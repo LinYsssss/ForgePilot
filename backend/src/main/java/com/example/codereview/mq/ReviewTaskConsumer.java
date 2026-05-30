@@ -3,19 +3,26 @@ package com.example.codereview.mq;
 import com.example.codereview.config.RabbitMqConfig;
 import com.example.codereview.review.ReviewProcessor;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 @Component
 public class ReviewTaskConsumer {
 
+    private static final long BASE_BACKOFF_MS = 2000L;
+    private static final long MAX_BACKOFF_MS = 30000L;
+
     private final ReviewProcessor reviewProcessor;
     private final ReviewTaskPublisher publisher;
     private final MqLogService mqLogService;
+    private final int maxRetry;
 
-    public ReviewTaskConsumer(ReviewProcessor reviewProcessor, ReviewTaskPublisher publisher, MqLogService mqLogService) {
+    public ReviewTaskConsumer(ReviewProcessor reviewProcessor, ReviewTaskPublisher publisher, MqLogService mqLogService,
+                              @Value("${app.review.max-retry:3}") int maxRetry) {
         this.reviewProcessor = reviewProcessor;
         this.publisher = publisher;
         this.mqLogService = mqLogService;
+        this.maxRetry = maxRetry;
     }
 
     @RabbitListener(queues = RabbitMqConfig.REVIEW_TASK_QUEUE)
@@ -25,12 +32,22 @@ public class ReviewTaskConsumer {
             mqLogService.consumed(message);
         } catch (RuntimeException ex) {
             mqLogService.failed(message, ex.getMessage());
-            if (message.retryCount() >= 3) {
+            if (message.retryCount() >= maxRetry) {
                 reviewProcessor.markDead(message.taskId(), ex.getMessage());
                 publisher.publishDead(message, ex.getMessage());
             } else {
+                backoff(message.retryCount());
                 publisher.publish(message.nextRetry());
             }
+        }
+    }
+
+    private void backoff(int retryCount) {
+        long delay = Math.min(MAX_BACKOFF_MS, BASE_BACKOFF_MS * (1L << retryCount));
+        try {
+            Thread.sleep(delay);
+        } catch (InterruptedException ex) {
+            Thread.currentThread().interrupt();
         }
     }
 }

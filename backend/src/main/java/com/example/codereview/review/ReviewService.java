@@ -70,7 +70,8 @@ public class ReviewService {
                 diff.baseCommitId(),
                 branchName,
                 userId,
-                rawDiff
+                rawDiff,
+                request.documentIds()
         );
         tasks.save(task);
         if (inline) {

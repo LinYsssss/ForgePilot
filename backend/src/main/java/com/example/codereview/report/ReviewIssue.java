@@ -70,6 +70,10 @@ public class ReviewIssue {
         return id;
     }
 
+    public Long getReportId() {
+        return reportId;
+    }
+
     public String getSeverity() {
         return severity;
     }

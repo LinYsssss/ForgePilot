@@ -32,6 +32,6 @@ public class FeedbackController {
 
     @GetMapping
     public ApiResponse<List<FeedbackResponse>> list(@PathVariable Long issueId) {
-        return ApiResponse.ok(feedbackService.list(issueId));
+        return ApiResponse.ok(feedbackService.list(issueId, currentUserProvider.getRequired().userId()));
     }
 }

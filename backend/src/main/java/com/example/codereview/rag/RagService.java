@@ -4,6 +4,7 @@ import com.example.codereview.ai.AiCallLogService;
 import com.example.codereview.knowledge.KnowledgeChunk;
 import com.example.codereview.knowledge.KnowledgeChunkRepository;
 import com.example.codereview.knowledge.KnowledgeDtos.SearchMatch;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -22,6 +23,8 @@ public class RagService {
     private final AiCallLogService aiCallLogService;
     private final String mode;
     private final int defaultTopK;
+    private final boolean fullContext;
+    private final int maxContextChars;
 
     public RagService(
             KnowledgeChunkRepository chunks,
@@ -30,7 +33,9 @@ public class RagService {
             ObjectProvider<JdbcTemplate> jdbcTemplate,
             AiCallLogService aiCallLogService,
             @Value("${app.rag.mode}") String mode,
-            @Value("${app.rag.top-k}") int defaultTopK
+            @Value("${app.rag.top-k}") int defaultTopK,
+            @Value("${app.rag.full-context}") boolean fullContext,
+            @Value("${app.rag.max-context-chars}") int maxContextChars
     ) {
         this.chunks = chunks;
         this.embeddingClient = embeddingClient;
@@ -39,36 +44,86 @@ public class RagService {
         this.aiCallLogService = aiCallLogService;
         this.mode = mode;
         this.defaultTopK = defaultTopK;
+        this.fullContext = fullContext;
+        this.maxContextChars = maxContextChars;
     }
 
     public List<SearchMatch> search(Long projectId, String query, Integer topK) {
         int limit = topK == null || topK <= 0 ? defaultTopK : topK;
+        return scopedSearch(projectId, query, limit, null);
+    }
+
+    public String buildContext(Long projectId, String query) {
+        return buildContext(projectId, query, null);
+    }
+
+    public String buildContext(Long projectId, String query, Collection<Long> documentIds) {
+        if (fullContext) {
+            return buildFullContext(projectId, documentIds);
+        }
+        return scopedSearch(projectId, query, defaultTopK, documentIds)
+                .stream()
+                .map(match -> "[来源: " + match.sourceName() + "#" + match.chunkIndex() + ", score=" + match.score() + "]\n" + match.content())
+                .collect(Collectors.joining("\n\n---\n\n"));
+    }
+
+    private List<KnowledgeChunk> chunksFor(Long projectId, Collection<Long> documentIds) {
+        if (documentIds == null || documentIds.isEmpty()) {
+            return chunks.findByProjectId(projectId);
+        }
+        return chunks.findByProjectIdAndDocumentIdIn(projectId, documentIds);
+    }
+
+    private String buildFullContext(Long projectId, Collection<Long> documentIds) {
+        String context = chunksFor(projectId, documentIds)
+                .stream()
+                .sorted(Comparator.comparing(KnowledgeChunk::getSourceName, Comparator.nullsLast(Comparator.naturalOrder()))
+                        .thenComparingInt(KnowledgeChunk::getChunkIndex))
+                .map(chunk -> "[来源: " + chunk.getSourceName() + "#" + chunk.getChunkIndex() + "]\n" + chunk.getContent())
+                .collect(Collectors.joining("\n\n---\n\n"));
+        if (maxContextChars > 0 && context.length() > maxContextChars) {
+            return context.substring(0, maxContextChars) + "\n\n[项目上下文已截断，超过最大长度 " + maxContextChars + "]";
+        }
+        return context;
+    }
+
+    private List<SearchMatch> scopedSearch(Long projectId, String query, int limit, Collection<Long> documentIds) {
+        if (fullContext) {
+            return chunksFor(projectId, documentIds)
+                    .stream()
+                    .sorted(Comparator.comparing(KnowledgeChunk::getSourceName, Comparator.nullsLast(Comparator.naturalOrder()))
+                            .thenComparingInt(KnowledgeChunk::getChunkIndex))
+                    .limit(limit)
+                    .map(this::toMatch)
+                    .toList();
+        }
         List<Double> queryEmbedding = embedForSearch(projectId, query);
-        if ("pgvector".equalsIgnoreCase(mode) && jdbcTemplate != null) {
+        if ("pgvector".equalsIgnoreCase(mode) && jdbcTemplate != null && (documentIds == null || documentIds.isEmpty())) {
             return searchPgVector(projectId, queryEmbedding, limit);
         }
-        return chunks.findByProjectId(projectId)
+        return chunksFor(projectId, documentIds)
                 .stream()
                 .map(chunk -> new ScoredChunk(chunk, cosine(queryEmbedding, embeddingJson.read(chunk.getEmbeddingJson()))))
                 .filter(scored -> scored.score > 0)
                 .sorted(Comparator.comparingDouble(ScoredChunk::score).reversed())
                 .limit(limit)
-                .map(scored -> new SearchMatch(
-                        scored.chunk.getId(),
-                        scored.chunk.getSourceName(),
-                        scored.chunk.getDocType(),
-                        scored.chunk.getChunkIndex(),
-                        scored.score,
-                        scored.chunk.getContent()
-                ))
+                .map(scored -> toMatch(scored.chunk, scored.score))
                 .toList();
     }
 
-    public String buildContext(Long projectId, String query) {
-        return search(projectId, query, defaultTopK)
-                .stream()
-                .map(match -> "[来源: " + match.sourceName() + "#" + match.chunkIndex() + ", score=" + match.score() + "]\n" + match.content())
-                .collect(Collectors.joining("\n\n---\n\n"));
+    private SearchMatch toMatch(KnowledgeChunk chunk) {
+        return toMatch(chunk, 1.0);
+    }
+
+    private SearchMatch toMatch(KnowledgeChunk chunk, double score) {
+        return new SearchMatch(
+                chunk.getId(),
+                chunk.getSourceName(),
+                chunk.getDocType(),
+                chunk.getChunkIndex(),
+                score,
+                chunk.getContent()
+        );
     }
 
     private List<SearchMatch> searchPgVector(Long projectId, List<Double> queryEmbedding, int limit) {

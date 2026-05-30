@@ -12,9 +12,11 @@ import org.springframework.transaction.annotation.Transactional;
 public class ProjectService {
 
     private final ProjectRepository projects;
+    private final ProjectCleanupService cleanupService;
 
-    public ProjectService(ProjectRepository projects) {
+    public ProjectService(ProjectRepository projects, ProjectCleanupService cleanupService) {
         this.projects = projects;
+        this.cleanupService = cleanupService;
     }
 
     @Transactional
@@ -49,5 +51,12 @@ public class ProjectService {
         ProjectEntity project = getRequired(projectId, userId);
         project.update(request.name(), request.description(), request.defaultBranch());
         return ProjectResponse.from(project);
+    }
+
+    @Transactional
+    public void delete(Long projectId, Long userId) {
+        ProjectEntity project = getRequired(projectId, userId);
+        cleanupService.purgeProjectData(projectId);
+        projects.delete(project);
     }
 }

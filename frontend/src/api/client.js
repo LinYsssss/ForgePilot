@@ -23,10 +23,15 @@ export async function api(path, options = {}) {
   if (token) {
     headers.Authorization = `Bearer ${token}`
   }
-  const response = await fetch(`${API_BASE}${path}`, {
-    ...options,
-    headers
-  })
+  let response
+  try {
+    response = await fetch(`${API_BASE}${path}`, { ...options, headers })
+  } catch (networkError) {
+    throw new Error('网络错误，请确认后端服务已启动')
+  }
+  if (response.status === 401 || response.status === 403) {
+    clearToken()
+  }
   const json = await response.json().catch(() => ({ code: 500, message: '响应解析失败' }))
   if (!response.ok || json.code !== 0) {
     throw new Error(json.message || `请求失败: ${response.status}`)

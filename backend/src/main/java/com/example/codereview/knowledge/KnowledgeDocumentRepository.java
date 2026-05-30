@@ -6,4 +6,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 public interface KnowledgeDocumentRepository extends JpaRepository<KnowledgeDocument, Long> {
 
     List<KnowledgeDocument> findByProjectIdOrderByCreatedAtDesc(Long projectId);
+
+    void deleteByProjectId(Long projectId);
 }

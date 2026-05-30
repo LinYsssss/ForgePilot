@@ -2,6 +2,7 @@ package com.example.codereview.auth;
 
 import com.example.codereview.common.security.CurrentUser;
 import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.time.Instant;
 import java.util.Base64;
 import javax.crypto.Mac;
@@ -34,7 +35,9 @@ public class TokenService {
     public CurrentUser parse(String token) {
         try {
             String[] parts = token.split("\\.");
-            if (parts.length != 2 || !sign(parts[0]).equals(parts[1])) {
+            if (parts.length != 2 || !MessageDigest.isEqual(
+                    sign(parts[0]).getBytes(StandardCharsets.UTF_8),
+                    parts[1].getBytes(StandardCharsets.UTF_8))) {
                 return null;
             }
             String payload = new String(Base64.getUrlDecoder().decode(parts[0]), StandardCharsets.UTF_8);

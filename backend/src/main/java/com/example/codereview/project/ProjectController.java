@@ -7,6 +7,7 @@ import com.example.codereview.project.ProjectDtos.ProjectResponse;
 import com.example.codereview.project.ProjectDtos.UpdateProjectRequest;
 import jakarta.validation.Valid;
 import java.util.List;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -45,5 +46,11 @@ public class ProjectController {
     @PutMapping("/{projectId}")
     public ApiResponse<ProjectResponse> update(@PathVariable Long projectId, @Valid @RequestBody UpdateProjectRequest request) {
         return ApiResponse.ok(projectService.update(projectId, currentUserProvider.getRequired().userId(), request));
+    }
+
+    @DeleteMapping("/{projectId}")
+    public ApiResponse<Void> delete(@PathVariable Long projectId) {
+        projectService.delete(projectId, currentUserProvider.getRequired().userId());
+        return ApiResponse.ok();
     }
 }

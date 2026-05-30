@@ -12,6 +12,12 @@
 - Diff 太大时需要截断和摘要，避免超出模型上下文。
 - 后续可加入轻量级模型和静态扫描结果，提高风险识别能力。
 
+> **检索模式说明**：本项目支持两种向 Prompt 提供项目上下文的方式：
+> - **全量注入（默认推荐，`RAG_FULL_CONTEXT=true`）**：把项目全部知识库文档拼进 Prompt，**不需要 embedding / 向量检索**。适合知识库总量不大（约几千到几万字）的场景，上下文最完整。超过 `RAG_MAX_CONTEXT_CHARS`（默认 6000 字）时自动截断。
+> - **向量检索（`RAG_FULL_CONTEXT=false`）**：按 Diff 提取 Query，做相似度检索取 TopK 片段。适合知识库很大、需要先筛选的场景，但需要 embedding 能力（内存模式可用本地 mock 占位，pgvector 模式需真实 embedding API）。
+>
+> 下文第 2~7 节描述的是向量检索链路；启用全量注入时，检索环节被「取项目全部 chunk 并拼接」替代，其余 Prompt 构造、AI 调用、JSON 解析环节完全一致。
+
 ## 2. RAG 总体流程
 
 ```mermaid

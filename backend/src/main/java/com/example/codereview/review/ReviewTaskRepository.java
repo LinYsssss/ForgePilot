@@ -8,6 +8,8 @@ public interface ReviewTaskRepository extends JpaRepository<ReviewTask, Long> {
 
     List<ReviewTask> findByProjectIdOrderByCreatedAtDesc(Long projectId);
 
+    void deleteByProjectId(Long projectId);
+
     Optional<ReviewTask> findFirstByProjectIdAndRepositoryIdAndCommitIdAndBaseCommitIdAndBranchNameOrderByCreatedAtDesc(
             Long projectId,
             Long repositoryId,

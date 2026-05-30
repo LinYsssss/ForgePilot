@@ -39,6 +39,8 @@ public class GitCliService {
     }
 
     private Path ensureCloneLocked(CodeRepositoryEntity repository) {
+        GitInputValidator.requireSafeRepoUrl(repository.getRepoUrl());
+        GitInputValidator.requireSafeRef(repository.getDefaultBranch(), "默认分支");
         try {
             Files.createDirectories(workRoot);
             Path localPath = workRoot.resolve("repo-" + repository.getId()).toAbsolutePath();
@@ -57,8 +59,10 @@ public class GitCliService {
     }
 
     public List<CommitResponse> listCommits(CodeRepositoryEntity repository, int limit) {
+        GitInputValidator.requireSafeRef(repository.getDefaultBranch(), "默认分支");
+        int safeLimit = Math.max(1, Math.min(limit, 200));
         Path localPath = ensureClone(repository);
-        String output = run(localPath, "git", "log", "--max-count=" + limit,
+        String output = run(localPath, "git", "log", "--max-count=" + safeLimit,
                 "--pretty=format:%H%x1f%P%x1f%an%x1f%ae%x1f%ct%x1f%s",
                 repository.getDefaultBranch());
         List<CommitResponse> commits = new ArrayList<>();
@@ -83,18 +87,22 @@ public class GitCliService {
     }
 
     public CommitDiffResponse diff(CodeRepositoryEntity repository, String commitId, String baseCommitId) {
+        GitInputValidator.requireSafeRef(commitId, "Commit");
+        if (baseCommitId != null && !baseCommitId.isBlank()) {
+            GitInputValidator.requireSafeRef(baseCommitId, "Base Commit");
+        }
         Path localPath = ensureClone(repository);
         String base = baseCommitId;
         if (base == null || base.isBlank()) {
             base = resolveParentOrEmptyTree(localPath, commitId);
         }
-        String rawDiff = run(localPath, "git", "diff", "--find-renames", base, commitId);
+        String rawDiff = run(localPath, "git", "diff", "--find-renames", base, commitId, "--");
         List<DiffFileResponse> files = parseFiles(rawDiff);
         return new CommitDiffResponse(commitId, base, files, rawDiff);
     }
 
     private String resolveParentOrEmptyTree(Path localPath, String commitId) {
-        String parents = run(localPath, "git", "rev-list", "--parents", "-n", "1", commitId).trim();
+        String parents = run(localPath, "git", "rev-list", "--parents", "-n", "1", commitId, "--").trim();
         String[] parts = parents.split("\\s+");
         if (parts.length >= 2) {
             return parts[1];
@@ -174,10 +182,12 @@ public class GitCliService {
 
     private String run(Path directory, String... command) {
         try {
-            Process process = new ProcessBuilder(command)
+            ProcessBuilder builder = new ProcessBuilder(command)
                     .directory(directory.toFile())
-                    .redirectErrorStream(true)
-                    .start();
+                    .redirectErrorStream(true);
+            builder.environment().put("GIT_ALLOW_PROTOCOL", "http:https:file");
+            builder.environment().put("GIT_TERMINAL_PROMPT", "0");
+            Process process = builder.start();
             boolean finished = process.waitFor(60, TimeUnit.SECONDS);
             String output = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
             if (!finished) {

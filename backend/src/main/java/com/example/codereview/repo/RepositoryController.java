@@ -8,6 +8,7 @@ import com.example.codereview.repo.RepositoryDtos.CommitResponse;
 import com.example.codereview.repo.RepositoryDtos.RepositoryResponse;
 import jakarta.validation.Valid;
 import java.util.List;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -36,6 +37,12 @@ public class RepositoryController {
     @GetMapping
     public ApiResponse<RepositoryResponse> detail(@PathVariable Long projectId) {
         return ApiResponse.ok(repositoryService.detail(projectId, currentUserProvider.getRequired().userId()));
+    }
+
+    @DeleteMapping
+    public ApiResponse<Void> unbind(@PathVariable Long projectId) {
+        repositoryService.unbind(projectId, currentUserProvider.getRequired().userId());
+        return ApiResponse.ok();
     }
 
     @GetMapping("/commits")

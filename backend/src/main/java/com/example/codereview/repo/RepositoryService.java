@@ -3,6 +3,7 @@ package com.example.codereview.repo;
 import com.example.codereview.common.exception.BusinessException;
 import com.example.codereview.common.security.CryptoService;
 import com.example.codereview.git.GitCliService;
+import com.example.codereview.git.GitInputValidator;
 import com.example.codereview.project.ProjectService;
 import com.example.codereview.repo.RepositoryDtos.BindRepositoryRequest;
 import com.example.codereview.repo.RepositoryDtos.CommitDiffResponse;
@@ -31,6 +32,10 @@ public class RepositoryService {
     @Transactional
     public RepositoryResponse bind(Long projectId, Long userId, BindRepositoryRequest request) {
         projectService.getRequired(projectId, userId);
+        GitInputValidator.requireSafeRepoUrl(request.repoUrl());
+        if (request.defaultBranch() != null && !request.defaultBranch().isBlank()) {
+            GitInputValidator.requireSafeRef(request.defaultBranch(), "默认分支");
+        }
         String encryptedToken = cryptoService.encrypt(request.accessToken());
         CodeRepositoryEntity entity = repositories.findByProjectId(projectId)
                 .orElseGet(() -> new CodeRepositoryEntity(projectId, request.repoUrl(), request.provider(), request.defaultBranch(), encryptedToken));
@@ -57,5 +62,11 @@ public class RepositoryService {
         projectService.getRequired(projectId, userId);
         return repositories.findByProjectId(projectId)
                 .orElseThrow(() -> new BusinessException(404, "项目尚未绑定仓库"));
+    }
+
+    @Transactional
+    public void unbind(Long projectId, Long userId) {
+        CodeRepositoryEntity repository = getRequired(projectId, userId);
+        repositories.delete(repository);
     }
 }

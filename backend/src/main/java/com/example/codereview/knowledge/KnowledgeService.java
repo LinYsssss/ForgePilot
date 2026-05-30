@@ -31,6 +31,7 @@ public class KnowledgeService {
     private final AiCallLogService aiCallLogService;
     private final int chunkSize;
     private final int overlap;
+    private final boolean fullContext;
 
     public KnowledgeService(
             ProjectService projectService,
@@ -42,7 +43,8 @@ public class KnowledgeService {
             VectorIndexService vectorIndexService,
             AiCallLogService aiCallLogService,
             @Value("${app.rag.chunk-size}") int chunkSize,
-            @Value("${app.rag.overlap}") int overlap
+            @Value("${app.rag.overlap}") int overlap,
+            @Value("${app.rag.full-context}") boolean fullContext
     ) {
         this.projectService = projectService;
         this.documents = documents;
@@ -54,6 +56,7 @@ public class KnowledgeService {
         this.aiCallLogService = aiCallLogService;
         this.chunkSize = chunkSize;
         this.overlap = overlap;
+        this.fullContext = fullContext;
     }
 
     @Transactional
@@ -102,7 +105,7 @@ public class KnowledgeService {
         List<String> parts = split(document.getContentText());
         for (int i = 0; i < parts.size(); i++) {
             String part = parts.get(i);
-            String embedding = embeddingJson.write(embedForIndex(document.getProjectId(), part));
+            String embedding = fullContext ? null : embeddingJson.write(embedForIndex(document.getProjectId(), part));
             KnowledgeChunk chunk = chunks.save(new KnowledgeChunk(
                     document.getId(),
                     document.getProjectId(),
@@ -112,7 +115,9 @@ public class KnowledgeService {
                     part,
                     embedding
             ));
-            vectorIndexService.index(chunk);
+            if (!fullContext) {
+                vectorIndexService.index(chunk);
+            }
         }
     }
 

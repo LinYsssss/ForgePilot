@@ -2,6 +2,9 @@ package com.example.codereview.review;
 
 import jakarta.persistence.*;
 import java.time.Instant;
+import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Entity
 @Table(name = "review_task")
@@ -39,6 +42,9 @@ public class ReviewTask {
     private String diffText;
 
     @Column(columnDefinition = "text")
+    private String knowledgeDocIds;
+
+    @Column(columnDefinition = "text")
     private String errorMessage;
 
     private Instant startedAt;
@@ -54,6 +60,10 @@ public class ReviewTask {
     }
 
     public ReviewTask(Long projectId, Long repositoryId, String commitId, String baseCommitId, String branchName, Long triggerUserId, String diffText) {
+        this(projectId, repositoryId, commitId, baseCommitId, branchName, triggerUserId, diffText, null);
+    }
+
+    public ReviewTask(Long projectId, Long repositoryId, String commitId, String baseCommitId, String branchName, Long triggerUserId, String diffText, List<Long> knowledgeDocIds) {
         this.projectId = projectId;
         this.repositoryId = repositoryId;
         this.commitId = commitId;
@@ -61,10 +71,18 @@ public class ReviewTask {
         this.branchName = branchName;
         this.triggerUserId = triggerUserId;
         this.diffText = diffText;
+        this.knowledgeDocIds = serializeDocIds(knowledgeDocIds);
         this.status = "PENDING";
         this.retryCount = 0;
         this.createdAt = Instant.now();
         this.updatedAt = this.createdAt;
+    }
+
+    private static String serializeDocIds(List<Long> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return null;
+        }
+        return ids.stream().filter(java.util.Objects::nonNull).map(String::valueOf).collect(Collectors.joining(","));
     }
 
     public Long getId() {
@@ -97,6 +115,17 @@ public class ReviewTask {
 
     public String getDiffText() {
         return diffText;
+    }
+
+    public List<Long> getKnowledgeDocIds() {
+        if (knowledgeDocIds == null || knowledgeDocIds.isBlank()) {
+            return List.of();
+        }
+        return Arrays.stream(knowledgeDocIds.split(","))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .map(Long::valueOf)
+                .toList();
     }
 
     public String getErrorMessage() {

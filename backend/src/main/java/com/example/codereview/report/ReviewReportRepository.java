@@ -9,4 +9,6 @@ public interface ReviewReportRepository extends JpaRepository<ReviewReport, Long
     List<ReviewReport> findByProjectIdOrderByCreatedAtDesc(Long projectId);
 
     Optional<ReviewReport> findByTaskId(Long taskId);
+
+    void deleteByProjectId(Long projectId);
 }

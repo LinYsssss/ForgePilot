@@ -27,3 +27,6 @@ deploy/.env
 # OS
 Thumbs.db
 .DS_Store
+
+# Claude Code session/memory
+.claude/

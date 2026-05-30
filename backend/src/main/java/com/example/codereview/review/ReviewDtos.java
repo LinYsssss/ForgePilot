@@ -13,7 +13,8 @@ public final class ReviewDtos {
     public record CreateReviewTaskRequest(
             String commitId,
             String baseCommitId,
-            String branch
+            String branch,
+            List<Long> documentIds
     ) {
     }
 

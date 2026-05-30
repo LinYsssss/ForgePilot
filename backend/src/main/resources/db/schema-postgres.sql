@@ -71,6 +71,7 @@ create table if not exists review_task (
     status varchar(32) not null,
     retry_count integer not null,
     diff_text text,
+    knowledge_doc_ids text,
     error_message text,
     started_at timestamp(6) with time zone,
     finished_at timestamp(6) with time zone,
