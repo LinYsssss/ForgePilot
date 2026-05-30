@@ -1,0 +1,27 @@
+spring:
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://postgres:5432/code_review}
+    driver-class-name: org.postgresql.Driver
+    username: ${DB_USERNAME:code_review}
+    password: ${DB_PASSWORD:change-me}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    defer-datasource-initialization: false
+  sql:
+    init:
+      mode: always
+      schema-locations: classpath:db/schema-postgres.sql
+  rabbitmq:
+    host: ${RABBITMQ_HOST:rabbitmq}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USERNAME:guest}
+    password: ${RABBITMQ_PASSWORD:guest}
+    listener:
+      simple:
+        auto-startup: ${RABBITMQ_LISTENER_AUTO_STARTUP:true}
+
+app:
+  review:
+    inline: ${REVIEW_INLINE:false}

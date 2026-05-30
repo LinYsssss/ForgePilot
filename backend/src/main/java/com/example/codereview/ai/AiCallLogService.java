@@ -1,0 +1,131 @@
+package com.example.codereview.ai;
+
+import com.example.codereview.ai.AiCallLogDtos.AiCallLogResponse;
+import com.example.codereview.common.exception.BusinessException;
+import com.example.codereview.project.ProjectService;
+import com.example.codereview.review.ReviewTask;
+import com.example.codereview.review.ReviewTaskRepository;
+import java.util.List;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
+
+@Service
+public class AiCallLogService {
+
+    public static final String REVIEW = "CHAT_REVIEW";
+    public static final String EMBEDDING_INDEX = "EMBEDDING_INDEX";
+    public static final String EMBEDDING_SEARCH = "EMBEDDING_SEARCH";
+    public static final String MODEL_RISK = "MODEL_RISK";
+
+    private final AiCallLogRepository logs;
+    private final ProjectService projectService;
+    private final ReviewTaskRepository tasks;
+    private final String provider;
+    private final String chatModel;
+    private final String embeddingModel;
+
+    public AiCallLogService(
+            AiCallLogRepository logs,
+            ProjectService projectService,
+            ReviewTaskRepository tasks,
+            @Value("${app.ai.provider}") String provider,
+            @Value("${app.ai.chat-model}") String chatModel,
+            @Value("${app.ai.embedding-model}") String embeddingModel
+    ) {
+        this.logs = logs;
+        this.projectService = projectService;
+        this.tasks = tasks;
+        this.provider = provider;
+        this.chatModel = chatModel;
+        this.embeddingModel = embeddingModel;
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void reviewSuccess(Long projectId, Long taskId, int promptChars, int responseChars, long latencyMs) {
+        save(projectId, taskId, REVIEW, chatModel, promptChars, responseChars, latencyMs, "SUCCESS", null);
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void reviewFailed(Long projectId, Long taskId, int promptChars, long latencyMs, String errorMessage) {
+        save(projectId, taskId, REVIEW, chatModel, promptChars, 0, latencyMs, "FAILED", errorMessage);
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void embeddingSuccess(Long projectId, String requestType, int promptChars, int dimensions, long latencyMs) {
+        save(projectId, null, requestType, embeddingModel, promptChars, dimensions, latencyMs, "SUCCESS", null);
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void embeddingFailed(Long projectId, String requestType, int promptChars, long latencyMs, String errorMessage) {
+        save(projectId, null, requestType, embeddingModel, promptChars, 0, latencyMs, "FAILED", errorMessage);
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void modelRiskSuccess(Long projectId, Long taskId, int promptChars, int responseChars, long latencyMs, String modelVersion) {
+        save(projectId, taskId, MODEL_RISK, "model-service", modelVersion, promptChars, responseChars, latencyMs, "SUCCESS", null);
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void modelRiskFailed(Long projectId, Long taskId, int promptChars, long latencyMs, String errorMessage) {
+        save(projectId, taskId, MODEL_RISK, "model-service", "unknown", promptChars, 0, latencyMs, "FAILED", errorMessage);
+    }
+
+    @Transactional(readOnly = true)
+    public List<AiCallLogResponse> list(Long userId, Long projectId, Long taskId, Integer limit) {
+        int safeLimit = Math.max(1, Math.min(limit == null ? 50 : limit, 200));
+        PageRequest page = PageRequest.of(0, safeLimit);
+        if (taskId != null) {
+            ReviewTask task = tasks.findById(taskId)
+                    .orElseThrow(() -> new BusinessException(6002, "审查任务不存在"));
+            projectService.getRequired(task.getProjectId(), userId);
+            if (projectId != null && !projectId.equals(task.getProjectId())) {
+                throw new BusinessException(400, "任务不属于指定项目");
+            }
+            return (projectId == null
+                    ? logs.findByTaskIdOrderByCreatedAtDesc(taskId, page)
+                    : logs.findByProjectIdAndTaskIdOrderByCreatedAtDesc(projectId, taskId, page))
+                    .stream()
+                    .map(AiCallLogResponse::from)
+                    .toList();
+        }
+        if (projectId == null) {
+            throw new BusinessException(400, "projectId 或 taskId 至少传一个");
+        }
+        projectService.getRequired(projectId, userId);
+        return logs.findByProjectIdOrderByCreatedAtDesc(projectId, page)
+                .stream()
+                .map(AiCallLogResponse::from)
+                .toList();
+    }
+
+    private void save(Long projectId, Long taskId, String requestType, String model, int promptChars,
+                      int responseChars, long latencyMs, String status, String errorMessage) {
+        save(projectId, taskId, requestType, provider, model, promptChars, responseChars, latencyMs, status, errorMessage);
+    }
+
+    private void save(Long projectId, Long taskId, String requestType, String providerName, String model, int promptChars,
+                      int responseChars, long latencyMs, String status, String errorMessage) {
+        logs.save(new AiCallLog(
+                projectId,
+                taskId,
+                requestType,
+                providerName == null || providerName.isBlank() ? "unknown" : providerName,
+                model == null || model.isBlank() ? "unknown" : model,
+                Math.max(0, promptChars),
+                Math.max(0, responseChars),
+                Math.max(0, latencyMs),
+                status,
+                truncate(errorMessage)
+        ));
+    }
+
+    private String truncate(String message) {
+        if (message == null || message.length() <= 2000) {
+            return message;
+        }
+        return message.substring(0, 2000);
+    }
+}

@@ -1,0 +1,53 @@
+package com.example.codereview.review;
+
+import com.example.codereview.common.api.ApiResponse;
+import com.example.codereview.common.security.CurrentUserProvider;
+import com.example.codereview.review.ReviewDtos.CreateReviewTaskRequest;
+import com.example.codereview.review.ReviewDtos.ReviewReportDetail;
+import com.example.codereview.review.ReviewDtos.ReviewReportSummary;
+import com.example.codereview.review.ReviewDtos.ReviewTaskResponse;
+import java.util.List;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+@RequestMapping("/api/projects/{projectId}/reviews")
+public class ReviewController {
+
+    private final ReviewService reviewService;
+    private final CurrentUserProvider currentUserProvider;
+
+    public ReviewController(ReviewService reviewService, CurrentUserProvider currentUserProvider) {
+        this.reviewService = reviewService;
+        this.currentUserProvider = currentUserProvider;
+    }
+
+    @PostMapping("/tasks")
+    public ApiResponse<ReviewTaskResponse> createTask(@PathVariable Long projectId, @RequestBody CreateReviewTaskRequest request) {
+        return ApiResponse.ok(reviewService.create(projectId, currentUserProvider.getRequired().userId(), request));
+    }
+
+    @GetMapping("/tasks")
+    public ApiResponse<List<ReviewTaskResponse>> tasks(@PathVariable Long projectId) {
+        return ApiResponse.ok(reviewService.listTasks(projectId, currentUserProvider.getRequired().userId()));
+    }
+
+    @GetMapping("/tasks/{taskId}")
+    public ApiResponse<ReviewTaskResponse> taskDetail(@PathVariable Long projectId, @PathVariable Long taskId) {
+        return ApiResponse.ok(reviewService.taskDetail(projectId, currentUserProvider.getRequired().userId(), taskId));
+    }
+
+    @GetMapping("/reports")
+    public ApiResponse<List<ReviewReportSummary>> reports(@PathVariable Long projectId) {
+        return ApiResponse.ok(reviewService.reports(projectId, currentUserProvider.getRequired().userId()));
+    }
+
+    @GetMapping("/reports/{reportId}")
+    public ApiResponse<ReviewReportDetail> reportDetail(@PathVariable Long projectId, @PathVariable Long reportId) {
+        return ApiResponse.ok(reviewService.reportDetail(projectId, currentUserProvider.getRequired().userId(), reportId));
+    }
+}

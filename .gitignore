@@ -1,0 +1,29 @@
+# Build outputs
+backend/target/
+frontend/dist/
+model-service/__pycache__/
+model-service/.python-packages/
+model-service/app/__pycache__/
+model-service/scripts/__pycache__/
+
+# Dependency directories
+frontend/node_modules/
+frontend/.npm-cache/
+
+# Runtime and temporary files
+backend/.work/
+backend/*.log
+.work/
+
+# Local env files
+.env
+deploy/.env
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# OS
+Thumbs.db
+.DS_Store

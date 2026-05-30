@@ -1,0 +1,37 @@
+spring:
+  application:
+    name: reposage
+  profiles:
+    active: ${APP_ENV:dev}
+
+server:
+  port: ${SERVER_PORT:8080}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+app:
+  security:
+    token-secret: ${JWT_SECRET:dev-secret-change-me}
+    token-ttl-seconds: ${TOKEN_TTL_SECONDS:86400}
+    token-encrypt-key: ${TOKEN_ENCRYPT_KEY:dev-token-encryption-key-change-me}
+  model-service:
+    enabled: ${MODEL_SERVICE_ENABLED:false}
+    base-url: ${MODEL_SERVICE_URL:}
+  review:
+    inline: ${REVIEW_INLINE:true}
+    max-diff-chars: ${REVIEW_MAX_DIFF_CHARS:20000}
+  rag:
+    mode: ${RAG_MODE:memory}
+    chunk-size: ${RAG_CHUNK_SIZE:800}
+    overlap: ${RAG_OVERLAP:100}
+    top-k: ${RAG_TOP_K:5}
+  ai:
+    provider: ${AI_PROVIDER:mock}
+    base-url: ${LLM_BASE_URL:}
+    api-key: ${LLM_API_KEY:}
+    chat-model: ${LLM_CHAT_MODEL:mock-reviewer}
+    embedding-model: ${LLM_EMBEDDING_MODEL:mock-embedding}
