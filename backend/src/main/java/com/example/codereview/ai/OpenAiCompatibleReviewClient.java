@@ -3,6 +3,7 @@ package com.example.codereview.ai;
 import com.example.codereview.common.exception.BusinessException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -52,19 +53,43 @@ public class OpenAiCompatibleReviewClient implements AiReviewClient {
                 )
         );
         try {
-            String response = restClient.post()
+            byte[] response = restClient.post()
                     .uri("/chat/completions")
+                    .accept(MediaType.APPLICATION_JSON, MediaType.TEXT_PLAIN, MediaType.APPLICATION_OCTET_STREAM)
                     .body(request)
                     .retrieve()
-                    .body(String.class);
-            String content = objectMapper.readTree(response)
-                    .path("choices").path(0).path("message").path("content").asText();
+                    .body(byte[].class);
+            String responseText = response == null ? "" : new String(response, StandardCharsets.UTF_8);
+            String content = extractMessageContent(responseText);
             return parseContent(content);
         } catch (BusinessException ex) {
             throw ex;
         } catch (Exception ex) {
             throw new BusinessException(6004, "AI 调用失败: " + ex.getMessage());
         }
+    }
+
+    private String extractMessageContent(String responseText) {
+        try {
+            JsonNode root = objectMapper.readTree(responseText);
+            String content = root.path("choices").path(0).path("message").path("content").asText();
+            if (content == null || content.isBlank()) {
+                throw new BusinessException(6004, "AI 响应不符合 OpenAI Chat 格式: " + abbreviate(responseText));
+            }
+            return content;
+        } catch (BusinessException ex) {
+            throw ex;
+        } catch (Exception ex) {
+            throw new BusinessException(6004, "AI 响应不是有效 JSON: " + abbreviate(responseText));
+        }
+    }
+
+    private String abbreviate(String value) {
+        if (value == null || value.isBlank()) {
+            return "<empty>";
+        }
+        String normalized = value.replaceAll("\\s+", " ").trim();
+        return normalized.length() <= 500 ? normalized : normalized.substring(0, 500) + "...";
     }
 
     private AiReviewResult parseContent(String content) {
