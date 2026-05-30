@@ -659,7 +659,7 @@ async function unbindRepository() {
 async function loadCommits() {
   busy.commits = true
   try {
-    commits.value = await api(`/projects/${activeProject.value.projectId}/repository/commits`)
+    commits.value = await api(`/projects/${activeProject.value.projectId}/repository/commits?limit=100`)
     repoForm._bound = true
   } finally { busy.commits = false }
 }
