@@ -25,6 +25,7 @@ public class AiCallLogService {
     private final ReviewTaskRepository tasks;
     private final String provider;
     private final String chatModel;
+    private final String embeddingProvider;
     private final String embeddingModel;
 
     public AiCallLogService(
@@ -33,6 +34,7 @@ public class AiCallLogService {
             ReviewTaskRepository tasks,
             @Value("${app.ai.provider}") String provider,
             @Value("${app.ai.chat-model}") String chatModel,
+            @Value("${app.ai.embedding-provider}") String embeddingProvider,
             @Value("${app.ai.embedding-model}") String embeddingModel
     ) {
         this.logs = logs;
@@ -40,6 +42,7 @@ public class AiCallLogService {
         this.tasks = tasks;
         this.provider = provider;
         this.chatModel = chatModel;
+        this.embeddingProvider = embeddingProvider;
         this.embeddingModel = embeddingModel;
     }
 
@@ -55,12 +58,12 @@ public class AiCallLogService {
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void embeddingSuccess(Long projectId, String requestType, int promptChars, int dimensions, long latencyMs) {
-        save(projectId, null, requestType, embeddingModel, promptChars, dimensions, latencyMs, "SUCCESS", null);
+        save(projectId, null, requestType, embeddingProvider, embeddingModel, promptChars, dimensions, latencyMs, "SUCCESS", null);
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void embeddingFailed(Long projectId, String requestType, int promptChars, long latencyMs, String errorMessage) {
-        save(projectId, null, requestType, embeddingModel, promptChars, 0, latencyMs, "FAILED", errorMessage);
+        save(projectId, null, requestType, embeddingProvider, embeddingModel, promptChars, 0, latencyMs, "FAILED", errorMessage);
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)

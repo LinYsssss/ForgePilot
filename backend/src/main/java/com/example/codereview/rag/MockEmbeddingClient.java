@@ -8,7 +8,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 
 @Service
-@ConditionalOnProperty(prefix = "app.ai", name = "provider", havingValue = "mock", matchIfMissing = true)
+@ConditionalOnProperty(prefix = "app.ai", name = "embedding-provider", havingValue = "mock", matchIfMissing = true)
 public class MockEmbeddingClient implements EmbeddingClient {
 
     private static final int DIMENSIONS = 64;

@@ -136,6 +136,7 @@ public class GitCliService {
     private String[] gitCommand(CodeRepositoryEntity repository, String... args) {
         List<String> command = new ArrayList<>();
         command.add("git");
+        addSafeDirectoryOptions(command, repository.getRepoUrl());
         String token = cryptoService.decrypt(repository.getAccessTokenCiphertext());
         if (shouldUseToken(repository.getRepoUrl(), token)) {
             command.add("-c");
@@ -143,6 +144,17 @@ public class GitCliService {
         }
         command.addAll(List.of(args));
         return command.toArray(String[]::new);
+    }
+
+    private void addSafeDirectoryOptions(List<String> command, String repoUrl) {
+        if (repoUrl == null || repoUrl.isBlank() || repoUrl.toLowerCase().startsWith("http") || repoUrl.startsWith("git@")) {
+            return;
+        }
+        String normalized = repoUrl.replace('\\', '/').replaceAll("/+$", "");
+        command.add("-c");
+        command.add("safe.directory=" + normalized);
+        command.add("-c");
+        command.add("safe.directory=" + normalized + "/.git");
     }
 
     private boolean shouldUseToken(String repoUrl, String token) {
