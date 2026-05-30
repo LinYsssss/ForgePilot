@@ -7,6 +7,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.example.codereview.auth.AuthService;
 import com.example.codereview.common.security.CryptoService;
 import com.example.codereview.repo.CodeRepositoryEntity;
 import com.example.codereview.repo.CodeRepositoryJpaRepository;
@@ -40,22 +41,13 @@ class AuthProjectIntegrationTest {
     @Autowired
     private CryptoService cryptoService;
 
-    @Test
-    void registerThenCreateAndListProject() throws Exception {
-        String username = "tester_" + System.nanoTime();
-        MvcResult register = mockMvc.perform(post("/api/auth/register")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(Map.of(
-                                "username", username,
-                                "password", "123456",
-                                "nickname", "Tester"
-                        ))))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(0))
-                .andReturn();
+    @Autowired
+    private AuthService authService;
 
-        JsonNode root = objectMapper.readTree(register.getResponse().getContentAsString());
-        String token = root.path("data").path("token").asText();
+    @Test
+    void loginThenCreateAndListProject() throws Exception {
+        String username = "tester_" + System.nanoTime();
+        String token = seedAndLogin(username);
 
         mockMvc.perform(post("/api/projects")
                         .header("Authorization", "Bearer " + token)
@@ -84,7 +76,7 @@ class AuthProjectIntegrationTest {
 
     @Test
     void bindRepositoryEncryptsAccessToken() throws Exception {
-        String token = registerAndGetToken("repo_tester_" + System.nanoTime());
+        String token = seedAndLogin("repo_tester_" + System.nanoTime());
         Long projectId = createProjectAndGetId(token, "仓库加密测试");
 
         mockMvc.perform(post("/api/projects/{projectId}/repository", projectId)
@@ -109,18 +101,18 @@ class AuthProjectIntegrationTest {
                 .isEqualTo("plain-secret-token");
     }
 
-    private String registerAndGetToken(String username) throws Exception {
-        MvcResult register = mockMvc.perform(post("/api/auth/register")
+    private String seedAndLogin(String username) throws Exception {
+        authService.createUser(username, "123456", "Tester", "DEVELOPER");
+        MvcResult login = mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of(
                                 "username", username,
-                                "password", "123456",
-                                "nickname", "Tester"
+                                "password", "123456"
                         ))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(0))
                 .andReturn();
-        return objectMapper.readTree(register.getResponse().getContentAsString()).path("data").path("token").asText();
+        return objectMapper.readTree(login.getResponse().getContentAsString()).path("data").path("token").asText();
     }
 
     private Long createProjectAndGetId(String token, String name) throws Exception {

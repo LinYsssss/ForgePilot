@@ -23,18 +23,17 @@ public class AuthService {
     }
 
     @Transactional
-    public AuthResponse register(RegisterRequest request) {
-        if (users.existsByUsername(request.username())) {
+    public UserAccount createUser(String username, String rawPassword, String nickname, String role) {
+        if (users.existsByUsername(username)) {
             throw new BusinessException(409, "用户名已存在");
         }
         UserAccount user = new UserAccount(
-                request.username(),
-                passwordEncoder.encode(request.password()),
-                request.nickname(),
-                "DEVELOPER"
+                username,
+                passwordEncoder.encode(rawPassword),
+                nickname,
+                role == null || role.isBlank() ? "DEVELOPER" : role
         );
-        users.save(user);
-        return toAuthResponse(user);
+        return users.save(user);
     }
 
     public AuthResponse login(LoginRequest request) {

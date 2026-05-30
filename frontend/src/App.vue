@@ -19,9 +19,8 @@
         <button @click="run(login)" :disabled="busy.auth">
           <span v-if="busy.auth" class="spinner"></span>登录
         </button>
-        <button class="secondary" @click="run(register)" :disabled="busy.auth">注册并登录</button>
       </div>
-      <p class="hint">提示：开发环境默认 Mock AI，无需配置大模型 Key 即可体验全流程。</p>
+      <p class="hint">账号由管理员分配，如需账号请联系管理员。</p>
     </div>
     <transition name="t"><div v-if="toast.text" class="toast" :class="toast.type">{{ toast.text }}</div></transition>
   </div>
@@ -553,14 +552,6 @@ async function login() {
   busy.auth = true
   try {
     const data = await api('/auth/login', { method: 'POST', body: JSON.stringify(auth) })
-    setToken(data.token); token.value = data.token
-    await afterLogin()
-  } finally { busy.auth = false }
-}
-async function register() {
-  busy.auth = true
-  try {
-    const data = await api('/auth/register', { method: 'POST', body: JSON.stringify(auth) })
     setToken(data.token); token.value = data.token
     await afterLogin()
   } finally { busy.auth = false }

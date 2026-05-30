@@ -18,6 +18,11 @@ app:
     token-secret: ${JWT_SECRET:dev-secret-change-me}
     token-ttl-seconds: ${TOKEN_TTL_SECONDS:86400}
     token-encrypt-key: ${TOKEN_ENCRYPT_KEY:dev-token-encryption-key-change-me}
+    seed-admin:
+      username: ${SEED_ADMIN_USERNAME:}
+      password: ${SEED_ADMIN_PASSWORD:}
+      nickname: ${SEED_ADMIN_NICKNAME:管理员}
+      role: ${SEED_ADMIN_ROLE:ADMIN}
   http:
     connect-timeout-ms: ${HTTP_CONNECT_TIMEOUT_MS:10000}
     read-timeout-ms: ${HTTP_READ_TIMEOUT_MS:60000}

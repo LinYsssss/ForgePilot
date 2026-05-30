@@ -3,7 +3,6 @@ package com.example.codereview.auth;
 import com.example.codereview.auth.AuthDtos.AuthResponse;
 import com.example.codereview.auth.AuthDtos.LoginRequest;
 import com.example.codereview.auth.AuthDtos.MeResponse;
-import com.example.codereview.auth.AuthDtos.RegisterRequest;
 import com.example.codereview.common.api.ApiResponse;
 import com.example.codereview.common.security.CurrentUserProvider;
 import jakarta.validation.Valid;
@@ -23,11 +22,6 @@ public class AuthController {
     public AuthController(AuthService authService, CurrentUserProvider currentUserProvider) {
         this.authService = authService;
         this.currentUserProvider = currentUserProvider;
-    }
-
-    @PostMapping("/register")
-    public ApiResponse<AuthResponse> register(@Valid @RequestBody RegisterRequest request) {
-        return ApiResponse.ok(authService.register(request));
     }
 
     @PostMapping("/login")
