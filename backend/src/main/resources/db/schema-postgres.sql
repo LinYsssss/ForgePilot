@@ -175,6 +175,18 @@ create index if not exists idx_review_task_unique_lookup
     on review_task(project_id, repository_id, commit_id, base_commit_id, branch_name);
 create index if not exists idx_review_report_project on review_report(project_id);
 create index if not exists idx_review_issue_report on review_issue(report_id);
+-- feedback.updated_at was added after initial release; backfill for existing tables
+alter table feedback add column if not exists updated_at timestamp(6) with time zone;
+update feedback set updated_at = created_at where updated_at is null;
+alter table feedback alter column updated_at set not null;
+
+-- one verdict per user per issue: drop accidental duplicates before enforcing uniqueness
+delete from feedback f
+using feedback dup
+where f.issue_id = dup.issue_id
+  and f.user_id = dup.user_id
+  and f.id < dup.id;
+
 create index if not exists idx_feedback_issue on feedback(issue_id);
 create unique index if not exists uq_feedback_issue_user on feedback(issue_id, user_id);
 create index if not exists idx_mq_task_log_task on mq_task_log(task_id);
