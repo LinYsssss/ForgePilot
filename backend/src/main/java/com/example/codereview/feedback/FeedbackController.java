@@ -6,6 +6,7 @@ import com.example.codereview.feedback.FeedbackDtos.FeedbackRequest;
 import com.example.codereview.feedback.FeedbackDtos.FeedbackResponse;
 import jakarta.validation.Valid;
 import java.util.List;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -33,5 +34,11 @@ public class FeedbackController {
     @GetMapping
     public ApiResponse<List<FeedbackResponse>> list(@PathVariable Long issueId) {
         return ApiResponse.ok(feedbackService.list(issueId, currentUserProvider.getRequired().userId()));
+    }
+
+    @DeleteMapping
+    public ApiResponse<Void> delete(@PathVariable Long issueId) {
+        feedbackService.delete(issueId, currentUserProvider.getRequired().userId());
+        return ApiResponse.ok();
     }
 }

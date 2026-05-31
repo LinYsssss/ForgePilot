@@ -1,12 +1,16 @@
 package com.example.codereview.review;
 
 import com.example.codereview.common.exception.BusinessException;
+import com.example.codereview.ai.AiCallLogRepository;
+import com.example.codereview.feedback.FeedbackRepository;
+import com.example.codereview.mq.MqTaskLogRepository;
 import com.example.codereview.mq.ReviewTaskMessage;
 import com.example.codereview.mq.ReviewTaskPublisher;
 import com.example.codereview.repo.CodeRepositoryEntity;
 import com.example.codereview.repo.RepositoryDtos.CommitDiffResponse;
 import com.example.codereview.repo.RepositoryDtos.CommitResponse;
 import com.example.codereview.repo.RepositoryService;
+import com.example.codereview.report.ReviewIssue;
 import com.example.codereview.report.ReviewIssueRepository;
 import com.example.codereview.report.ReviewReport;
 import com.example.codereview.report.ReviewReportRepository;
@@ -18,6 +22,7 @@ import com.example.codereview.review.ReviewDtos.ReviewTaskResponse;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class ReviewService {
@@ -28,11 +33,15 @@ public class ReviewService {
     private final ReviewIssueRepository issues;
     private final ReviewProcessor processor;
     private final ReviewTaskPublisher publisher;
+    private final FeedbackRepository feedback;
+    private final MqTaskLogRepository mqLogs;
+    private final AiCallLogRepository aiCallLogs;
     private final boolean inline;
     private final int maxDiffChars;
 
     public ReviewService(RepositoryService repositoryService, ReviewTaskRepository tasks, ReviewReportRepository reports,
                          ReviewIssueRepository issues, ReviewProcessor processor, ReviewTaskPublisher publisher,
+                         FeedbackRepository feedback, MqTaskLogRepository mqLogs, AiCallLogRepository aiCallLogs,
                          @Value("${app.review.inline}") boolean inline,
                          @Value("${app.review.max-diff-chars}") int maxDiffChars) {
         this.repositoryService = repositoryService;
@@ -41,6 +50,9 @@ public class ReviewService {
         this.issues = issues;
         this.processor = processor;
         this.publisher = publisher;
+        this.feedback = feedback;
+        this.mqLogs = mqLogs;
+        this.aiCallLogs = aiCallLogs;
         this.inline = inline;
         this.maxDiffChars = maxDiffChars;
     }
@@ -101,6 +113,58 @@ public class ReviewService {
             throw new BusinessException(403, "无权访问该任务");
         }
         return ReviewTaskResponse.from(task);
+    }
+
+    @Transactional
+    public ReviewTaskResponse cancelTask(Long projectId, Long userId, Long taskId) {
+        repositoryService.getRequired(projectId, userId);
+        ReviewTask task = requireTask(projectId, taskId);
+        if (task.isTerminal()) {
+            throw new BusinessException(6003, "任务已结束，无法停止");
+        }
+        task.markCanceled();
+        tasks.save(task);
+        return ReviewTaskResponse.from(task);
+    }
+
+    @Transactional
+    public void deleteTask(Long projectId, Long userId, Long taskId) {
+        repositoryService.getRequired(projectId, userId);
+        ReviewTask task = requireTask(projectId, taskId);
+        reports.findByTaskId(taskId).ifPresent(report -> purgeReport(report));
+        aiCallLogs.deleteByTaskId(taskId);
+        mqLogs.deleteByTaskId(taskId);
+        tasks.delete(task);
+    }
+
+    @Transactional
+    public void deleteReport(Long projectId, Long userId, Long reportId) {
+        repositoryService.getRequired(projectId, userId);
+        ReviewReport report = reports.findById(reportId)
+                .orElseThrow(() -> new BusinessException(404, "审查报告不存在"));
+        if (!report.getProjectId().equals(projectId)) {
+            throw new BusinessException(403, "无权访问该报告");
+        }
+        purgeReport(report);
+    }
+
+    private void purgeReport(ReviewReport report) {
+        List<Long> issueIds = issues.findByReportId(report.getId())
+                .stream().map(ReviewIssue::getId).toList();
+        if (!issueIds.isEmpty()) {
+            feedback.deleteByIssueIdIn(issueIds);
+        }
+        issues.deleteByReportIdIn(List.of(report.getId()));
+        reports.delete(report);
+    }
+
+    private ReviewTask requireTask(Long projectId, Long taskId) {
+        ReviewTask task = tasks.findById(taskId)
+                .orElseThrow(() -> new BusinessException(6002, "审查任务不存在"));
+        if (!task.getProjectId().equals(projectId)) {
+            throw new BusinessException(403, "无权访问该任务");
+        }
+        return task;
     }
 
     public List<ReviewReportSummary> reports(Long projectId, Long userId) {

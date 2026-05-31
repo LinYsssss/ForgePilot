@@ -13,4 +13,6 @@ public interface AiCallLogRepository extends JpaRepository<AiCallLog, Long> {
     List<AiCallLog> findByProjectIdAndTaskIdOrderByCreatedAtDesc(Long projectId, Long taskId, Pageable pageable);
 
     void deleteByProjectId(Long projectId);
+
+    void deleteByTaskId(Long taskId);
 }

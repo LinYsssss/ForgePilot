@@ -19,18 +19,24 @@ public final class FeedbackDtos {
             Long feedbackId,
             Long issueId,
             Long userId,
+            String username,
             String feedbackType,
             String comment,
-            Instant createdAt
+            boolean mine,
+            Instant createdAt,
+            Instant updatedAt
     ) {
-        public static FeedbackResponse from(Feedback feedback) {
+        public static FeedbackResponse from(Feedback feedback, String username, Long currentUserId) {
             return new FeedbackResponse(
                     feedback.getId(),
                     feedback.getIssueId(),
                     feedback.getUserId(),
+                    username,
                     feedback.getFeedbackType(),
                     feedback.getComment(),
-                    feedback.getCreatedAt()
+                    feedback.getUserId().equals(currentUserId),
+                    feedback.getCreatedAt(),
+                    feedback.getUpdatedAt()
             );
         }
     }

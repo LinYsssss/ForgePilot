@@ -7,6 +7,7 @@ import com.example.codereview.review.ReviewDtos.ReviewReportDetail;
 import com.example.codereview.review.ReviewDtos.ReviewReportSummary;
 import com.example.codereview.review.ReviewDtos.ReviewTaskResponse;
 import java.util.List;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -41,6 +42,17 @@ public class ReviewController {
         return ApiResponse.ok(reviewService.taskDetail(projectId, currentUserProvider.getRequired().userId(), taskId));
     }
 
+    @PostMapping("/tasks/{taskId}/cancel")
+    public ApiResponse<ReviewTaskResponse> cancelTask(@PathVariable Long projectId, @PathVariable Long taskId) {
+        return ApiResponse.ok(reviewService.cancelTask(projectId, currentUserProvider.getRequired().userId(), taskId));
+    }
+
+    @DeleteMapping("/tasks/{taskId}")
+    public ApiResponse<Void> deleteTask(@PathVariable Long projectId, @PathVariable Long taskId) {
+        reviewService.deleteTask(projectId, currentUserProvider.getRequired().userId(), taskId);
+        return ApiResponse.ok();
+    }
+
     @GetMapping("/reports")
     public ApiResponse<List<ReviewReportSummary>> reports(@PathVariable Long projectId) {
         return ApiResponse.ok(reviewService.reports(projectId, currentUserProvider.getRequired().userId()));
@@ -49,5 +61,11 @@ public class ReviewController {
     @GetMapping("/reports/{reportId}")
     public ApiResponse<ReviewReportDetail> reportDetail(@PathVariable Long projectId, @PathVariable Long reportId) {
         return ApiResponse.ok(reviewService.reportDetail(projectId, currentUserProvider.getRequired().userId(), reportId));
+    }
+
+    @DeleteMapping("/reports/{reportId}")
+    public ApiResponse<Void> deleteReport(@PathVariable Long projectId, @PathVariable Long reportId) {
+        reviewService.deleteReport(projectId, currentUserProvider.getRequired().userId(), reportId);
+        return ApiResponse.ok();
     }
 }

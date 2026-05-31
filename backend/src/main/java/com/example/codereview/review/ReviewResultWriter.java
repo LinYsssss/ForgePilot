@@ -26,6 +26,9 @@ public class ReviewResultWriter {
     public void saveSuccess(Long taskId, AiReviewResult result) {
         ReviewTask task = tasks.findById(taskId)
                 .orElseThrow(() -> new BusinessException(6002, "审查任务不存在"));
+        if (task.isCanceled()) {
+            return;
+        }
         ReviewReport report = new ReviewReport(
                 task.getId(),
                 task.getProjectId(),

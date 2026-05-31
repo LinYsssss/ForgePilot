@@ -26,6 +26,9 @@ public class Feedback {
     @Column(nullable = false)
     private Instant createdAt;
 
+    @Column(nullable = false)
+    private Instant updatedAt;
+
     protected Feedback() {
     }
 
@@ -35,6 +38,13 @@ public class Feedback {
         this.feedbackType = feedbackType;
         this.comment = comment;
         this.createdAt = Instant.now();
+        this.updatedAt = this.createdAt;
+    }
+
+    public void update(String feedbackType, String comment) {
+        this.feedbackType = feedbackType;
+        this.comment = comment;
+        this.updatedAt = Instant.now();
     }
 
     public Long getId() {
@@ -59,5 +69,9 @@ public class Feedback {
 
     public Instant getCreatedAt() {
         return createdAt;
+    }
+
+    public Instant getUpdatedAt() {
+        return updatedAt;
     }
 }

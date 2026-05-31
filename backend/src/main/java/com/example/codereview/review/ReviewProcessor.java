@@ -39,7 +39,7 @@ public class ReviewProcessor {
     public void process(Long taskId) {
         ReviewTask task = tasks.findById(taskId)
                 .orElseThrow(() -> new BusinessException(6002, "审查任务不存在"));
-        if ("SUCCESS".equals(task.getStatus())) {
+        if (task.isTerminal()) {
             return;
         }
         try {

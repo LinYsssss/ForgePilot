@@ -32,6 +32,11 @@ public class ReviewTaskStatusService {
         task.markDead(error);
     }
 
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public boolean isCanceled(Long taskId) {
+        return getTask(taskId).isCanceled();
+    }
+
     private ReviewTask getTask(Long taskId) {
         return tasks.findById(taskId)
                 .orElseThrow(() -> new BusinessException(6002, "审查任务不存在"));

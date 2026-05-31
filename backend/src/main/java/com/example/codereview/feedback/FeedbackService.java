@@ -1,5 +1,7 @@
 package com.example.codereview.feedback;
 
+import com.example.codereview.auth.UserAccount;
+import com.example.codereview.auth.UserAccountRepository;
 import com.example.codereview.common.exception.BusinessException;
 import com.example.codereview.feedback.FeedbackDtos.FeedbackRequest;
 import com.example.codereview.feedback.FeedbackDtos.FeedbackResponse;
@@ -8,7 +10,9 @@ import com.example.codereview.report.ReviewIssue;
 import com.example.codereview.report.ReviewIssueRepository;
 import com.example.codereview.report.ReviewReport;
 import com.example.codereview.report.ReviewReportRepository;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,13 +26,16 @@ public class FeedbackService {
     private final ReviewIssueRepository issues;
     private final ReviewReportRepository reports;
     private final ProjectService projectService;
+    private final UserAccountRepository users;
 
     public FeedbackService(FeedbackRepository feedbackRepository, ReviewIssueRepository issues,
-                           ReviewReportRepository reports, ProjectService projectService) {
+                           ReviewReportRepository reports, ProjectService projectService,
+                           UserAccountRepository users) {
         this.feedbackRepository = feedbackRepository;
         this.issues = issues;
         this.reports = reports;
         this.projectService = projectService;
+        this.users = users;
     }
 
     @Transactional
@@ -37,17 +44,44 @@ public class FeedbackService {
         if (!ALLOWED_TYPES.contains(request.feedbackType())) {
             throw new BusinessException(400, "反馈类型不合法");
         }
-        Feedback feedback = new Feedback(issueId, userId, request.feedbackType(), request.comment());
+        Feedback feedback = feedbackRepository.findByIssueIdAndUserId(issueId, userId)
+                .map(existing -> {
+                    existing.update(request.feedbackType(), request.comment());
+                    return existing;
+                })
+                .orElseGet(() -> new Feedback(issueId, userId, request.feedbackType(), request.comment()));
         feedbackRepository.save(feedback);
-        return FeedbackResponse.from(feedback);
+        return FeedbackResponse.from(feedback, displayName(userId), userId);
     }
 
+    @Transactional
+    public void delete(Long issueId, Long userId) {
+        requireAccessibleIssue(issueId, userId);
+        Feedback feedback = feedbackRepository.findByIssueIdAndUserId(issueId, userId)
+                .orElseThrow(() -> new BusinessException(404, "你还没有提交过反馈"));
+        feedbackRepository.delete(feedback);
+    }
+
+    @Transactional(readOnly = true)
     public List<FeedbackResponse> list(Long issueId, Long userId) {
         requireAccessibleIssue(issueId, userId);
-        return feedbackRepository.findByIssueIdOrderByCreatedAtDesc(issueId)
-                .stream()
-                .map(FeedbackResponse::from)
+        List<Feedback> all = feedbackRepository.findByIssueIdOrderByCreatedAtDesc(issueId);
+        Map<Long, String> nameCache = new HashMap<>();
+        return all.stream()
+                .map(fb -> FeedbackResponse.from(
+                        fb,
+                        nameCache.computeIfAbsent(fb.getUserId(), this::displayName),
+                        userId))
                 .toList();
+    }
+
+    private String displayName(Long userId) {
+        return users.findById(userId)
+                .map(user -> {
+                    String nickname = user.getNickname();
+                    return nickname == null || nickname.isBlank() ? user.getUsername() : nickname;
+                })
+                .orElse("用户#" + userId);
     }
 
     private void requireAccessibleIssue(Long issueId, Long userId) {

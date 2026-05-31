@@ -171,4 +171,18 @@ public class ReviewTask {
         this.finishedAt = Instant.now();
         this.updatedAt = this.finishedAt;
     }
+
+    public void markCanceled() {
+        this.status = "CANCELED";
+        this.finishedAt = Instant.now();
+        this.updatedAt = this.finishedAt;
+    }
+
+    public boolean isCanceled() {
+        return "CANCELED".equals(this.status);
+    }
+
+    public boolean isTerminal() {
+        return "SUCCESS".equals(this.status) || "DEAD".equals(this.status) || "CANCELED".equals(this.status);
+    }
 }

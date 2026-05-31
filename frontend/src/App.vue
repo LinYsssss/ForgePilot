@@ -9,20 +9,20 @@
       <p class="auth-sub">AI 代码仓库智能审查平台</p>
       <div class="grid">
         <label class="field">用户名
-          <input v-model="auth.username" placeholder="developer" @keyup.enter="run(login)" />
+          <input v-model="auth.username" placeholder="developer" autocomplete="username" @keyup.enter="login" />
         </label>
         <label class="field">密码
-          <input v-model="auth.password" type="password" placeholder="至少 6 位" @keyup.enter="run(login)" />
+          <input v-model="auth.password" type="password" placeholder="至少 6 位" autocomplete="current-password" @keyup.enter="login" />
         </label>
       </div>
       <div class="actions">
-        <button @click="run(login)" :disabled="busy.auth">
+        <button @click="login" :disabled="busy.auth">
           <span v-if="busy.auth" class="spinner"></span>登录
         </button>
       </div>
       <p class="hint">账号由管理员分配，如需账号请联系管理员。</p>
     </div>
-    <transition name="t"><div v-if="toast.text" class="toast" :class="toast.type">{{ toast.text }}</div></transition>
+    <transition name="t"><div v-if="toast.text" class="toast" :class="toast.type" role="status">{{ toast.text }}</div></transition>
   </div>
 
   <!-- ===================== APP ===================== -->
@@ -36,24 +36,24 @@
         </div>
       </div>
 
-      <nav>
+      <nav aria-label="主导航">
         <button :class="{ active: tab === 'dashboard' }" @click="tab = 'dashboard'">
-          <span class="nav-ico">▦</span> 概览
+          <span class="nav-ico" aria-hidden="true">▦</span> 概览
         </button>
         <button :class="{ active: tab === 'projects' }" @click="tab = 'projects'">
-          <span class="nav-ico">▤</span> 项目
+          <span class="nav-ico" aria-hidden="true">▤</span> 项目
         </button>
         <button :class="{ active: tab === 'repository' }" @click="goTab('repository')" :disabled="!activeProject">
-          <span class="nav-ico">⎇</span> 仓库
+          <span class="nav-ico" aria-hidden="true">⎇</span> 仓库
         </button>
         <button :class="{ active: tab === 'knowledge' }" @click="goTab('knowledge')" :disabled="!activeProject">
-          <span class="nav-ico">▣</span> 知识库
+          <span class="nav-ico" aria-hidden="true">▣</span> 知识库
         </button>
         <button :class="{ active: tab === 'reviews' }" @click="goTab('reviews')" :disabled="!activeProject">
-          <span class="nav-ico">✓</span> 审查
+          <span class="nav-ico" aria-hidden="true">✓</span> 审查
         </button>
         <button :class="{ active: tab === 'aiLogs' }" @click="openProjectAiLogs" :disabled="!activeProject">
-          <span class="nav-ico">◷</span> AI 日志
+          <span class="nav-ico" aria-hidden="true">◷</span> AI 日志
         </button>
       </nav>
 
@@ -61,7 +61,7 @@
         <div class="user-chip">
           <div class="avatar">{{ (me.nickname || me.username || 'U').slice(0,1).toUpperCase() }}</div>
           <div>
-            <div>{{ me.nickname || me.username }}</div>
+            <div class="uname">{{ me.nickname || me.username }}</div>
             <div class="tagline">{{ me.role }}</div>
           </div>
         </div>
@@ -73,9 +73,12 @@
       <header class="topbar">
         <div class="crumb">
           <strong>{{ tabTitle }}</strong>
-          <span v-if="activeProject" class="muted">/ {{ activeProject.name }} · 默认分支 {{ activeProject.defaultBranch }}</span>
+          <span v-if="activeProject" class="muted">/ {{ activeProject.name }} · 默认分支 <span class="mono">{{ activeProject.defaultBranch }}</span></span>
         </div>
         <div class="topbar-actions">
+          <button class="theme-toggle" :title="theme === 'dark' ? '切换到浅色模式' : '切换到深色模式'" :aria-label="theme === 'dark' ? '切换到浅色模式' : '切换到深色模式'" @click="toggleTheme">
+            {{ theme === 'dark' ? '☀' : '☾' }}
+          </button>
           <button class="secondary" @click="run(refreshAll)" :disabled="busy.refresh">
             <span v-if="busy.refresh" class="spinner dark"></span>刷新
           </button>
@@ -85,10 +88,11 @@
       <!-- ============ DASHBOARD ============ -->
       <template v-if="tab === 'dashboard'">
         <div class="stat-grid">
-          <div class="stat"><div class="label">项目总数</div><div class="value">{{ projects.length }}</div></div>
-          <div class="stat"><div class="label">审查任务</div><div class="value">{{ tasks.length }}</div></div>
-          <div class="stat"><div class="label">审查报告</div><div class="value">{{ reports.length }}</div></div>
+          <div class="stat"><span class="spark" aria-hidden="true">▤</span><div class="label">项目总数</div><div class="value">{{ projects.length }}</div></div>
+          <div class="stat"><span class="spark" aria-hidden="true">✓</span><div class="label">审查任务</div><div class="value">{{ tasks.length }}</div></div>
+          <div class="stat"><span class="spark" aria-hidden="true">▦</span><div class="label">审查报告</div><div class="value">{{ reports.length }}</div></div>
           <div class="stat">
+            <span class="spark" aria-hidden="true">⚠</span>
             <div class="label">高风险报告</div>
             <div class="value" :class="highRiskCount ? 'tinted-high' : 'tinted-ok'">{{ highRiskCount }}</div>
           </div>
@@ -99,12 +103,12 @@
             <div><h2>最近审查报告</h2><div class="sub">{{ activeProject ? activeProject.name : '请选择项目' }}</div></div>
             <button class="sm secondary" @click="goTab('reviews')" :disabled="!activeProject">前往审查 →</button>
           </div>
-          <div v-if="!activeProject" class="empty"><div class="ico">▤</div><p>还没有选择项目</p><p>去“项目”页创建或选择一个项目。</p></div>
-          <div v-else-if="!reports.length" class="empty"><div class="ico">✓</div><p>暂无审查报告</p><p>绑定仓库并触发一次代码审查吧。</p></div>
+          <div v-if="!activeProject" class="empty"><div class="ico" aria-hidden="true">▤</div><p>还没有选择项目</p><p>去“项目”页创建或选择一个项目。</p></div>
+          <div v-else-if="!reports.length" class="empty"><div class="ico" aria-hidden="true">✓</div><p>暂无审查报告</p><p>绑定仓库并触发一次代码审查吧。</p></div>
           <div v-else class="list">
             <button v-for="r in reports.slice(0,6)" :key="r.reportId" class="list-row row-reports" @click="openReport(r.reportId)">
               <span class="mono">#{{ r.reportId }}</span>
-              <span class="grow">{{ shortCommit(r.commitId) }} · {{ fmtTime(r.createdAt) }}</span>
+              <span class="grow"><span class="mono">{{ shortCommit(r.commitId) }}</span> · {{ fmtTime(r.createdAt) }}</span>
               <span class="badge" :class="'risk-' + r.overallRisk">{{ r.overallRisk }}</span>
               <span class="mono">{{ r.issueCount }} 问题</span>
             </button>
@@ -133,10 +137,10 @@
 
         <div class="panel">
           <div class="panel-head"><div><h2>我的项目</h2><div class="sub">共 {{ projects.length }} 个</div></div></div>
-          <div v-if="busy.projects" class="loading-overlay"><span class="spinner dark"></span> 加载中…</div>
-          <div v-else-if="!projects.length" class="empty"><div class="ico">▤</div><p>还没有项目</p><p>在上方创建你的第一个项目。</p></div>
+          <div v-if="busy.projects" class="skeleton"><div class="sk-row" v-for="n in 3" :key="n"></div></div>
+          <div v-else-if="!projects.length" class="empty"><div class="ico" aria-hidden="true">▤</div><p>还没有项目</p><p>在上方创建你的第一个项目。</p></div>
           <div v-else class="proj-grid">
-            <div v-for="p in projects" :key="p.projectId" class="proj-card" :class="{ active: activeProject && activeProject.projectId === p.projectId }" @click="selectProject(p)">
+            <div v-for="p in projects" :key="p.projectId" class="proj-card" :class="{ active: activeProject && activeProject.projectId === p.projectId }" tabindex="0" @click="selectProject(p)" @keyup.enter="selectProject(p)">
               <div class="meta">
                 <span class="status-pill" :class="'st-' + p.status">{{ p.status }}</span>
                 <div class="card-actions">
@@ -147,8 +151,8 @@
               <h3>{{ p.name }}</h3>
               <div class="desc">{{ p.description || '暂无描述' }}</div>
               <div class="meta">
-                <span class="mono" style="color:var(--text-dim);font-size:12.5px">⎇ {{ p.defaultBranch }}</span>
-                <span style="color:var(--text-dim);font-size:12px">{{ fmtDate(p.createdAt) }}</span>
+                <span class="mono">⎇ {{ p.defaultBranch }}</span>
+                <span class="when">{{ fmtDate(p.createdAt) }}</span>
               </div>
             </div>
           </div>
@@ -175,7 +179,7 @@
             </label>
             <label class="field">默认分支<input v-model="repoForm.defaultBranch" placeholder="main" /></label>
           </div>
-          <label class="field" v-if="needsToken" style="margin-top:14px">
+          <label class="field" v-if="needsToken" style="margin-top:16px">
             访问令牌 (私有仓库需要，加密存储，不回显)
             <input v-model="repoForm.accessToken" type="password" placeholder="ghp_… / glpat-…" />
           </label>
@@ -195,15 +199,15 @@
         <div class="panel">
           <div class="panel-head">
             <div><h2>提交历史</h2><div class="sub">点击某次提交查看变更明细</div></div>
-            <span v-if="selectedCommit" class="badge plain risk-NONE">已选 {{ shortCommit(selectedCommit.commitId) }}</span>
+            <span v-if="selectedCommit" class="badge plain">已选 {{ shortCommit(selectedCommit.commitId) }}</span>
           </div>
-          <div v-if="busy.commits" class="loading-overlay"><span class="spinner dark"></span> 拉取提交中…</div>
-          <div v-else-if="!commits.length" class="empty"><div class="ico">⎇</div><p>暂无提交</p><p>先绑定仓库并点击“加载 Commit”。</p></div>
+          <div v-if="busy.commits" class="skeleton"><div class="sk-row" v-for="n in 4" :key="n"></div></div>
+          <div v-else-if="!commits.length" class="empty"><div class="ico" aria-hidden="true">⎇</div><p>暂无提交</p><p>先绑定仓库并点击“加载 Commit”。</p></div>
           <div v-else class="list">
             <button v-for="c in commits" :key="c.commitId" class="list-row row-commits" :class="{ selected: selectedCommit && selectedCommit.commitId === c.commitId }" @click="selectCommit(c)">
               <span class="mono">{{ shortCommit(c.commitId) }}</span>
               <span class="grow">{{ c.message }}</span>
-              <span style="color:var(--text-dim);font-size:12px">{{ c.authorName }}</span>
+              <span class="mono">{{ c.authorName }}</span>
             </button>
           </div>
 
@@ -214,7 +218,7 @@
               </button>
               <button class="sm" @click="reviewSelectedCommit">对该提交发起审查 →</button>
             </div>
-            <div v-if="diffFiles.length" >
+            <div v-if="diffFiles.length">
               <div v-for="f in diffFiles" :key="f.filePath" class="diff-wrap">
                 <div class="diff-file-head">
                   <span class="fname">{{ f.filePath }}</span>
@@ -252,12 +256,12 @@
 
         <div class="panel">
           <div class="panel-head"><div><h2>已入库文档</h2><div class="sub">共 {{ documents.length }} 篇</div></div></div>
-          <div v-if="!documents.length" class="empty"><div class="ico">▣</div><p>知识库为空</p><p>上传业务流程或安全规范文档。</p></div>
+          <div v-if="!documents.length" class="empty"><div class="ico" aria-hidden="true">▣</div><p>知识库为空</p><p>上传业务流程或安全规范文档。</p></div>
           <div v-else class="doc-grid">
             <div v-for="d in documents" :key="d.documentId" class="doc-card">
               <div class="doc-name">📄 {{ d.fileName }}</div>
               <div class="doc-foot">
-                <span class="badge plain risk-NONE">{{ d.docType }}</span>
+                <span class="badge plain">{{ d.docType }}</span>
                 <span class="status-pill" :class="'st-' + d.status">{{ d.status }}</span>
               </div>
               <button class="danger sm" @click="run(() => deleteDocument(d.documentId))">删除</button>
@@ -282,7 +286,7 @@
               <div class="match-body">{{ m.content }}</div>
             </div>
           </div>
-          <div v-else-if="searched" class="empty"><div class="ico">🔍</div><p>未检索到相关内容</p></div>
+          <div v-else-if="searched" class="empty"><div class="ico" aria-hidden="true">🔍</div><p>未检索到相关内容</p></div>
         </div>
       </template>
 
@@ -312,7 +316,7 @@
               <label v-for="d in documents" :key="d.documentId" class="kb-chip" :class="{ on: chosenDocs.has(d.documentId) }">
                 <input type="checkbox" :checked="chosenDocs.has(d.documentId)" @change="toggleDoc(d.documentId)" />
                 <span class="kb-name">📄 {{ d.fileName }}</span>
-                <span class="badge plain risk-NONE">{{ d.docType }}</span>
+                <span class="badge plain">{{ d.docType }}</span>
               </label>
             </div>
             <p class="hint">已选 {{ chosenDocs.size }} / {{ documents.length }} 篇。不选 = 使用全部知识库。</p>
@@ -329,33 +333,40 @@
         <div class="split">
           <div class="panel">
             <div class="panel-head"><div><h2>审查任务</h2><div class="sub">{{ tasks.length }} 条</div></div></div>
-            <div v-if="!tasks.length" class="empty"><div class="ico">✓</div><p>暂无任务</p></div>
+            <div v-if="!tasks.length" class="empty"><div class="ico" aria-hidden="true">✓</div><p>暂无任务</p></div>
             <div v-else class="list">
-              <button v-for="t in tasks" :key="t.taskId" class="list-row row-tasks" :class="{ selected: activeTask && activeTask.taskId === t.taskId }" @click="selectTask(t)">
+              <div v-for="t in tasks" :key="t.taskId" class="list-row row-tasks" :class="{ selected: activeTask && activeTask.taskId === t.taskId }" @click="selectTask(t)">
                 <span class="mono">#{{ t.taskId }}</span>
                 <span class="grow mono">{{ shortCommit(t.commitId) }}</span>
-                <span class="status-pill" :class="'st-' + t.status">{{ t.status }}</span>
-              </button>
+                <span class="status-pill" :class="'st-' + t.status">{{ statusLabel(t.status) }}</span>
+                <span class="row-actions">
+                  <button v-if="t.status === 'PENDING' || t.status === 'RUNNING'" class="warn sm" title="停止任务" @click.stop="run(() => cancelTask(t))">停止</button>
+                  <button class="danger sm" title="删除任务" @click.stop="askDeleteTask(t)">删除</button>
+                </span>
+              </div>
             </div>
           </div>
           <div class="panel">
             <div class="panel-head"><div><h2>审查报告</h2><div class="sub">{{ reports.length }} 条</div></div></div>
-            <div v-if="!reports.length" class="empty"><div class="ico">▦</div><p>暂无报告</p></div>
+            <div v-if="!reports.length" class="empty"><div class="ico" aria-hidden="true">▦</div><p>暂无报告</p></div>
             <div v-else class="list">
-              <button v-for="r in reports" :key="r.reportId" class="list-row row-reports" :class="{ selected: reportDetail && reportDetail.reportId === r.reportId }" @click="openReport(r.reportId)">
+              <div v-for="r in reports" :key="r.reportId" class="list-row row-reports" :class="{ selected: reportDetail && reportDetail.reportId === r.reportId }" @click="openReport(r.reportId)">
                 <span class="mono">#{{ r.reportId }}</span>
                 <span class="grow">{{ r.issueCount }} 个问题</span>
                 <span class="badge" :class="'risk-' + r.overallRisk">{{ r.overallRisk }}</span>
-                <span style="color:var(--text-dim);font-size:12px">{{ fmtTime(r.createdAt) }}</span>
-              </button>
+                <span class="row-actions">
+                  <button class="danger sm" title="删除报告" @click.stop="askDeleteReport(r)">删除</button>
+                </span>
+              </div>
             </div>
           </div>
         </div>
 
         <div class="panel" v-if="activeTask">
           <div class="panel-head">
-            <div><h2>任务 #{{ activeTask.taskId }} 详情</h2><div class="sub">{{ activeTask.status }} · {{ shortCommit(activeTask.commitId) }}</div></div>
-            <div class="topbar-actions">
+            <div><h2>任务 #{{ activeTask.taskId }} 详情</h2><div class="sub">{{ statusLabel(activeTask.status) }} · <span class="mono">{{ shortCommit(activeTask.commitId) }}</span></div></div>
+            <div class="head-actions">
+              <button v-if="activeTask.status === 'PENDING' || activeTask.status === 'RUNNING'" class="sm warn" @click="run(() => cancelTask(activeTask))">停止任务</button>
               <button class="sm secondary" @click="run(() => loadMqLogs(activeTask.taskId))">MQ 日志</button>
               <button class="sm secondary" @click="run(() => openTaskAiLogs(activeTask.taskId))">AI 日志</button>
             </div>
@@ -365,21 +376,35 @@
             <div v-for="(l, i) in mqLogs" :key="i" class="list-row" style="grid-template-columns: 110px 1fr auto; cursor:default">
               <span class="status-pill" :class="'st-' + mqStatusClass(l.status)">{{ l.status }}</span>
               <span class="grow mono">{{ l.routingKey }}</span>
-              <span style="color:var(--text-dim);font-size:12px">重试 {{ l.retryCount }}</span>
+              <span class="mono">重试 {{ l.retryCount }}</span>
             </div>
           </div>
         </div>
 
         <div class="panel" v-if="reportDetail">
           <div class="panel-head">
-            <div><h2>{{ reportDetail.summary }}</h2><div class="sub">报告 #{{ reportDetail.reportId }} · {{ shortCommit(reportDetail.commitId) }}</div></div>
-            <span class="badge" :class="'risk-' + reportDetail.overallRisk">总体风险 {{ reportDetail.overallRisk }}</span>
+            <div><h2>审查报告 #{{ reportDetail.reportId }}</h2><div class="sub"><span class="mono">{{ shortCommit(reportDetail.commitId) }}</span> · {{ fmtTime(reportDetail.createdAt) }}</div></div>
+            <button class="sm danger" @click="askDeleteReport(reportDetail)">删除报告</button>
           </div>
-          <div v-if="!reportDetail.issues.length" class="empty"><div class="ico">✓</div><p>未发现明显风险</p></div>
-          <div v-for="issue in reportDetail.issues" :key="issue.issueId" class="issue" :class="'sevbar-' + issue.severity">
+
+          <div class="report-summary">
+            <div class="risk-dial" :class="'r-' + reportDetail.overallRisk">{{ reportDetail.overallRisk }}</div>
+            <div class="rs-body">
+              <h3>{{ reportDetail.summary || '审查完成' }}</h3>
+              <div class="rs-meta">
+                <span class="sev-tally risk-NONE">共 {{ reportDetail.issues.length }} 问题</span>
+                <span v-if="severityTally.HIGH" class="sev-tally risk-HIGH">{{ severityTally.HIGH }} 高危</span>
+                <span v-if="severityTally.MEDIUM" class="sev-tally risk-MEDIUM">{{ severityTally.MEDIUM }} 中危</span>
+                <span v-if="severityTally.LOW" class="sev-tally risk-LOW">{{ severityTally.LOW }} 低危</span>
+              </div>
+            </div>
+          </div>
+
+          <div v-if="!reportDetail.issues.length" class="empty"><div class="ico" aria-hidden="true">✓</div><p>未发现明显风险</p></div>
+          <div v-for="issue in sortedIssues" :key="issue.issueId" class="issue" :class="'sevbar-' + issue.severity">
             <div class="issue-head">
               <span class="badge" :class="'sev-' + issue.severity">{{ issue.severity }}</span>
-              <span class="badge plain risk-NONE">{{ issue.category }}</span>
+              <span class="badge plain">{{ issue.category }}</span>
               <h4>{{ issue.title }}</h4>
               <span v-if="issue.filePath" class="file">{{ issue.filePath }}<template v-if="issue.lineStart">:{{ issue.lineStart }}</template></span>
             </div>
@@ -394,31 +419,29 @@
             </div>
 
             <div class="issue-foot">
-              <button class="sm secondary" @click="run(() => submitFeedback(issue.issueId, 'TRUE_POSITIVE'))">👍 真实问题</button>
-              <button class="sm secondary" @click="run(() => submitFeedback(issue.issueId, 'FALSE_POSITIVE'))">🚫 误报</button>
-              <button class="sm secondary" @click="run(() => submitFeedback(issue.issueId, 'NEED_DISCUSSION'))">💬 需讨论</button>
-              <button class="sm secondary" @click="toggleFeedback(issue.issueId)">{{ openFeedback[issue.issueId] ? '收起反馈' : '查看反馈' }}</button>
+              <button class="vote sm" :class="voteClass(issue.issueId, 'TRUE_POSITIVE')" @click="run(() => vote(issue.issueId, 'TRUE_POSITIVE'))">👍 真实问题</button>
+              <button class="vote sm" :class="voteClass(issue.issueId, 'FALSE_POSITIVE')" @click="run(() => vote(issue.issueId, 'FALSE_POSITIVE'))">🚫 误报</button>
+              <button class="vote sm" :class="voteClass(issue.issueId, 'NEED_DISCUSSION')" @click="run(() => vote(issue.issueId, 'NEED_DISCUSSION'))">💬 需讨论</button>
+              <button class="sm secondary" @click="toggleFeedback(issue.issueId)">{{ openFeedback[issue.issueId] ? '收起反馈' : `查看反馈${feedbackCount(issue.issueId)}` }}</button>
+              <button v-if="myVote(issue.issueId)" class="sm danger" @click="run(() => removeMyFeedback(issue.issueId))">撤回我的反馈</button>
             </div>
 
             <div v-if="openFeedback[issue.issueId]">
               <div class="fb-row">
-                <select :value="ensureDraft(issue.issueId).type" @change="e => ensureDraft(issue.issueId).type = e.target.value">
-                  <option value="TRUE_POSITIVE">真实问题</option>
-                  <option value="FALSE_POSITIVE">误报</option>
-                  <option value="NEED_DISCUSSION">需讨论</option>
-                </select>
-                <input :value="ensureDraft(issue.issueId).comment" @input="e => ensureDraft(issue.issueId).comment = e.target.value" placeholder="补充说明（可选）" @keyup.enter="run(() => submitFeedbackForm(issue.issueId))" />
-                <button class="sm" @click="run(() => submitFeedbackForm(issue.issueId))">提交</button>
+                <input :value="ensureDraft(issue.issueId).comment" @input="e => ensureDraft(issue.issueId).comment = e.target.value" placeholder="给当前投票补充说明（可选）" @keyup.enter="run(() => submitFeedbackForm(issue.issueId))" />
+                <button class="sm" @click="run(() => submitFeedbackForm(issue.issueId))" :disabled="!myVote(issue.issueId)">保存说明</button>
               </div>
+              <p v-if="!myVote(issue.issueId)" class="fb-empty">先在上方选择一个投票（真实问题 / 误报 / 需讨论），再补充说明。</p>
               <div class="fb-list" v-if="(feedbackMap[issue.issueId] || []).length">
-                <div v-for="fb in feedbackMap[issue.issueId]" :key="fb.feedbackId" class="fb-item">
+                <div v-for="fb in feedbackMap[issue.issueId]" :key="fb.feedbackId" class="fb-item" :class="{ mine: fb.mine }">
                   <span class="badge plain" :class="fbBadge(fb.feedbackType)">{{ fbLabel(fb.feedbackType) }}</span>
-                  <span class="who">用户#{{ fb.userId }}</span>
+                  <span class="who">{{ fb.username }}</span>
+                  <span v-if="fb.mine" class="you-tag">你</span>
                   <span class="grow">{{ fb.comment || '—' }}</span>
-                  <span style="color:var(--text-dim);font-size:11.5px">{{ fmtTime(fb.createdAt) }}</span>
+                  <span class="when">{{ fmtTime(fb.updatedAt || fb.createdAt) }}</span>
                 </div>
               </div>
-              <div v-else class="hint">还没有反馈记录。</div>
+              <p v-else class="fb-empty">还没有反馈记录。</p>
             </div>
           </div>
         </div>
@@ -428,22 +451,42 @@
       <template v-else-if="tab === 'aiLogs'">
         <div class="panel">
           <div class="panel-head">
-            <div><h2>AI 调用日志</h2><div class="sub">{{ aiLogScope }}</div></div>
+            <div><h2>AI 调用日志</h2><div class="sub">{{ aiLogScope }} · 共 {{ aiLogs.length }} 条，按日期归类</div></div>
             <button class="sm secondary" @click="run(openProjectAiLogs)">刷新项目日志</button>
           </div>
-          <div v-if="!aiLogs.length" class="empty"><div class="ico">◷</div><p>暂无调用日志</p><p>执行一次审查或检索后会生成。</p></div>
-          <div v-else class="list">
-            <button v-for="l in aiLogs" :key="l.id" class="list-row row-ailog" :class="{ selected: selectedAiLog && selectedAiLog.id === l.id }" @click="selectedAiLog = l">
-              <span class="badge plain risk-NONE">{{ l.requestType }}</span>
-              <span class="grow mono hide-sm">{{ l.provider }} / {{ l.model }}</span>
-              <span class="status-pill" :class="'st-' + l.status">{{ l.status }}</span>
-              <span class="mono hide-sm">{{ l.latencyMs }}ms</span>
-              <span class="mono hide-sm">{{ l.promptChars }}→{{ l.responseChars }}</span>
-            </button>
+          <div v-if="!aiLogs.length" class="empty"><div class="ico" aria-hidden="true">◷</div><p>暂无调用日志</p><p>执行一次审查或检索后会生成。</p></div>
+          <div v-else>
+            <div v-for="g in groupedAiLogs" :key="g.date" class="log-group">
+              <button class="log-group-head" :class="{ collapsed: collapsedDates[g.date] }" @click="toggleDate(g.date)">
+                <span class="caret" aria-hidden="true">▾</span>
+                <span class="date">{{ g.date }} <span class="rel">{{ g.relative }}</span></span>
+                <span class="divider"></span>
+                <span class="count">{{ g.items.length }} 次调用</span>
+              </button>
+              <div v-show="!collapsedDates[g.date]" class="log-group-body">
+                <div v-for="tg in g.taskGroups" :key="tg.key" class="log-task-group">
+                  <div class="log-task-label">
+                    <span v-if="tg.taskId">🧪 任务 <span class="mono">#{{ tg.taskId }}</span></span>
+                    <span v-else>🔎 项目级调用（检索 / 向量）</span>
+                    <span class="grow"></span>
+                    <span class="count">{{ tg.items.length }}</span>
+                  </div>
+                  <div class="list">
+                    <button v-for="l in tg.items" :key="l.id" class="list-row row-ailog" :class="{ selected: selectedAiLog && selectedAiLog.id === l.id }" @click="selectedAiLog = l">
+                      <span class="badge plain">{{ l.requestType }}</span>
+                      <span class="grow mono hide-sm">{{ l.provider }} / {{ l.model }}</span>
+                      <span class="status-pill" :class="'st-' + l.status">{{ l.status }}</span>
+                      <span class="mono hide-sm">{{ l.latencyMs }}ms</span>
+                      <span class="mono hide-sm">{{ l.promptChars }}→{{ l.responseChars }}</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
         <div class="panel" v-if="selectedAiLog">
-          <div class="panel-head"><div><h2>调用详情 #{{ selectedAiLog.id }}</h2></div><button class="sm secondary" @click="selectedAiLog = null">收起</button></div>
+          <div class="panel-head"><div><h2>调用详情 #{{ selectedAiLog.id }}</h2><div class="sub">{{ fmtTime(selectedAiLog.createdAt) }}</div></div><button class="sm secondary" @click="selectedAiLog = null">收起</button></div>
           <div class="grid two">
             <div class="kv"><b>类型</b><span>{{ selectedAiLog.requestType }}</span></div>
             <div class="kv"><b>Provider</b><span>{{ selectedAiLog.provider }}</span></div>
@@ -457,23 +500,23 @@
       </template>
     </section>
 
-    <!-- delete confirm modal -->
+    <!-- confirm modal -->
     <transition name="t">
-      <div v-if="deleteTarget" class="modal-backdrop" @click.self="deleteTarget = null">
-        <div class="modal">
-          <h3>删除项目「{{ deleteTarget.name }}」？</h3>
-          <p style="color:var(--text-soft)">将级联删除该项目的仓库绑定、知识库、审查任务、报告、问题与反馈，操作不可恢复。</p>
+      <div v-if="confirmModal" class="modal-backdrop" @click.self="confirmModal = null" @keyup.esc="confirmModal = null">
+        <div class="modal" role="dialog" aria-modal="true">
+          <h3>{{ confirmModal.title }}</h3>
+          <p>{{ confirmModal.body }}</p>
           <div class="actions">
-            <button class="secondary" @click="deleteTarget = null">取消</button>
-            <button class="danger" @click="run(confirmDeleteProject)" :disabled="busy.delete">
-              <span v-if="busy.delete" class="spinner dark"></span>确认删除
+            <button class="secondary" @click="confirmModal = null">取消</button>
+            <button class="danger solid" @click="run(confirmAction)" :disabled="busy.confirm">
+              <span v-if="busy.confirm" class="spinner"></span>{{ confirmModal.confirmLabel || '确认删除' }}
             </button>
           </div>
         </div>
       </div>
     </transition>
 
-    <transition name="t"><div v-if="toast.text" class="toast" :class="toast.type">{{ toast.text }}</div></transition>
+    <transition name="t"><div v-if="toast.text" class="toast" :class="toast.type" role="status">{{ toast.text }}</div></transition>
   </main>
 </template>
 
@@ -484,7 +527,12 @@ import { api, clearToken, getToken, setToken } from './api/client'
 const token = ref(getToken())
 const tab = ref('dashboard')
 
-const me = reactive({ username: '', nickname: '', role: '' })
+const theme = ref(localStorage.getItem('theme') || 'dark')
+function applyTheme() { document.documentElement.setAttribute('data-theme', theme.value) }
+function toggleTheme() { theme.value = theme.value === 'dark' ? 'light' : 'dark'; localStorage.setItem('theme', theme.value); applyTheme() }
+applyTheme()
+
+const me = reactive({ userId: null, username: '', nickname: '', role: '' })
 const projects = ref([])
 const activeProject = ref(null)
 const commits = ref([])
@@ -499,12 +547,13 @@ const mqLogs = ref([])
 const aiLogs = ref([])
 const aiLogScope = ref('项目维度')
 const selectedAiLog = ref(null)
+const collapsedDates = reactive({})
 const selectedFile = ref(null)
 const searchMatches = ref([])
 const searched = ref(false)
 const searchQuery = ref('发货前是否需要校验支付状态')
 const docType = ref('BUSINESS_FLOW')
-const deleteTarget = ref(null)
+const confirmModal = ref(null)
 
 const openFeedback = reactive({})
 const feedbackMap = reactive({})
@@ -528,6 +577,36 @@ const tabTitle = computed(() => tabTitles[tab.value] || 'RepoSage')
 const repoBound = computed(() => commits.value.length > 0 || repoForm._bound)
 const needsToken = computed(() => /^https?:\/\//i.test(repoForm.repoUrl.trim()))
 const highRiskCount = computed(() => reports.value.filter(r => r.overallRisk === 'HIGH').length)
+
+const SEV_ORDER = { HIGH: 0, MEDIUM: 1, LOW: 2, NONE: 3 }
+const sortedIssues = computed(() => {
+  if (!reportDetail.value) return []
+  return [...reportDetail.value.issues].sort((a, b) => (SEV_ORDER[a.severity] ?? 9) - (SEV_ORDER[b.severity] ?? 9))
+})
+const severityTally = computed(() => {
+  const t = { HIGH: 0, MEDIUM: 0, LOW: 0, NONE: 0 }
+  if (reportDetail.value) for (const i of reportDetail.value.issues) t[i.severity] = (t[i.severity] || 0) + 1
+  return t
+})
+
+const groupedAiLogs = computed(() => {
+  const byDate = new Map()
+  for (const log of aiLogs.value) {
+    const date = fmtDate(log.createdAt)
+    if (!byDate.has(date)) byDate.set(date, [])
+    byDate.get(date).push(log)
+  }
+  return [...byDate.entries()].map(([date, items]) => {
+    const byTask = new Map()
+    for (const l of items) {
+      const key = l.taskId == null ? 'none' : String(l.taskId)
+      if (!byTask.has(key)) byTask.set(key, { key, taskId: l.taskId ?? null, items: [] })
+      byTask.get(key).items.push(l)
+    }
+    const taskGroups = [...byTask.values()].sort((a, b) => (b.taskId || 0) - (a.taskId || 0))
+    return { date, relative: relativeDay(date), items, taskGroups }
+  })
+})
 
 function toastMsg(text, type = '') {
   toast.text = text; toast.type = type
@@ -554,6 +633,8 @@ async function login() {
     const data = await api('/auth/login', { method: 'POST', body: JSON.stringify(auth) })
     setToken(data.token); token.value = data.token
     await afterLogin()
+  } catch (error) {
+    toastMsg(error?.message || '登录失败', 'error')
   } finally { busy.auth = false }
 }
 async function afterLogin() {
@@ -622,16 +703,17 @@ function selectProject(p) {
   tab.value = 'repository'
   run(refreshAll)
 }
-function askDeleteProject(p) { deleteTarget.value = p }
-async function confirmDeleteProject() {
-  busy.delete = true
-  try {
-    await api(`/projects/${deleteTarget.value.projectId}`, { method: 'DELETE' })
-    if (activeProject.value && activeProject.value.projectId === deleteTarget.value.projectId) activeProject.value = null
-    deleteTarget.value = null
-    await loadProjects()
-    toastMsg('项目已删除', 'success')
-  } finally { busy.delete = false }
+function askDeleteProject(p) {
+  confirmModal.value = {
+    title: `删除项目「${p.name}」？`,
+    body: '将级联删除该项目的仓库绑定、知识库、审查任务、报告、问题与反馈，操作不可恢复。',
+    onConfirm: async () => {
+      await api(`/projects/${p.projectId}`, { method: 'DELETE' })
+      if (activeProject.value && activeProject.value.projectId === p.projectId) activeProject.value = null
+      await loadProjects()
+      toastMsg('项目已删除', 'success')
+    },
+  }
 }
 
 /* ---------- repository ---------- */
@@ -747,7 +829,7 @@ async function loadReviews() {
   try {
     tasks.value = await api(`/projects/${activeProject.value.projectId}/reviews/tasks`)
     reports.value = await api(`/projects/${activeProject.value.projectId}/reviews/reports`)
-    if (activeTask.value) activeTask.value = tasks.value.find(t => t.taskId === activeTask.value.taskId) || activeTask.value
+    if (activeTask.value) activeTask.value = tasks.value.find(t => t.taskId === activeTask.value.taskId) || null
   } finally { busy.reviews = false }
 }
 function selectTask(t) { activeTask.value = t; mqLogs.value = [] }
@@ -756,6 +838,46 @@ async function openReport(reportId) {
   tab.value = 'reviews'
 }
 async function loadMqLogs(taskId) { mqLogs.value = await api(`/mq/logs?taskId=${taskId}`) }
+
+async function cancelTask(t) {
+  await api(`/projects/${activeProject.value.projectId}/reviews/tasks/${t.taskId}/cancel`, { method: 'POST' })
+  await loadReviews()
+  toastMsg('任务已停止', 'success')
+}
+function askDeleteTask(t) {
+  confirmModal.value = {
+    title: `删除审查任务 #${t.taskId}？`,
+    body: '将一并删除该任务生成的报告、问题、反馈以及关联的 AI / MQ 日志，操作不可恢复。',
+    onConfirm: async () => {
+      await api(`/projects/${activeProject.value.projectId}/reviews/tasks/${t.taskId}`, { method: 'DELETE' })
+      if (activeTask.value && activeTask.value.taskId === t.taskId) activeTask.value = null
+      const reportForTask = reports.value.find(r => r.taskId === t.taskId)
+      if (reportDetail.value && reportForTask && reportDetail.value.reportId === reportForTask.reportId) reportDetail.value = null
+      await loadReviews()
+      toastMsg('任务已删除', 'success')
+    },
+  }
+}
+function askDeleteReport(r) {
+  confirmModal.value = {
+    title: `删除审查报告 #${r.reportId}？`,
+    body: '将删除该报告及其下的所有问题与反馈，对应的审查任务会保留，操作不可恢复。',
+    onConfirm: async () => {
+      await api(`/projects/${activeProject.value.projectId}/reviews/reports/${r.reportId}`, { method: 'DELETE' })
+      if (reportDetail.value && reportDetail.value.reportId === r.reportId) reportDetail.value = null
+      await loadReviews()
+      toastMsg('报告已删除', 'success')
+    },
+  }
+}
+async function confirmAction() {
+  if (!confirmModal.value) return
+  busy.confirm = true
+  try {
+    await confirmModal.value.onConfirm()
+    confirmModal.value = null
+  } finally { busy.confirm = false }
+}
 
 /* ---------- polling for running tasks ---------- */
 function maybeStartPolling() {
@@ -774,41 +896,75 @@ function maybeStartPolling() {
 }
 function stopPolling() { if (pollTimer) { clearInterval(pollTimer); pollTimer = null } pollingActive.value = false }
 
-/* ---------- feedback ---------- */
-function ensureDraft(id) { if (!fbDraft[id]) fbDraft[id] = { type: 'TRUE_POSITIVE', comment: '' } ; return fbDraft[id] }
+/* ---------- feedback (one verdict per user, upsert) ---------- */
+function ensureDraft(id) { if (!fbDraft[id]) fbDraft[id] = { comment: '' }; return fbDraft[id] }
+function myVote(issueId) {
+  const list = feedbackMap[issueId] || []
+  return list.find(fb => fb.mine) || null
+}
+function voteClass(issueId, type) {
+  const mine = myVote(issueId)
+  return mine && mine.feedbackType === type ? 'on-' + type : ''
+}
+function feedbackCount(issueId) {
+  const n = (feedbackMap[issueId] || []).length
+  return n ? ` (${n})` : ''
+}
 async function toggleFeedback(id) {
   openFeedback[id] = !openFeedback[id]
   if (openFeedback[id]) await loadFeedback(id)
 }
-async function loadFeedback(id) { feedbackMap[id] = await api(`/review-issues/${id}/feedback`) }
-async function submitFeedback(issueId, type) {
-  await api(`/review-issues/${issueId}/feedback`, { method: 'POST', body: JSON.stringify({ feedbackType: type, comment: '' }) })
+async function loadFeedback(id) {
+  feedbackMap[id] = await api(`/review-issues/${id}/feedback`)
+  const mine = myVote(id)
+  ensureDraft(id).comment = mine?.comment || ''
+}
+async function vote(issueId, type) {
+  const draft = ensureDraft(issueId)
+  await api(`/review-issues/${issueId}/feedback`, { method: 'POST', body: JSON.stringify({ feedbackType: type, comment: draft.comment || '' }) })
   openFeedback[issueId] = true
   await loadFeedback(issueId)
-  toastMsg('反馈已提交', 'success')
+  toastMsg('反馈已保存', 'success')
 }
 async function submitFeedbackForm(issueId) {
+  const mine = myVote(issueId)
+  if (!mine) return toastMsg('请先选择一个投票', 'error')
   const d = ensureDraft(issueId)
-  await api(`/review-issues/${issueId}/feedback`, { method: 'POST', body: JSON.stringify({ feedbackType: d.type, comment: d.comment }) })
-  d.comment = ''
+  await api(`/review-issues/${issueId}/feedback`, { method: 'POST', body: JSON.stringify({ feedbackType: mine.feedbackType, comment: d.comment }) })
   await loadFeedback(issueId)
-  toastMsg('反馈已提交', 'success')
+  toastMsg('反馈说明已更新', 'success')
+}
+async function removeMyFeedback(issueId) {
+  await api(`/review-issues/${issueId}/feedback`, { method: 'DELETE' })
+  ensureDraft(issueId).comment = ''
+  await loadFeedback(issueId)
+  toastMsg('已撤回你的反馈', 'success')
 }
 
 /* ---------- ai logs ---------- */
 async function loadAiLogs(taskId = null) {
   if (!activeProject.value) return
-  const query = taskId ? `taskId=${taskId}&limit=50` : `projectId=${activeProject.value.projectId}&limit=50`
+  const query = taskId ? `taskId=${taskId}&limit=100` : `projectId=${activeProject.value.projectId}&limit=100`
   aiLogs.value = await api(`/ai/logs?${query}`)
   aiLogScope.value = taskId ? `任务 #${taskId} 维度` : '项目维度'
 }
 async function openProjectAiLogs() { if (!activeProject.value) return; await loadAiLogs(); tab.value = 'aiLogs' }
 async function openTaskAiLogs(taskId) { await loadAiLogs(taskId); tab.value = 'aiLogs' }
+function toggleDate(date) { collapsedDates[date] = !collapsedDates[date] }
 
 /* ---------- helpers ---------- */
 function shortCommit(id) { return id ? id.slice(0, 8) : '-' }
 function fmtTime(t) { if (!t) return '-'; const d = new Date(t); return `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}` }
 function fmtDate(t) { if (!t) return '-'; const d = new Date(t); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}` }
+function relativeDay(dateStr) {
+  const today = fmtDate(new Date().toISOString())
+  const y = new Date(); y.setDate(y.getDate() - 1)
+  const yesterday = fmtDate(y.toISOString())
+  if (dateStr === today) return '今天'
+  if (dateStr === yesterday) return '昨天'
+  return ''
+}
+function statusLabel(s) { return { PENDING: '等待中', RUNNING: '运行中', SUCCESS: '成功', FAILED: '失败', DEAD: '已死信', CANCELED: '已停止' }[s] || s }
 function mqStatusClass(s) { return s === 'CONSUMED' || s === 'PUBLISHED' ? 'SUCCESS' : (s === 'DEAD' ? 'DEAD' : 'FAILED') }
 function fbLabel(t) { return { TRUE_POSITIVE: '真实问题', FALSE_POSITIVE: '误报', NEED_DISCUSSION: '需讨论' }[t] || t }
 function fbBadge(t) { return { TRUE_POSITIVE: 'risk-LOW', FALSE_POSITIVE: 'risk-HIGH', NEED_DISCUSSION: 'risk-MEDIUM' }[t] || 'risk-NONE' }
