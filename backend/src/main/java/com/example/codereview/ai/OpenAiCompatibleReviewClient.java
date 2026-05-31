@@ -3,6 +3,7 @@ package com.example.codereview.ai;
 import com.example.codereview.common.exception.BusinessException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.net.SocketTimeoutException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
@@ -11,6 +12,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 
@@ -27,15 +29,24 @@ public class OpenAiCompatibleReviewClient implements AiReviewClient {
             ObjectMapper objectMapper,
             @Value("${app.ai.base-url}") String baseUrl,
             @Value("${app.ai.api-key}") String apiKey,
-            @Value("${app.ai.chat-model}") String model
+            @Value("${app.ai.chat-model}") String model,
+            @Value("${app.http.connect-timeout-ms:10000}") int connectTimeoutMs,
+            @Value("${app.ai.read-timeout-ms:300000}") int readTimeoutMs
     ) {
         if (baseUrl == null || baseUrl.isBlank() || apiKey == null || apiKey.isBlank()) {
             throw new IllegalStateException("AI_PROVIDER=openai-compatible requires LLM_BASE_URL and LLM_API_KEY");
         }
+        // Chat review prompts are large and reasoning models are slow, so this call needs a far
+        // longer read timeout than the shared 60s factory. Override the request factory for this
+        // client only; embedding / model-risk clients keep the default timeout.
+        SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
+        requestFactory.setConnectTimeout(connectTimeoutMs);
+        requestFactory.setReadTimeout(readTimeoutMs);
         this.restClient = restClientBuilder
                 .baseUrl(baseUrl.replaceAll("/+$", ""))
                 .defaultHeader(HttpHeaders.AUTHORIZATION, "Bearer " + apiKey)
                 .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                .requestFactory(requestFactory)
                 .build();
         this.objectMapper = objectMapper;
         this.model = model;
@@ -65,8 +76,39 @@ public class OpenAiCompatibleReviewClient implements AiReviewClient {
         } catch (BusinessException ex) {
             throw ex;
         } catch (Exception ex) {
-            throw new BusinessException(6004, "AI 调用失败: " + ex.getMessage());
+            throw new BusinessException(6004, "AI 调用失败: " + describeFailure(ex));
         }
+    }
+
+    /**
+     * Flattens the exception cause chain into one message. {@code RestClientException.getMessage()}
+     * only carries "Error while extracting response for type [...]"; the real cause (e.g.
+     * {@code SocketTimeoutException: Read timed out} or a connection reset) lives in {@code getCause()}
+     * and was previously dropped, making failures look like an opaque content-type problem.
+     */
+    private String describeFailure(Throwable ex) {
+        StringBuilder sb = new StringBuilder();
+        boolean readTimeout = false;
+        Throwable current = ex;
+        Throwable previous = null;
+        while (current != null && current != previous) {
+            if (sb.length() > 0) {
+                sb.append(" | caused by ");
+            }
+            sb.append(current.getClass().getSimpleName());
+            if (current.getMessage() != null && !current.getMessage().isBlank()) {
+                sb.append(": ").append(current.getMessage());
+            }
+            if (current instanceof SocketTimeoutException) {
+                readTimeout = true;
+            }
+            previous = current;
+            current = current.getCause();
+        }
+        if (readTimeout) {
+            sb.append(" —— 读超时，请增大 AI_READ_TIMEOUT_MS 或减小 diff / RAG 上下文");
+        }
+        return sb.toString();
     }
 
     private String extractMessageContent(String responseText) {
