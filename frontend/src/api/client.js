@@ -20,9 +20,11 @@ export async function api(path, options = {}) {
   if (response.status === 204) {
     return null
   }
+  const traceId = response.headers.get('X-Trace-Id')
   const json = await response.json().catch(() => ({ code: 500, message: '响应解析失败' }))
   if (!response.ok || json.code !== 0) {
-    throw new Error(json.message || `请求失败: ${response.status}`)
+    const base = json.message || `请求失败: ${response.status}`
+    throw new Error(traceId ? `${base}（trace ${traceId}）` : base)
   }
   return json.data
 }

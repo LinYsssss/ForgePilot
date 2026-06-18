@@ -634,6 +634,7 @@
                       <span class="status-pill" :class="'st-' + l.status">{{ l.status }}</span>
                       <span class="mono hide-sm">{{ l.latencyMs }}ms</span>
                       <span class="mono hide-sm">{{ l.promptChars }}→{{ l.responseChars }}</span>
+                      <span v-if="l.totalTokens" class="mono hide-sm">{{ l.totalTokens }} tok</span>
                     </button>
                   </div>
                 </div>
@@ -650,6 +651,7 @@
             <div class="kv"><b>耗时</b><span>{{ selectedAiLog.latencyMs }} ms</span></div>
             <div class="kv"><b>输入</b><span>{{ selectedAiLog.promptChars }} 字符</span></div>
             <div class="kv"><b>输出</b><span>{{ selectedAiLog.responseChars }} 字符</span></div>
+            <div class="kv"><b>Token</b><span>{{ selectedAiLog.promptTokens }} 入 / {{ selectedAiLog.completionTokens }} 出 / {{ selectedAiLog.totalTokens }} 总</span></div>
           </div>
           <p v-if="selectedAiLog.errorMessage" class="badge plain risk-HIGH" style="display:block;padding:10px;margin-top:10px">{{ selectedAiLog.errorMessage }}</p>
         </div>
