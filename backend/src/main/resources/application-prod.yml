@@ -23,5 +23,7 @@ spring:
         auto-startup: ${RABBITMQ_LISTENER_AUTO_STARTUP:true}
 
 app:
+  security:
+    auth-cookie-secure: ${AUTH_COOKIE_SECURE:true}
   review:
     inline: ${REVIEW_INLINE:false}

@@ -9,9 +9,6 @@ import org.springframework.stereotype.Component;
 @Component
 public class ReviewTaskConsumer {
 
-    private static final long BASE_BACKOFF_MS = 2000L;
-    private static final long MAX_BACKOFF_MS = 30000L;
-
     private final ReviewProcessor reviewProcessor;
     private final ReviewTaskPublisher publisher;
     private final MqLogService mqLogService;
@@ -36,18 +33,8 @@ public class ReviewTaskConsumer {
                 reviewProcessor.markDead(message.taskId(), ex.getMessage());
                 publisher.publishDead(message, ex.getMessage());
             } else {
-                backoff(message.retryCount());
-                publisher.publish(message.nextRetry());
+                publisher.publishDelayed(message.nextRetry());
             }
-        }
-    }
-
-    private void backoff(int retryCount) {
-        long delay = Math.min(MAX_BACKOFF_MS, BASE_BACKOFF_MS * (1L << retryCount));
-        try {
-            Thread.sleep(delay);
-        } catch (InterruptedException ex) {
-            Thread.currentThread().interrupt();
         }
     }
 }

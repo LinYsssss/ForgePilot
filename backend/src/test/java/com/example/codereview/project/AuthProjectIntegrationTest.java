@@ -5,13 +5,13 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.example.codereview.auth.AuthService;
 import com.example.codereview.common.security.CryptoService;
 import com.example.codereview.repo.CodeRepositoryEntity;
 import com.example.codereview.repo.CodeRepositoryJpaRepository;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.Map;
+import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -19,9 +19,12 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+import jakarta.servlet.http.Cookie;
 
 @SpringBootTest(properties = {
         "app.security.token-secret=test-secret",
+        "app.security.token-encrypt-key=test-encrypt-key",
+        "app.git.allow-local-path=false",
         "spring.jpa.hibernate.ddl-auto=create-drop",
         "spring.rabbitmq.listener.simple.auto-startup=false",
         "management.health.rabbit.enabled=false"
@@ -71,7 +74,7 @@ class AuthProjectIntegrationTest {
     @Test
     void rejectProjectAccessWithoutToken() throws Exception {
         mockMvc.perform(get("/api/projects"))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isUnauthorized());
     }
 
     @Test
@@ -94,11 +97,58 @@ class AuthProjectIntegrationTest {
 
         CodeRepositoryEntity repository = repositories.findByProjectId(projectId).orElseThrow();
 
-        assert repository.getAccessTokenCiphertext() != null;
-        org.assertj.core.api.Assertions.assertThat(repository.getAccessTokenCiphertext()).startsWith("v1:");
-        org.assertj.core.api.Assertions.assertThat(repository.getAccessTokenCiphertext()).doesNotContain("plain-secret-token");
-        org.assertj.core.api.Assertions.assertThat(cryptoService.decrypt(repository.getAccessTokenCiphertext()))
+        Assertions.assertThat(repository.getAccessTokenCiphertext()).isNotNull();
+        Assertions.assertThat(repository.getAccessTokenCiphertext()).startsWith("v1:");
+        Assertions.assertThat(repository.getAccessTokenCiphertext()).doesNotContain("plain-secret-token");
+        Assertions.assertThat(cryptoService.decrypt(repository.getAccessTokenCiphertext()))
                 .isEqualTo("plain-secret-token");
+    }
+
+    @Test
+    void rejectLocalRepositoryPathWhenDisabled() throws Exception {
+        String token = seedAndLogin("repo_prod_" + System.nanoTime());
+        Long projectId = createProjectAndGetId(token, "production repo restriction");
+
+        mockMvc.perform(post("/api/projects/{projectId}/repository", projectId)
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "repoUrl", "F:/demo/local-repo",
+                                "provider", "LOCAL",
+                                "defaultBranch", "main",
+                                "accessToken", ""
+                        ))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value(400));
+    }
+
+    @Test
+    void logoutRevokesSessionCookie() throws Exception {
+        String username = "cookie_user_" + System.nanoTime();
+        authService.createUser(username, "123456", "Tester", "DEVELOPER");
+
+        MvcResult login = mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "username", username,
+                                "password", "123456"
+                        ))))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        String setCookie = login.getResponse().getHeader("Set-Cookie");
+        org.assertj.core.api.Assertions.assertThat(setCookie).contains("HttpOnly");
+        Cookie authCookie = login.getResponse().getCookie("reposage_auth");
+        org.assertj.core.api.Assertions.assertThat(authCookie).isNotNull();
+
+        mockMvc.perform(post("/api/auth/logout")
+                        .cookie(authCookie))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0));
+
+        mockMvc.perform(get("/api/auth/me")
+                        .cookie(authCookie))
+                .andExpect(status().isUnauthorized());
     }
 
     private String seedAndLogin(String username) throws Exception {

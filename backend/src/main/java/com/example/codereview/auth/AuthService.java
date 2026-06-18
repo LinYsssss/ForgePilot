@@ -42,6 +42,9 @@ public class AuthService {
         if (!passwordEncoder.matches(request.password(), user.getPasswordHash())) {
             throw new BusinessException(400, "用户名或密码错误");
         }
+        if (!user.isEnabled()) {
+            throw new BusinessException(403, "账号已被禁用");
+        }
         return toAuthResponse(user);
     }
 
@@ -49,6 +52,13 @@ public class AuthService {
         UserAccount user = users.findById(userId)
                 .orElseThrow(() -> new BusinessException(404, "用户不存在"));
         return new MeResponse(user.getId(), user.getUsername(), user.getNickname(), user.getRole());
+    }
+
+    @Transactional
+    public void logout(Long userId) {
+        UserAccount user = users.findById(userId)
+                .orElseThrow(() -> new BusinessException(404, "用户不存在"));
+        user.bumpSessionVersion();
     }
 
     private AuthResponse toAuthResponse(UserAccount user) {

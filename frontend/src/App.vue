@@ -1,6 +1,6 @@
 <template>
   <!-- ===================== AUTH ===================== -->
-  <div v-if="!token" class="auth-wrap">
+  <div v-if="!authenticated" class="auth-wrap">
     <div class="auth-card">
       <div class="brand">
         <div class="brand-logo">R</div>
@@ -45,6 +45,9 @@
         </button>
         <button :class="{ active: tab === 'repository' }" @click="goTab('repository')" :disabled="!activeProject">
           <span class="nav-ico" aria-hidden="true">⎇</span> 仓库
+        </button>
+        <button :class="{ active: tab === 'pullRequests' }" @click="goTab('pullRequests')" :disabled="!activeProject">
+          <span class="nav-ico" aria-hidden="true">⑂</span> PR 工作流
         </button>
         <button :class="{ active: tab === 'knowledge' }" @click="goTab('knowledge')" :disabled="!activeProject">
           <span class="nav-ico" aria-hidden="true">▣</span> 知识库
@@ -229,6 +232,159 @@
               </div>
             </div>
           </template>
+        </div>
+      </template>
+
+      <!-- ============ PULL REQUESTS ============ -->
+      <template v-else-if="tab === 'pullRequests'">
+        <div class="panel">
+          <div class="panel-head">
+            <div><h2>{{ pullRequestForm.pullRequestId ? '更新 PR' : '登记 PR' }}</h2><div class="sub">把真实团队里的 Pull Request 纳入审查闭环</div></div>
+            <div class="head-actions">
+              <button v-if="pullRequestForm.pullRequestId" class="sm secondary" @click="resetPullRequestForm">取消编辑</button>
+              <button class="sm secondary" @click="fillPrFromSelectedCommit" :disabled="!selectedCommit">使用已选 Commit</button>
+            </div>
+          </div>
+          <div class="grid four">
+            <label class="field">PR 编号<input v-model.number="pullRequestForm.prNumber" type="number" min="1" placeholder="123" /></label>
+            <label class="field">Provider
+              <select v-model="pullRequestForm.provider">
+                <option value="GITHUB">GitHub</option>
+                <option value="GITLAB">GitLab</option>
+                <option value="GITEE">Gitee</option>
+                <option value="OTHER">其他</option>
+              </select>
+            </label>
+            <label class="field" style="grid-column: span 2">标题<input v-model="pullRequestForm.title" placeholder="feat: add order review gate" /></label>
+          </div>
+          <div class="grid four" style="margin-top:16px">
+            <label class="field">作者<input v-model="pullRequestForm.authorName" placeholder="developer" /></label>
+            <label class="field">源分支<input v-model="pullRequestForm.sourceBranch" placeholder="feature/order-gate" /></label>
+            <label class="field">目标分支<input v-model="pullRequestForm.targetBranch" :placeholder="activeProject ? activeProject.defaultBranch : 'main'" /></label>
+            <label class="field">外部 PR ID<input v-model="pullRequestForm.externalPrId" placeholder="可选" /></label>
+          </div>
+          <div class="grid two" style="margin-top:16px">
+            <label class="field">Base SHA / Ref<input v-model="pullRequestForm.baseSha" placeholder="main 或 base commit" /></label>
+            <label class="field">Head SHA / Ref<input v-model="pullRequestForm.headSha" placeholder="feature 分支或 head commit" /></label>
+          </div>
+          <div class="actions">
+            <button @click="run(savePullRequest)" :disabled="busy.pullRequest">
+              <span v-if="busy.pullRequest" class="spinner"></span>{{ pullRequestForm.pullRequestId ? '保存 PR 更新' : '登记 PR' }}
+            </button>
+            <button class="secondary" @click="run(loadPullRequests)" :disabled="busy.pullRequests">刷新 PR</button>
+          </div>
+        </div>
+
+        <div class="split">
+          <div class="panel">
+            <div class="panel-head"><div><h2>PR 列表</h2><div class="sub">{{ pullRequests.length }} 条</div></div></div>
+            <div v-if="!pullRequests.length" class="empty"><div class="ico" aria-hidden="true">⑂</div><p>暂无 PR</p><p>先登记一个 PR，再触发审查。</p></div>
+            <div v-else class="list">
+              <div v-for="pr in pullRequests" :key="pr.pullRequestId" class="list-row row-prs" :class="{ selected: activePullRequest && activePullRequest.pullRequestId === pr.pullRequestId }" @click="selectPullRequest(pr)">
+                <span class="mono">#{{ pr.prNumber || pr.pullRequestId }}</span>
+                <span class="grow">{{ pr.title }}</span>
+                <span class="status-pill" :class="'st-' + pr.reviewState">{{ prStateLabel(pr.reviewState) }}</span>
+                <span class="mono">{{ shortCommit(pr.headSha) }}</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-head">
+              <div><h2>PR 审查闭环</h2><div class="sub">{{ activePullRequest ? activePullRequest.title : '请选择 PR' }}</div></div>
+              <button v-if="activePullRequest" class="sm secondary" @click="editPullRequest(activePullRequest)">编辑 PR</button>
+            </div>
+            <div v-if="!activePullRequest" class="empty"><div class="ico" aria-hidden="true">⑂</div><p>选择一个 PR</p></div>
+            <template v-else>
+              <div class="pr-meta">
+                <span class="badge plain">{{ activePullRequest.provider }}</span>
+                <span class="status-pill" :class="'st-' + activePullRequest.status">{{ activePullRequest.status }}</span>
+                <span class="mono">{{ activePullRequest.sourceBranch }} → {{ activePullRequest.targetBranch }}</span>
+              </div>
+
+              <div class="kb-select compact">
+                <div class="kb-head">
+                  <span class="section-title" style="margin:0">参与 PR 审查的知识库</span>
+                  <div class="kb-tools">
+                    <button class="sm secondary" @click="selectAllDocs" :disabled="!documents.length">全选</button>
+                    <button class="sm secondary" @click="clearDocs" :disabled="!documents.length">清空</button>
+                  </div>
+                </div>
+                <div v-if="!documents.length" class="hint">该项目暂无知识库文档；不选则审查仅基于 PR diff。</div>
+                <div v-else class="kb-chips">
+                  <label v-for="d in documents" :key="d.documentId" class="kb-chip" :class="{ on: chosenDocs.has(d.documentId) }">
+                    <input type="checkbox" :checked="chosenDocs.has(d.documentId)" @change="toggleDoc(d.documentId)" />
+                    <span class="kb-name">{{ d.fileName }}</span>
+                  </label>
+                </div>
+              </div>
+
+              <div class="actions">
+                <button @click="run(createPrReview)" :disabled="busy.prReview">
+                  <span v-if="busy.prReview" class="spinner"></span>触发 PR 审查
+                </button>
+                <button class="secondary" @click="run(loadReviews)" :disabled="busy.reviews">刷新报告</button>
+              </div>
+
+              <div class="section-title">PR 审查报告</div>
+              <div v-if="!prReports.length" class="empty"><div class="ico" aria-hidden="true">▦</div><p>这个 PR 暂无报告</p></div>
+              <div v-else class="list pr-report-list">
+                <div v-for="r in prReports" :key="r.reportId" class="list-row row-reports" :class="{ selected: prActionForm.reportId === r.reportId }" @click="selectPrReport(r.reportId)">
+                  <span class="mono">#{{ r.reportId }}</span>
+                  <span class="grow">{{ r.issueCount }} 个问题</span>
+                  <span class="badge" :class="'risk-' + r.overallRisk">{{ r.overallRisk }}</span>
+                  <button class="sm secondary" @click.stop="openReport(r.reportId)">查看</button>
+                </div>
+              </div>
+
+              <div class="section-title">管理员动作</div>
+              <div class="grid two">
+                <label class="field">动作
+                  <select v-model="prActionForm.actionType">
+                    <option value="REQUEST_CHANGES">打回修改</option>
+                    <option value="APPROVE">通过</option>
+                    <option value="WAIVE">风险豁免</option>
+                    <option value="COMMENT">仅评论</option>
+                  </select>
+                </label>
+                <label class="field">关联报告
+                  <select v-model.number="prActionForm.reportId" @change="loadActionReport">
+                    <option :value="null">不关联</option>
+                    <option v-for="r in prReports" :key="r.reportId" :value="r.reportId">#{{ r.reportId }} · {{ r.overallRisk }} · {{ r.issueCount }} 问题</option>
+                  </select>
+                </label>
+              </div>
+              <div v-if="actionReportDetail && actionReportDetail.issues.length" class="issue-picker">
+                <div class="kb-head">
+                  <span class="section-title" style="margin:0">关联问题项</span>
+                  <div class="kb-tools">
+                    <button class="sm secondary" @click="selectBlockingIssues">选择高/中危</button>
+                    <button class="sm secondary" @click="clearActionIssues">清空</button>
+                  </div>
+                </div>
+                <label v-for="issue in actionReportDetail.issues" :key="issue.issueId" class="issue-check" :class="{ on: actionIssueIds.has(issue.issueId) }">
+                  <input type="checkbox" :checked="actionIssueIds.has(issue.issueId)" @change="toggleActionIssue(issue.issueId)" />
+                  <span class="badge" :class="'sev-' + issue.severity">{{ issue.severity }}</span>
+                  <span class="grow">{{ issue.title }}</span>
+                </label>
+              </div>
+              <label class="field" style="margin-top:16px">原因<textarea v-model="prActionForm.reason" placeholder="例如：存在高风险权限问题，暂不允许合并"></textarea></label>
+              <label class="field" style="margin-top:12px">整改要求<textarea v-model="prActionForm.requirement" placeholder="例如：补充权限校验，并新增对应测试"></textarea></label>
+              <div class="actions">
+                <button @click="run(submitPrAction)" :disabled="busy.prAction">
+                  <span v-if="busy.prAction" class="spinner"></span>提交动作
+                </button>
+              </div>
+
+              <div v-if="prActions.length" class="list action-history">
+                <div v-for="a in prActions" :key="a.actionId" class="list-row action-row">
+                  <span class="status-pill" :class="'st-' + actionStateClass(a.actionType)">{{ actionLabel(a.actionType) }}</span>
+                  <span class="grow">{{ a.reason || a.requirement || '无补充说明' }}</span>
+                  <span class="mono">{{ fmtTime(a.createdAt) }}</span>
+                </div>
+              </div>
+            </template>
+          </div>
         </div>
       </template>
 
@@ -522,9 +678,9 @@
 
 <script setup>
 import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
-import { api, clearToken, getToken, setToken } from './api/client'
+import { api } from './api/client'
 
-const token = ref(getToken())
+const authenticated = ref(false)
 const tab = ref('dashboard')
 
 const theme = ref(localStorage.getItem('theme') || 'dark')
@@ -541,6 +697,11 @@ const diffFiles = ref([])
 const documents = ref([])
 const tasks = ref([])
 const reports = ref([])
+const pullRequests = ref([])
+const activePullRequest = ref(null)
+const prActions = ref([])
+const actionReportDetail = ref(null)
+const actionIssueIds = ref(new Set())
 const activeTask = ref(null)
 const reportDetail = ref(null)
 const mqLogs = ref([])
@@ -566,17 +727,24 @@ const auth = reactive({ username: 'developer', password: '123456' })
 const projectForm = reactive({ projectId: null, name: '', description: '', defaultBranch: 'main' })
 const repoForm = reactive({ repoUrl: '', provider: 'GITHUB', defaultBranch: 'main', accessToken: '' })
 const reviewForm = reactive({ commitId: '', baseCommitId: '', branch: '' })
+const pullRequestForm = reactive({ pullRequestId: null, prNumber: null, title: '', authorName: '', sourceBranch: '', targetBranch: 'main', baseSha: '', headSha: '', provider: 'GITHUB', externalPrId: '', status: 'OPEN' })
+const prActionForm = reactive({ actionType: 'REQUEST_CHANGES', reportId: null, reason: '', requirement: '' })
 const chosenDocs = ref(new Set())
 const demoRepoPath = import.meta.env.VITE_DEMO_REPO_PATH || 'F:\\202605New\\demo-repos\\mall-order-service'
 
 let pollTimer = null
 const pollingActive = ref(false)
 
-const tabTitles = { dashboard: '概览', projects: '项目管理', repository: '仓库配置', knowledge: 'RAG 知识库', reviews: '代码审查', aiLogs: 'AI 调用日志' }
+const tabTitles = { dashboard: '概览', projects: '项目管理', repository: '仓库配置', pullRequests: 'PR 工作流', knowledge: 'RAG 知识库', reviews: '代码审查', aiLogs: 'AI 调用日志' }
 const tabTitle = computed(() => tabTitles[tab.value] || 'RepoSage')
 const repoBound = computed(() => commits.value.length > 0 || repoForm._bound)
 const needsToken = computed(() => /^https?:\/\//i.test(repoForm.repoUrl.trim()))
 const highRiskCount = computed(() => reports.value.filter(r => r.overallRisk === 'HIGH').length)
+const prReports = computed(() => {
+  if (!activePullRequest.value) return []
+  const taskIds = new Set(tasks.value.filter(t => t.pullRequestId === activePullRequest.value.pullRequestId).map(t => t.taskId))
+  return reports.value.filter(r => taskIds.has(r.taskId))
+})
 
 const SEV_ORDER = { HIGH: 0, MEDIUM: 1, LOW: 2, NONE: 3 }
 const sortedIssues = computed(() => {
@@ -620,7 +788,7 @@ async function run(action, key) {
   } catch (error) {
     const msg = error?.message || '操作失败'
     toastMsg(msg, 'error')
-    if (msg.includes('未登录') || msg.includes('401')) logout()
+    if (msg.includes('未登录') || msg.includes('401')) await logout(false)
   } finally {
     if (key) busy[key] = false
   }
@@ -630,8 +798,8 @@ async function run(action, key) {
 async function login() {
   busy.auth = true
   try {
-    const data = await api('/auth/login', { method: 'POST', body: JSON.stringify(auth) })
-    setToken(data.token); token.value = data.token
+    await api('/auth/login', { method: 'POST', body: JSON.stringify(auth) })
+    authenticated.value = true
     await afterLogin()
   } catch (error) {
     toastMsg(error?.message || '登录失败', 'error')
@@ -643,25 +811,35 @@ async function afterLogin() {
   tab.value = 'dashboard'
   toastMsg('登录成功', 'success')
 }
-function logout() {
-  clearToken(); token.value = ''; activeProject.value = null
+async function logout(callApi = true) {
+  if (callApi) {
+    try { await api('/auth/logout', { method: 'POST' }) } catch { /* ignore */ }
+  }
+  authenticated.value = false
+  Object.assign(me, { userId: null, username: '', nickname: '', role: '' })
+  projects.value = []
+  activeProject.value = null
+  resetReviewState()
   stopPolling()
 }
 async function loadMe() {
   try {
     const data = await api('/auth/me')
     Object.assign(me, data)
-  } catch { /* token carries username if /me missing */ }
+  } catch {
+    Object.assign(me, { userId: null, username: '', nickname: '', role: '' })
+    throw new Error('未登录')
+  }
 }
 
 /* ---------- refresh ---------- */
 async function refreshAll() {
-  if (!token.value) return
+  if (!authenticated.value) return
   busy.refresh = true
   try {
     await loadProjects()
     if (activeProject.value) {
-      await Promise.allSettled([loadDocuments(), loadReviews(), loadAiLogs()])
+      await Promise.allSettled([loadDocuments(), loadReviews(), loadPullRequests(), loadAiLogs()])
     }
   } finally { busy.refresh = false }
 }
@@ -765,6 +943,168 @@ function reviewSelectedCommit() {
   tab.value = 'reviews'
 }
 
+/* ---------- pull requests ---------- */
+function resetPullRequestForm() {
+  Object.assign(pullRequestForm, {
+    pullRequestId: null,
+    prNumber: null,
+    title: '',
+    authorName: '',
+    sourceBranch: '',
+    targetBranch: activeProject.value?.defaultBranch || 'main',
+    baseSha: '',
+    headSha: '',
+    provider: 'GITHUB',
+    externalPrId: '',
+    status: 'OPEN',
+  })
+}
+function fillPrFromSelectedCommit() {
+  if (!selectedCommit.value) return
+  Object.assign(pullRequestForm, {
+    title: selectedCommit.value.message || `Review ${shortCommit(selectedCommit.value.commitId)}`,
+    authorName: selectedCommit.value.authorName || '',
+    sourceBranch: reviewForm.branch || activeProject.value?.defaultBranch || 'main',
+    targetBranch: activeProject.value?.defaultBranch || 'main',
+    baseSha: selectedCommit.value.parentCommitId || '',
+    headSha: selectedCommit.value.commitId,
+  })
+  tab.value = 'pullRequests'
+}
+async function savePullRequest() {
+  if (!pullRequestForm.title.trim()) return toastMsg('请填写 PR 标题', 'error')
+  if (!pullRequestForm.sourceBranch.trim() || !pullRequestForm.targetBranch.trim()) return toastMsg('请填写源分支和目标分支', 'error')
+  if (!pullRequestForm.baseSha.trim() || !pullRequestForm.headSha.trim()) return toastMsg('请填写 Base 和 Head', 'error')
+  busy.pullRequest = true
+  try {
+    const body = JSON.stringify({
+      prNumber: pullRequestForm.prNumber || null,
+      title: pullRequestForm.title,
+      authorName: pullRequestForm.authorName,
+      sourceBranch: pullRequestForm.sourceBranch,
+      targetBranch: pullRequestForm.targetBranch,
+      baseSha: pullRequestForm.baseSha,
+      headSha: pullRequestForm.headSha,
+      provider: pullRequestForm.provider,
+      externalPrId: pullRequestForm.externalPrId,
+      status: pullRequestForm.status,
+    })
+    if (pullRequestForm.pullRequestId) {
+      await api(`/projects/${activeProject.value.projectId}/pull-requests/${pullRequestForm.pullRequestId}`, { method: 'PUT', body })
+      toastMsg('PR 已更新', 'success')
+    } else {
+      const created = await api(`/projects/${activeProject.value.projectId}/pull-requests`, { method: 'POST', body })
+      activePullRequest.value = created
+      toastMsg('PR 已登记', 'success')
+    }
+    await loadPullRequests()
+    resetPullRequestForm()
+  } finally { busy.pullRequest = false }
+}
+async function loadPullRequests() {
+  if (!activeProject.value) return
+  busy.pullRequests = true
+  try {
+    pullRequests.value = await api(`/projects/${activeProject.value.projectId}/pull-requests`)
+    if (activePullRequest.value) {
+      activePullRequest.value = pullRequests.value.find(pr => pr.pullRequestId === activePullRequest.value.pullRequestId) || null
+    }
+    if (!activePullRequest.value && pullRequests.value.length) {
+      await selectPullRequest(pullRequests.value[0])
+    }
+  } finally { busy.pullRequests = false }
+}
+async function selectPullRequest(pr) {
+  activePullRequest.value = pr
+  prActionForm.reportId = null
+  actionReportDetail.value = null
+  actionIssueIds.value = new Set()
+  await loadPrActions()
+}
+function editPullRequest(pr) {
+  Object.assign(pullRequestForm, {
+    pullRequestId: pr.pullRequestId,
+    prNumber: pr.prNumber,
+    title: pr.title,
+    authorName: pr.authorName || '',
+    sourceBranch: pr.sourceBranch,
+    targetBranch: pr.targetBranch,
+    baseSha: pr.baseSha,
+    headSha: pr.headSha,
+    provider: pr.provider,
+    externalPrId: pr.externalPrId || '',
+    status: pr.status,
+  })
+  toastMsg('正在编辑 PR：' + (pr.prNumber ? '#' + pr.prNumber : '#' + pr.pullRequestId))
+}
+async function createPrReview() {
+  if (!activePullRequest.value) return
+  busy.prReview = true
+  try {
+    const documentIds = Array.from(chosenDocs.value)
+    await api(`/projects/${activeProject.value.projectId}/pull-requests/${activePullRequest.value.pullRequestId}/review-task`, {
+      method: 'POST',
+      body: JSON.stringify({ documentIds }),
+    })
+    await loadReviews()
+    if (prReports.value[0]) await selectPrReport(prReports.value[0].reportId)
+    toastMsg('PR 审查任务已创建', 'success')
+    maybeStartPolling()
+  } finally { busy.prReview = false }
+}
+async function selectPrReport(reportId) {
+  prActionForm.reportId = reportId
+  await loadActionReport()
+}
+async function loadActionReport() {
+  actionIssueIds.value = new Set()
+  if (!prActionForm.reportId) {
+    actionReportDetail.value = null
+    return
+  }
+  actionReportDetail.value = await api(`/projects/${activeProject.value.projectId}/reviews/reports/${prActionForm.reportId}`)
+}
+function toggleActionIssue(id) {
+  const next = new Set(actionIssueIds.value)
+  next.has(id) ? next.delete(id) : next.add(id)
+  actionIssueIds.value = next
+}
+function selectBlockingIssues() {
+  if (!actionReportDetail.value) return
+  actionIssueIds.value = new Set(actionReportDetail.value.issues
+    .filter(i => i.severity === 'HIGH' || i.severity === 'MEDIUM')
+    .map(i => i.issueId))
+}
+function clearActionIssues() { actionIssueIds.value = new Set() }
+async function submitPrAction() {
+  if (!activePullRequest.value) return
+  busy.prAction = true
+  try {
+    await api(`/projects/${activeProject.value.projectId}/pull-requests/${activePullRequest.value.pullRequestId}/actions`, {
+      method: 'POST',
+      body: JSON.stringify({
+        actionType: prActionForm.actionType,
+        reportId: prActionForm.reportId,
+        reason: prActionForm.reason,
+        requirement: prActionForm.requirement,
+        selectedIssueIds: Array.from(actionIssueIds.value),
+      }),
+    })
+    Object.assign(prActionForm, { actionType: 'REQUEST_CHANGES', reportId: null, reason: '', requirement: '' })
+    actionReportDetail.value = null
+    actionIssueIds.value = new Set()
+    await Promise.allSettled([loadPullRequests(), loadPrActions()])
+    toastMsg('审核动作已提交', 'success')
+  } finally { busy.prAction = false }
+}
+async function loadPrActions() {
+  if (!activePullRequest.value) {
+    prActions.value = []
+    return
+  }
+  prActions.value = await api(`/projects/${activeProject.value.projectId}/pull-requests/${activePullRequest.value.pullRequestId}/actions`)
+}
+
 /* ---------- knowledge ---------- */
 function onFileChange(e) { selectedFile.value = e.target.files?.[0] || null }
 async function uploadDocument() {
@@ -801,8 +1141,10 @@ async function searchKnowledge() {
 function resetReviewState() {
   commits.value = []; selectedCommit.value = null; diffFiles.value = []
   tasks.value = []; reports.value = []; activeTask.value = null; reportDetail.value = null; mqLogs.value = []
+  pullRequests.value = []; activePullRequest.value = null; prActions.value = []; actionReportDetail.value = null; actionIssueIds.value = new Set()
   repoForm._bound = false
   chosenDocs.value = new Set()
+  resetPullRequestForm()
 }
 async function createReview() {
   busy.review = true
@@ -965,6 +1307,9 @@ function relativeDay(dateStr) {
   return ''
 }
 function statusLabel(s) { return { PENDING: '等待中', RUNNING: '运行中', SUCCESS: '成功', FAILED: '失败', DEAD: '已死信', CANCELED: '已停止' }[s] || s }
+function prStateLabel(s) { return { PENDING: '待审查', PASSED: '已通过', CHANGES_REQUESTED: '已打回', WAIVED: '已豁免' }[s] || s }
+function actionLabel(s) { return { APPROVE: '通过', REQUEST_CHANGES: '打回', WAIVE: '豁免', COMMENT: '评论' }[s] || s }
+function actionStateClass(s) { return { APPROVE: 'SUCCESS', REQUEST_CHANGES: 'FAILED', WAIVE: 'PENDING', COMMENT: 'CONSUMED' }[s] || s }
 function mqStatusClass(s) { return s === 'CONSUMED' || s === 'PUBLISHED' ? 'SUCCESS' : (s === 'DEAD' ? 'DEAD' : 'FAILED') }
 function fbLabel(t) { return { TRUE_POSITIVE: '真实问题', FALSE_POSITIVE: '误报', NEED_DISCUSSION: '需讨论' }[t] || t }
 function fbBadge(t) { return { TRUE_POSITIVE: 'risk-LOW', FALSE_POSITIVE: 'risk-HIGH', NEED_DISCUSSION: 'risk-MEDIUM' }[t] || 'risk-NONE' }
@@ -981,7 +1326,15 @@ function diffLines(diff) {
 }
 
 onMounted(async () => {
-  if (token.value) { await loadMe(); await refreshAll() }
+  try {
+    await loadMe()
+    authenticated.value = !!me.userId
+    if (authenticated.value) {
+      await refreshAll()
+    }
+  } catch {
+    authenticated.value = false
+  }
 })
 onUnmounted(stopPolling)
 </script>

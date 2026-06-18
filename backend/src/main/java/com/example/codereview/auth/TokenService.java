@@ -13,6 +13,12 @@ import org.springframework.stereotype.Service;
 @Service
 public class TokenService {
 
+    public record ParsedToken(Long userId, String username, String role, int sessionVersion, long expiresAt) {
+        public CurrentUser toCurrentUser() {
+            return new CurrentUser(userId, username, role);
+        }
+    }
+
     private final String secret;
     private final long ttlSeconds;
 
@@ -26,13 +32,18 @@ public class TokenService {
 
     public String issue(UserAccount user) {
         long expiresAt = Instant.now().plusSeconds(ttlSeconds).getEpochSecond();
-        String payload = user.getId() + ":" + user.getUsername() + ":" + user.getRole() + ":" + expiresAt;
+        String payload = user.getId() + ":" + user.getUsername() + ":" + user.getRole() + ":" + user.getSessionVersion() + ":" + expiresAt;
         String encodedPayload = base64Url(payload.getBytes(StandardCharsets.UTF_8));
         String signature = sign(encodedPayload);
         return encodedPayload + "." + signature;
     }
 
     public CurrentUser parse(String token) {
+        ParsedToken parsed = parseClaims(token);
+        return parsed == null ? null : parsed.toCurrentUser();
+    }
+
+    public ParsedToken parseClaims(String token) {
         try {
             String[] parts = token.split("\\.");
             if (parts.length != 2 || !MessageDigest.isEqual(
@@ -42,14 +53,20 @@ public class TokenService {
             }
             String payload = new String(Base64.getUrlDecoder().decode(parts[0]), StandardCharsets.UTF_8);
             String[] fields = payload.split(":");
-            if (fields.length != 4) {
+            if (fields.length != 5) {
                 return null;
             }
-            long expiresAt = Long.parseLong(fields[3]);
+            long expiresAt = Long.parseLong(fields[4]);
             if (Instant.now().getEpochSecond() > expiresAt) {
                 return null;
             }
-            return new CurrentUser(Long.parseLong(fields[0]), fields[1], fields[2]);
+            return new ParsedToken(
+                    Long.parseLong(fields[0]),
+                    fields[1],
+                    fields[2],
+                    Integer.parseInt(fields[3]),
+                    expiresAt
+            );
         } catch (RuntimeException ex) {
             return null;
         }

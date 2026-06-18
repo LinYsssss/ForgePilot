@@ -16,11 +16,14 @@ class TokenServiceTest {
 
         String token = tokenService.issue(user);
         CurrentUser parsed = tokenService.parse(token);
+        TokenService.ParsedToken claims = tokenService.parseClaims(token);
 
         assertThat(parsed).isNotNull();
         assertThat(parsed.userId()).isEqualTo(42L);
         assertThat(parsed.username()).isEqualTo("alice");
         assertThat(parsed.role()).isEqualTo("DEVELOPER");
+        assertThat(claims).isNotNull();
+        assertThat(claims.sessionVersion()).isEqualTo(0);
     }
 
     @Test
@@ -32,5 +35,22 @@ class TokenServiceTest {
         String token = tokenService.issue(user);
 
         assertThat(tokenService.parse(token + "x")).isNull();
+        assertThat(tokenService.parseClaims(token + "x")).isNull();
+    }
+
+    @Test
+    void tokenCarriesSessionVersion() {
+        TokenService tokenService = new TokenService("unit-test-secret", 3600);
+        UserAccount user = new UserAccount("carol", "hash", "Carol", "DEVELOPER");
+        ReflectionTestUtils.setField(user, "id", 9L);
+
+        String issuedBeforeLogout = tokenService.issue(user);
+        user.bumpSessionVersion();
+        String issuedAfterLogout = tokenService.issue(user);
+
+        assertThat(tokenService.parseClaims(issuedBeforeLogout)).isNotNull();
+        assertThat(tokenService.parseClaims(issuedBeforeLogout).sessionVersion()).isEqualTo(0);
+        assertThat(tokenService.parseClaims(issuedAfterLogout)).isNotNull();
+        assertThat(tokenService.parseClaims(issuedAfterLogout).sessionVersion()).isEqualTo(1);
     }
 }

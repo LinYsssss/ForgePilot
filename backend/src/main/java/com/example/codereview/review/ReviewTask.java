@@ -1,13 +1,32 @@
 package com.example.codereview.review;
 
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Index;
+import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
 @Entity
-@Table(name = "review_task")
+@Table(
+        name = "review_task",
+        uniqueConstraints = {
+                @UniqueConstraint(
+                        name = "uq_review_task_idempotency",
+                        columnNames = {"projectId", "repositoryId", "commitId", "baseCommitIdNormalized", "branchName"}
+                )
+        },
+        indexes = {
+                @Index(name = "idx_review_task_project", columnList = "projectId"),
+                @Index(name = "idx_review_task_pull_request", columnList = "pullRequestId")
+        }
+)
 public class ReviewTask {
 
     @Id
@@ -26,11 +45,16 @@ public class ReviewTask {
     @Column(length = 80)
     private String baseCommitId;
 
+    @Column(nullable = false, length = 80)
+    private String baseCommitIdNormalized;
+
     @Column(nullable = false, length = 128)
     private String branchName;
 
     @Column(nullable = false)
     private Long triggerUserId;
+
+    private Long pullRequestId;
 
     @Column(nullable = false, length = 32)
     private String status;
@@ -64,12 +88,19 @@ public class ReviewTask {
     }
 
     public ReviewTask(Long projectId, Long repositoryId, String commitId, String baseCommitId, String branchName, Long triggerUserId, String diffText, List<Long> knowledgeDocIds) {
+        this(projectId, repositoryId, commitId, baseCommitId, branchName, triggerUserId, diffText, knowledgeDocIds, null);
+    }
+
+    public ReviewTask(Long projectId, Long repositoryId, String commitId, String baseCommitId, String branchName,
+                      Long triggerUserId, String diffText, List<Long> knowledgeDocIds, Long pullRequestId) {
         this.projectId = projectId;
         this.repositoryId = repositoryId;
         this.commitId = commitId;
         this.baseCommitId = baseCommitId;
+        this.baseCommitIdNormalized = normalizeBaseCommitId(baseCommitId);
         this.branchName = branchName;
         this.triggerUserId = triggerUserId;
+        this.pullRequestId = pullRequestId;
         this.diffText = diffText;
         this.knowledgeDocIds = serializeDocIds(knowledgeDocIds);
         this.status = "PENDING";
@@ -83,6 +114,10 @@ public class ReviewTask {
             return null;
         }
         return ids.stream().filter(java.util.Objects::nonNull).map(String::valueOf).collect(Collectors.joining(","));
+    }
+
+    private static String normalizeBaseCommitId(String baseCommitId) {
+        return baseCommitId == null ? "" : baseCommitId;
     }
 
     public Long getId() {
@@ -101,6 +136,10 @@ public class ReviewTask {
         return baseCommitId;
     }
 
+    public String getBaseCommitIdNormalized() {
+        return baseCommitIdNormalized;
+    }
+
     public String getBranchName() {
         return branchName;
     }
@@ -109,8 +148,16 @@ public class ReviewTask {
         return status;
     }
 
+    public Long getPullRequestId() {
+        return pullRequestId;
+    }
+
     public int getRetryCount() {
         return retryCount;
+    }
+
+    public Long getRepositoryId() {
+        return repositoryId;
     }
 
     public String getDiffText() {
@@ -145,6 +192,9 @@ public class ReviewTask {
     }
 
     public void markRunning() {
+        if ("RUNNING".equals(this.status)) {
+            return;
+        }
         this.status = "RUNNING";
         this.startedAt = Instant.now();
         this.updatedAt = this.startedAt;

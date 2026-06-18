@@ -10,6 +10,7 @@ import com.example.codereview.repo.RepositoryDtos.CommitDiffResponse;
 import com.example.codereview.repo.RepositoryDtos.CommitResponse;
 import com.example.codereview.repo.RepositoryDtos.RepositoryResponse;
 import java.util.List;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,25 +21,34 @@ public class RepositoryService {
     private final CodeRepositoryJpaRepository repositories;
     private final GitCliService gitCliService;
     private final CryptoService cryptoService;
+    private final boolean allowLocalRepoPath;
 
     public RepositoryService(ProjectService projectService, CodeRepositoryJpaRepository repositories,
-                             GitCliService gitCliService, CryptoService cryptoService) {
+                             GitCliService gitCliService, CryptoService cryptoService,
+                             @Value("${app.git.allow-local-path:false}") boolean allowLocalRepoPath) {
         this.projectService = projectService;
         this.repositories = repositories;
         this.gitCliService = gitCliService;
         this.cryptoService = cryptoService;
+        this.allowLocalRepoPath = allowLocalRepoPath;
     }
 
     @Transactional
     public RepositoryResponse bind(Long projectId, Long userId, BindRepositoryRequest request) {
         projectService.getRequired(projectId, userId);
-        GitInputValidator.requireSafeRepoUrl(request.repoUrl());
+        GitInputValidator.requireSafeRepoUrl(request.repoUrl(), allowLocalRepoPath);
         if (request.defaultBranch() != null && !request.defaultBranch().isBlank()) {
             GitInputValidator.requireSafeRef(request.defaultBranch(), "默认分支");
         }
         String encryptedToken = cryptoService.encrypt(request.accessToken());
         CodeRepositoryEntity entity = repositories.findByProjectId(projectId)
-                .orElseGet(() -> new CodeRepositoryEntity(projectId, request.repoUrl(), request.provider(), request.defaultBranch(), encryptedToken));
+                .orElseGet(() -> new CodeRepositoryEntity(
+                        projectId,
+                        request.repoUrl(),
+                        request.provider(),
+                        request.defaultBranch(),
+                        encryptedToken
+                ));
         if (entity.getId() != null) {
             entity.update(request.repoUrl(), request.provider(), request.defaultBranch(), encryptedToken);
         }

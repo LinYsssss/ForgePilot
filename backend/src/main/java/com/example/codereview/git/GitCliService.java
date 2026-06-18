@@ -12,11 +12,13 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Base64;
+import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Stream;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -25,9 +27,12 @@ public class GitCliService {
     private final Path workRoot = Path.of(".work", "repos");
     private final ConcurrentMap<Long, Object> repositoryLocks = new ConcurrentHashMap<>();
     private final CryptoService cryptoService;
+    private final boolean allowLocalRepoPath;
 
-    public GitCliService(CryptoService cryptoService) {
+    public GitCliService(CryptoService cryptoService,
+                         @Value("${app.git.allow-local-path:false}") boolean allowLocalRepoPath) {
         this.cryptoService = cryptoService;
+        this.allowLocalRepoPath = allowLocalRepoPath;
     }
 
     public Path ensureClone(CodeRepositoryEntity repository) {
@@ -38,20 +43,31 @@ public class GitCliService {
         }
     }
 
+    public void deleteWorkingCopy(Long repositoryId) {
+        if (repositoryId == null) {
+            return;
+        }
+        Object lock = repositoryLocks.computeIfAbsent(repositoryId, key -> new Object());
+        synchronized (lock) {
+            deleteWorkingCopyLocked(repositoryId);
+        }
+        repositoryLocks.remove(repositoryId);
+    }
+
     private Path ensureCloneLocked(CodeRepositoryEntity repository) {
-        GitInputValidator.requireSafeRepoUrl(repository.getRepoUrl());
+        GitInputValidator.requireSafeRepoUrl(repository.getRepoUrl(), allowLocalRepoPath);
         GitInputValidator.requireSafeRef(repository.getDefaultBranch(), "默认分支");
         try {
             Files.createDirectories(workRoot);
-            Path localPath = workRoot.resolve("repo-" + repository.getId()).toAbsolutePath();
+            Path localPath = resolveRepositoryPath(repository.getId());
             if (Files.exists(localPath.resolve(".git"))) {
-                run(localPath, gitCommand(repository, "fetch", "--all", "--prune"));
-                run(localPath, gitCommand(repository, "checkout", repository.getDefaultBranch()));
-                run(localPath, gitCommand(repository, "pull", "--ff-only", "origin", repository.getDefaultBranch()));
+                run(localPath, repository, "fetch", "--all", "--prune");
+                run(localPath, repository, "checkout", repository.getDefaultBranch());
+                run(localPath, repository, "pull", "--ff-only", "origin", repository.getDefaultBranch());
                 return localPath;
             }
-            run(workRoot.toAbsolutePath(), gitCommand(repository, "clone", repository.getRepoUrl(), localPath.toString()));
-            run(localPath, gitCommand(repository, "checkout", repository.getDefaultBranch()));
+            run(workRoot.toAbsolutePath(), repository, "clone", repository.getRepoUrl(), localPath.toString());
+            run(localPath, repository, "checkout", repository.getDefaultBranch());
             return localPath;
         } catch (IOException ex) {
             throw new BusinessException(6001, "准备仓库目录失败");
@@ -62,9 +78,14 @@ public class GitCliService {
         GitInputValidator.requireSafeRef(repository.getDefaultBranch(), "默认分支");
         int safeLimit = Math.max(1, Math.min(limit, 200));
         Path localPath = ensureClone(repository);
-        String output = run(localPath, "git", "log", "--max-count=" + safeLimit,
+        String output = run(
+                localPath,
+                repository,
+                "log",
+                "--max-count=" + safeLimit,
                 "--pretty=format:%H%x1f%P%x1f%an%x1f%ae%x1f%ct%x1f%s",
-                repository.getDefaultBranch());
+                repository.getDefaultBranch()
+        );
         List<CommitResponse> commits = new ArrayList<>();
         if (output.isBlank()) {
             return commits;
@@ -94,15 +115,15 @@ public class GitCliService {
         Path localPath = ensureClone(repository);
         String base = baseCommitId;
         if (base == null || base.isBlank()) {
-            base = resolveParentOrEmptyTree(localPath, commitId);
+            base = resolveParentOrEmptyTree(localPath, repository, commitId);
         }
-        String rawDiff = run(localPath, "git", "diff", "--find-renames", base, commitId, "--");
+        String rawDiff = run(localPath, repository, "diff", "--find-renames", base, commitId, "--");
         List<DiffFileResponse> files = parseFiles(rawDiff);
         return new CommitDiffResponse(commitId, base, files, rawDiff);
     }
 
-    private String resolveParentOrEmptyTree(Path localPath, String commitId) {
-        String parents = run(localPath, "git", "rev-list", "--parents", "-n", "1", commitId, "--").trim();
+    private String resolveParentOrEmptyTree(Path localPath, CodeRepositoryEntity repository, String commitId) {
+        String parents = run(localPath, repository, "rev-list", "--parents", "-n", "1", commitId, "--").trim();
         String[] parts = parents.split("\\s+");
         if (parts.length >= 2) {
             return parts[1];
@@ -141,15 +162,40 @@ public class GitCliService {
         return files;
     }
 
+    private void deleteWorkingCopyLocked(Long repositoryId) {
+        Path repoPath = resolveRepositoryPath(repositoryId);
+        if (Files.notExists(repoPath)) {
+            return;
+        }
+        ensureWithinWorkRoot(repoPath);
+        try (Stream<Path> paths = Files.walk(repoPath)) {
+            paths.sorted(Comparator.reverseOrder()).forEach(path -> {
+                try {
+                    Files.deleteIfExists(path);
+                } catch (IOException ex) {
+                    throw new IllegalStateException("删除仓库工作目录失败: " + path, ex);
+                }
+            });
+        } catch (IOException ex) {
+            throw new IllegalStateException("删除仓库工作目录失败", ex);
+        }
+    }
+
+    private Path resolveRepositoryPath(Long repositoryId) {
+        return workRoot.resolve("repo-" + repositoryId).toAbsolutePath().normalize();
+    }
+
+    private void ensureWithinWorkRoot(Path candidate) {
+        Path absoluteWorkRoot = workRoot.toAbsolutePath().normalize();
+        if (!candidate.normalize().startsWith(absoluteWorkRoot)) {
+            throw new IllegalStateException("仓库工作目录越界: " + candidate);
+        }
+    }
+
     private String[] gitCommand(CodeRepositoryEntity repository, String... args) {
         List<String> command = new ArrayList<>();
         command.add("git");
         addSafeDirectoryOptions(command, repository.getRepoUrl());
-        String token = cryptoService.decrypt(repository.getAccessTokenCiphertext());
-        if (shouldUseToken(repository.getRepoUrl(), token)) {
-            command.add("-c");
-            command.add("http.extraHeader=Authorization: Basic " + basicAuth(repository, token));
-        }
         command.addAll(List.of(args));
         return command.toArray(String[]::new);
     }
@@ -165,6 +211,13 @@ public class GitCliService {
         command.add("safe.directory=" + normalized + "/.git");
     }
 
+    private String askPassUsername(CodeRepositoryEntity repository) {
+        return switch ((repository.getProvider() == null ? "" : repository.getProvider()).toUpperCase()) {
+            case "GITLAB", "GITEE" -> "oauth2";
+            default -> "x-access-token";
+        };
+    }
+
     private boolean shouldUseToken(String repoUrl, String token) {
         return token != null
                 && !token.isBlank()
@@ -172,21 +225,24 @@ public class GitCliService {
                 && repoUrl.toLowerCase().startsWith("http");
     }
 
-    private String basicAuth(CodeRepositoryEntity repository, String token) {
-        String username = switch ((repository.getProvider() == null ? "" : repository.getProvider()).toUpperCase()) {
-            case "GITLAB", "GITEE" -> "oauth2";
-            default -> "x-access-token";
-        };
-        return Base64.getEncoder().encodeToString((username + ":" + token).getBytes(StandardCharsets.UTF_8));
-    }
-
-    private String run(Path directory, String... command) {
+    private String run(Path directory, CodeRepositoryEntity repository, String... args) {
+        Path askPassScript = null;
         try {
-            ProcessBuilder builder = new ProcessBuilder(command)
+            ProcessBuilder builder = new ProcessBuilder(gitCommand(repository, args))
                     .directory(directory.toFile())
                     .redirectErrorStream(true);
-            builder.environment().put("GIT_ALLOW_PROTOCOL", "http:https:file");
+            builder.environment().put("GIT_ALLOW_PROTOCOL", repository.getRepoUrl().toLowerCase().startsWith("http")
+                    ? "http:https"
+                    : "http:https:file");
             builder.environment().put("GIT_TERMINAL_PROMPT", "0");
+            String token = cryptoService.decrypt(repository.getAccessTokenCiphertext());
+            if (shouldUseToken(repository.getRepoUrl(), token)) {
+                AskPassConfig askPass = createAskPass();
+                askPassScript = askPass.scriptPath();
+                builder.environment().put("GIT_ASKPASS", askPass.command());
+                builder.environment().put("REPOSAGE_GIT_USERNAME", askPassUsername(repository));
+                builder.environment().put("REPOSAGE_GIT_PASSWORD", token);
+            }
             Process process = builder.start();
             boolean finished = process.waitFor(60, TimeUnit.SECONDS);
             String output = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
@@ -203,6 +259,47 @@ public class GitCliService {
         } catch (InterruptedException ex) {
             Thread.currentThread().interrupt();
             throw new BusinessException(6001, "Git 命令被中断");
+        } finally {
+            if (askPassScript != null) {
+                try {
+                    Files.deleteIfExists(askPassScript);
+                } catch (IOException ignored) {
+                    // Best-effort cleanup for ephemeral askpass helpers.
+                }
+            }
         }
+    }
+
+    private AskPassConfig createAskPass() throws IOException {
+        Files.createDirectories(workRoot);
+        boolean windows = System.getProperty("os.name", "").toLowerCase().contains("win");
+        if (windows) {
+            Path scriptPath = Files.createTempFile(workRoot, "git-askpass-", ".ps1");
+            String script = """
+                    param([string]$prompt)
+                    if ($prompt -match 'Username') {
+                      [Console]::Out.WriteLine($env:REPOSAGE_GIT_USERNAME)
+                    } else {
+                      [Console]::Out.WriteLine($env:REPOSAGE_GIT_PASSWORD)
+                    }
+                    """;
+            Files.writeString(scriptPath, script, StandardCharsets.UTF_8);
+            String command = "powershell.exe -NoProfile -ExecutionPolicy Bypass -File \"" + scriptPath + "\"";
+            return new AskPassConfig(scriptPath, command);
+        }
+        Path scriptPath = Files.createTempFile(workRoot, "git-askpass-", ".sh");
+        String script = """
+                #!/bin/sh
+                case "$1" in
+                  *Username*) printf '%s\\n' "$REPOSAGE_GIT_USERNAME" ;;
+                  *) printf '%s\\n' "$REPOSAGE_GIT_PASSWORD" ;;
+                esac
+                """;
+        Files.writeString(scriptPath, script, StandardCharsets.UTF_8);
+        scriptPath.toFile().setExecutable(true);
+        return new AskPassConfig(scriptPath, scriptPath.toAbsolutePath().toString());
+    }
+
+    private record AskPassConfig(Path scriptPath, String command) {
     }
 }

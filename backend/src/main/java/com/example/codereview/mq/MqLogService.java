@@ -32,6 +32,10 @@ public class MqLogService {
         save(message, RabbitMqConfig.REVIEW_DEAD_ROUTING_KEY, "DEAD", error);
     }
 
+    public void delayed(ReviewTaskMessage message) {
+        save(message, RabbitMqConfig.REVIEW_DELAY_ROUTING_KEY, "DELAYED", null);
+    }
+
     private void save(ReviewTaskMessage message, String routingKey, String status, String error) {
         logs.save(new MqTaskLog(
                 message.taskId(),
@@ -49,6 +53,9 @@ public class MqLogService {
     private String queueName(String routingKey) {
         if (RabbitMqConfig.REVIEW_DEAD_ROUTING_KEY.equals(routingKey)) {
             return RabbitMqConfig.REVIEW_DEAD_QUEUE;
+        }
+        if (RabbitMqConfig.REVIEW_DELAY_ROUTING_KEY.equals(routingKey)) {
+            return RabbitMqConfig.REVIEW_DELAY_QUEUE;
         }
         return RabbitMqConfig.REVIEW_TASK_QUEUE;
     }

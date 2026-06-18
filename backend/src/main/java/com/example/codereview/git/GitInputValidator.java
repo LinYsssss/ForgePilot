@@ -17,11 +17,11 @@ public final class GitInputValidator {
                 || value.startsWith("-")
                 || value.contains("..")
                 || !SAFE_REF.matcher(value).matches()) {
-            throw new BusinessException(400, "非法的 " + field);
+            throw new BusinessException(400, "非法的" + field);
         }
     }
 
-    public static void requireSafeRepoUrl(String repoUrl) {
+    public static void requireSafeRepoUrl(String repoUrl, boolean allowLocalPath) {
         if (repoUrl == null || repoUrl.isBlank()) {
             throw new BusinessException(400, "仓库地址不能为空");
         }
@@ -34,13 +34,18 @@ public final class GitInputValidator {
             return;
         }
         if (trimmed.contains("://")) {
-            throw new BusinessException(400, "仅支持 http/https 远程仓库地址或本地演示仓库路径");
+            throw new BusinessException(400, allowLocalPath
+                    ? "仅支持 http/https 远程仓库地址或本地演示仓库路径"
+                    : "仅支持 http/https 远程仓库地址");
         }
         if (trimmed.contains("::")) {
             throw new BusinessException(400, "非法的仓库地址");
         }
         if (isScpLike(trimmed)) {
             throw new BusinessException(400, "暂不支持 SSH 仓库地址，请使用 http/https");
+        }
+        if (!allowLocalPath) {
+            throw new BusinessException(400, "生产环境仅支持 http/https 远程仓库地址");
         }
     }
 

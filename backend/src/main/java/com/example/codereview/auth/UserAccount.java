@@ -1,6 +1,11 @@
 package com.example.codereview.auth;
 
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
 import java.time.Instant;
 
 @Entity
@@ -27,6 +32,9 @@ public class UserAccount {
     private String status;
 
     @Column(nullable = false)
+    private int sessionVersion;
+
+    @Column(nullable = false)
     private Instant createdAt;
 
     @Column(nullable = false)
@@ -41,6 +49,7 @@ public class UserAccount {
         this.nickname = nickname;
         this.role = role;
         this.status = "ENABLED";
+        this.sessionVersion = 0;
         this.createdAt = Instant.now();
         this.updatedAt = this.createdAt;
     }
@@ -67,5 +76,18 @@ public class UserAccount {
 
     public String getStatus() {
         return status;
+    }
+
+    public int getSessionVersion() {
+        return sessionVersion;
+    }
+
+    public boolean isEnabled() {
+        return "ENABLED".equalsIgnoreCase(status);
+    }
+
+    public void bumpSessionVersion() {
+        this.sessionVersion++;
+        this.updatedAt = Instant.now();
     }
 }

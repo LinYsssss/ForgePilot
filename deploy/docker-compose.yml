@@ -9,13 +9,13 @@ services:
       - postgres_data:/var/lib/postgresql/data
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
 
   rabbitmq:
     image: rabbitmq:3-management
     environment:
-      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USERNAME:-guest}
-      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-guest}
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USERNAME:-code_review}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-change-me}
     ports:
       - "5672:5672"
       - "15672:15672"

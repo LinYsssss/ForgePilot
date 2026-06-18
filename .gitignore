@@ -9,10 +9,12 @@ model-service/scripts/__pycache__/
 # Dependency directories
 frontend/node_modules/
 frontend/.npm-cache/
+.m2home/
 
 # Runtime and temporary files
 backend/.work/
 backend/*.log
+frontend/*.log
 .work/
 
 # Local env files

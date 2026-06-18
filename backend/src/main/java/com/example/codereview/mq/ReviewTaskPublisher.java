@@ -32,4 +32,13 @@ public class ReviewTaskPublisher {
                 message
         );
     }
+
+    public void publishDelayed(ReviewTaskMessage message) {
+        mqLogService.delayed(message);
+        rabbitTemplate.convertAndSend(
+                RabbitMqConfig.REVIEW_EXCHANGE,
+                RabbitMqConfig.REVIEW_DELAY_ROUTING_KEY,
+                message
+        );
+    }
 }

@@ -28,3 +28,7 @@ management:
 logging:
   level:
     com.example.codereview: info
+
+app:
+  git:
+    allow-local-path: true

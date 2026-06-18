@@ -14,12 +14,14 @@ public final class ReviewDtos {
             String commitId,
             String baseCommitId,
             String branch,
-            List<Long> documentIds
+            List<Long> documentIds,
+            Long pullRequestId
     ) {
     }
 
     public record ReviewTaskResponse(
             Long taskId,
+            Long pullRequestId,
             String status,
             String commitId,
             String branch,
@@ -32,6 +34,7 @@ public final class ReviewDtos {
         public static ReviewTaskResponse from(ReviewTask task) {
             return new ReviewTaskResponse(
                     task.getId(),
+                    task.getPullRequestId(),
                     task.getStatus(),
                     task.getCommitId(),
                     task.getBranchName(),
