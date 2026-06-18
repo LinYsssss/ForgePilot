@@ -31,6 +31,15 @@ public class AiCallLog {
     private int responseChars;
 
     @Column(nullable = false)
+    private int promptTokens;
+
+    @Column(nullable = false)
+    private int completionTokens;
+
+    @Column(nullable = false)
+    private int totalTokens;
+
+    @Column(nullable = false)
     private long latencyMs;
 
     @Column(nullable = false, length = 32)
@@ -46,7 +55,8 @@ public class AiCallLog {
     }
 
     public AiCallLog(Long projectId, Long taskId, String requestType, String provider, String model,
-                     int promptChars, int responseChars, long latencyMs, String status, String errorMessage) {
+                     int promptChars, int responseChars, int promptTokens, int completionTokens, int totalTokens,
+                     long latencyMs, String status, String errorMessage) {
         this.projectId = projectId;
         this.taskId = taskId;
         this.requestType = requestType;
@@ -54,6 +64,9 @@ public class AiCallLog {
         this.model = model;
         this.promptChars = promptChars;
         this.responseChars = responseChars;
+        this.promptTokens = promptTokens;
+        this.completionTokens = completionTokens;
+        this.totalTokens = totalTokens;
         this.latencyMs = latencyMs;
         this.status = status;
         this.errorMessage = errorMessage;
@@ -90,6 +103,18 @@ public class AiCallLog {
 
     public int getResponseChars() {
         return responseChars;
+    }
+
+    public int getPromptTokens() {
+        return promptTokens;
+    }
+
+    public int getCompletionTokens() {
+        return completionTokens;
+    }
+
+    public int getTotalTokens() {
+        return totalTokens;
     }
 
     public long getLatencyMs() {

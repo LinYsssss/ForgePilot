@@ -3,6 +3,8 @@ package com.example.codereview.ai;
 import com.example.codereview.common.exception.BusinessException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import io.github.resilience4j.retry.annotation.Retry;
 import java.net.SocketTimeoutException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -14,6 +16,9 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.HttpServerErrorException;
+import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
 
 @Service
@@ -53,6 +58,8 @@ public class OpenAiCompatibleReviewClient implements AiReviewClient {
     }
 
     @Override
+    @Retry(name = "aiReview")
+    @CircuitBreaker(name = "aiReview")
     public AiReviewResult review(String diffText, String ragContext) {
         String prompt = buildPrompt(diffText, ragContext);
         Map<String, Object> request = Map.of(
@@ -71,13 +78,47 @@ public class OpenAiCompatibleReviewClient implements AiReviewClient {
                     .retrieve()
                     .body(byte[].class);
             String responseText = response == null ? "" : new String(response, StandardCharsets.UTF_8);
-            String content = extractMessageContent(responseText);
-            return parseContent(content);
+            JsonNode root = readResponseRoot(responseText);
+            String content = extractMessageContent(root, responseText);
+            return parseContent(content, extractUsage(root));
         } catch (BusinessException ex) {
             throw ex;
+        } catch (HttpClientErrorException ex) {
+            // 4xx is a deterministic client problem (bad key/request) — retrying won't help.
+            // 429 is the exception: it is a transient rate-limit, so let it retry / trip the breaker.
+            if (ex.getStatusCode().value() == 429) {
+                throw new AiCallTransientException("AI 调用被限流(429): " + describeFailure(ex), ex);
+            }
+            throw new BusinessException(6004, "AI 调用失败: " + describeFailure(ex));
+        } catch (HttpServerErrorException ex) {
+            throw new AiCallTransientException("AI 服务端错误(5xx): " + describeFailure(ex), ex);
+        } catch (ResourceAccessException ex) {
+            // Connect/read timeout or connection reset — transient, worth retrying.
+            throw new AiCallTransientException("AI 调用网络异常: " + describeFailure(ex), ex);
         } catch (Exception ex) {
             throw new BusinessException(6004, "AI 调用失败: " + describeFailure(ex));
         }
+    }
+
+    private JsonNode readResponseRoot(String responseText) {
+        try {
+            return objectMapper.readTree(responseText);
+        } catch (Exception ex) {
+            throw new BusinessException(6004, "AI 响应不是有效 JSON: " + abbreviate(responseText));
+        }
+    }
+
+    /** Reads OpenAI-compatible {@code usage} so we can record real token cost, not just char counts. */
+    private TokenUsage extractUsage(JsonNode root) {
+        JsonNode usage = root.path("usage");
+        if (usage.isMissingNode() || usage.isNull()) {
+            return TokenUsage.none();
+        }
+        return new TokenUsage(
+                usage.path("prompt_tokens").asInt(0),
+                usage.path("completion_tokens").asInt(0),
+                usage.path("total_tokens").asInt(0)
+        );
     }
 
     /**
@@ -111,19 +152,12 @@ public class OpenAiCompatibleReviewClient implements AiReviewClient {
         return sb.toString();
     }
 
-    private String extractMessageContent(String responseText) {
-        try {
-            JsonNode root = objectMapper.readTree(responseText);
-            String content = root.path("choices").path(0).path("message").path("content").asText();
-            if (content == null || content.isBlank()) {
-                throw new BusinessException(6004, "AI 响应不符合 OpenAI Chat 格式: " + abbreviate(responseText));
-            }
-            return content;
-        } catch (BusinessException ex) {
-            throw ex;
-        } catch (Exception ex) {
-            throw new BusinessException(6004, "AI 响应不是有效 JSON: " + abbreviate(responseText));
+    private String extractMessageContent(JsonNode root, String responseText) {
+        String content = root.path("choices").path(0).path("message").path("content").asText();
+        if (content == null || content.isBlank()) {
+            throw new BusinessException(6004, "AI 响应不符合 OpenAI Chat 格式: " + abbreviate(responseText));
         }
+        return content;
     }
 
     private String abbreviate(String value) {
@@ -134,7 +168,7 @@ public class OpenAiCompatibleReviewClient implements AiReviewClient {
         return normalized.length() <= 500 ? normalized : normalized.substring(0, 500) + "...";
     }
 
-    private AiReviewResult parseContent(String content) {
+    private AiReviewResult parseContent(String content, TokenUsage usage) {
         try {
             String json = extractJson(content);
             JsonNode root = objectMapper.readTree(json);
@@ -158,7 +192,8 @@ public class OpenAiCompatibleReviewClient implements AiReviewClient {
                     root.path("summary").asText("AI 审查完成"),
                     root.path("overallRisk").asText(issues.isEmpty() ? "NONE" : "MEDIUM"),
                     issues,
-                    content
+                    content,
+                    usage
             );
         } catch (Exception ex) {
             throw new BusinessException(6005, "AI 输出解析失败: " + ex.getMessage());

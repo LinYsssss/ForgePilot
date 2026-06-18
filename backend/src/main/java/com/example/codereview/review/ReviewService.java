@@ -6,6 +6,8 @@ import com.example.codereview.feedback.FeedbackRepository;
 import com.example.codereview.mq.MqTaskLogRepository;
 import com.example.codereview.mq.ReviewTaskMessage;
 import com.example.codereview.mq.ReviewTaskPublisher;
+import com.example.codereview.pullrequest.PullRequestEntity;
+import com.example.codereview.pullrequest.PullRequestRepository;
 import com.example.codereview.repo.CodeRepositoryEntity;
 import com.example.codereview.repo.RepositoryDtos.CommitDiffResponse;
 import com.example.codereview.repo.RepositoryDtos.CommitResponse;
@@ -23,6 +25,7 @@ import java.util.List;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.dao.DataIntegrityViolationException;
 
 @Service
 public class ReviewService {
@@ -33,59 +36,66 @@ public class ReviewService {
     private final ReviewIssueRepository issues;
     private final ReviewProcessor processor;
     private final ReviewTaskPublisher publisher;
+    private final PullRequestRepository pullRequests;
     private final FeedbackRepository feedback;
     private final MqTaskLogRepository mqLogs;
     private final AiCallLogRepository aiCallLogs;
     private final boolean inline;
-    private final int maxDiffChars;
+    private final int maxTotalDiffChars;
 
     public ReviewService(RepositoryService repositoryService, ReviewTaskRepository tasks, ReviewReportRepository reports,
                          ReviewIssueRepository issues, ReviewProcessor processor, ReviewTaskPublisher publisher,
-                         FeedbackRepository feedback, MqTaskLogRepository mqLogs, AiCallLogRepository aiCallLogs,
+                         PullRequestRepository pullRequests, FeedbackRepository feedback,
+                         MqTaskLogRepository mqLogs, AiCallLogRepository aiCallLogs,
                          @Value("${app.review.inline}") boolean inline,
-                         @Value("${app.review.max-diff-chars}") int maxDiffChars) {
+                         @Value("${app.review.max-total-diff-chars:200000}") int maxTotalDiffChars) {
         this.repositoryService = repositoryService;
         this.tasks = tasks;
         this.reports = reports;
         this.issues = issues;
         this.processor = processor;
         this.publisher = publisher;
+        this.pullRequests = pullRequests;
         this.feedback = feedback;
         this.mqLogs = mqLogs;
         this.aiCallLogs = aiCallLogs;
         this.inline = inline;
-        this.maxDiffChars = maxDiffChars;
+        this.maxTotalDiffChars = maxTotalDiffChars;
     }
 
     public ReviewTaskResponse create(Long projectId, Long userId, CreateReviewTaskRequest request) {
         CodeRepositoryEntity repository = repositoryService.getRequired(projectId, userId);
-        String commitId = resolveCommitId(projectId, userId, request.commitId());
-        String branchName = request.branch() == null || request.branch().isBlank() ? repository.getDefaultBranch() : request.branch();
-        CommitDiffResponse diff = repositoryService.diff(projectId, userId, commitId, request.baseCommitId());
+        PullRequestEntity pullRequest = resolvePullRequest(projectId, request.pullRequestId());
+        if (pullRequest != null && !pullRequest.getRepositoryId().equals(repository.getId())) {
+            throw new BusinessException(400, "PR 不属于当前仓库");
+        }
+        String commitId = pullRequest == null ? resolveCommitId(projectId, userId, request.commitId()) : pullRequest.getHeadSha();
+        String baseCommitId = pullRequest == null ? request.baseCommitId() : pullRequest.getBaseSha();
+        String branchName = resolveBranchName(repository, request.branch(), pullRequest);
+        CommitDiffResponse diff = repositoryService.diff(projectId, userId, commitId, baseCommitId);
         ReviewTask existing = tasks
-                .findFirstByProjectIdAndRepositoryIdAndCommitIdAndBaseCommitIdAndBranchNameOrderByCreatedAtDesc(
+                .findIdempotentTask(
                         projectId,
                         repository.getId(),
                         commitId,
-                        diff.baseCommitId(),
+                        normalizeBaseCommitId(diff.baseCommitId()),
                         branchName
                 )
                 .orElse(null);
         if (existing != null) {
             return ReviewTaskResponse.from(existing);
         }
-        String rawDiff = truncate(diff.rawDiff());
-        ReviewTask task = new ReviewTask(
+        ReviewTask task = saveTaskWithRetry(
                 projectId,
                 repository.getId(),
                 commitId,
                 diff.baseCommitId(),
                 branchName,
                 userId,
-                rawDiff,
-                request.documentIds()
+                truncate(diff.rawDiff()),
+                request.documentIds(),
+                pullRequest
         );
-        tasks.save(task);
         if (inline) {
             processor.process(task.getId());
             return tasks.findById(task.getId())
@@ -95,6 +105,32 @@ public class ReviewService {
             publisher.publish(ReviewTaskMessage.of(task.getId(), projectId, commitId));
         }
         return ReviewTaskResponse.from(task);
+    }
+
+    private ReviewTask saveTaskWithRetry(Long projectId, Long repositoryId, String commitId, String baseCommitId,
+                                         String branchName, Long userId, String rawDiff, List<Long> documentIds,
+                                         PullRequestEntity pullRequest) {
+        ReviewTask task = new ReviewTask(
+                projectId,
+                repositoryId,
+                commitId,
+                baseCommitId,
+                branchName,
+                userId,
+                rawDiff,
+                documentIds,
+                pullRequest == null ? null : pullRequest.getId()
+        );
+        try {
+            return tasks.saveAndFlush(task);
+        } catch (DataIntegrityViolationException ex) {
+            return tasks.findIdempotentTask(projectId, repositoryId, commitId, normalizeBaseCommitId(baseCommitId), branchName)
+                    .orElseThrow(() -> ex);
+        }
+    }
+
+    private String normalizeBaseCommitId(String baseCommitId) {
+        return baseCommitId == null ? "" : baseCommitId;
     }
 
     public List<ReviewTaskResponse> listTasks(Long projectId, Long userId) {
@@ -209,13 +245,34 @@ public class ReviewService {
         return commits.get(0).commitId();
     }
 
+    private PullRequestEntity resolvePullRequest(Long projectId, Long pullRequestId) {
+        if (pullRequestId == null) {
+            return null;
+        }
+        PullRequestEntity pullRequest = pullRequests.findById(pullRequestId)
+                .orElseThrow(() -> new BusinessException(404, "PR 不存在"));
+        if (!pullRequest.getProjectId().equals(projectId)) {
+            throw new BusinessException(403, "PR 不属于当前项目");
+        }
+        return pullRequest;
+    }
+
+    private String resolveBranchName(CodeRepositoryEntity repository, String requestedBranch, PullRequestEntity pullRequest) {
+        if (pullRequest != null) {
+            return pullRequest.getSourceBranch();
+        }
+        return requestedBranch == null || requestedBranch.isBlank() ? repository.getDefaultBranch() : requestedBranch;
+    }
+
     private String truncate(String diff) {
         if (diff == null) {
             return "";
         }
-        if (diff.length() <= maxDiffChars) {
+        if (diff.length() <= maxTotalDiffChars) {
             return diff;
         }
-        return diff.substring(0, maxDiffChars) + "\n\n[Diff 已截断，超过最大长度 " + maxDiffChars + "]";
+        // Overall safety cap only; per-file chunking (ReviewProcessor) handles fitting the model
+        // context, so this bound is large and rarely hit.
+        return diff.substring(0, maxTotalDiffChars) + "\n\n[Diff 已截断，超过单任务最大长度 " + maxTotalDiffChars + "]";
     }
 }

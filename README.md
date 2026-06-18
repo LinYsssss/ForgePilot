@@ -17,12 +17,15 @@ RepoSage 以 Git Commit 的 Diff 为输入，结合项目知识库和大模型�
 
 - **真实大模型审查**：通过 OpenAI 兼容接口接入大模型（已验证小米 MiMo），也可切换到任何 OpenAI 兼容服务。
 - **全量上下文注入**：知识库不大时，直接把项目全部文档喂给大模型，**无需 embedding / 向量数据库**，审查上下文更完整、更准确。
+- **大 Diff 分片审查**：改动很大时按文件拆分、分批调用大模型再合并问题，避免整体 Diff 被静默截断丢失代码。
 - **可选向量检索**：知识库很大时，可切换到内存余弦检索或 PostgreSQL + pgvector 向量检索（需要 embedding API）。
 - **规则引擎兜底**：纯 Java 关键词/模式规则，识别常见高危模式，不依赖任何外部服务。
 - **轻量分类模型**：FastAPI + scikit-learn（TF-IDF + 逻辑回归），对 Diff 做风险预判，结果作为信号注入审查上下文。
 - **异步任务**：RabbitMQ 承载耗时审查任务，含重试与死信队列；开发环境可用 inline 模式免装 MQ。
+- **调用弹性**：大模型调用接入 Resilience4j 重试 + 熔断，仅对网络超时 / 5xx / 429 等瞬时故障重试，连续失败时快速失败避免雪崩。
 - **安全**：登录 Token 鉴权；Git accessToken 用 AES-GCM 加密存储，接口不返回明文。
-- **可观测**：`ai_call_log` 记录每次大模型 / embedding / 模型调用的类型、模型、耗时、输入输出长度、状态和错误。
+- **可观测**：`ai_call_log` 记录每次大模型 / embedding / 模型调用的类型、模型、耗时、输入输出长度、**Token 用量**、状态和错误；并通过 Micrometer 把审查时延 / 吞吐 / Token 成本暴露到 `/actuator/prometheus`。
+- **生产级护栏**：每请求 `X-Trace-Id` 贯穿日志（MDC）；按用户/IP 的接口限流（超限返回 429 + `Retry-After`）；`/actuator/health` 深度探活（AI provider / 模型服务 / DB / 磁盘，细节仅鉴权可见）。
 - **可部署**：提供 Docker Compose（PostgreSQL+pgvector、RabbitMQ、后端、模型服务、前端、Nginx）。
 
 ---
@@ -149,9 +152,14 @@ RAG_FULL_CONTEXT=true
 | `RAG_TOP_K` | `5` | 向量检索时返回的片段数（全量注入模式下不生效） |
 | `EMBEDDING_PROVIDER` | `mock` | 向量化提供方：`mock`（本地占位）/ `openai-compatible`（真实 embedding API） |
 | `REVIEW_INLINE` | `true` | `true` 同步审查（免 MQ）；`false` 走 RabbitMQ 异步 |
-| `REVIEW_MAX_DIFF_CHARS` | `20000` | 单次审查 Diff 最大字符数，超出截断 |
+| `REVIEW_MAX_DIFF_CHARS` | `20000` | 单个 AI 调用的 Diff 字符预算（分片审查按此打包文件） |
+| `REVIEW_MAX_TOTAL_DIFF_CHARS` | `200000` | 单任务存储的 Diff 总上限（安全边界，超出才截断） |
+| `REVIEW_MAX_FILES` | `40` | 单任务最多审查的文件数，超出的文件跳过并在报告中说明 |
 | `MODEL_SERVICE_ENABLED` | `false` | 是否启用 FastAPI 轻量模型预判 |
 | `MODEL_SERVICE_URL` | 空 | 模型服务地址，如 `http://model-service:8000` |
+| `RATE_LIMIT_ENABLED` | `true` | 是否启用 `/api/**` 接口限流 |
+| `RATE_LIMIT_REQUESTS` | `120` | 单个时间窗内每用户/IP 允许的请求数，超出返回 429 |
+| `RATE_LIMIT_WINDOW_SECONDS` | `60` | 限流时间窗长度（秒） |
 
 ---
 
@@ -180,7 +188,8 @@ RAG_FULL_CONTEXT=true
 6. 触发审查任务。
 7. 查看审查报告：风险等级、问题列表、证据来源、修复建议。
 8. 对问题提交人工反馈（确认 / 误报 / 备注）。
-9. 查看 AI 调用日志与 MQ 日志。
+9. 在 PR 工作流中登记 Pull Request，基于 PR 触发审查，并按报告执行“通过 / 打回修改 / 风险豁免”。
+10. 查看 AI 调用日志与 MQ 日志。
 
 **验证大模型与全量注入是否生效**：报告中的问题应能引用到你上传文档里的具体内容（例如发货问题引用 `order-flow.md` 的支付校验规则），说明完整项目上下文确实进入了 Prompt。
 
@@ -195,6 +204,7 @@ RAG_FULL_CONTEXT=true
 | 认证 | `POST /api/auth/register`、`POST /api/auth/login`、`GET /api/auth/me` |
 | 项目 | `POST /api/projects`、`GET /api/projects`、`GET/PUT/DELETE /api/projects/{projectId}` |
 | 仓库 | `POST/GET/DELETE /api/projects/{projectId}/repository`、`GET .../commits`、`GET .../commits/{commitId}/diff` |
+| PR 工作流 | `POST/GET/PUT /api/projects/{projectId}/pull-requests`、`POST .../pull-requests/{pullRequestId}/review-task`、`POST/GET .../pull-requests/{pullRequestId}/actions` |
 | 知识库 | `POST/GET /api/projects/{projectId}/knowledge/documents`、`DELETE .../documents/{documentId}`、`POST .../knowledge/search` |
 | 审查 | `POST/GET /api/projects/{projectId}/reviews/tasks`、`GET .../tasks/{taskId}`、`GET .../reviews/reports`、`GET .../reports/{reportId}` |
 | 反馈 | `POST/GET /api/review-issues/{issueId}/feedback` |

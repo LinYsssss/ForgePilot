@@ -47,33 +47,35 @@ public class AiCallLogService {
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void reviewSuccess(Long projectId, Long taskId, int promptChars, int responseChars, long latencyMs) {
-        save(projectId, taskId, REVIEW, chatModel, promptChars, responseChars, latencyMs, "SUCCESS", null);
+    public void reviewSuccess(Long projectId, Long taskId, int promptChars, int responseChars, TokenUsage usage, long latencyMs) {
+        TokenUsage u = usage == null ? TokenUsage.none() : usage;
+        save(projectId, taskId, REVIEW, chatModel, promptChars, responseChars,
+                u.promptTokens(), u.completionTokens(), u.totalTokens(), latencyMs, "SUCCESS", null);
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void reviewFailed(Long projectId, Long taskId, int promptChars, long latencyMs, String errorMessage) {
-        save(projectId, taskId, REVIEW, chatModel, promptChars, 0, latencyMs, "FAILED", errorMessage);
+        save(projectId, taskId, REVIEW, chatModel, promptChars, 0, 0, 0, 0, latencyMs, "FAILED", errorMessage);
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void embeddingSuccess(Long projectId, String requestType, int promptChars, int dimensions, long latencyMs) {
-        save(projectId, null, requestType, embeddingProvider, embeddingModel, promptChars, dimensions, latencyMs, "SUCCESS", null);
+        save(projectId, null, requestType, embeddingProvider, embeddingModel, promptChars, dimensions, 0, 0, 0, latencyMs, "SUCCESS", null);
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void embeddingFailed(Long projectId, String requestType, int promptChars, long latencyMs, String errorMessage) {
-        save(projectId, null, requestType, embeddingProvider, embeddingModel, promptChars, 0, latencyMs, "FAILED", errorMessage);
+        save(projectId, null, requestType, embeddingProvider, embeddingModel, promptChars, 0, 0, 0, 0, latencyMs, "FAILED", errorMessage);
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void modelRiskSuccess(Long projectId, Long taskId, int promptChars, int responseChars, long latencyMs, String modelVersion) {
-        save(projectId, taskId, MODEL_RISK, "model-service", modelVersion, promptChars, responseChars, latencyMs, "SUCCESS", null);
+        save(projectId, taskId, MODEL_RISK, "model-service", modelVersion, promptChars, responseChars, 0, 0, 0, latencyMs, "SUCCESS", null);
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void modelRiskFailed(Long projectId, Long taskId, int promptChars, long latencyMs, String errorMessage) {
-        save(projectId, taskId, MODEL_RISK, "model-service", "unknown", promptChars, 0, latencyMs, "FAILED", errorMessage);
+        save(projectId, taskId, MODEL_RISK, "model-service", "unknown", promptChars, 0, 0, 0, 0, latencyMs, "FAILED", errorMessage);
     }
 
     @Transactional(readOnly = true)
@@ -105,12 +107,15 @@ public class AiCallLogService {
     }
 
     private void save(Long projectId, Long taskId, String requestType, String model, int promptChars,
-                      int responseChars, long latencyMs, String status, String errorMessage) {
-        save(projectId, taskId, requestType, provider, model, promptChars, responseChars, latencyMs, status, errorMessage);
+                      int responseChars, int promptTokens, int completionTokens, int totalTokens,
+                      long latencyMs, String status, String errorMessage) {
+        save(projectId, taskId, requestType, provider, model, promptChars, responseChars,
+                promptTokens, completionTokens, totalTokens, latencyMs, status, errorMessage);
     }
 
     private void save(Long projectId, Long taskId, String requestType, String providerName, String model, int promptChars,
-                      int responseChars, long latencyMs, String status, String errorMessage) {
+                      int responseChars, int promptTokens, int completionTokens, int totalTokens,
+                      long latencyMs, String status, String errorMessage) {
         logs.save(new AiCallLog(
                 projectId,
                 taskId,
@@ -119,6 +124,9 @@ public class AiCallLogService {
                 model == null || model.isBlank() ? "unknown" : model,
                 Math.max(0, promptChars),
                 Math.max(0, responseChars),
+                Math.max(0, promptTokens),
+                Math.max(0, completionTokens),
+                Math.max(0, totalTokens),
                 Math.max(0, latencyMs),
                 status,
                 truncate(errorMessage)

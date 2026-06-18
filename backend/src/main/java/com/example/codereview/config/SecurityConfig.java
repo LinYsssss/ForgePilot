@@ -1,14 +1,18 @@
 package com.example.codereview.config;
 
 import com.example.codereview.common.security.TokenAuthenticationFilter;
+import com.example.codereview.common.web.RateLimitFilter;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
@@ -19,11 +23,16 @@ public class SecurityConfig {
     SecurityFilterChain securityFilterChain(
             HttpSecurity http,
             TokenAuthenticationFilter tokenFilter,
-            @Value("${spring.h2.console.enabled:false}") boolean h2ConsoleEnabled
+            ObjectMapper objectMapper,
+            @Value("${spring.h2.console.enabled:false}") boolean h2ConsoleEnabled,
+            @Value("${app.ratelimit.enabled:true}") boolean rateLimitEnabled,
+            @Value("${app.ratelimit.limit:120}") int rateLimit,
+            @Value("${app.ratelimit.window-seconds:60}") int rateLimitWindowSeconds
     ) throws Exception {
         http
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .exceptionHandling(ex -> ex.authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
                 .authorizeHttpRequests(auth -> {
                     auth.requestMatchers("/api/auth/login", "/api/actuator/health", "/actuator/health").permitAll();
                     if (h2ConsoleEnabled) {
@@ -31,7 +40,11 @@ public class SecurityConfig {
                     }
                     auth.anyRequest().authenticated();
                 })
-                .addFilterBefore(tokenFilter, UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(tokenFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterAfter(
+                        new RateLimitFilter(rateLimitEnabled, rateLimit, rateLimitWindowSeconds, objectMapper),
+                        TokenAuthenticationFilter.class
+                );
         if (h2ConsoleEnabled) {
             http.headers(headers -> headers.frameOptions(frame -> frame.sameOrigin()));
         } else {

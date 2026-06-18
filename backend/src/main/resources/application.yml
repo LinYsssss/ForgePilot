@@ -7,17 +7,57 @@ spring:
 server:
   port: ${SERVER_PORT:8080}
 
+logging:
+  pattern:
+    level: "%5p [%X{traceId:-}]"
+
 management:
   endpoints:
     web:
       exposure:
-        include: health,info
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: when_authorized
+      show-components: when_authorized
+  metrics:
+    tags:
+      application: ${spring.application.name:reposage}
+
+resilience4j:
+  retry:
+    instances:
+      aiReview:
+        max-attempts: ${AI_RETRY_MAX_ATTEMPTS:3}
+        wait-duration: ${AI_RETRY_WAIT:2s}
+        retry-exceptions:
+          - com.example.codereview.ai.AiCallTransientException
+  circuitbreaker:
+    instances:
+      aiReview:
+        sliding-window-type: COUNT_BASED
+        sliding-window-size: 10
+        minimum-number-of-calls: 5
+        failure-rate-threshold: 60
+        wait-duration-in-open-state: 30s
+        permitted-number-of-calls-in-half-open-state: 2
+        record-exceptions:
+          - com.example.codereview.ai.AiCallTransientException
 
 app:
+  git:
+    allow-local-path: ${GIT_ALLOW_LOCAL_PATH:false}
+  ratelimit:
+    enabled: ${RATE_LIMIT_ENABLED:true}
+    limit: ${RATE_LIMIT_REQUESTS:120}
+    window-seconds: ${RATE_LIMIT_WINDOW_SECONDS:60}
   security:
     token-secret: ${JWT_SECRET:dev-secret-change-me}
     token-ttl-seconds: ${TOKEN_TTL_SECONDS:86400}
     token-encrypt-key: ${TOKEN_ENCRYPT_KEY:dev-token-encryption-key-change-me}
+    auth-cookie-name: ${AUTH_COOKIE_NAME:reposage_auth}
+    auth-cookie-secure: ${AUTH_COOKIE_SECURE:false}
+    auth-cookie-same-site: ${AUTH_COOKIE_SAME_SITE:Lax}
     seed-admin:
       username: ${SEED_ADMIN_USERNAME:}
       password: ${SEED_ADMIN_PASSWORD:}
@@ -32,6 +72,8 @@ app:
   review:
     inline: ${REVIEW_INLINE:true}
     max-diff-chars: ${REVIEW_MAX_DIFF_CHARS:20000}
+    max-total-diff-chars: ${REVIEW_MAX_TOTAL_DIFF_CHARS:200000}
+    max-files: ${REVIEW_MAX_FILES:40}
     max-retry: ${REVIEW_MAX_RETRY:3}
     max-prompt-chars: ${REVIEW_MAX_PROMPT_CHARS:48000}
   rag:

@@ -7,6 +7,7 @@ create table if not exists user_account (
     nickname varchar(64),
     role varchar(32) not null,
     status varchar(32) not null,
+    session_version integer not null default 0,
     created_at timestamp(6) with time zone not null,
     updated_at timestamp(6) with time zone not null
 );
@@ -32,6 +33,26 @@ create table if not exists code_repository (
     local_path varchar(512),
     status varchar(32) not null,
     last_error text,
+    created_at timestamp(6) with time zone not null,
+    updated_at timestamp(6) with time zone not null
+);
+
+create table if not exists pull_request (
+    id bigserial primary key,
+    project_id bigint not null,
+    repository_id bigint not null,
+    provider varchar(32) not null,
+    external_pr_id varchar(128),
+    pr_number integer,
+    title varchar(255) not null,
+    author_name varchar(128),
+    source_branch varchar(128) not null,
+    target_branch varchar(128) not null,
+    base_sha varchar(80) not null,
+    head_sha varchar(80) not null,
+    status varchar(32) not null,
+    review_state varchar(32) not null,
+    last_synced_at timestamp(6) with time zone,
     created_at timestamp(6) with time zone not null,
     updated_at timestamp(6) with time zone not null
 );
@@ -66,8 +87,10 @@ create table if not exists review_task (
     repository_id bigint not null,
     commit_id varchar(80) not null,
     base_commit_id varchar(80),
+    base_commit_id_normalized varchar(80) not null default '',
     branch_name varchar(128) not null,
     trigger_user_id bigint not null,
+    pull_request_id bigint,
     status varchar(32) not null,
     retry_count integer not null,
     diff_text text,
@@ -108,6 +131,19 @@ create table if not exists review_issue (
     created_at timestamp(6) with time zone not null
 );
 
+create table if not exists review_action (
+    id bigserial primary key,
+    project_id bigint not null,
+    pull_request_id bigint not null,
+    report_id bigint,
+    actor_id bigint not null,
+    action_type varchar(32) not null,
+    reason text,
+    requirement_text text,
+    selected_issue_ids text,
+    created_at timestamp(6) with time zone not null
+);
+
 create table if not exists feedback (
     id bigserial primary key,
     issue_id bigint not null,
@@ -141,6 +177,9 @@ create table if not exists ai_call_log (
     model varchar(128) not null,
     prompt_chars integer not null,
     response_chars integer not null,
+    prompt_tokens integer not null default 0,
+    completion_tokens integer not null default 0,
+    total_tokens integer not null default 0,
     latency_ms bigint not null,
     status varchar(32) not null,
     error_message text,
@@ -165,16 +204,34 @@ alter table knowledge_chunk_vector
     add constraint fk_knowledge_chunk_vector_chunk
     foreign key (chunk_id) references knowledge_chunk(id) on delete cascade;
 
+alter table review_task add column if not exists pull_request_id bigint;
+alter table review_task add column if not exists base_commit_id_normalized varchar(80) not null default '';
+update review_task set base_commit_id_normalized = coalesce(base_commit_id, '') where base_commit_id_normalized is null or base_commit_id_normalized = '';
+alter table user_account add column if not exists session_version integer not null default 0;
+
+-- ai_call_log token columns were added after initial release; backfill for existing tables
+alter table ai_call_log add column if not exists prompt_tokens integer not null default 0;
+alter table ai_call_log add column if not exists completion_tokens integer not null default 0;
+alter table ai_call_log add column if not exists total_tokens integer not null default 0;
+
 create index if not exists idx_project_owner on project(owner_id);
 create index if not exists idx_code_repository_project on code_repository(project_id);
+create index if not exists idx_pull_request_project on pull_request(project_id);
+create index if not exists idx_pull_request_repo on pull_request(repository_id);
+create index if not exists idx_pull_request_review_state on pull_request(project_id, review_state);
 create index if not exists idx_knowledge_document_project on knowledge_document(project_id);
 create index if not exists idx_knowledge_chunk_document on knowledge_chunk(document_id);
 create index if not exists idx_knowledge_chunk_project on knowledge_chunk(project_id);
 create index if not exists idx_review_task_project on review_task(project_id);
+create index if not exists idx_review_task_pull_request on review_task(pull_request_id);
 create index if not exists idx_review_task_unique_lookup
     on review_task(project_id, repository_id, commit_id, base_commit_id, branch_name);
+create unique index if not exists uq_review_task_idempotency
+    on review_task(project_id, repository_id, commit_id, base_commit_id_normalized, branch_name);
 create index if not exists idx_review_report_project on review_report(project_id);
 create index if not exists idx_review_issue_report on review_issue(report_id);
+create index if not exists idx_review_action_project on review_action(project_id);
+create index if not exists idx_review_action_pull_request on review_action(pull_request_id);
 -- feedback.updated_at was added after initial release; backfill for existing tables
 alter table feedback add column if not exists updated_at timestamp(6) with time zone;
 update feedback set updated_at = created_at where updated_at is null;

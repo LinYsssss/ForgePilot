@@ -1,7 +1,9 @@
 param(
     [string]$BaseUrl = "http://localhost:8080",
     [string]$RepoPath = "",
-    [int]$TimeoutSeconds = 60
+    [int]$TimeoutSeconds = 60,
+    [string]$AdminUser = "admin",
+    [string]$AdminPassword = "admin123"
 )
 
 $ErrorActionPreference = "Stop"
@@ -86,16 +88,16 @@ if ($health.status -ne "UP") {
 }
 
 $suffix = Get-Date -Format "yyyyMMddHHmmss"
-$username = "developer_$suffix"
-$password = "123456"
 
-$register = Invoke-JsonApi -Method Post -Path "/api/auth/register" -Body @{
-    username = $username
-    password = $password
-    nickname = "Smoke Tester"
+# Registration is no longer a public endpoint; the first user is provisioned via the
+# SEED_ADMIN_* env vars (AuthSeedRunner). Authenticate as that seeded admin.
+$login = Invoke-JsonApi -Method Post -Path "/api/auth/login" -Body @{
+    username = $AdminUser
+    password = $AdminPassword
 }
-Assert-ApiOk $register "register"
-$token = $register.data.token
+Assert-ApiOk $login "login"
+$token = $login.data.token
+$username = $AdminUser
 
 $project = Invoke-JsonApi -Method Post -Path "/api/projects" -Token $token -Body @{
     name = "mall-order-review-$suffix"
@@ -194,4 +196,5 @@ Assert-ApiOk $aiLogs "ai logs"
     MqLogCount = $mqLogs.data.Count
     AiLogCount = $aiLogs.data.Count
     AiLogTypes = (($aiLogs.data | ForEach-Object { $_.requestType } | Sort-Object -Unique) -join ",")
+    AiTotalTokens = (($aiLogs.data | Measure-Object -Property totalTokens -Sum).Sum)
 } | Format-List

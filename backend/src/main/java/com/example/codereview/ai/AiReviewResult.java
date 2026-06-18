@@ -6,8 +6,13 @@ public record AiReviewResult(
         String summary,
         String overallRisk,
         List<Issue> issues,
-        String rawResponse
+        String rawResponse,
+        TokenUsage usage
 ) {
+    public AiReviewResult(String summary, String overallRisk, List<Issue> issues, String rawResponse) {
+        this(summary, overallRisk, issues, rawResponse, TokenUsage.none());
+    }
+
     public record Issue(
             String severity,
             String category,

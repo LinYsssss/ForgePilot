@@ -1,6 +1,8 @@
 package com.example.codereview.common.exception;
 
+import com.example.codereview.ai.AiCallTransientException;
 import com.example.codereview.common.api.ApiResponse;
+import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
 import jakarta.validation.ConstraintViolationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,7 +20,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(BusinessException.class)
     public ResponseEntity<ApiResponse<Void>> handleBusiness(BusinessException ex) {
-        return ResponseEntity.badRequest().body(ApiResponse.error(ex.getCode(), ex.getMessage()));
+        return ResponseEntity.status(ex.getHttpStatus()).body(ApiResponse.error(ex.getCode(), ex.getMessage()));
     }
 
     @ExceptionHandler({MethodArgumentNotValidException.class, ConstraintViolationException.class})
@@ -29,6 +31,20 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<ApiResponse<Void>> handleUnreadable(HttpMessageNotReadableException ex) {
         return ResponseEntity.badRequest().body(ApiResponse.error(400, "请求体格式错误"));
+    }
+
+    @ExceptionHandler(CallNotPermittedException.class)
+    public ResponseEntity<ApiResponse<Void>> handleCircuitOpen(CallNotPermittedException ex) {
+        log.warn("AI 调用熔断已打开，快速失败: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                .body(ApiResponse.error(6006, "AI 服务连续失败，熔断已开启，请稍后再试"));
+    }
+
+    @ExceptionHandler(AiCallTransientException.class)
+    public ResponseEntity<ApiResponse<Void>> handleAiTransient(AiCallTransientException ex) {
+        log.warn("AI 调用多次重试后仍失败: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                .body(ApiResponse.error(6004, "AI 服务暂不可用（已重试）：" + ex.getMessage()));
     }
 
     @ExceptionHandler(Exception.class)
