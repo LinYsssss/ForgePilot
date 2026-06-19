@@ -233,11 +233,26 @@ bash scripts/init-demo-repo.sh
 启动的服务：PostgreSQL + pgvector、RabbitMQ、Spring Boot 后端、FastAPI 模型服务、Vue 前端、Nginx。
 对外入口：前端 `http://服务器IP/`，健康检查 `http://服务器IP/actuator/health`，RabbitMQ 管理台 `http://服务器IP:15672`。
 
-生产环境启动时执行 `backend/src/main/resources/db/schema-postgres.sql` 初始化表与 pgvector 表，并以 `ddl-auto=validate` 校验实体结构。详见 `docs/12_服务器部署与演示手册.md`。
+生产环境由 Flyway 按版本执行 `backend/src/main/resources/db/migration/` 中的迁移，并以 `ddl-auto=validate` 校验实体结构。`deploy/init.sql` 只负责启用 pgvector 扩展，不再维护业务表结构。详见 `docs/12_服务器部署与演示手册.md`。
 
 ---
 
 ## 构建与测试
+
+### 工程基线
+
+| 组件 | 支持基线 |
+| --- | --- |
+| Java | 17 |
+| Maven | 3.9+ |
+| Node.js | 20 LTS |
+| PostgreSQL | 16 + pgvector |
+| RabbitMQ | 3.13 |
+| Docker Compose | v2 |
+
+需要执行 PostgreSQL、RabbitMQ 集成测试或完整生产联调时，必须安装 Docker Desktop/Engine，并确保 `docker compose version` 可用。未安装 Docker 时，Testcontainers 用例会明确跳过，不能视为生产基础设施验证通过。
+
+数据库结构统一由 Flyway 管理。任何结构调整都必须新增不可变的 `V<N>__description.sql`；已经发布或被共享环境执行过的迁移禁止修改，只能通过更高版本迁移向前修正。
 
 后端测试：
 
@@ -253,11 +268,19 @@ cd frontend
 npm run build
 ```
 
-一键本地验收（后端测试 + 前端构建 + 模型服务检查 + 后端冒烟 + Docker 可用性检查）：
+一键本地验收（后端测试 + 前端测试与构建 + 模型服务检查 + 后端冒烟 + Docker 可用性检查）：
 
 ```text
 .\scripts\verify-local.ps1
 ```
+
+只执行可重复的构建与测试、不启动后端冒烟服务：
+
+```text
+.\scripts\verify-local.ps1 -SkipSmoke
+```
+
+首次运行时，脚本会根据 `model-service/requirements.txt` 将 Python 依赖安装到被 Git 忽略的本地目录。
 
 后端冒烟（启动后端后执行，跑通注册→建项目→绑仓库→传知识库→审查→报告→反馈全链路）：
 
