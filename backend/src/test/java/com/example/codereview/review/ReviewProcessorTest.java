@@ -7,6 +7,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.example.codereview.ai.AiCallLogService;
@@ -80,6 +81,19 @@ class ReviewProcessorTest {
         assertEquals("HIGH", merged.overallRisk(), "overall risk is the max across chunks");
         assertEquals(45, merged.usage().totalTokens(), "token cost is summed across chunks");
         assertTrue(merged.summary().contains("分片审查"), "summary reflects the chunked review");
+    }
+
+    @Test
+    void canceledTaskDoesNotInvokeReviewDependencies() {
+        ReviewTask task = new ReviewTask(7L, 1L, "abc", null, "main", 9L, THREE_FILE_DIFF);
+        task.markCanceled();
+        when(tasks.findById(1L)).thenReturn(Optional.of(task));
+        ReviewProcessor processor = new ReviewProcessor(tasks, ragService, aiReviewClient, aiCallLogService,
+                aiMetrics, modelRiskClient, taskStatusService, resultWriter, 48_000, 20_000, 40);
+
+        processor.process(1L);
+
+        verifyNoInteractions(modelRiskClient, ragService, aiReviewClient, resultWriter);
     }
 
     private static AiReviewResult.Issue issue(String title) {
