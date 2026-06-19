@@ -1,0 +1,20 @@
+package com.example.codereview.agent.run;
+
+public enum AgentRunStatus {
+    RECEIVED,
+    PREPARING_REPOSITORY,
+    ANALYZING_CHANGE,
+    PLANNING,
+    EXECUTING_TOOLS,
+    RETRIEVING_CONTEXT,
+    VERIFYING_FINDINGS,
+    GENERATING_PATCH,
+    VALIDATING_PATCH,
+    WAITING_APPROVAL,
+    PUBLISHING_RESULT,
+    COMPLETED,
+    RETRY_WAIT,
+    FAILED,
+    CANCELED,
+    TIMED_OUT
+}
