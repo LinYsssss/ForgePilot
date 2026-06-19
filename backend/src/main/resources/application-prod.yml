@@ -9,10 +9,14 @@ spring:
       ddl-auto: validate
     open-in-view: false
     defer-datasource-initialization: false
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    baseline-version: 0
+    locations: classpath:db/migration
   sql:
     init:
-      mode: always
-      schema-locations: classpath:db/schema-postgres.sql
+      mode: never
   rabbitmq:
     host: ${RABBITMQ_HOST:rabbitmq}
     port: ${RABBITMQ_PORT:5672}
