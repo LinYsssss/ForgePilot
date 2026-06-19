@@ -16,6 +16,7 @@ backend/.work/
 backend/*.log
 frontend/*.log
 .work/
+.worktrees/
 
 # Local env files
 .env
