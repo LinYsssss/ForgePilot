@@ -15,6 +15,7 @@ frontend/.npm-cache/
 backend/.work/
 backend/*.log
 frontend/*.log
+frontend/.vite-dev.*.log
 .work/
 .worktrees/
 

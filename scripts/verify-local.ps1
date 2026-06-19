@@ -53,11 +53,26 @@ function Invoke-CommandChecked {
 
 function Invoke-ModelCheck {
     Push-Location $ModelDir
+    $previousPythonPath = $env:PYTHONPATH
     try {
         $localPackages = Join-Path $ModelDir ".python-packages"
-        if (Test-Path $localPackages) {
-            $env:PYTHONPATH = $localPackages
+        $requirements = Join-Path $ModelDir "requirements.txt"
+        $dependencyCheck = @'
+import fastapi
+import joblib
+import sklearn
+'@
+
+        $env:PYTHONPATH = $localPackages
+        $dependencyCheck | python -
+        if ($LASTEXITCODE -ne 0) {
+            Write-Host "Model dependencies missing; installing into $localPackages"
+            python -m pip install --disable-pip-version-check --target $localPackages -r $requirements
+            if ($LASTEXITCODE -ne 0) {
+                throw "model dependency installation failed with code $LASTEXITCODE"
+            }
         }
+
         $code = @'
 from app.main import PredictRequest, load_model, model_status, predict
 load_model()
@@ -79,6 +94,7 @@ if result["source"] != "trained-model":
         }
     }
     finally {
+        $env:PYTHONPATH = $previousPythonPath
         Pop-Location
     }
 }
@@ -140,6 +156,10 @@ function Test-DockerAvailability {
 try {
     Invoke-Step "Backend tests" {
         Invoke-CommandChecked -FilePath "mvn" -Arguments @("-s", ".mvn\settings.xml", "test") -WorkingDirectory $BackendDir
+    }
+
+    Invoke-Step "Frontend tests" {
+        Invoke-CommandChecked -FilePath "npm" -Arguments @("test") -WorkingDirectory $FrontendDir
     }
 
     Invoke-Step "Frontend build" {
