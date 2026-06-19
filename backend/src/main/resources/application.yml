@@ -59,6 +59,8 @@ app:
     plan:
       default-tool-limit: ${AGENT_PLAN_DEFAULT_TOOL_LIMIT:3}
       max-argument-bytes: ${AGENT_PLAN_MAX_ARGUMENT_BYTES:16384}
+    model:
+      max-output-bytes: ${AGENT_MODEL_MAX_OUTPUT_BYTES:65536}
   git:
     allow-local-path: ${GIT_ALLOW_LOCAL_PATH:false}
   ratelimit:
