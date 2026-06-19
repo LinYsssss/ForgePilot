@@ -53,6 +53,9 @@ app:
       max-input-tokens: ${AGENT_MAX_INPUT_TOKENS:60000}
       max-output-tokens: ${AGENT_MAX_OUTPUT_TOKENS:12000}
       max-estimated-cost: ${AGENT_MAX_ESTIMATED_COST:2.00}
+    tool:
+      max-input-bytes: ${AGENT_TOOL_MAX_INPUT_BYTES:16384}
+      max-output-bytes: ${AGENT_TOOL_MAX_OUTPUT_BYTES:65536}
   git:
     allow-local-path: ${GIT_ALLOW_LOCAL_PATH:false}
   ratelimit:
