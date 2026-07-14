@@ -10,6 +10,8 @@ public interface ReviewReportRepository extends JpaRepository<ReviewReport, Long
 
     Optional<ReviewReport> findByTaskId(Long taskId);
 
+    Optional<ReviewReport> findByAgentRunId(Long agentRunId);
+
     void deleteByProjectId(Long projectId);
 
     void deleteByTaskId(Long taskId);

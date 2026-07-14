@@ -11,8 +11,11 @@ public class ReviewReport {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
+    @Column
     private Long taskId;
+
+    @Column(name = "agent_run_id", unique = true)
+    private Long agentRunId;
 
     @Column(nullable = false)
     private Long projectId;
@@ -49,12 +52,27 @@ public class ReviewReport {
         this.createdAt = Instant.now();
     }
 
+    /**
+     * Build a legacy report projected from a completed Agent Run. Such reports have no legacy
+     * {@code taskId}; the unique {@code agentRunId} is the idempotent projection key.
+     */
+    public static ReviewReport forAgentRun(Long agentRunId, Long projectId, String commitId, String overallRisk,
+                                           int issueCount, String summary, String rawAiResponse) {
+        ReviewReport report = new ReviewReport(null, projectId, commitId, overallRisk, issueCount, summary, rawAiResponse);
+        report.agentRunId = agentRunId;
+        return report;
+    }
+
     public Long getId() {
         return id;
     }
 
     public Long getTaskId() {
         return taskId;
+    }
+
+    public Long getAgentRunId() {
+        return agentRunId;
     }
 
     public Long getProjectId() {
