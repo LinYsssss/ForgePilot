@@ -34,6 +34,21 @@ public class AgentRunTransitionService {
             String payload,
             String traceId
     ) {
+        transitionAndEnqueue(
+                agentRunId, nextStatus, stepSequence, eventKey, "AGENT_STEP", payload, traceId
+        );
+    }
+
+    @Transactional
+    public void transitionAndEnqueue(
+            Long agentRunId,
+            AgentRunStatus nextStatus,
+            int stepSequence,
+            String eventKey,
+            String eventType,
+            String payload,
+            String traceId
+    ) {
         AgentRun run = runs.findById(agentRunId)
                 .orElseThrow(() -> new IllegalArgumentException("Agent run not found: " + agentRunId));
         stateMachine.requireTransition(run.getStatus(), nextStatus);
@@ -41,7 +56,7 @@ public class AgentRunTransitionService {
         outbox.saveAndFlush(AgentOutboxEvent.pending(
                 eventKey,
                 run.getId(),
-                "AGENT_STEP",
+                eventType,
                 payload,
                 traceId,
                 Instant.now()

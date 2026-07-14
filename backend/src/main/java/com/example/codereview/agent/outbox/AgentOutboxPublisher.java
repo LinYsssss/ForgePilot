@@ -59,7 +59,7 @@ public class AgentOutboxPublisher {
             try {
                 rabbitTemplate.convertAndSend(
                         RabbitMqConfig.AGENT_EXCHANGE,
-                        RabbitMqConfig.AGENT_STEP_ROUTING_KEY,
+                        routingKey(event.getEventType()),
                         event.getPayload()
                 );
                 event.markSent(clock.instant());
@@ -73,6 +73,15 @@ public class AgentOutboxPublisher {
         return published;
     }
 
+    private String routingKey(String eventType) {
+        return switch (eventType) {
+            case "AGENT_STEP" -> RabbitMqConfig.AGENT_STEP_ROUTING_KEY;
+            case "AGENT_STEP_DELAY" -> RabbitMqConfig.AGENT_DELAY_ROUTING_KEY;
+            case "AGENT_CANCEL" -> RabbitMqConfig.AGENT_CANCEL_ROUTING_KEY;
+            case "AGENT_DEAD" -> RabbitMqConfig.AGENT_DEAD_ROUTING_KEY;
+            default -> throw new IllegalArgumentException("Unsupported Agent outbox event type: " + eventType);
+        };
+    }
     private String failureMessage(RuntimeException exception) {
         String message = exception.getMessage();
         return message == null || message.isBlank() ? exception.getClass().getName() : message;

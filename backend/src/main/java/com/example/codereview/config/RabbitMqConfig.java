@@ -27,7 +27,13 @@ public class RabbitMqConfig {
 
     public static final String AGENT_EXCHANGE = "agent.exchange";
     public static final String AGENT_STEP_QUEUE = "agent.step.queue";
+    public static final String AGENT_DELAY_QUEUE = "agent.delay.queue";
+    public static final String AGENT_CANCEL_QUEUE = "agent.cancel.queue";
+    public static final String AGENT_DEAD_QUEUE = "agent.dead.queue";
     public static final String AGENT_STEP_ROUTING_KEY = "agent.step";
+    public static final String AGENT_DELAY_ROUTING_KEY = "agent.delay";
+    public static final String AGENT_CANCEL_ROUTING_KEY = "agent.cancel";
+    public static final String AGENT_DEAD_ROUTING_KEY = "agent.dead";
 
     @Bean
     DirectExchange reviewExchange() {
@@ -37,21 +43,6 @@ public class RabbitMqConfig {
     @Bean
     Queue reviewTaskQueue() {
         return QueueBuilder.durable(REVIEW_TASK_QUEUE).build();
-    }
-
-    @Bean
-    DirectExchange agentExchange() {
-        return new DirectExchange(AGENT_EXCHANGE, true, false);
-    }
-
-    @Bean
-    Queue agentStepQueue() {
-        return QueueBuilder.durable(AGENT_STEP_QUEUE).build();
-    }
-
-    @Bean
-    Binding agentStepBinding(Queue agentStepQueue, DirectExchange agentExchange) {
-        return BindingBuilder.bind(agentStepQueue).to(agentExchange).with(AGENT_STEP_ROUTING_KEY);
     }
 
     @Bean
@@ -81,6 +72,58 @@ public class RabbitMqConfig {
     @Bean
     Binding reviewDeadBinding(Queue reviewDeadQueue, DirectExchange reviewExchange) {
         return BindingBuilder.bind(reviewDeadQueue).to(reviewExchange).with(REVIEW_DEAD_ROUTING_KEY);
+    }
+
+    @Bean
+    DirectExchange agentExchange() {
+        return new DirectExchange(AGENT_EXCHANGE, true, false);
+    }
+
+    @Bean
+    Queue agentStepQueue() {
+        return QueueBuilder.durable(AGENT_STEP_QUEUE)
+                .deadLetterExchange(AGENT_EXCHANGE)
+                .deadLetterRoutingKey(AGENT_DEAD_ROUTING_KEY)
+                .build();
+    }
+
+    @Bean
+    Queue agentDelayQueue(@Value("${app.agent.queue.retry-delay-ms:5000}") int retryDelayMs) {
+        return QueueBuilder.durable(AGENT_DELAY_QUEUE)
+                .deadLetterExchange(AGENT_EXCHANGE)
+                .deadLetterRoutingKey(AGENT_STEP_ROUTING_KEY)
+                .ttl(retryDelayMs)
+                .build();
+    }
+
+    @Bean
+    Queue agentCancelQueue() {
+        return QueueBuilder.durable(AGENT_CANCEL_QUEUE).build();
+    }
+
+    @Bean
+    Queue agentDeadQueue() {
+        return QueueBuilder.durable(AGENT_DEAD_QUEUE).build();
+    }
+
+    @Bean
+    Binding agentStepBinding(Queue agentStepQueue, DirectExchange agentExchange) {
+        return BindingBuilder.bind(agentStepQueue).to(agentExchange).with(AGENT_STEP_ROUTING_KEY);
+    }
+
+    @Bean
+    Binding agentDelayBinding(Queue agentDelayQueue, DirectExchange agentExchange) {
+        return BindingBuilder.bind(agentDelayQueue).to(agentExchange).with(AGENT_DELAY_ROUTING_KEY);
+    }
+
+    @Bean
+    Binding agentCancelBinding(Queue agentCancelQueue, DirectExchange agentExchange) {
+        return BindingBuilder.bind(agentCancelQueue).to(agentExchange).with(AGENT_CANCEL_ROUTING_KEY);
+    }
+
+    @Bean
+    Binding agentDeadBinding(Queue agentDeadQueue, DirectExchange agentExchange) {
+        return BindingBuilder.bind(agentDeadQueue).to(agentExchange).with(AGENT_DEAD_ROUTING_KEY);
     }
 
     @Bean

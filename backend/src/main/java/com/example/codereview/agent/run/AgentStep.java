@@ -78,6 +78,62 @@ public class AgentStep {
         return new AgentStep(agentRunId, sequenceNo, stepType);
     }
 
+    public boolean isSucceeded() {
+        return status == AgentStepStatus.SUCCEEDED;
+    }
+
+    public boolean isRunningAttempt(int messageAttempt) {
+        return status == AgentStepStatus.RUNNING && attempt == messageAttempt;
+    }
+
+    public boolean acceptsAttempt(int messageAttempt) {
+        if (status == AgentStepStatus.SUCCEEDED || status == AgentStepStatus.CANCELED) {
+            return false;
+        }
+        if (status == AgentStepStatus.RUNNING) {
+            return false;
+        }
+        if (status == AgentStepStatus.FAILED) {
+            return messageAttempt == attempt + 1;
+        }
+        return messageAttempt == attempt;
+    }
+
+    public void start(int messageAttempt) {
+        if (!acceptsAttempt(messageAttempt)) {
+            throw new IllegalStateException(
+                    "Step does not accept attempt " + messageAttempt + " while " + status + "/" + attempt
+            );
+        }
+        this.attempt = messageAttempt;
+        this.status = AgentStepStatus.RUNNING;
+        this.startedAt = Instant.now();
+        this.finishedAt = null;
+        this.errorMessage = null;
+        this.updatedAt = this.startedAt;
+    }
+
+    public void succeed(String outputSummary) {
+        this.status = AgentStepStatus.SUCCEEDED;
+        this.outputSummary = truncate(outputSummary, 8_000);
+        this.errorMessage = null;
+        this.finishedAt = Instant.now();
+        this.updatedAt = this.finishedAt;
+    }
+
+    public void fail(String errorMessage) {
+        this.status = AgentStepStatus.FAILED;
+        this.errorMessage = truncate(errorMessage, 2_000);
+        this.finishedAt = Instant.now();
+        this.updatedAt = this.finishedAt;
+    }
+
+    private static String truncate(String value, int maxLength) {
+        if (value == null) {
+            return null;
+        }
+        return value.substring(0, Math.min(value.length(), maxLength));
+    }
     public Long getId() {
         return id;
     }

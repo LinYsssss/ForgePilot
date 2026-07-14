@@ -46,6 +46,9 @@ resilience4j:
 
 app:
   agent:
+    queue:
+      max-retry: ${AGENT_QUEUE_MAX_RETRY:3}
+      retry-delay-ms: ${AGENT_QUEUE_RETRY_DELAY_MS:5000}
     budget:
       max-elapsed: ${AGENT_MAX_ELAPSED:10m}
       max-tool-calls: ${AGENT_MAX_TOOL_CALLS:20}

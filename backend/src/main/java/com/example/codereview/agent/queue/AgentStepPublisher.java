@@ -1,0 +1,78 @@
+package com.example.codereview.agent.queue;
+
+import com.example.codereview.agent.outbox.AgentRunTransitionService;
+import com.example.codereview.agent.run.AgentRunStatus;
+import com.example.codereview.agent.run.AgentStep;
+import com.example.codereview.agent.run.AgentStepRepository;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
+
+@Component
+public class AgentStepPublisher {
+
+    private static final String STEP_EVENT = "AGENT_STEP";
+    private static final String DELAY_EVENT = "AGENT_STEP_DELAY";
+
+    private final AgentStepRepository steps;
+    private final AgentRunTransitionService transitions;
+    private final ObjectMapper objectMapper;
+
+    public AgentStepPublisher(
+            AgentStepRepository steps,
+            AgentRunTransitionService transitions,
+            ObjectMapper objectMapper
+    ) {
+        this.steps = steps;
+        this.transitions = transitions;
+        this.objectMapper = objectMapper;
+    }
+
+    @Transactional
+    public AgentStepMessage schedule(
+            Long agentRunId,
+            int sequenceNo,
+            AgentRunStatus stepType,
+            String traceId
+    ) {
+        AgentStepMessage message = new AgentStepMessage(agentRunId, sequenceNo, 0, traceId);
+        if (steps.findByAgentRunIdAndSequenceNo(agentRunId, sequenceNo).isPresent()) {
+            return message;
+        }
+        steps.saveAndFlush(AgentStep.pending(agentRunId, sequenceNo, stepType));
+        transitions.transitionAndEnqueue(
+                agentRunId,
+                stepType,
+                sequenceNo,
+                message.identity(),
+                STEP_EVENT,
+                serialize(message),
+                traceId
+        );
+        return message;
+    }
+
+    @Transactional
+    public AgentStepMessage scheduleRetry(AgentStepMessage previous) {
+        AgentStepMessage retry = previous.nextAttempt();
+        transitions.transitionAndEnqueue(
+                retry.agentRunId(),
+                AgentRunStatus.RETRY_WAIT,
+                retry.sequenceNo(),
+                retry.identity(),
+                DELAY_EVENT,
+                serialize(retry),
+                retry.traceId()
+        );
+        return retry;
+    }
+
+    private String serialize(AgentStepMessage message) {
+        try {
+            return objectMapper.writeValueAsString(message);
+        } catch (JsonProcessingException exception) {
+            throw new IllegalStateException("Unable to serialize Agent step message", exception);
+        }
+    }
+}
