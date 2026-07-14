@@ -5,11 +5,19 @@ import com.example.codereview.agent.run.AgentRunRepository;
 import com.example.codereview.agent.run.AgentRunStatus;
 import com.example.codereview.agent.run.AgentStateMachine;
 import java.time.Instant;
+import java.util.Set;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class AgentRunTransitionService {
+
+    private static final Set<String> EVENT_TYPES = Set.of(
+            "AGENT_STEP",
+            "AGENT_STEP_DELAY",
+            "AGENT_CANCEL",
+            "AGENT_DEAD"
+    );
 
     private final AgentRunRepository runs;
     private final AgentOutboxRepository outbox;
@@ -53,9 +61,36 @@ public class AgentRunTransitionService {
                 .orElseThrow(() -> new IllegalArgumentException("Agent run not found: " + agentRunId));
         stateMachine.requireTransition(run.getStatus(), nextStatus);
         run.advanceTo(nextStatus, stepSequence);
+        saveOutbox(run.getId(), eventKey, eventType, payload, traceId);
+    }
+
+    @Transactional
+    public void enqueue(
+            Long agentRunId,
+            String eventKey,
+            String eventType,
+            String payload,
+            String traceId
+    ) {
+        if (!runs.existsById(agentRunId)) {
+            throw new IllegalArgumentException("Agent run not found: " + agentRunId);
+        }
+        saveOutbox(agentRunId, eventKey, eventType, payload, traceId);
+    }
+
+    private void saveOutbox(
+            Long agentRunId,
+            String eventKey,
+            String eventType,
+            String payload,
+            String traceId
+    ) {
+        if (!EVENT_TYPES.contains(eventType)) {
+            throw new IllegalArgumentException("Unsupported Agent outbox event type: " + eventType);
+        }
         outbox.saveAndFlush(AgentOutboxEvent.pending(
                 eventKey,
-                run.getId(),
+                agentRunId,
                 eventType,
                 payload,
                 traceId,

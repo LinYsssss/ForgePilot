@@ -93,7 +93,7 @@ public class AgentStep {
         if (status == AgentStepStatus.RUNNING) {
             return false;
         }
-        if (status == AgentStepStatus.FAILED) {
+        if (status == AgentStepStatus.FAILED || status == AgentStepStatus.INTERRUPTED) {
             return messageAttempt == attempt + 1;
         }
         return messageAttempt == attempt;

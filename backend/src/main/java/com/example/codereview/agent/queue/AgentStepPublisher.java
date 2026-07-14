@@ -4,6 +4,7 @@ import com.example.codereview.agent.outbox.AgentRunTransitionService;
 import com.example.codereview.agent.run.AgentRunStatus;
 import com.example.codereview.agent.run.AgentStep;
 import com.example.codereview.agent.run.AgentStepRepository;
+import com.example.codereview.agent.run.AgentStepStatus;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Component;
@@ -66,6 +67,30 @@ public class AgentStepPublisher {
                 retry.traceId()
         );
         return retry;
+    }
+
+    @Transactional
+    public AgentStepMessage republishInterrupted(AgentStep step) {
+        if (step.getStatus() != AgentStepStatus.INTERRUPTED) {
+            throw new IllegalArgumentException("Only interrupted Agent steps can be recovered");
+        }
+        int recoveryAttempt = step.getAttempt() + 1;
+        String traceId = "recovery:" + step.getAgentRunId() + ":" + step.getSequenceNo()
+                + ":" + recoveryAttempt;
+        AgentStepMessage message = new AgentStepMessage(
+                step.getAgentRunId(),
+                step.getSequenceNo(),
+                recoveryAttempt,
+                traceId
+        );
+        transitions.enqueue(
+                message.agentRunId(),
+                message.identity(),
+                STEP_EVENT,
+                serialize(message),
+                traceId
+        );
+        return message;
     }
 
     private String serialize(AgentStepMessage message) {

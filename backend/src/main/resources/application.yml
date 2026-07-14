@@ -49,6 +49,10 @@ app:
     queue:
       max-retry: ${AGENT_QUEUE_MAX_RETRY:3}
       retry-delay-ms: ${AGENT_QUEUE_RETRY_DELAY_MS:5000}
+    recovery:
+      enabled: ${AGENT_RECOVERY_ENABLED:true}
+      stale-threshold: ${AGENT_RECOVERY_STALE_THRESHOLD:5m}
+      batch-size: ${AGENT_RECOVERY_BATCH_SIZE:100}
     budget:
       max-elapsed: ${AGENT_MAX_ELAPSED:10m}
       max-tool-calls: ${AGENT_MAX_TOOL_CALLS:20}
