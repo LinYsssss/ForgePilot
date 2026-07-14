@@ -50,6 +50,17 @@ public class TokenAuthenticationFilter extends OncePerRequestFilter {
         filterChain.doFilter(request, response);
     }
 
+    /**
+     * Re-establish authentication on ASYNC dispatches too. With stateless token auth the security
+     * context is rebuilt per dispatch; for async endpoints (e.g. SSE timelines) the downstream
+     * authorization filter still runs on the async dispatch, so this filter must run there as well or
+     * an authenticated request would be denied when it resumes.
+     */
+    @Override
+    protected boolean shouldNotFilterAsyncDispatch() {
+        return false;
+    }
+
     private String resolveToken(HttpServletRequest request) {
         String header = request.getHeader("Authorization");
         if (header != null && header.startsWith("Bearer ")) {

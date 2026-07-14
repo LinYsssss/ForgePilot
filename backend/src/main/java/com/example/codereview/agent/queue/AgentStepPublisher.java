@@ -1,5 +1,6 @@
 package com.example.codereview.agent.queue;
 
+import com.example.codereview.agent.api.AgentStepRecordedEvent;
 import com.example.codereview.agent.outbox.AgentRunTransitionService;
 import com.example.codereview.agent.run.AgentRunStatus;
 import com.example.codereview.agent.run.AgentStep;
@@ -7,6 +8,7 @@ import com.example.codereview.agent.run.AgentStepRepository;
 import com.example.codereview.agent.run.AgentStepStatus;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,15 +21,18 @@ public class AgentStepPublisher {
     private final AgentStepRepository steps;
     private final AgentRunTransitionService transitions;
     private final ObjectMapper objectMapper;
+    private final ApplicationEventPublisher events;
 
     public AgentStepPublisher(
             AgentStepRepository steps,
             AgentRunTransitionService transitions,
-            ObjectMapper objectMapper
+            ObjectMapper objectMapper,
+            ApplicationEventPublisher events
     ) {
         this.steps = steps;
         this.transitions = transitions;
         this.objectMapper = objectMapper;
+        this.events = events;
     }
 
     @Transactional
@@ -46,6 +51,37 @@ public class AgentStepPublisher {
                 agentRunId,
                 stepType,
                 sequenceNo,
+                message.identity(),
+                STEP_EVENT,
+                serialize(message),
+                traceId
+        );
+        events.publishEvent(new AgentStepRecordedEvent(agentRunId, sequenceNo));
+        return message;
+    }
+
+    /**
+     * Operator-initiated retry of a previously failed/interrupted step. The run must already have been
+     * re-opened into {@code RETRY_WAIT} in the same transaction; here we only re-enqueue the step for
+     * its next attempt through the outbox (no forward state transition of its own).
+     */
+    @Transactional
+    public AgentStepMessage republishForRetry(AgentStep step) {
+        if (step.isSucceeded() || step.getStatus() == AgentStepStatus.RUNNING) {
+            throw new IllegalArgumentException(
+                    "Only a failed or interrupted Agent step can be retried, was " + step.getStatus()
+            );
+        }
+        int retryAttempt = step.getAttempt() + 1;
+        String traceId = "retry:" + step.getAgentRunId() + ":" + step.getSequenceNo() + ":" + retryAttempt;
+        AgentStepMessage message = new AgentStepMessage(
+                step.getAgentRunId(),
+                step.getSequenceNo(),
+                retryAttempt,
+                traceId
+        );
+        transitions.enqueue(
+                message.agentRunId(),
                 message.identity(),
                 STEP_EVENT,
                 serialize(message),

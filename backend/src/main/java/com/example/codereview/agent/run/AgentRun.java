@@ -87,6 +87,18 @@ public class AgentRun {
         this.updatedAt = Instant.now();
     }
 
+    /**
+     * Operator-initiated recovery of a terminal failure. This is a deliberate action outside the
+     * forward {@link AgentStateMachine} (which keeps {@code FAILED}/{@code TIMED_OUT} terminal): it
+     * re-opens the run into {@code RETRY_WAIT} so the interrupted step can ride the sanctioned
+     * {@code RETRY_WAIT -> step} path again. Callers must first verify the current status is retryable.
+     */
+    public void reopenForRetry() {
+        this.status = AgentRunStatus.RETRY_WAIT;
+        this.cancellationRequested = false;
+        this.updatedAt = Instant.now();
+    }
+
     public Long getId() {
         return id;
     }

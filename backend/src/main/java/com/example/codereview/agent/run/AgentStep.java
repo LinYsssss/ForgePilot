@@ -128,6 +128,18 @@ public class AgentStep {
         this.updatedAt = this.finishedAt;
     }
 
+    public void cancel() {
+        this.status = AgentStepStatus.CANCELED;
+        this.finishedAt = Instant.now();
+        this.updatedAt = this.finishedAt;
+    }
+
+    public boolean isTerminal() {
+        return status == AgentStepStatus.SUCCEEDED
+                || status == AgentStepStatus.CANCELED
+                || status == AgentStepStatus.SKIPPED;
+    }
+
     private static String truncate(String value, int maxLength) {
         if (value == null) {
             return null;
