@@ -61,6 +61,9 @@ app:
       max-argument-bytes: ${AGENT_PLAN_MAX_ARGUMENT_BYTES:16384}
     model:
       max-output-bytes: ${AGENT_MODEL_MAX_OUTPUT_BYTES:65536}
+    outbox:
+      retry-delay: ${AGENT_OUTBOX_RETRY_DELAY:10s}
+      max-error-length: ${AGENT_OUTBOX_MAX_ERROR_LENGTH:2000}
   git:
     allow-local-path: ${GIT_ALLOW_LOCAL_PATH:false}
   ratelimit:

@@ -25,6 +25,10 @@ public class RabbitMqConfig {
     public static final String REVIEW_DELAY_ROUTING_KEY = "review.delay";
     public static final String REVIEW_DEAD_ROUTING_KEY = "review.dead";
 
+    public static final String AGENT_EXCHANGE = "agent.exchange";
+    public static final String AGENT_STEP_QUEUE = "agent.step.queue";
+    public static final String AGENT_STEP_ROUTING_KEY = "agent.step";
+
     @Bean
     DirectExchange reviewExchange() {
         return new DirectExchange(REVIEW_EXCHANGE, true, false);
@@ -33,6 +37,21 @@ public class RabbitMqConfig {
     @Bean
     Queue reviewTaskQueue() {
         return QueueBuilder.durable(REVIEW_TASK_QUEUE).build();
+    }
+
+    @Bean
+    DirectExchange agentExchange() {
+        return new DirectExchange(AGENT_EXCHANGE, true, false);
+    }
+
+    @Bean
+    Queue agentStepQueue() {
+        return QueueBuilder.durable(AGENT_STEP_QUEUE).build();
+    }
+
+    @Bean
+    Binding agentStepBinding(Queue agentStepQueue, DirectExchange agentExchange) {
+        return BindingBuilder.bind(agentStepQueue).to(agentExchange).with(AGENT_STEP_ROUTING_KEY);
     }
 
     @Bean
