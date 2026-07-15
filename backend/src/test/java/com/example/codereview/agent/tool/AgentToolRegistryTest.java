@@ -9,8 +9,10 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.example.codereview.agent.observability.AgentMetrics;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.json.JsonMapper;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -107,7 +109,14 @@ class AgentToolRegistryTest {
     }
 
     private AgentToolRegistry registry(List<AgentTool<?, ?>> tools) {
-        return new AgentToolRegistry(tools, mapper, invocations, 4_096, 8_192);
+        return new AgentToolRegistry(
+                tools,
+                mapper,
+                invocations,
+                new AgentMetrics(new SimpleMeterRegistry()),
+                4_096,
+                8_192
+        );
     }
 
     private AgentTool<TestInput, TestOutput> echoTool(

@@ -1,5 +1,6 @@
 package com.example.codereview.agent.outbox;
 
+import com.example.codereview.agent.observability.AgentMetrics;
 import com.example.codereview.agent.run.AgentRun;
 import com.example.codereview.agent.run.AgentRunRepository;
 import com.example.codereview.agent.run.AgentRunStatus;
@@ -22,15 +23,18 @@ public class AgentRunTransitionService {
     private final AgentRunRepository runs;
     private final AgentOutboxRepository outbox;
     private final AgentStateMachine stateMachine;
+    private final AgentMetrics metrics;
 
     public AgentRunTransitionService(
             AgentRunRepository runs,
             AgentOutboxRepository outbox,
-            AgentStateMachine stateMachine
+            AgentStateMachine stateMachine,
+            AgentMetrics metrics
     ) {
         this.runs = runs;
         this.outbox = outbox;
         this.stateMachine = stateMachine;
+        this.metrics = metrics;
     }
 
     @Transactional
@@ -59,9 +63,11 @@ public class AgentRunTransitionService {
     ) {
         AgentRun run = runs.findById(agentRunId)
                 .orElseThrow(() -> new IllegalArgumentException("Agent run not found: " + agentRunId));
-        stateMachine.requireTransition(run.getStatus(), nextStatus);
+        AgentRunStatus from = run.getStatus();
+        stateMachine.requireTransition(from, nextStatus);
         run.advanceTo(nextStatus, stepSequence);
         saveOutbox(run.getId(), eventKey, eventType, payload, traceId);
+        recordLifecycle(from, nextStatus);
     }
 
     @Transactional
@@ -76,6 +82,17 @@ public class AgentRunTransitionService {
             throw new IllegalArgumentException("Agent run not found: " + agentRunId);
         }
         saveOutbox(agentRunId, eventKey, eventType, payload, traceId);
+    }
+
+    private void recordLifecycle(AgentRunStatus from, AgentRunStatus to) {
+        if (from == AgentRunStatus.RECEIVED) {
+            metrics.runCreated();
+        }
+        if (to == AgentRunStatus.COMPLETED) {
+            metrics.runCompleted();
+        } else if (to == AgentRunStatus.FAILED) {
+            metrics.runFailed();
+        }
     }
 
     private void saveOutbox(

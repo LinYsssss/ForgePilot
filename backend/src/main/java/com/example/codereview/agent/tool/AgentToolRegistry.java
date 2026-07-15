@@ -1,5 +1,6 @@
 package com.example.codereview.agent.tool;
 
+import com.example.codereview.agent.observability.AgentMetrics;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -25,6 +26,7 @@ public class AgentToolRegistry {
     private final Map<String, AgentTool<?, ?>> tools;
     private final ObjectMapper mapper;
     private final ToolInvocationRepository invocations;
+    private final AgentMetrics metrics;
     private final int maxInputBytes;
     private final int maxOutputBytes;
 
@@ -32,6 +34,7 @@ public class AgentToolRegistry {
             List<AgentTool<?, ?>> tools,
             ObjectMapper mapper,
             ToolInvocationRepository invocations,
+            AgentMetrics metrics,
             @Value("${app.agent.tool.max-input-bytes:16384}") int maxInputBytes,
             @Value("${app.agent.tool.max-output-bytes:65536}") int maxOutputBytes
     ) {
@@ -39,6 +42,7 @@ public class AgentToolRegistry {
         this.mapper = mapper.copy()
                 .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, true);
         this.invocations = invocations;
+        this.metrics = metrics;
         this.maxInputBytes = maxInputBytes;
         this.maxOutputBytes = maxOutputBytes;
     }
@@ -87,10 +91,13 @@ public class AgentToolRegistry {
                 invocation.fail(redactText(result.error()), durationMs);
             }
             invocations.save(invocation);
+            metrics.recordTool(toolName, result.success(), durationMs);
             return new ToolResult<>(result.success(), sanitizedOutput, redactText(result.error()));
         } catch (RuntimeException ex) {
-            invocation.fail(redactText(ex.getMessage()), elapsedMillis(started));
+            long durationMs = elapsedMillis(started);
+            invocation.fail(redactText(ex.getMessage()), durationMs);
             invocations.save(invocation);
+            metrics.recordTool(toolName, false, durationMs);
             throw ex;
         }
     }

@@ -1,6 +1,7 @@
 package com.example.codereview.agent.queue;
 
 import com.example.codereview.agent.error.AgentFailureType;
+import com.example.codereview.agent.observability.AgentMetrics;
 import com.example.codereview.agent.run.AgentRun;
 import com.example.codereview.agent.run.AgentRunRepository;
 import com.example.codereview.agent.run.AgentRunStatus;
@@ -19,6 +20,7 @@ public class AgentStepExecutionService {
     private final AgentStateMachine stateMachine;
     private final AgentStepHandler handler;
     private final AgentStepPublisher publisher;
+    private final AgentMetrics metrics;
     private final int maxRetry;
 
     public AgentStepExecutionService(
@@ -27,6 +29,7 @@ public class AgentStepExecutionService {
             AgentStateMachine stateMachine,
             AgentStepHandler handler,
             AgentStepPublisher publisher,
+            AgentMetrics metrics,
             @Value("${app.agent.queue.max-retry:3}") int maxRetry
     ) {
         this.runs = runs;
@@ -34,6 +37,7 @@ public class AgentStepExecutionService {
         this.stateMachine = stateMachine;
         this.handler = handler;
         this.publisher = publisher;
+        this.metrics = metrics;
         this.maxRetry = maxRetry;
     }
 
@@ -48,6 +52,13 @@ public class AgentStepExecutionService {
                         "Agent step not found: " + message.identity()
                 ));
 
+        long startedNanos = System.nanoTime();
+        ExecutionOutcome outcome = runLoadedStep(run, step, message);
+        metrics.recordStep(step.getStepType(), outcome.name(), (System.nanoTime() - startedNanos) / 1_000_000);
+        return outcome;
+    }
+
+    private ExecutionOutcome runLoadedStep(AgentRun run, AgentStep step, AgentStepMessage message) {
         if (step.isSucceeded()) {
             return ExecutionOutcome.DUPLICATE_IGNORED;
         }

@@ -24,8 +24,8 @@ RepoSage 以 Git Commit 的 Diff 为输入，结合项目知识库和大模型�
 - **异步任务**：RabbitMQ 承载耗时审查任务，含重试与死信队列；开发环境可用 inline 模式免装 MQ。
 - **调用弹性**：大模型调用接入 Resilience4j 重试 + 熔断，仅对网络超时 / 5xx / 429 等瞬时故障重试，连续失败时快速失败避免雪崩。
 - **安全**：登录 Token 鉴权；Git accessToken 用 AES-GCM 加密存储，接口不返回明文。
-- **可观测**：`ai_call_log` 记录每次大模型 / embedding / 模型调用的类型、模型、耗时、输入输出长度、**Token 用量**、状态和错误；并通过 Micrometer 把审查时延 / 吞吐 / Token 成本暴露到 `/actuator/prometheus`。
-- **生产级护栏**：每请求 `X-Trace-Id` 贯穿日志（MDC）；按用户/IP 的接口限流（超限返回 429 + `Retry-After`）；`/actuator/health` 深度探活（AI provider / 模型服务 / DB / 磁盘，细节仅鉴权可见）。
+- **可观测**：`ai_call_log` 记录每次大模型 / embedding / 模型调用的类型、模型、耗时、输入输出长度、**Token 用量**、状态和错误；并通过 Micrometer 把审查时延 / 吞吐 / Token 成本暴露到 `/actuator/prometheus`。Agent 控制面另有 `reposage.agent.runs`（created/completed/failed/recovered 计数）与 `reposage.agent.step` / `reposage.agent.tool` 时延直方图，标签仅取有界维度（状态、步骤类型、工具名），绝不用 run id / 仓库名 / 错误消息做标签以免时间序列爆炸。
+- **生产级护栏**：每请求 `X-Trace-Id` 贯穿日志（MDC）；该 traceId 会随 Agent 步骤消息经 outbox → RabbitMQ 传递，消费端重新写入 MDC，使异步步骤与工具调用日志与最初的 HTTP 请求同源可关联；按用户/IP 的接口限流（超限返回 429 + `Retry-After`）；`/actuator/health` 深度探活（AI provider / 模型服务 / DB / 磁盘，细节仅鉴权可见）。
 - **可部署**：提供 Docker Compose（PostgreSQL+pgvector、RabbitMQ、后端、模型服务、前端、Nginx）。
 
 ---

@@ -1,5 +1,6 @@
 package com.example.codereview.agent.run;
 
+import com.example.codereview.agent.observability.AgentMetrics;
 import com.example.codereview.agent.queue.AgentStepPublisher;
 import java.time.Clock;
 import java.time.Duration;
@@ -38,6 +39,7 @@ public class AgentRecoveryService {
 
     private final AgentStepRepository steps;
     private final AgentStepPublisher publisher;
+    private final AgentMetrics metrics;
     private final TransactionTemplate transactions;
     private final Clock clock;
     private final Duration staleThreshold;
@@ -48,17 +50,19 @@ public class AgentRecoveryService {
     public AgentRecoveryService(
             AgentStepRepository steps,
             AgentStepPublisher publisher,
+            AgentMetrics metrics,
             PlatformTransactionManager transactionManager,
             @Value("${app.agent.recovery.stale-threshold:5m}") Duration staleThreshold,
             @Value("${app.agent.recovery.batch-size:100}") int batchSize,
             @Value("${app.agent.recovery.enabled:true}") boolean enabled
     ) {
-        this(steps, publisher, transactionManager, Clock.systemUTC(), staleThreshold, batchSize, enabled);
+        this(steps, publisher, metrics, transactionManager, Clock.systemUTC(), staleThreshold, batchSize, enabled);
     }
 
     AgentRecoveryService(
             AgentStepRepository steps,
             AgentStepPublisher publisher,
+            AgentMetrics metrics,
             PlatformTransactionManager transactionManager,
             Clock clock,
             Duration staleThreshold,
@@ -73,6 +77,7 @@ public class AgentRecoveryService {
         }
         this.steps = steps;
         this.publisher = publisher;
+        this.metrics = metrics;
         this.clock = clock;
         this.staleThreshold = staleThreshold;
         this.batchSize = batchSize;
@@ -108,6 +113,7 @@ public class AgentRecoveryService {
                 recovered++;
             }
         }
+        metrics.runsRecovered(recovered);
         return recovered;
     }
 
