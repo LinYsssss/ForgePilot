@@ -35,6 +35,9 @@ public class SecurityConfig {
                 .exceptionHandling(ex -> ex.authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
                 .authorizeHttpRequests(auth -> {
                     auth.requestMatchers("/api/auth/login", "/api/actuator/health", "/actuator/health").permitAll();
+                    // SCM webhooks are unauthenticated at the bearer-token layer; each delivery is
+                    // instead gated by per-installation HMAC/token verification in the controller.
+                    auth.requestMatchers("/api/webhooks/**").permitAll();
                     if (h2ConsoleEnabled) {
                         auth.requestMatchers("/h2-console/**").permitAll();
                     }
