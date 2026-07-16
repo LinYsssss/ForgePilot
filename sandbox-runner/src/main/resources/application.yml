@@ -17,3 +17,4 @@ spring:
 app:
   sandbox:
     signing-secret: ${SANDBOX_SIGNING_SECRET:}
+    work-root: ${SANDBOX_WORK_ROOT:/app/.work}
