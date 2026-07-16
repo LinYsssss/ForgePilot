@@ -127,3 +127,5 @@ app:
     signing-secret: ${SANDBOX_SIGNING_SECRET:}
     tool-image: ${SANDBOX_TOOL_IMAGE:}
     tool-timeout-ms: ${SANDBOX_TOOL_TIMEOUT_MS:120000}
+  scm:
+    allow-insecure-localhost: ${SCM_ALLOW_INSECURE_LOCALHOST:false}
