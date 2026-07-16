@@ -123,3 +123,7 @@ app:
     embedding-base-url: ${EMBEDDING_BASE_URL:${LLM_BASE_URL:}}
     embedding-api-key: ${EMBEDDING_API_KEY:${LLM_API_KEY:}}
     embedding-model: ${LLM_EMBEDDING_MODEL:mock-embedding}
+  sandbox:
+    signing-secret: ${SANDBOX_SIGNING_SECRET:}
+    tool-image: ${SANDBOX_TOOL_IMAGE:}
+    tool-timeout-ms: ${SANDBOX_TOOL_TIMEOUT_MS:120000}

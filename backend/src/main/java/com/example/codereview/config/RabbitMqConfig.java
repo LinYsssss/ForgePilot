@@ -35,6 +35,10 @@ public class RabbitMqConfig {
     public static final String AGENT_CANCEL_ROUTING_KEY = "agent.cancel";
     public static final String AGENT_DEAD_ROUTING_KEY = "agent.dead";
 
+    public static final String SANDBOX_EXCHANGE = "sandbox.exchange";
+    public static final String SANDBOX_JOB_QUEUE = "sandbox.job.queue";
+    public static final String SANDBOX_JOB_ROUTING_KEY = "sandbox.job";
+
     @Bean
     DirectExchange reviewExchange() {
         return new DirectExchange(REVIEW_EXCHANGE, true, false);
@@ -127,7 +131,27 @@ public class RabbitMqConfig {
     }
 
     @Bean
+    DirectExchange sandboxExchange() {
+        return new DirectExchange(SANDBOX_EXCHANGE, true, false);
+    }
+
+    @Bean
+    Queue sandboxJobQueue() {
+        return QueueBuilder.durable(SANDBOX_JOB_QUEUE).build();
+    }
+
+    @Bean
+    Binding sandboxJobBinding(Queue sandboxJobQueue, DirectExchange sandboxExchange) {
+        return BindingBuilder.bind(sandboxJobQueue).to(sandboxExchange).with(SANDBOX_JOB_ROUTING_KEY);
+    }
+
+    @Bean
     MessageConverter rabbitMessageConverter(ObjectMapper objectMapper) {
         return new Jackson2JsonMessageConverter(objectMapper);
+    }
+
+    @Bean
+    com.example.codereview.sandbox.SandboxJobSigner sandboxJobSigner() {
+        return new com.example.codereview.sandbox.SandboxJobSigner();
     }
 }

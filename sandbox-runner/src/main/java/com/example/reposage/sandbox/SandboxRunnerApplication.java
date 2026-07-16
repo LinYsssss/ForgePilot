@@ -43,6 +43,28 @@ public class SandboxRunnerApplication {
     }
 
     @Bean
+    RepositoryUrlPolicy repositoryUrlPolicy() {
+        return new RepositoryUrlPolicy();
+    }
+
+    @Bean
+    RepositoryArchiveExtractor repositoryArchiveExtractor(RepositoryUrlPolicy urls) {
+        return new RepositoryArchiveExtractor(
+                new RepositoryArchiveLimits(10_000, 16L * 1024 * 1024, 512L * 1024 * 1024), urls);
+    }
+
+    @Bean
+    RepositoryReadCommandHandler repositoryReadCommandHandler() {
+        return new RepositoryReadCommandHandler(65_536, 1_000, 65_536);
+    }
+
+    @Bean
+    WorkspaceArchiveResolver workspaceArchiveResolver(
+            @Value("${app.sandbox.archive-root:/app/archives}") String archiveRoot) throws java.io.IOException {
+        return new WorkspaceArchiveResolver(Path.of(archiveRoot));
+    }
+
+    @Bean
     DependencyPreparationPolicy dependencyPreparationPolicy() {
         return new DependencyPreparationPolicy();
     }
