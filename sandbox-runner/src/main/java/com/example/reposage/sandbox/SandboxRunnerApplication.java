@@ -1,11 +1,13 @@
 package com.example.reposage.sandbox;
 
 import java.time.Clock;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
+import org.springframework.beans.factory.annotation.Value;
 
 @SpringBootApplication
 public class SandboxRunnerApplication {
@@ -38,5 +40,17 @@ public class SandboxRunnerApplication {
     @Bean
     DockerClient dockerClient() {
         return new DockerCliClient();
+    }
+
+    @Bean
+    DependencyPreparationPolicy dependencyPreparationPolicy() {
+        return new DependencyPreparationPolicy();
+    }
+
+    @Bean
+    DependencyCacheManager dependencyCacheManager(
+            DependencyPreparationPolicy policy,
+            @Value("${app.sandbox.dependency-cache-root:/app/.cache/dependencies}") String cacheRoot) {
+        return new DependencyCacheManager(Path.of(cacheRoot), policy);
     }
 }

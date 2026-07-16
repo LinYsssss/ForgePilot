@@ -46,11 +46,13 @@ services:
       RABBITMQ_USERNAME: ${RABBITMQ_USERNAME:-code_review}
       RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-change-me}
       SANDBOX_SIGNING_SECRET: ${SANDBOX_SIGNING_SECRET:?SANDBOX_SIGNING_SECRET is required}
+      SANDBOX_DEPENDENCY_CACHE_ROOT: /app/.cache/dependencies
     depends_on:
       - rabbitmq
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - sandbox_work:/app/.work
+      - sandbox_dependency_cache:/app/.cache/dependencies
     restart: unless-stopped
 
   model-service:
@@ -84,3 +86,4 @@ volumes:
   postgres_data:
   backend_work:
   sandbox_work:
+  sandbox_dependency_cache:

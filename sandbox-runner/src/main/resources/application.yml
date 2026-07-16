@@ -18,3 +18,4 @@ app:
   sandbox:
     signing-secret: ${SANDBOX_SIGNING_SECRET:}
     work-root: ${SANDBOX_WORK_ROOT:/app/.work}
+    dependency-cache-root: ${SANDBOX_DEPENDENCY_CACHE_ROOT:/app/.cache/dependencies}

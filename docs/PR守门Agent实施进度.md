@@ -7,8 +7,8 @@
 - 功能分支：`feat/pr-gatekeeper-agent`
 - 隔离工作树：`F:\202605New\.worktrees\pr-gatekeeper-agent`
 - 基线分支提交：`fad60d2 chore: ignore isolated worktrees`
-- 当前阶段：Phase 3 Task 9（依赖缓存准备）尚未开始
-- 最新完成任务：Phase 3 Task 8（容器执行策略）
+- 当前阶段：Phase 3 Task 10（仓库准备与只读工具）尚未开始
+- 最新完成任务：Phase 3 Task 9（依赖缓存准备）
 
 ## 2. 已完成范围
 
@@ -38,7 +38,7 @@ bf9446f feat: project agent results to legacy reports
 
 ### Phase 3：SCM 与 Sandbox
 
-已完成 Task 1 至 Task 8：
+已完成 Task 1 至 Task 9：
 
 1. SCM installation 和 webhook delivery 持久化。
 2. GitHub/GitLab 中立契约。
@@ -48,8 +48,9 @@ bf9446f feat: project agent results to legacy reports
 6. 后端与 Runner 字节兼容的签名 Sandbox Job 协议。
 7. 独立 Spring Boot Sandbox Runner：专用 RabbitMQ 队列、签名/过期/重放校验、可替换执行器、无 HTTP 端口、Dockerfile 和 Compose 服务。
 8. 固定命令 ID 白名单、Pinned image 校验、`--network none`、只读根文件系统、非 root、CPU/内存/PID 限制、临时工作区、路径/符号链接逃逸防护、超时/取消 kill 和幂等清理。
+9. Maven/Gradle/Python/npm/pnpm/yarn 锁文件内容寻址缓存键、独立联网准备策略、安全环境变量白名单、分析任务只读缓存挂载和缺缓存 `ENVIRONMENT_INCOMPLETE` 结果。
 
-Task 8 的 Docker CLI 调用通过参数列表执行，不经过 Shell；Runner 镜像内包含固定版本 Docker CLI。真实 Docker daemon 和恶意容器联调仍需在有 Docker 的环境补跑。
+依赖缓存只有存在 `.complete` 标记才视为可用；准备请求受命令、时限、大小和环境变量白名单约束。真实依赖下载和 Docker 挂载联调仍需在有 Docker 的环境补跑。
 
 对应提交：
 
@@ -61,7 +62,8 @@ e098562 feat: receive gitlab merge request webhooks
 944bbf1 feat: start agent runs from scm events
 c9ee713 feat: define signed sandbox job protocol
 484ee1f feat: add isolated sandbox runner service
-<本次提交> feat: enforce sandbox container policy
+aed5f6e feat: enforce sandbox container policy
+<本次提交> feat: prepare isolated dependency caches
 ```
 
 ## 3. 最新验证证据
@@ -77,7 +79,7 @@ frontend: npm run build
 结果: PASS
 
 sandbox-runner: mvn package
-结果: 12 tests, 0 failures, 0 errors, 0 skipped；Spring Boot 可执行 JAR 打包成功
+结果: 17 tests, 0 failures, 0 errors, 0 skipped；Spring Boot 可执行 JAR 打包成功
 
 git diff --check
 结果: PASS（当前 Task）
@@ -106,13 +108,13 @@ git diff --check
 
 ## 5. 下一步严格顺序
 
-从 Phase 3 Task 9 开始：
+从 Phase 3 Task 10 开始：
 
-1. 为 Maven/Gradle、pip、npm/pnpm/yarn 锁文件定义确定性缓存键。
-2. 仅允许独立的依赖准备任务写入缓存；分析任务只读挂载且保持 `--network none`。
-3. 缺少依赖时返回 `ENVIRONMENT_INCOMPLETE`，不能生成代码 Finding。
-4. 在有 Docker 的环境补跑 Task 8 容器安全测试并记录证据。
-5. 独立提交 `feat: prepare isolated dependency caches` 后进入 Task 10。
+1. 实现安全的仓库归档解包，拒绝绝对路径、`..` 和逃逸符号链接。
+2. 限制归档总大小、文件数量和单文件输出。
+3. 在后端注册 `git.diff`、`git.file`、`code.search` 类型化工具。
+4. Runner 只执行固定命令处理器并返回带截断元数据的有界输出。
+5. 独立提交 `feat: execute repository read tools in sandbox` 后进入 Task 11。
 
 ## 6. 继续开发提示词
 
@@ -120,7 +122,7 @@ git diff --check
 请在 F:\202605New\.worktrees\pr-gatekeeper-agent 的 feat/pr-gatekeeper-agent 分支继续 PR 守门 Agent。
 
 先读取 docs/PR守门Agent实施进度.md、Phase 3/4 计划、git status 和最近 20 个提交。
-Phase 1、Phase 2 和 Phase 3 Task 1-8 已完成，不要重复实现，不要修改冻结的 V1-V4。
+Phase 1、Phase 2 和 Phase 3 Task 1-9 已完成，不要重复实现，不要修改冻结的 V1-V4。
 
-从 Phase 3 Task 9 依赖缓存准备开始，严格 TDD、每个 Task 独立提交。不得在宿主机直接执行仓库命令，不得接受消息中的任意 Shell 命令。完成前运行后端全量测试、前端测试与构建、Runner 测试和 git diff --check。Docker/Testcontainers 不可用导致的未验证项目必须明确记录。
+从 Phase 3 Task 10 仓库准备与只读工具开始，严格 TDD、每个 Task 独立提交。不得在宿主机直接执行仓库命令，不得接受消息中的任意 Shell 命令。完成前运行后端全量测试、前端测试与构建、Runner 测试和 git diff --check。Docker/Testcontainers 不可用导致的未验证项目必须明确记录。
 ```
