@@ -1,5 +1,6 @@
 # Build outputs
 backend/target/
+sandbox-runner/target/
 frontend/dist/
 model-service/__pycache__/
 model-service/.python-packages/

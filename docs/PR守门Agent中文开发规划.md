@@ -378,4 +378,3 @@ npm run build
 - `docs/superpowers/plans/2026-06-18-pr-gatekeeper-phase-2-agent-control-plane.md`
 - `docs/superpowers/plans/2026-06-18-pr-gatekeeper-phase-3-scm-sandbox.md`
 - `docs/superpowers/plans/2026-06-18-pr-gatekeeper-phase-4-plugins-patch-evaluation.md`
-

@@ -220,7 +220,8 @@ RAG_FULL_CONTEXT=true
 ```text
 cd deploy
 cp .env.example .env
-# 编辑 .env：填入真实 LLM_API_KEY、改掉 DB_PASSWORD/JWT_SECRET/TOKEN_ENCRYPT_KEY 等默认值
+# 编辑 .env：填入真实 LLM_API_KEY，并改掉 DB_PASSWORD、JWT_SECRET、
+# TOKEN_ENCRYPT_KEY、SANDBOX_SIGNING_SECRET 等默认值
 docker compose up -d --build
 ```
 
@@ -230,8 +231,12 @@ docker compose up -d --build
 bash scripts/init-demo-repo.sh
 ```
 
-启动的服务：PostgreSQL + pgvector、RabbitMQ、Spring Boot 后端、FastAPI 模型服务、Vue 前端、Nginx。
+启动的服务：PostgreSQL + pgvector、RabbitMQ、Spring Boot 后端、Sandbox Runner、FastAPI 模型服务、Vue 前端、Nginx。
 对外入口：前端 `http://服务器IP/`，健康检查 `http://服务器IP/actuator/health`，RabbitMQ 管理台 `http://服务器IP:15672`。
+
+Sandbox Runner 没有对外 HTTP 端口，只通过专用 RabbitMQ 队列接收签名任务。单机 Docker Compose
+方案面向受控演示环境，不构成恶意多租户安全边界；Docker Socket 仅挂载给受信任 Runner，Runner
+启动的仓库分析容器不得继承该挂载，也不得接收 SCM、LLM 或数据库密钥。
 
 生产环境由 Flyway 按版本执行 `backend/src/main/resources/db/migration/` 中的迁移，并以 `ddl-auto=validate` 校验实体结构。`deploy/init.sql` 只负责启用 pgvector 扩展，不再维护业务表结构。详见 `docs/12_服务器部署与演示手册.md`。
 

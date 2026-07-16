@@ -1,131 +1,126 @@
 # PR 守门 Agent 实施进度
 
-> 本文是长任务的权威续开发入口。继续开发前先读取五份计划、本文、当前 Git 状态和最近提交，不要从头重复 Phase 1。
+> 本文是长任务的权威续开发入口。继续开发前先读取设计、Roadmap、当前阶段计划、本文、Git 状态和最近提交。
 
 ## 1. 工作位置
 
 - 功能分支：`feat/pr-gatekeeper-agent`
 - 隔离工作树：`F:\202605New\.worktrees\pr-gatekeeper-agent`
 - 基线分支提交：`fad60d2 chore: ignore isolated worktrees`
-- 当前阶段：Phase 2 Task 7（事务 Outbox）尚未开始
+- 当前阶段：Phase 3 Task 8（容器执行策略）尚未开始
+- 最新完成任务：Phase 3 Task 7（隔离 Sandbox Runner 服务）
 
 ## 2. 已完成范围
 
 ### Phase 1：工程基线
 
-已全部完成：
-
-- Node 20、Java 17、Maven 3.9+ 基线。
-- 前端测试、确定性生产构建和锁文件安装。
-- Flyway V1/V2、生产 SQL Init 关闭、旧结构升级测试。
-- PostgreSQL/pgvector 与 RabbitMQ Testcontainers 测试骨架。
-- Review 重试、取消、RAG 隔离回归测试。
-- GitHub Actions 和 `scripts/verify-local.ps1` 统一质量门。
-- README 与本地开发手册中的兼容矩阵和迁移规则。
-
-对应提交：
-
-```text
-2cb4591 fix: make frontend production build reproducible
-ad7da9c build: standardize backend quality baseline
-36a70af feat: manage production schema with Flyway
-6401912 test: add containerized infrastructure migration tests
-419c838 test: cover review retry and RAG isolation
-48ba320 ci: enforce reproducible project verification
-b09f829 docs: define engineering baseline and migration workflow
-```
+已全部完成：可复现前端构建、Java/Node/Maven 版本基线、Flyway、Testcontainers 测试骨架、核心回归测试、CI 和统一质量门。
 
 ### Phase 2：Agent 控制面
 
-已完成 Task 1 至 Task 6：
+已全部完成：
 
-1. `agent_run`、`agent_step` 持久化、步骤顺序唯一约束和乐观锁。
-2. 不可变状态迁移表，覆盖主路径、无问题分支、无安全 Patch 分支和审批边界。
-3. 时间、工具调用、模型调用、输入/输出 Token 和成本预算守卫。
-4. 类型化工具注册表、工具名白名单、严格输入反序列化、审批要求、敏感字段脱敏、输入输出大小限制、`invocation_key` 幂等。
-5. Review Plan 持久化和验证：非空、工具存在、单工具次数、审批时序、参数大小。
-6. Prompt 信任分区、结构化模型输出、Markdown JSON 剥离、未知字段拒绝、一次 JSON 修复、模型调用元数据审计。
+- `agent_run`、`agent_step`、`tool_invocation` 持久化和状态机。
+- 预算、类型化工具、Review Plan 和结构化模型输出校验。
+- 事务 Outbox、Agent 专用 MQ、幂等消费和失败重试。
+- 服务重启恢复、Timeline/SSE、旧报告兼容投影和 Micrometer 指标。
+
+对应后续提交：
+
+```text
+5bab09d feat: publish agent steps through transactional outbox
+6ca9676 feat: schedule idempotent agent steps
+b9bff2a feat: recover interrupted agent runs
+78e5bbb feat: expose agent run timeline
+bf9446f feat: project agent results to legacy reports
+426aa48 feat: instrument agent control plane
+```
+
+### Phase 3：SCM 与 Sandbox
+
+已完成 Task 1 至 Task 7：
+
+1. SCM installation 和 webhook delivery 持久化。
+2. GitHub/GitLab 中立契约。
+3. GitHub PR Webhook 验签、归一化和幂等。
+4. GitLab MR Webhook 验证、归一化和幂等。
+5. Webhook 事件持久化创建 Agent Run。
+6. 后端与 Runner 字节兼容的签名 Sandbox Job 协议。
+7. 独立 Spring Boot Sandbox Runner：专用 RabbitMQ 队列、签名/过期/重放校验、可替换执行器、无 HTTP 端口、Dockerfile 和 Compose 服务。
+
+Task 7 当前使用安全占位执行器返回 `ENVIRONMENT_INCOMPLETE`，不会在宿主机执行仓库命令。真正的 Docker 容器执行必须在 Task 8 完成策略白名单、网络、资源、路径、超时与清理约束后启用。
 
 对应提交：
 
 ```text
-82462e3 feat: persist agent runs and steps
-6189206 feat: enforce agent state transitions
-7efcd4a feat: enforce agent execution budgets
-390731f feat: add typed agent tool registry
-61cfbb8 feat: validate model-generated review plans
-e11f803 feat: validate structured agent model output
+24e03c0 feat: persist scm installations and deliveries
+1b8423d feat: define scm provider contracts
+c22b393 feat: receive github pull request webhooks
+e098562 feat: receive gitlab merge request webhooks
+944bbf1 feat: start agent runs from scm events
+c9ee713 feat: define signed sandbox job protocol
+<本次提交> feat: add isolated sandbox runner service
 ```
-
-数据库迁移：
-
-- `V3__agent_control_plane.sql`
-- `V4__review_plan_and_tool_invocation.sql`
-
-V3/V4 现在视为冻结。后续结构变化必须从 V5 起新增迁移，不要再编辑 V1 至 V4。
 
 ## 3. 最新验证证据
 
-阶段性回归结果：
-
 ```text
 backend: mvn -s .mvn/settings.xml test
-结果: 52 tests, 0 failures, 0 errors, 2 skipped
+结果: 134 tests, 0 failures, 0 errors, 2 skipped
 
 frontend: npm test
 结果: 3 passed
 
 frontend: npm run build
 结果: PASS
+
+sandbox-runner: mvn package
+结果: 6 tests, 0 failures, 0 errors, 0 skipped；Spring Boot 可执行 JAR 打包成功
+
+git diff --check
+结果: PASS（当前 Task）
 ```
 
-两个跳过项是：
+后端跳过项仍为：
 
 - `InfrastructureIntegrationTest`
 - `LegacySchemaMigrationIntegrationTest`
 
-原因是本机没有可用 Docker。它们不能记作“已通过”，必须由有 Docker 的环境或 GitHub Actions 执行。
+本机没有 `docker` 命令，因此以下项目尚未验证，不能记录为通过：
 
-## 4. 已知边界
+- `docker compose config` 和镜像构建。
+- RabbitMQ 到 Runner 的真实消息联调。
+- Docker Socket、容器网络和宿主路径隔离。
+- PostgreSQL/RabbitMQ Testcontainers 集成测试。
 
-- V3/V4 已通过 H2/JPA 映射测试和 Java 全量测试，但尚未在本机 PostgreSQL 16 + pgvector 上执行，因为 Docker 不可用。
-- `AgentToolRegistry` 编译时存在 Jackson 旧 API 警告，不影响测试；后续可把 `ObjectNode.fields()` 迁移到新版遍历 API。
-- 当前控制面只完成基础模型和验证边界，尚未形成可运行的端到端 Agent Worker。
-- 不要让业务服务直接调用 `RabbitTemplate`；后续消息必须从 Outbox 发布。
-- 不要让模型输出决定 Java 类、Spring Bean、队列名、容器镜像、文件路径或 Shell 命令。
+## 4. 安全边界与已知限制
+
+- V1 至 V4 Flyway 迁移已冻结，不得修改。
+- 后端不得运行仓库控制的命令，也不得挂载 Docker Socket。
+- Sandbox Runner 是受信任的单机演示编排组件；Compose 不是恶意多租户隔离边界。
+- 分析容器不得继承 Docker Socket、SCM Token、LLM Key 或数据库凭据。
+- 当前 nonce 重放保护是 Runner 进程内存级；持久化/分布式防重需在后续安全集成阶段补强。
+- 当前占位执行器不会执行任何命令；不要为了演示绕过它直接调用 Shell。
 
 ## 5. 下一步严格顺序
 
-从 Phase 2 Task 7 继续：
+从 Phase 3 Task 8 开始：
 
-1. 新增 `V5__agent_outbox.sql`。
-2. 实现 `AgentOutboxEvent`、Repository、Publisher。
-3. 用测试证明状态迁移和 Outbox 插入同事务提交/回滚。
-4. MQ 失败保留 `PENDING`，增加 `attempt_count`、`next_attempt_at` 和截断错误。
-5. 使用数据库锁或原子 claim，避免多实例重复发布。
-6. 然后依次完成 Phase 2 Task 8 至 Task 12：
-   - Agent 专用 RabbitMQ 队列与幂等消费；
-   - 重启恢复；
-   - Timeline API 与 SSE；
-   - 旧报告兼容投影；
-   - 指标、关联 ID 和 Phase 2 全量验证。
-7. Phase 2 完成后再进入 Phase 3 SCM/Webhook/沙箱，不要提前混入。
-8. Phase 4 最后实现插件、Patch、审批、评测和 OpenTelemetry。
+1. 先为 `ContainerPolicy` 编写失败测试。
+2. 固定命令 ID 白名单，消息不得携带任意命令字符串。
+3. 生成包含 `--network none`、只读根文件系统、非 root、CPU/内存/PID 限制的容器参数。
+4. 校验工作区路径规范化及符号链接逃逸。
+5. 实现超时/取消时 kill 和幂等清理。
+6. Docker 可用环境中补跑真实容器安全测试；不可用时如实记录。
+7. 独立提交 `feat: enforce sandbox container policy` 后再进入 Task 9。
 
-## 6. 继续开发时的提示词
+## 6. 继续开发提示词
 
 ```text
-请在 F:\202605New\.worktrees\pr-gatekeeper-agent 的 feat/pr-gatekeeper-agent 分支继续执行 PR 守门 Agent 长任务。
+请在 F:\202605New\.worktrees\pr-gatekeeper-agent 的 feat/pr-gatekeeper-agent 分支继续 PR 守门 Agent。
 
-先读取：
-1. docs/PR守门Agent实施进度.md
-2. docs/superpowers/plans/2026-06-18-pr-gatekeeper-roadmap.md
-3. Phase 2/3/4 三份计划
-4. git status 和最近 15 个提交
+先读取 docs/PR守门Agent实施进度.md、Phase 3/4 计划、git status 和最近 20 个提交。
+Phase 1、Phase 2 和 Phase 3 Task 1-7 已完成，不要重复实现，不要修改冻结的 V1-V4。
 
-Phase 1 已完成；Phase 2 Task 1-6 已完成并提交。不要重复实现，也不要修改已经冻结的 V1-V4 Flyway 迁移。
-
-从 Phase 2 Task 7 事务 Outbox 开始，严格测试驱动、每个 Task 独立提交。完成前运行后端全量测试、前端测试与构建。Docker 不可用导致的 Testcontainers SKIP 必须如实记录，不能宣称通过。
-
-如果本轮仍未完成全部 Phase 2-4，更新 docs/PR守门Agent实施进度.md，记录最后完成的提交、测试证据、阻塞和下一步。
+从 Phase 3 Task 8 容器执行策略开始，严格 TDD、每个 Task 独立提交。不得在宿主机直接执行仓库命令，不得接受消息中的任意 Shell 命令。完成前运行后端全量测试、前端测试与构建、Runner 测试和 git diff --check。Docker/Testcontainers 不可用导致的未验证项目必须明确记录。
 ```

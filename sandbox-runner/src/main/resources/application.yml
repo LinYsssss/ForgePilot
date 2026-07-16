@@ -1,0 +1,19 @@
+spring:
+  application:
+    name: reposage-sandbox-runner
+  main:
+    web-application-type: none
+  rabbitmq:
+    host: ${RABBITMQ_HOST:rabbitmq}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USERNAME:code_review}
+    password: ${RABBITMQ_PASSWORD:change-me}
+    listener:
+      simple:
+        acknowledge-mode: auto
+        default-requeue-rejected: false
+        prefetch: ${SANDBOX_PREFETCH:1}
+
+app:
+  sandbox:
+    signing-secret: ${SANDBOX_SIGNING_SECRET:}
