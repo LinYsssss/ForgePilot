@@ -24,6 +24,14 @@ public class PatchValidationService {
     public PatchCandidate validate(Long patchId, String currentHeadSha, String archiveRef,
                                    String validationCommandId, String targetFingerprint,
                                    PatchValidationKind kind, ToolContext context) {
+        return validate(patchId, currentHeadSha, archiveRef, validationCommandId,
+                targetFingerprint, null, kind, context);
+    }
+
+    @Transactional
+    public PatchCandidate validate(Long patchId, String currentHeadSha, String archiveRef,
+                                   String validationCommandId, String targetFingerprint,
+                                   String imageDigest, PatchValidationKind kind, ToolContext context) {
         PatchCandidate candidate = patches.findById(patchId)
                 .orElseThrow(() -> new IllegalArgumentException("patch candidate not found"));
         if (!candidate.getAgentRunId().equals(context.agentRunId())) {
@@ -33,7 +41,8 @@ public class PatchValidationService {
             throw new IllegalArgumentException("stale head SHA");
         }
         ToolResult<Map<String, Object>> tool = gateway.execute(context, new PatchValidateRequest(
-                archiveRef, candidate.getHeadSha(), currentHeadSha, validationCommandId, targetFingerprint));
+                archiveRef, candidate.getHeadSha(), currentHeadSha, validationCommandId,
+                targetFingerprint, imageDigest));
         if (!tool.success() || tool.data() == null) {
             throw new IllegalStateException(tool.error() == null ? "sandbox validation unavailable" : tool.error());
         }

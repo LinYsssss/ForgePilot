@@ -7,8 +7,8 @@
 - 功能分支：`feat/pr-gatekeeper-agent`
 - 隔离工作树：`F:\202605New\.worktrees\pr-gatekeeper-agent`
 - 基线分支提交：`fad60d2 chore: ignore isolated worktrees`
-- 当前阶段：Phase 5 Task 8 已完成，下一步 Task 9 Model-generated Patch Safety Workflow
-- 最新完成任务：Phase 5 Task 8（Repository Analysis、三语言 signed sandbox、RAG、Evidence Finding 与 Gate）
+- 当前阶段：Phase 5 Task 9 已完成，下一步 Task 10 Approval-aware SCM Publication
+- 最新完成任务：Phase 5 Task 9（受 Finding Gate 约束的 Patch 生成、独立 sandbox 验证与人工审批前置）
 
 ## 2. 已完成范围
 
@@ -212,13 +212,23 @@ Task 8 已完成：
 - 模型单独声明、陈旧位置或跨 head-SHA 证据不能阻断 PR；clean/rejected Finding 直接进入 PUBLISHING_RESULT，只有 verified blocking Finding 才进入 GENERATING_PATCH。
 - 当前主机仍未动态验证真实 workspace archive provisioning、RabbitMQ→Runner 和容器内三语言命令，不能宣称 Docker 安全验收通过。
 
-下一步严格执行 Task 9，将模型生成 Patch 接入现有 PatchCandidate、Sandbox validation 和人工审批安全链路。
+Task 9 已完成：
+
+- `GeneratingPatchStepExecutor` 只选择已 verified 且 Gate blocking 的 Finding；clean、rejected、nonblocking Finding 直接跳过 Patch 并进入 publication。
+- Patch 模型只能返回严格 `{unifiedDiff}` schema；生成结果绑定 Agent Run、当前 head SHA、Finding IDs、model、prompt version，并由既有 `PatchCandidateService` 计算 patch hash 和执行 UnifiedDiffValidator。
+- 既有路径穿越、绝对路径、二进制、rename、protected CI/CODEOWNERS/Flyway/.git、文件数和行数限制仍是唯一 Patch scope 门禁。
+- `ValidatingPatchStepExecutor` 从插件声明的 pinned command 中分别选择 BUILD/TEST/SCAN，通过 `PatchValidationService` 运行 baseline、apply-check、apply、patched checks，并保留独立状态。
+- Patch validation 请求可携带 plugin 的 sha256-pinned image；target finding fingerprint 必须消失，只有 `PatchCandidate.isApprovable()` 才能进入 WAITING_APPROVAL。
+- 模型和 LangChain4j callback 没有审批、上传、提交、推送或合并能力；不合格 Patch 只发布安全摘要，不暴露 Patch 内容。
+- 当前主机仍未动态验证 patch archive provisioning、真实容器 baseline/patched checks 和 Docker 安全策略，不能宣称最终 Patch 验收通过。
+
+下一步严格执行 Task 10，接入 approval-aware SCM publication 和 idempotent recovery。
 
 ## 3. 最新验证证据
 
 ```text
 backend: mvn test
-结果: 264 tests, 0 failures, 0 errors, 3 skipped
+结果: 268 tests, 0 failures, 0 errors, 3 skipped
 
 frontend: npm test
 结果: 4 passed
@@ -263,9 +273,9 @@ git diff --check
 
 Task 1 前的源码核查确认 AgentStepHandler 当时仍是占位实现，StructuredAgentModelService 与 ReviewContextService 尚未进入生产 Agent 步骤链路。Task 6 已用 typed state executors 替换占位 handler；后续仍不能重写现有控制面，而应继续以 LangChain4j 作为模型、Embedding、Retriever 和受控 Tool Calling 适配层，将真实业务逐状态接入。
 
-Phase 5 Task 1-8 已按 TDD 完成。下一步从 Task 9 开始接入模型 Patch 与既有验证/审批安全链路。V1-V16 均不得修改，V17 已使用，后续新增迁移从 V18 开始。每个 Task 后运行 backend、frontend 和 sandbox-runner 全量测试及 git diff --check。
+Phase 5 Task 1-9 已按 TDD 完成。下一步从 Task 10 开始接入 approval-aware SCM publication 和 idempotent recovery。V1-V16 均不得修改，V17 已使用，后续新增迁移从 V18 开始。每个 Task 后运行 backend、frontend 和 sandbox-runner 全量测试及 git diff --check。
 
-Phase 1-4 计划代码 Task 已完成；Phase 5 Task 1-8 已完成，Task 9-12 尚未实施。最终发布仍必须在具备 Docker 的环境执行以下动态验收：
+Phase 1-4 计划代码 Task 已完成；Phase 5 Task 1-9 已完成，Task 10-12 尚未实施。最终发布仍必须在具备 Docker 的环境执行以下动态验收：
 
 1. `docker compose config`、全部镜像构建与服务健康检查。
 2. PostgreSQL/RabbitMQ Testcontainers 三个跳过测试、RabbitMQ→Runner、Patch apply/validate 和依赖缓存真实联调。

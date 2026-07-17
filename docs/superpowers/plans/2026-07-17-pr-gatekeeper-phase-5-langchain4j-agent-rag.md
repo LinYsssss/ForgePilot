@@ -384,21 +384,22 @@ Rules:
 - Reuse patch.apply.check, patch.apply, and patch.validate runner commands.
 - Extend Patch generation, validation, stale-head, and approval tests.
 
-- [ ] Generate a Patch only for verified eligible findings and only within remaining model/tool budgets.
-- [ ] Require unified diff output tied to Agent Run, head SHA, finding IDs, model, prompt version, and content hash.
-- [ ] Apply all existing path, protected-file, binary, rename, size, file-count, and line-count policies before sandbox submission.
-- [ ] Reject model attempts to alter CI, CODEOWNERS, Flyway history, secrets, or files outside the reviewed repository.
-- [ ] Run baseline and patched checks with the same pinned image, dependency cache policy, resource limits, and network policy.
-- [ ] Require the target fingerprint or reproducer to disappear; unrelated passing tests do not prove repair.
-- [ ] Preserve independent apply, build, test, and scan statuses.
-- [ ] Enter WAITING_APPROVAL only for an approval-eligible Patch; otherwise publish the findings without exposing Patch content.
-- [ ] Confirm no model or framework callback can approve, upload, commit, push, or merge a Patch.
-- [ ] Commit with: feat: verify langchain4j generated patches safely
+- [x] Generate a Patch only for verified eligible findings and only within remaining model/tool budgets.
+- [x] Require unified diff output tied to Agent Run, head SHA, finding IDs, model, prompt version, and content hash.
+- [x] Apply all existing path, protected-file, binary, rename, size, file-count, and line-count policies before sandbox submission.
+- [x] Reject model attempts to alter CI, CODEOWNERS, Flyway history, secrets, or files outside the reviewed repository.
+- [x] Run baseline and patched checks with the same pinned image, dependency cache policy, resource limits, and network policy.
+- [x] Require the target fingerprint or reproducer to disappear; unrelated passing tests do not prove repair.
+- [x] Preserve independent apply, build, test, and scan statuses.
+- [x] Enter WAITING_APPROVAL only for an approval-eligible Patch; otherwise publish the findings without exposing Patch content.
+- [x] Confirm no model or framework callback can approve, upload, commit, push, or merge a Patch.
+- [x] Commit with: feat: verify langchain4j generated patches safely
 
 **Exit evidence:**
 
 - Known-patch evaluation cases apply and remove the target defect.
 - Malicious, stale, oversized, protected-file, or non-repairing patches remain unapprovable.
+- Patch archive provisioning remains a trusted external workspace input; signed Runner and Docker dynamic acceptance is still required before release.
 
 ### Task 10: Complete approval-aware SCM publication and idempotent recovery
 

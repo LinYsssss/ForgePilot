@@ -55,7 +55,9 @@ public final class RabbitSandboxToolGateway implements SandboxToolGateway {
                 "tool-" + UUID.randomUUID(),
                 request.archiveRef(),
                 request instanceof LanguageCommandRequest language
-                        ? language.imageDigest() : imageDigest,
+                        ? language.imageDigest()
+                        : request instanceof PatchValidateRequest patch && patch.imageDigest() != null
+                                ? patch.imageDigest() : imageDigest,
                 commandId(request),
                 commandArgs(request),
                 new SandboxJob.Limits(1000, 512, 128, timeoutMs),
