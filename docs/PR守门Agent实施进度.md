@@ -7,8 +7,8 @@
 - 功能分支：`feat/pr-gatekeeper-agent`
 - 隔离工作树：`F:\202605New\.worktrees\pr-gatekeeper-agent`
 - 基线分支提交：`fad60d2 chore: ignore isolated worktrees`
-- 当前阶段：Phase 4 Task 13 代码完成，Docker/Compose/Testcontainers/真实评测动态验收待补跑
-- 最新完成任务：Phase 4 Task 13（OpenTelemetry 与静态发布验收）
+- 当前阶段：Phase 4 Task 13 代码完成；Phase 5 LangChain4j + Agent + RAG 集成计划已建立，尚未实施
+- 最新完成任务：Phase 5 实施计划编写（代码 Task 尚未开始）
 
 ## 2. 已完成范围
 
@@ -170,14 +170,23 @@ git diff --check
 
 ## 5. 下一步严格顺序
 
-所有计划代码 Task 已完成。最终发布仍必须在具备 Docker 的环境执行以下动态验收：
+新增实施计划：
+
+- docs/superpowers/plans/2026-07-17-pr-gatekeeper-phase-5-langchain4j-agent-rag.md
+
+源码核查确认 backend/pom.xml 尚无 LangChain4j/Spring AI 依赖，AgentStepHandler 仍是占位实现，StructuredAgentModelService 与 ReviewContextService 尚未进入生产 Agent 步骤链路。因此下一阶段不是重写现有控制面，而是以 LangChain4j 作为模型、Embedding、Retriever 和受控 Tool Calling 适配层，补齐真实分状态 Agent 编排。
+
+Phase 5 必须从 Task 1 开始按 TDD 独立提交。V1-V13 均不得修改，新增迁移从 V14 开始。每个 Task 后运行 backend、frontend 和 sandbox-runner 全量测试及 git diff --check。
+
+Phase 1-4 计划代码 Task 已完成；Phase 5 尚未实施。最终发布仍必须在具备 Docker 的环境执行以下动态验收：
 
 1. `docker compose config`、全部镜像构建与服务健康检查。
 2. PostgreSQL/RabbitMQ Testcontainers 三个跳过测试、RabbitMQ→Runner、Patch apply/validate 和依赖缓存真实联调。
 3. Docker Socket、网络、只读根文件系统、非 root、资源限制、宿主路径与凭据隔离动态安全验收。
 4. Webhook→Agent→工具/模型→Sandbox→SCM 的真实 trace，以及 Prometheus 指标采集。
 5. 真实 development/holdout corpus 执行与质量门；当前 baseline 仅为确定性混淆矩阵验证。
-4. 每个 Task 独立提交；Docker 动态验收未完成时不得宣称 Phase 3 最终放行。
+6. Phase 5 完成后再执行 LangChain4j Webhook→Agent→RAG/工具→Finding/Patch→SCM 的真实端到端验收。
+7. 每个 Task 独立提交；Docker 动态验收未完成时不得宣称 Phase 3、Phase 4 或 Phase 5 最终放行。
 
 ## 6. 继续开发提示词
 
@@ -187,5 +196,5 @@ git diff --check
 先读取 docs/PR守门Agent实施进度.md、Phase 3/4 计划、git status 和最近 20 个提交。
 Phase 1、Phase 2 和 Phase 3 Task 1-11 已完成；Task 12 的代码、静态加固和运维文档已完成，但 Docker 动态验收待补跑。不要重复实现，不要修改冻结的 V1-V4。
 
-计划中的代码 Task 1-13 均已实现。下一步只做最终完成度审计与 Docker 环境动态验收，不重复已有实现，不修改 V1-V13。当前主机无 Docker，不能宣称 Phase 3/4 最终发布验收通过。具备 Docker 后运行 Compose/Testcontainers/安全/真实评测套件，并将结果写回本文。
+Phase 1-4 的代码 Task 已实现。Phase 5 LangChain4j + Agent + RAG 集成计划位于 docs/superpowers/plans/2026-07-17-pr-gatekeeper-phase-5-langchain4j-agent-rag.md，尚未实施。下一步从 Phase 5 Task 1 开始，严格 TDD、独立提交，不修改 V1-V13。现有 AgentStepHandler 仍是占位实现，必须按计划接通真实分状态执行链路。当前主机无 Docker，不能宣称 Phase 3/4/5 最终发布验收通过。
 ```

@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Deliver the approved PR gatekeeper design as four independently testable increments.
+**Goal:** Deliver the approved PR gatekeeper design as independently testable increments, then integrate LangChain4j with the existing deterministic Agent and RAG architecture.
 
 **Architecture:** Preserve the existing RepoSage review flow while adding a persistent Agent control plane, then SCM adapters and a sandbox data plane, and finally language plugins plus verified patch generation. Each phase must leave the application deployable and backward compatible.
 
@@ -16,6 +16,7 @@
 2. [Phase 2: Agent Control Plane](2026-06-18-pr-gatekeeper-phase-2-agent-control-plane.md)
 3. [Phase 3: SCM and Sandbox](2026-06-18-pr-gatekeeper-phase-3-scm-sandbox.md)
 4. [Phase 4: Language Plugins, Patch Verification, and Evaluation](2026-06-18-pr-gatekeeper-phase-4-plugins-patch-evaluation.md)
+5. [Phase 5: LangChain4j Agent and RAG Integration](2026-07-17-pr-gatekeeper-phase-5-langchain4j-agent-rag.md)
 
 ## Execution precondition
 
