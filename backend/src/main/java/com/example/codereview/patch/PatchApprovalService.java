@@ -11,9 +11,19 @@ import java.util.List;
 public class PatchApprovalService {
     private final PatchCandidateRepository patches; private final PatchApprovalRepository approvals;
     private final AgentRunRepository runs; private final ProjectService projects;
+    private final com.example.codereview.agent.queue.AgentStepWakeupService wakeup;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public PatchApprovalService(PatchCandidateRepository patches, PatchApprovalRepository approvals,
+                                AgentRunRepository runs, ProjectService projects,
+                                com.example.codereview.agent.queue.AgentStepWakeupService wakeup) {
+        this.patches = patches; this.approvals = approvals; this.runs = runs; this.projects = projects;
+        this.wakeup = wakeup;
+    }
+
     public PatchApprovalService(PatchCandidateRepository patches, PatchApprovalRepository approvals,
                                 AgentRunRepository runs, ProjectService projects) {
-        this.patches = patches; this.approvals = approvals; this.runs = runs; this.projects = projects;
+        this(patches, approvals, runs, projects, null);
     }
     @Transactional
     public PatchApproval decide(Long projectId, Long patchId, Long agentRunId, Long approverId,
@@ -36,8 +46,10 @@ public class PatchApprovalService {
             if (existing.get().getDecision() != decision) throw new IllegalStateException("approval decision is immutable");
             return existing.get();
         }
-        return approvals.save(new PatchApproval(patchId, approverId, decision,
+        PatchApproval saved = approvals.save(new PatchApproval(patchId, approverId, decision,
                 patch.getPatchHash(), patch.getHeadSha(), bounded(comment, 2000)));
+        if (wakeup != null) wakeup.wakeWaiting(agentRunId);
+        return saved;
     }
     public List<PatchCandidate> list(Long projectId, Long agentRunId, Long userId) {
         projects.getRequired(projectId, userId);

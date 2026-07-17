@@ -4,6 +4,8 @@ import com.example.codereview.agent.run.AgentRun;
 import com.example.codereview.agent.run.AgentRunRepository;
 import com.example.codereview.agent.run.AgentRunStatus;
 import com.example.codereview.agent.run.AgentStateMachine;
+import com.example.codereview.agent.orchestration.AgentScmContext;
+import com.example.codereview.agent.orchestration.AgentScmContextRepository;
 import java.util.Optional;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,10 +33,13 @@ public class WebhookAgentRunService {
 
     private final AgentRunRepository agentRunRepository;
     private final AgentStateMachine stateMachine;
+    private final AgentScmContextRepository scmContexts;
 
-    public WebhookAgentRunService(AgentRunRepository agentRunRepository, AgentStateMachine stateMachine) {
+    public WebhookAgentRunService(AgentRunRepository agentRunRepository, AgentStateMachine stateMachine,
+                                  AgentScmContextRepository scmContexts) {
         this.agentRunRepository = agentRunRepository;
         this.stateMachine = stateMachine;
+        this.scmContexts = scmContexts;
     }
 
     @Transactional
@@ -56,6 +61,7 @@ public class WebhookAgentRunService {
                 triggerKey,
                 event.headSha());
         run = agentRunRepository.save(run);
+        scmContexts.save(AgentScmContext.from(run.getId(), event, installation));
 
         supersedeOlderRuns(event, run.getId());
         return new StartResult(run, true);

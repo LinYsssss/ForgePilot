@@ -134,6 +134,15 @@ public class AgentStep {
         this.updatedAt = this.finishedAt;
     }
 
+    public void reopenForExternalWakeup() {
+        if (status != AgentStepStatus.SUCCEEDED) {
+            throw new IllegalStateException("Only a completed external-wait step can be woken");
+        }
+        this.status = AgentStepStatus.PENDING;
+        this.finishedAt = null;
+        this.updatedAt = Instant.now();
+    }
+
     public boolean isTerminal() {
         return status == AgentStepStatus.SUCCEEDED
                 || status == AgentStepStatus.CANCELED
