@@ -95,7 +95,7 @@ class AgentStepExecutorRegistryTest {
 
     private AgentStepExecutionContext context() {
         return new AgentStepExecutionContext(
-                1L, 2L, 3L, 4L, "head", AgentRunStatus.PREPARING_REPOSITORY,
+                1L, 10L, 2L, 3L, 4L, "head", AgentRunStatus.PREPARING_REPOSITORY,
                 1, 0, "trace", false
         );
     }

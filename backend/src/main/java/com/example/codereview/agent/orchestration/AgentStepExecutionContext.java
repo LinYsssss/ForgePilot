@@ -5,6 +5,7 @@ import java.util.Objects;
 
 public record AgentStepExecutionContext(
         Long agentRunId,
+        Long agentStepId,
         Long projectId,
         Long repositoryId,
         Long pullRequestId,
@@ -17,6 +18,7 @@ public record AgentStepExecutionContext(
 ) {
     public AgentStepExecutionContext {
         Objects.requireNonNull(agentRunId, "agentRunId");
+        Objects.requireNonNull(agentStepId, "agentStepId");
         Objects.requireNonNull(projectId, "projectId");
         Objects.requireNonNull(repositoryId, "repositoryId");
         Objects.requireNonNull(headSha, "headSha");

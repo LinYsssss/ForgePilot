@@ -13,6 +13,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -112,6 +113,20 @@ public class AgentToolRegistry {
             throw new IllegalArgumentException("Unknown Agent tool: " + toolName);
         }
         return tool.riskLevel();
+    }
+
+    public List<ToolDescriptor> descriptors(Set<String> allowedToolNames) {
+        if (allowedToolNames == null || allowedToolNames.isEmpty()) {
+            return List.of();
+        }
+        return allowedToolNames.stream()
+                .sorted()
+                .map(tools::get)
+                .filter(java.util.Objects::nonNull)
+                .map(tool -> new ToolDescriptor(
+                        tool.name(), tool.description(), tool.inputType(), tool.riskLevel()
+                ))
+                .toList();
     }
 
     private Map<String, AgentTool<?, ?>> index(List<AgentTool<?, ?>> candidates) {
@@ -217,5 +232,13 @@ public class AgentToolRegistry {
 
     private long elapsedMillis(long started) {
         return (System.nanoTime() - started) / 1_000_000;
+    }
+
+    public record ToolDescriptor(
+            String name,
+            String description,
+            Class<?> inputType,
+            ToolRiskLevel riskLevel
+    ) {
     }
 }

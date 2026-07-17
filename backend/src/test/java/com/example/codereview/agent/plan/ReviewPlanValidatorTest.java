@@ -66,6 +66,24 @@ class ReviewPlanValidatorTest {
                 .anyMatch(error -> error.contains("arguments"));
     }
 
+    @Test
+    void rejectsToolsOutsideCurrentStatePluginAuthorizationAndBudget() {
+        var policy = new ReviewPlanValidator.PlanPolicy(
+                java.util.Set.of("read_diff"),
+                java.util.Set.of("java"),
+                java.util.Set.of("read_diff"),
+                1
+        );
+
+        assertThat(validator.validate(List.of(item("apply_patch", "write")), true, policy).errors())
+                .anyMatch(error -> error.contains("current state"));
+
+        assertThat(validator.validate(List.of(
+                item("read_diff", "one"),
+                item("read_diff", "two")
+        ), false, policy).errors()).anyMatch(error -> error.contains("remaining budget"));
+    }
+
     private ReviewPlan.PlanItem item(String toolName, String purpose) {
         return new ReviewPlan.PlanItem(
                 toolName,

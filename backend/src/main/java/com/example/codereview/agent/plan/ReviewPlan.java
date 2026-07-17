@@ -73,11 +73,31 @@ public class ReviewPlan {
         this.updatedAt = Instant.now();
     }
 
+    public Long getId() {
+        return id;
+    }
+
+    public String getStatus() {
+        return status;
+    }
+
+    public String getValidatedPlanJson() {
+        return validatedPlanJson;
+    }
+
+    public String getModelResponseJson() {
+        return modelResponseJson;
+    }
+
     public record PlanItem(
             String toolName,
             JsonNode arguments,
             String purpose,
-            String expectedEvidence
+            String expectedEvidence,
+            String modelRequestId
     ) {
+        public PlanItem(String toolName, JsonNode arguments, String purpose, String expectedEvidence) {
+            this(toolName, arguments, purpose, expectedEvidence, null);
+        }
     }
 }

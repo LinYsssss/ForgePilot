@@ -7,8 +7,8 @@
 - 功能分支：`feat/pr-gatekeeper-agent`
 - 隔离工作树：`F:\202605New\.worktrees\pr-gatekeeper-agent`
 - 基线分支提交：`fad60d2 chore: ignore isolated worktrees`
-- 当前阶段：Phase 5 Task 6 已完成，下一步 Task 7 Planning 与 Bounded Tool Loop
-- 最新完成任务：Phase 5 Task 6（typed state executors、版本化 checkpoint 与失败分类）
+- 当前阶段：Phase 5 Task 7 已完成，下一步 Task 8 Repository Analysis、RAG 与 Evidence Findings
+- 最新完成任务：Phase 5 Task 7（Planning、bounded Tool Calling、模型→工具→模型闭环与累计预算）
 
 ## 2. 已完成范围
 
@@ -188,13 +188,24 @@ Task 6 已完成：
 - 新增 retryable/permanent provider error 与 environment incomplete 分类，并覆盖取消、重复投递、非法模型输出和不同失败类型。
 - 当前各状态 executor 仅写入 state-specific typed checkpoint，不自动推进状态；这是 Task 7-10 接入真实 planning、tool、RAG、Patch、审批和发布链路的安全基座，避免未实现业务空跑完整流程。
 
-下一步严格执行 Task 7，实现 Planning 与 bounded LangChain4j tool loop。
+Task 7 已完成：
+
+- `PlanningStepExecutor` 已接入生产 `StructuredAgentModelService`，生成 schema-valid、带 model request ID 的受控工具计划，并持久化版本化 planning checkpoint。
+- `LangChainToolSchemaMapper` 将 provider-neutral `AgentTool` 输入 record 转为 LangChain4j `ToolSpecification`，禁止 command、shell 和 executable 字段；只暴露当前 Planning 状态允许且项目已授权的只读工具。
+- `AgentToolLoop` 在任何外部调用前校验计划成员、工具名、JSON 对象、审批、参数字节、路径穿越、重复 request ID、调用次数和取消状态。
+- model request ID 被纳入 `ToolInvocation` 幂等键；重复投递复用已持久化成功结果，不重复执行工具。
+- 工具结果以 success、environment-incomplete、policy-rejected、execution-failed 或 canceled 显式状态返回，并沿用 Registry 的输入输出脱敏和限长。
+- `ExecutingToolsStepExecutor` 将持久化工具结果重新送入模型，最终计划再次经过 schema、工具权限和 Citation 校验，形成模型→工具→模型闭环。
+- `AgentModelBudgetPolicy` 按整个 conversation 累计模型调用、输入/输出 token、provider latency 和可配置单价估算成本；provider retry 仍为 0，超限统一为 `BUDGET_EXCEEDED`。
+- 成功 step 使用 `AgentStepResult.ADVANCE`，由既有 `AgentStepPublisher`、状态机、事务 Outbox 和 MQ 调度下一状态，不允许 executor 私自修改 AgentRun。
+
+下一步严格执行 Task 8，接入 RepositoryProfile、ChangeSet、三语言插件、ReviewContextService 和证据化 Finding 链路。
 
 ## 3. 最新验证证据
 
 ```text
 backend: mvn test
-结果: 241 tests, 0 failures, 0 errors, 3 skipped
+结果: 251 tests, 0 failures, 0 errors, 3 skipped
 
 frontend: npm test
 结果: 4 passed
@@ -239,9 +250,9 @@ git diff --check
 
 Task 1 前的源码核查确认 AgentStepHandler 当时仍是占位实现，StructuredAgentModelService 与 ReviewContextService 尚未进入生产 Agent 步骤链路。Task 6 已用 typed state executors 替换占位 handler；后续仍不能重写现有控制面，而应继续以 LangChain4j 作为模型、Embedding、Retriever 和受控 Tool Calling 适配层，将真实业务逐状态接入。
 
-Phase 5 Task 1-6 已按 TDD 完成。下一步从 Task 7 开始实现 Planning 与 bounded LangChain4j tool loop。V1-V16 均不得修改，后续新增迁移从 V17 开始。每个 Task 后运行 backend、frontend 和 sandbox-runner 全量测试及 git diff --check。
+Phase 5 Task 1-7 已按 TDD 完成。下一步从 Task 8 开始接入 Repository Analysis、RAG 和 Evidence Findings。V1-V16 均不得修改，后续新增迁移从 V17 开始。每个 Task 后运行 backend、frontend 和 sandbox-runner 全量测试及 git diff --check。
 
-Phase 1-4 计划代码 Task 已完成；Phase 5 Task 1-6 已完成，Task 7-12 尚未实施。最终发布仍必须在具备 Docker 的环境执行以下动态验收：
+Phase 1-4 计划代码 Task 已完成；Phase 5 Task 1-7 已完成，Task 8-12 尚未实施。最终发布仍必须在具备 Docker 的环境执行以下动态验收：
 
 1. `docker compose config`、全部镜像构建与服务健康检查。
 2. PostgreSQL/RabbitMQ Testcontainers 三个跳过测试、RabbitMQ→Runner、Patch apply/validate 和依赖缓存真实联调。

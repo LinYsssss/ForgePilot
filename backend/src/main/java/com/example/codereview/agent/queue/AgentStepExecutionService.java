@@ -89,6 +89,20 @@ public class AgentStepExecutionService {
             String output = serialize(result);
             step.succeed(output);
             steps.save(step);
+            if (result.disposition() == AgentStepResult.Disposition.ADVANCE) {
+                if (result.nextState() == null) {
+                    throw new AgentStepExecutionException(
+                            AgentFailureType.INTERNAL_ERROR,
+                            "Advancing Agent step result requires nextState"
+                    );
+                }
+                publisher.schedule(
+                        run.getId(),
+                        step.getSequenceNo() + 1,
+                        result.nextState(),
+                        message.traceId()
+                );
+            }
             return ExecutionOutcome.SUCCEEDED;
         } catch (AgentStepExecutionException exception) {
             return handleFailure(run, step, message, exception.getFailureType(), exception.getMessage());
@@ -106,6 +120,7 @@ public class AgentStepExecutionService {
     ) {
         return new AgentStepExecutionContext(
                 run.getId(),
+                step.getId(),
                 run.getProjectId(),
                 run.getRepositoryId(),
                 run.getPullRequestId(),

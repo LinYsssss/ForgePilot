@@ -332,21 +332,22 @@ Rules:
 - Modify backend/src/main/java/com/example/codereview/agent/tool/AgentToolRegistry.java only through provider-neutral additions.
 - Create focused tests for planning, tool requests, budgets, approvals, duplicates, and cancellation.
 
-- [ ] Test the planning state produces a schema-valid Review Plan for the detected language plugins.
-- [ ] Expose only tools compatible with the current state, plugin capabilities, project authorization, and remaining budget.
-- [ ] Convert AgentTool input types to LangChain4j tool specifications without exposing executable paths or shell strings.
-- [ ] Validate tool name, JSON arguments, plan membership, risk level, approval, byte limits, and budget before execution.
-- [ ] Persist the model tool-request ID and use it in the ToolInvocation idempotency key.
-- [ ] Return sanitized tool results to the model with explicit success, environment-incomplete, policy-rejected, or execution-failed status.
-- [ ] Bound iterations, tool calls, model calls, input/output tokens, duration, retries, and estimated cost.
-- [ ] Reject parallel or repeated destructive/generative requests unless the plan and idempotency policy explicitly allow them.
-- [ ] Test unknown tools, arbitrary command fields, path traversal, prompt-injected tools, approval-required tools, and oversized arguments.
-- [ ] Commit with: feat: execute bounded langchain4j agent tools
+- [x] Test the planning state produces a schema-valid Review Plan for the detected language plugins.
+- [x] Expose only tools compatible with the current state, plugin capabilities, project authorization, and remaining budget.
+- [x] Convert AgentTool input types to LangChain4j tool specifications without exposing executable paths or shell strings.
+- [x] Validate tool name, JSON arguments, plan membership, risk level, approval, byte limits, and budget before execution.
+- [x] Persist the model tool-request ID and use it in the ToolInvocation idempotency key.
+- [x] Return sanitized tool results to the model with explicit success, environment-incomplete, policy-rejected, or execution-failed status.
+- [x] Bound iterations, tool calls, model calls, input/output tokens, duration, retries, and estimated cost.
+- [x] Reject parallel or repeated destructive/generative requests unless the plan and idempotency policy explicitly allow them.
+- [x] Test unknown tools, arbitrary command fields, path traversal, prompt-injected tools, approval-required tools, and oversized arguments.
+- [x] Commit with: feat: execute bounded langchain4j agent tools
 
 **Exit evidence:**
 
 - A deterministic model fixture requests git.diff and code.search, receives persisted results, and returns a valid final plan.
 - An injected scm.comment, patch.apply, or shell-like request is rejected before any external call.
+- Planning persists a versioned conversation checkpoint; ExecutingTools returns sanitized persisted results to the model, revalidates the final plan, and enforces aggregate call/token/latency/cost limits before advancing through the existing Outbox state transition.
 
 ### Task 8: Wire repository analysis, RAG, and evidence-backed findings
 

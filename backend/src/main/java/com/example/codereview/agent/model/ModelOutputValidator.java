@@ -45,8 +45,28 @@ public class ModelOutputValidator {
             List<String> allowedCitationIds,
             Function<String, String> repair
     ) {
+        return validateInternal(rawOutput, approved, allowedCitationIds, null, repair);
+    }
+
+    public ValidationResult validate(
+            String rawOutput,
+            boolean approved,
+            List<String> allowedCitationIds,
+            ReviewPlanValidator.PlanPolicy planPolicy,
+            Function<String, String> repair
+    ) {
+        return validateInternal(rawOutput, approved, allowedCitationIds, planPolicy, repair);
+    }
+
+    private ValidationResult validateInternal(
+            String rawOutput,
+            boolean approved,
+            List<String> allowedCitationIds,
+            ReviewPlanValidator.PlanPolicy planPolicy,
+            Function<String, String> repair
+    ) {
         Set<String> allowed = Set.copyOf(allowedCitationIds == null ? List.of() : allowedCitationIds);
-        ValidationResult first = validateOnce(rawOutput, approved, allowed);
+        ValidationResult first = validateOnce(rawOutput, approved, allowed, planPolicy);
         if (first.valid()) {
             return first;
         }
@@ -56,11 +76,16 @@ public class ModelOutputValidator {
         } catch (RuntimeException ex) {
             return invalid("JSON repair failed");
         }
-        ValidationResult second = validateOnce(repaired, approved, allowed);
+        ValidationResult second = validateOnce(repaired, approved, allowed, planPolicy);
         return second.valid() ? second : invalid(second.error());
     }
 
-    private ValidationResult validateOnce(String rawOutput, boolean approved, Set<String> allowedCitationIds) {
+    private ValidationResult validateOnce(
+            String rawOutput,
+            boolean approved,
+            Set<String> allowedCitationIds,
+            ReviewPlanValidator.PlanPolicy planPolicy
+    ) {
         if (rawOutput == null || rawOutput.isBlank()) {
             return invalid("model output is empty");
         }
@@ -73,10 +98,10 @@ public class ModelOutputValidator {
             if (response.summary() == null || response.summary().isBlank()) {
                 return invalid("summary is required");
             }
-            var planResult = plans.validate(
-                    response.plan() == null ? List.of() : response.plan(),
-                    approved
-            );
+            var planItems = response.plan() == null ? List.<com.example.codereview.agent.plan.ReviewPlan.PlanItem>of() : response.plan();
+            var planResult = planPolicy == null
+                    ? plans.validate(planItems, approved)
+                    : plans.validate(planItems, approved, planPolicy);
             if (!planResult.valid()) {
                 return invalid(String.join("; ", planResult.errors()));
             }
