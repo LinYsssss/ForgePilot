@@ -50,6 +50,12 @@ public class Finding {
     @Column(nullable = false, length = 32)
     private String status;
 
+    @Column(length = 64)
+    private String fingerprint;
+
+    @Column(name = "rejection_reason", columnDefinition = "text")
+    private String rejectionReason;
+
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
@@ -128,6 +134,26 @@ public class Finding {
 
     public String getStatus() {
         return status;
+    }
+
+    public void applyVerification(String fingerprint, boolean accepted, String rejectionReason) {
+        if (fingerprint == null || !fingerprint.matches("[a-f0-9]{64}")) {
+            throw new IllegalArgumentException("fingerprint must be lowercase SHA-256");
+        }
+        if (!accepted && (rejectionReason == null || rejectionReason.isBlank())) {
+            throw new IllegalArgumentException("rejectionReason is required");
+        }
+        this.fingerprint = fingerprint;
+        this.status = accepted ? "verified" : "rejected";
+        this.rejectionReason = accepted ? null : rejectionReason;
+    }
+
+    public String getFingerprint() {
+        return fingerprint;
+    }
+
+    public String getRejectionReason() {
+        return rejectionReason;
     }
 
     public Instant getCreatedAt() {
