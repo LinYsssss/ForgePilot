@@ -7,8 +7,8 @@
 - 功能分支：`feat/pr-gatekeeper-agent`
 - 隔离工作树：`F:\202605New\.worktrees\pr-gatekeeper-agent`
 - 基线分支提交：`fad60d2 chore: ignore isolated worktrees`
-- 当前阶段：Phase 3 Task 12（安全与集成验证；Docker 动态验收待补跑）
-- 最新完成任务：Phase 3 Task 11（SCM 结果发布）
+- 当前阶段：Phase 4 Task 2（Java 插件；Phase 3 Docker 动态验收待补跑）
+- 最新完成任务：Phase 4 Task 1（语言插件与 Finding/Evidence 契约）
 
 ## 2. 已完成范围
 
@@ -38,7 +38,7 @@ bf9446f feat: project agent results to legacy reports
 
 ### Phase 3：SCM 与 Sandbox
 
-已完成 Task 1 至 Task 10：
+已完成 Task 1 至 Task 12 的代码与静态范围；Task 12 的 Docker 动态验收待补跑：
 
 1. SCM installation 和 webhook delivery 持久化。
 2. GitHub/GitLab 中立契约。
@@ -69,14 +69,29 @@ aed5f6e feat: enforce sandbox container policy
 05e69c3 feat: prepare isolated dependency caches
 a4a6f6f feat: execute repository read tools in sandbox
 52efc6b feat: publish agent reviews to scm providers
-Task 12（本次提交） docs: document scm and sandbox operations
+827ebd7 docs: document scm and sandbox operations
+```
+
+### Phase 4：插件、Patch 与评测
+
+已完成 Task 1：
+
+- `RepositoryProfile`、`ChangeSet`、`ChangeAnalysis`、`ToolCommand` 和 `LanguagePlugin` 契约。
+- 纯语言、混合语言和构建文件变更的确定性插件选择。
+- `FindingCandidate`、`FindingEvidence`、Finding/Evidence JPA 持久化；证据包含类型、来源版本、文件/行、2048 字符有界摘录、分数和原文 SHA-256。
+- 因仓库已存在 SCM `V7__scm_webhooks.sql`，Finding/Evidence 迁移安全顺延为 `V8__findings_and_evidence.sql`；后续 Patch 迁移顺延为 V9，不修改既有迁移。
+
+对应提交：
+
+```text
+Task 1（本次提交） feat: define language plugin and evidence contracts
 ```
 
 ## 3. 最新验证证据
 
 ```text
 backend: mvn test
-结果: 141 tests, 0 failures, 0 errors, 3 skipped
+结果: 147 tests, 0 failures, 0 errors, 3 skipped
 
 frontend: npm test
 结果: 3 passed
@@ -115,12 +130,12 @@ git diff --check
 
 ## 5. 下一步严格顺序
 
-继续 Phase 3 Task 12 动态验收，然后进入 Phase 4：
+继续记录 Phase 3 Task 12 动态验收缺口，并实施 Phase 4 Task 2：
 
-1. 在可用环境运行三个 Testcontainers 集成测试。
-2. 运行 Docker Compose 安全冒烟，验证恶意命令、网络、Docker Socket、云元数据和宿主路径隔离。
-3. 检查 Runner/分析容器环境变量和日志不泄露 SCM/LLM 密钥。
-4. Docker 动态验收未完成时保持明确风险记录；代码开发可继续 Phase 4 Task 1，但不得宣称 Phase 3 最终放行。
+1. 为 Java 插件先写 Maven/Gradle 检测、changed-symbol 提取和工具输出归一化测试。
+2. 使用 JavaParser 提取类、方法、注解和调用上下文。
+3. 注册 Maven/Gradle compile/test、PMD、SpotBugs、Checkstyle 固定命令 ID，并将 SARIF/XML 归一化为 `FindingCandidate`。
+4. 每个 Task 独立提交；Docker 动态验收未完成时不得宣称 Phase 3 最终放行。
 
 ## 6. 继续开发提示词
 
@@ -130,5 +145,5 @@ git diff --check
 先读取 docs/PR守门Agent实施进度.md、Phase 3/4 计划、git status 和最近 20 个提交。
 Phase 1、Phase 2 和 Phase 3 Task 1-11 已完成；Task 12 的代码、静态加固和运维文档已完成，但 Docker 动态验收待补跑。不要重复实现，不要修改冻结的 V1-V4。
 
-继续记录 Phase 3 Task 12 的 Docker 阻塞，同时从 Phase 4 Task 1 插件契约开始，严格 TDD、每个 Task 独立提交。不得在宿主机直接执行仓库命令，不得接受消息中的任意 Shell 命令。完成前运行后端全量测试、前端测试与构建、Runner 测试和 git diff --check。Docker/Testcontainers 不可用导致的未验证项目必须明确记录。
+继续记录 Phase 3 Task 12 的 Docker 阻塞，同时从 Phase 4 Task 2 Java 插件开始，严格 TDD、每个 Task 独立提交。Finding/Evidence 已使用 V8，Patch 迁移必须使用 V9。不得在宿主机直接执行仓库命令，不得接受消息中的任意 Shell 命令。完成前运行后端全量测试、前端测试与构建、Runner 测试和 git diff --check。Docker/Testcontainers 不可用导致的未验证项目必须明确记录。
 ```
