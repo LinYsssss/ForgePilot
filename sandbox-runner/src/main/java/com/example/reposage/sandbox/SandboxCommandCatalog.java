@@ -12,6 +12,10 @@ public final class SandboxCommandCatalog {
     public static Map<String, ContainerPolicy.CommandSpec> commands() {
         return Map.ofEntries(
                 entry("sandbox.health", "/bin/true"),
+                entry("patch.apply.check", "/usr/bin/git", "-C", "/workspace", "apply", "--check",
+                        "/workspace/.reposage/candidate.patch"),
+                entry("patch.apply", "/usr/bin/git", "-C", "/workspace", "apply", "--whitespace=error-all",
+                        "/workspace/.reposage/candidate.patch"),
                 entry("java.maven.compile", "/usr/bin/mvn", "-B", "-DskipTests", "compile"),
                 entry("java.maven.test", "/usr/bin/mvn", "-B", "test"),
                 entry("java.gradle.compile", "/opt/gradle/bin/gradle", "--no-daemon", "classes"),

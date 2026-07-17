@@ -7,8 +7,8 @@
 - 功能分支：`feat/pr-gatekeeper-agent`
 - 隔离工作树：`F:\202605New\.worktrees\pr-gatekeeper-agent`
 - 基线分支提交：`fad60d2 chore: ignore isolated worktrees`
-- 当前阶段：Phase 4 Task 9（Sandbox Patch apply/validate；Phase 3 Docker 动态验收待补跑）
-- 最新完成任务：Phase 4 Task 8（Patch Candidate 持久化与校验）
+- 当前阶段：Phase 4 Task 10（人工审批 API 与 Vue UI；Phase 3 Docker 动态验收待补跑）
+- 最新完成任务：Phase 4 Task 9（Sandbox Patch apply/validate）
 
 ## 2. 已完成范围
 
@@ -74,7 +74,7 @@ a4a6f6f feat: execute repository read tools in sandbox
 
 ### Phase 4：插件、Patch 与评测
 
-已完成 Task 1 至 Task 8：
+已完成 Task 1 至 Task 9：
 
 - `RepositoryProfile`、`ChangeSet`、`ChangeAnalysis`、`ToolCommand` 和 `LanguagePlugin` 契约。
 - 纯语言、混合语言和构建文件变更的确定性插件选择。
@@ -97,6 +97,8 @@ a4a6f6f feat: execute repository read tools in sandbox
 - 每个上下文来源均标记为不可信证据，携带 PR head SHA/source version 及 `source#chunk-N` 精确引用；知识文档索引优先 Markdown 标题和 fenced code 边界，无法识别结构时保留固定字符分块回退。
 - `V11__patch_candidates_and_approvals.sql` 新增不可变 Patch Candidate、Finding 关联和审批请求表，不修改 V1-V10；Patch 绑定 Agent Run、head SHA、Finding IDs、generator model、prompt version 和内容 SHA-256。
 - Unified diff 策略拒绝绝对路径、路径遍历、二进制内容、rename、伪造 `---/+++` 标记、CI/CODEOWNERS/Flyway 等受保护文件，以及文件数和新增+删除行数超限；stale head SHA 和跨 Agent Run Finding 绑定在持久化前拒绝。
+- Runner 固定注册 `patch.apply.check`、`patch.apply` 和 `patch.validate`，安全解包后在同一临时工作区依次执行 baseline、apply check、apply 和 patched validation；验证命令、镜像与 CPU/内存/PID/超时限制保持一致，不接受任意 Shell。
+- `V12__patch_validation_results.sql` 持久化 apply/build/test/scan 独立状态、目标 fingerprint/reproducer 是否消失、结构化 before/after 结果、有界日志和验证时间；仅 apply 成功且目标消失的 Patch 具备审批资格，构建和测试失败仍独立保留。
 
 对应提交：
 
@@ -108,14 +110,15 @@ c24117f feat: add javascript typescript analysis plugin
 7e95b48 feat: calculate evidence-based gate decisions
 1c73d51 feat: verify and deduplicate findings
 a14674d feat: add hybrid review context retrieval
-Task 8（本次提交） feat: validate generated patch candidates
+72a9f61 feat: validate generated patch candidates
+Task 9（本次提交） feat: verify candidate patches in sandbox
 ```
 
 ## 3. 最新验证证据
 
 ```text
 backend: mvn test
-结果: 181 tests, 0 failures, 0 errors, 3 skipped
+结果: 183 tests, 0 failures, 0 errors, 3 skipped
 
 frontend: npm test
 结果: 3 passed
@@ -124,7 +127,7 @@ frontend: npm run build
 结果: PASS
 
 sandbox-runner: mvn test
-结果: 34 tests, 0 failures, 0 errors, 0 skipped
+结果: 37 tests, 0 failures, 0 errors, 0 skipped
 
 git diff --check
 结果: PASS（当前 Task）
@@ -154,11 +157,11 @@ git diff --check
 
 ## 5. 下一步严格顺序
 
-继续记录 Phase 3 Task 12 动态验收缺口，并实施 Phase 4 Task 9：
+继续记录 Phase 3 Task 12 动态验收缺口，并实施 Phase 4 Task 10：
 
-1. 增加固定 `patch.apply` 和 `patch.validate` 工具及 Runner 处理器，不接受任意 Shell。
-2. 覆盖 clean apply、stale SHA、冲突、编译失败、测试失败和成功验证；baseline 与 patched 使用相同镜像和限制。
-3. 持久化结构化 before/after delta 和有界日志；仅 apply 成功才允许进入审批，build/test 状态独立记录，并要求目标 Finding fingerprint 或 reproducer 消失。
+1. 新增审批 API/service/DTO，并校验项目成员权限、stale head、Patch 验证资格和重复请求幂等。
+2. 审批记录 approver、decision、不可变 Patch hash、head SHA、comment 和时间；未经审批不得发布 Patch 内容。
+3. 前端拆分 Agent timeline、findings、patch diff 和 approval 组件，展示证据、置信度、验证日志、Patch 下载、批准和拒绝；无效 Patch 禁用审批。
 4. 每个 Task 独立提交；Docker 动态验收未完成时不得宣称 Phase 3 最终放行。
 
 ## 6. 继续开发提示词
@@ -169,5 +172,5 @@ git diff --check
 先读取 docs/PR守门Agent实施进度.md、Phase 3/4 计划、git status 和最近 20 个提交。
 Phase 1、Phase 2 和 Phase 3 Task 1-11 已完成；Task 12 的代码、静态加固和运维文档已完成，但 Docker 动态验收待补跑。不要重复实现，不要修改冻结的 V1-V4。
 
-继续记录 Phase 3 Task 12 的 Docker 阻塞，同时从 Phase 4 Task 9 Sandbox Patch apply/validate 开始，严格 TDD、每个 Task 独立提交。Patch 持久化已使用 V11；若 Task 9 需要新增字段，必须使用 V12，不得修改 V1-V11。不得在宿主机直接执行仓库命令，不得接受消息中的任意 Shell 命令。完成前运行后端全量测试、前端测试与构建、Runner 测试和 git diff --check。Docker/Testcontainers 不可用导致的未验证项目必须明确记录。
+继续记录 Phase 3 Task 12 的 Docker 阻塞，同时从 Phase 4 Task 10 人工审批 API 与 Vue UI 开始，严格 TDD、每个 Task 独立提交。Patch 使用 V11、验证结果使用 V12；后续迁移从 V13 开始，不得修改 V1-V12。不得在宿主机直接执行仓库命令，不得接受消息中的任意 Shell 命令。完成前运行后端全量测试、前端测试与构建、Runner 测试和 git diff --check。Docker/Testcontainers 不可用导致的未验证项目必须明确记录。
 ```

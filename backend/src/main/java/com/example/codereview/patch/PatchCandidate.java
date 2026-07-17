@@ -32,6 +32,15 @@ public class PatchCandidate {
     @Column(name = "validation_reason", columnDefinition = "text") private String validationReason;
     @Column(name = "file_count", nullable = false) private int fileCount;
     @Column(name = "changed_lines", nullable = false) private int changedLines;
+    @Column(name = "apply_status", nullable = false, length = 24) private String applyStatus = "NOT_RUN";
+    @Column(name = "build_status", nullable = false, length = 24) private String buildStatus = "NOT_RUN";
+    @Column(name = "test_status", nullable = false, length = 24) private String testStatus = "NOT_RUN";
+    @Column(name = "scan_status", nullable = false, length = 24) private String scanStatus = "NOT_RUN";
+    @Column(name = "target_disappeared", nullable = false) private boolean targetDisappeared;
+    @Column(name = "validation_result_json", nullable = false, columnDefinition = "text")
+    private String validationResultJson = "[]";
+    @Column(name = "validation_log", nullable = false, columnDefinition = "text") private String validationLog = "";
+    @Column(name = "validated_at") private Instant validatedAt;
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "patch_candidate_finding", joinColumns = @JoinColumn(name = "patch_candidate_id"))
     @Column(name = "finding_id", nullable = false)
@@ -69,6 +78,44 @@ public class PatchCandidate {
     public int getChangedLines() { return changedLines; }
     public Set<Long> getFindingIds() { return Set.copyOf(findingIds); }
     public Instant getCreatedAt() { return createdAt; }
+    public String getApplyStatus() { return applyStatus; }
+    public String getBuildStatus() { return buildStatus; }
+    public String getTestStatus() { return testStatus; }
+    public String getScanStatus() { return scanStatus; }
+    public boolean isTargetDisappeared() { return targetDisappeared; }
+    public String getValidationResultJson() { return validationResultJson; }
+    public String getValidationLog() { return validationLog; }
+    public Instant getValidatedAt() { return validatedAt; }
+
+    public void recordSandboxValidation(PatchValidationKind kind, PatchSandboxValidation result) {
+        if (!"SCOPE_VALID".equals(status) && !"VALIDATING".equals(status)
+                && !"VALIDATED".equals(status) && !"VALIDATION_FAILED".equals(status)) {
+            throw new IllegalStateException("patch is not eligible for sandbox validation");
+        }
+        applyStatus = result.applySucceeded() ? "SUCCEEDED" : result.applyChecked() ? "FAILED" : "NOT_RUN";
+        String commandStatus = result.applySucceeded() && result.commandSucceeded() ? "PASSED" : "FAILED";
+        switch (kind) {
+            case BUILD -> buildStatus = commandStatus;
+            case TEST -> testStatus = commandStatus;
+            case SCAN -> scanStatus = commandStatus;
+        }
+        targetDisappeared = targetDisappeared || result.targetDisappeared();
+        validationResultJson = appendJson(validationResultJson, result.resultJson());
+        validationLog = appendBounded(validationLog, result.boundedLog(), 32_768);
+        validatedAt = Instant.now();
+        status = isApprovable() ? "VALIDATED" : "VALIDATION_FAILED";
+    }
+
+    public boolean isApprovable() { return "SUCCEEDED".equals(applyStatus) && targetDisappeared; }
+
+    private static String appendJson(String current, String value) {
+        if (current == null || current.equals("[]")) return "[" + value + "]";
+        return current.substring(0, current.length() - 1) + "," + value + "]";
+    }
+    private static String appendBounded(String current, String value, int maxChars) {
+        String combined = (current == null || current.isBlank()) ? value : current + "\n---\n" + value;
+        return combined.length() <= maxChars ? combined : combined.substring(combined.length() - maxChars);
+    }
 
     private static String required(String value, String name) {
         if (value == null || value.isBlank()) throw new IllegalArgumentException(name + " is required");

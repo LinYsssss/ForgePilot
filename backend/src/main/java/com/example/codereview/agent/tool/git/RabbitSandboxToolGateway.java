@@ -98,6 +98,9 @@ public final class RabbitSandboxToolGateway implements SandboxToolGateway {
         if (request instanceof CodeSearchRequest) {
             return "code.search";
         }
+        if (request instanceof PatchValidateRequest) {
+            return "patch.validate";
+        }
         throw new IllegalArgumentException("unsupported sandbox tool request");
     }
 
@@ -110,6 +113,10 @@ public final class RabbitSandboxToolGateway implements SandboxToolGateway {
         }
         if (request instanceof CodeSearchRequest value) {
             return List.of(value.query(), Integer.toString(value.maxResults()), Integer.toString(value.maxBytes()));
+        }
+        if (request instanceof PatchValidateRequest value) {
+            return List.of(value.boundHeadSha(), value.currentHeadSha(), value.validationCommandId(),
+                    value.targetFingerprint());
         }
         throw new IllegalArgumentException("unsupported sandbox tool request");
     }
