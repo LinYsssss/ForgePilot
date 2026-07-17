@@ -7,8 +7,8 @@
 - 功能分支：`feat/pr-gatekeeper-agent`
 - 隔离工作树：`F:\202605New\.worktrees\pr-gatekeeper-agent`
 - 基线分支提交：`fad60d2 chore: ignore isolated worktrees`
-- 当前阶段：Phase 5 Task 1 已完成，下一步 Task 2 LangChain4j Chat Model 适配
-- 最新完成任务：Phase 5 Task 1（固定 LangChain4j 依赖与 runtime 配置边界）
+- 当前阶段：Phase 5 Task 2 已完成，下一步 Task 3 LangChain4j Embedding 与版本化向量
+- 最新完成任务：Phase 5 Task 2（Chat Model 适配、错误分类、调用审计与独立 JSON repair）
 
 ## 2. 已完成范围
 
@@ -132,7 +132,7 @@ c3b3c95 feat: complete observable pr gatekeeper agent
 Task 1 已完成：
 
 - 通过 Maven Central 元数据和实际 JAR 核查选择 LangChain4j `1.8.0`。这是已核实与 Spring Boot 3.5.8 管理的 Jackson 2.19.x 对齐的最高稳定版本；LangChain4j 1.9.1 起要求 Jackson 2.20.x，1.12.2 起要求 2.21.x，因此未盲目采用最新 1.17.2，也未覆盖 Spring Boot 的 Jackson 版本。
-- 使用 LangChain4j BOM 固定版本，只直接引入 `langchain4j-core` 和 `langchain4j-open-ai`；未引入会额外带入 OpenNLP 的高层聚合模块。
+- 使用 LangChain4j BOM 固定版本，直接引入 `langchain4j-core`、`langchain4j-open-ai` 和实际生产适配所需的 `langchain4j-http-client-jdk`；未引入会额外带入 OpenNLP 的高层聚合模块。
 - 已固定并加载 `ChatModel`、`EmbeddingModel`、`ContentRetriever`、`ToolSpecification`、`OpenAiChatModel`、`OpenAiEmbeddingModel` 与 JDK HTTP Client API，字节码在 Java 17 上加载通过。
 - 项目 Maven settings 显式使用 HTTPS Maven Central，消除宿主机全局 HTTP 阿里云镜像被 Maven blocker 拒绝、导致干净环境无法解析新依赖的问题。
 - 新增 `app.ai.runtime`，仅允许 `legacy` 和 `langchain4j`。本地/测试允许确定性 mock；生产选择 LangChain4j 时必须使用真实 Chat provider，并按选择的 Embedding provider 校验 URL、Key 和模型名。
@@ -140,13 +140,22 @@ Task 1 已完成：
 - 依赖树确认 Jackson 仍由 Spring Boot 固定为 2.19.4；LangChain4j 使用 JDK HTTP Client；唯一 SLF4J provider 仍为 Logback。现有 OTel OkHttp sender 不属于 LangChain4j 模型调用栈。
 - Task 1 聚焦测试 12 项通过，覆盖版本、Java 17 字节码、完整 Spring Boot mock runtime 上下文、Jackson、SLF4J、HTTP Client、无关 OpenNLP 排除、runtime 枚举和生产配置失败策略。
 
-尚未实现 Chat/Embedding 的 LangChain4j 调用适配，下一步严格执行 Task 2。
+Task 2 已完成：
+
+- `LangChain4jAgentModelClient` 通过 OpenAI-compatible Chat Completions API 保持 system/user 消息边界，固定 temperature、关闭框架重试和请求/响应日志，并使用 JDK HTTP Client 的连接/读取超时。
+- 401/其他 4xx、429/5xx、连接与读取超时、malformed JSON、空 choices 和缺失 usage 均有 WireMock 契约覆盖；错误只记录低敏类别，不回显 provider body、Key 或 Authorization。
+- `AgentModelClient` 仍是 provider-neutral 边界；LangChain4j 类型没有进入 Agent 状态机、持久化实体或控制面。
+- generation 与单次 JSON repair 分别持久化 provider、model、tokens、finish reason、latency、response SHA-256、prompt/schema version 与终态；provider 失败审计使用 `REQUIRES_NEW`，不会随外层异常回滚。
+- 新增 `V14__agent_model_call_metadata.sql`，未修改 V1-V13。Task 3 的 Embedding metadata 迁移顺延为 V15。
+- 模型 observation 仅使用 provider、model、purpose 三个有界标签。
+
+尚未实现 LangChain4j Embedding 调用适配，下一步严格执行 Task 3。
 
 ## 3. 最新验证证据
 
 ```text
 backend: mvn test
-结果: 202 tests, 0 failures, 0 errors, 3 skipped
+结果: 214 tests, 0 failures, 0 errors, 3 skipped
 
 frontend: npm test
 结果: 4 passed
@@ -176,7 +185,7 @@ git diff --check
 
 ## 4. 安全边界与已知限制
 
-- V1 至 V4 Flyway 迁移已冻结，不得修改。
+- V1 至 V13 Flyway 迁移已冻结，不得修改；V14 已用于模型调用审计，下一新增迁移从 V15 开始。
 - 后端不得运行仓库控制的命令，也不得挂载 Docker Socket。
 - Sandbox Runner 是受信任的单机演示编排组件；Compose 不是恶意多租户隔离边界。
 - 分析容器不得继承 Docker Socket、SCM Token、LLM Key 或数据库凭据。
@@ -191,9 +200,9 @@ git diff --check
 
 Task 1 前的源码核查确认 AgentStepHandler 仍是占位实现，StructuredAgentModelService 与 ReviewContextService 尚未进入生产 Agent 步骤链路。现在已建立 LangChain4j 依赖和 runtime 边界；后续仍不能重写现有控制面，而应继续以 LangChain4j 作为模型、Embedding、Retriever 和受控 Tool Calling 适配层，补齐真实分状态 Agent 编排。
 
-Phase 5 Task 1 已按 TDD 完成。下一步从 Task 2 开始实现 LangChain4j Chat Model 适配。V1-V13 均不得修改，新增迁移从 V14 开始。每个 Task 后运行 backend、frontend 和 sandbox-runner 全量测试及 git diff --check。
+Phase 5 Task 1-2 已按 TDD 完成。下一步从 Task 3 开始实现 LangChain4j Embedding 适配与版本化向量。V1-V13 均不得修改，V14 已使用，新增迁移从 V15 开始。每个 Task 后运行 backend、frontend 和 sandbox-runner 全量测试及 git diff --check。
 
-Phase 1-4 计划代码 Task 已完成；Phase 5 Task 1 已完成，Task 2-12 尚未实施。最终发布仍必须在具备 Docker 的环境执行以下动态验收：
+Phase 1-4 计划代码 Task 已完成；Phase 5 Task 1-2 已完成，Task 3-12 尚未实施。最终发布仍必须在具备 Docker 的环境执行以下动态验收：
 
 1. `docker compose config`、全部镜像构建与服务健康检查。
 2. PostgreSQL/RabbitMQ Testcontainers 三个跳过测试、RabbitMQ→Runner、Patch apply/validate 和依赖缓存真实联调。
@@ -211,5 +220,5 @@ Phase 1-4 计划代码 Task 已完成；Phase 5 Task 1 已完成，Task 2-12 尚
 先读取 docs/PR守门Agent实施进度.md、Phase 3/4 计划、git status 和最近 20 个提交。
 Phase 1、Phase 2 和 Phase 3 Task 1-11 已完成；Task 12 的代码、静态加固和运维文档已完成，但 Docker 动态验收待补跑。不要重复实现，不要修改冻结的 V1-V4。
 
-Phase 1-4 的代码 Task 已实现。Phase 5 Task 1 已完成，固定 LangChain4j 1.8.0、core/open-ai 模块、Java 17/Boot/Jackson 兼容性和 legacy/langchain4j runtime 配置边界。下一步从 Phase 5 Task 2 开始，严格 TDD 实现 Chat Model adapter，独立提交，不修改 V1-V13。现有 AgentStepHandler 仍是占位实现，必须在后续 Task 6 按计划接通真实分状态执行链路。当前主机无 Docker，不能宣称 Phase 3/4/5 最终发布验收通过。
+Phase 1-4 的代码 Task 已实现。Phase 5 Task 1-2 已完成：固定 LangChain4j 1.8.0 与 runtime 边界，并实现 Chat Model adapter、错误分类、调用审计和独立 JSON repair；V14 已用于模型调用 metadata。下一步从 Phase 5 Task 3 开始，严格 TDD 实现 Embedding adapter 与版本化向量，迁移从 V15 开始，不修改 V1-V13。现有 AgentStepHandler 仍是占位实现，必须在后续 Task 6 按计划接通真实分状态执行链路。当前主机无 Docker，不能宣称 Phase 3/4/5 最终发布验收通过。
 ```

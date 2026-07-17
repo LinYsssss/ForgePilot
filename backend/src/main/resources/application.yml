@@ -125,6 +125,7 @@ app:
     base-url: ${LLM_BASE_URL:}
     api-key: ${LLM_API_KEY:}
     chat-model: ${LLM_CHAT_MODEL:mock-reviewer}
+    temperature: ${AI_TEMPERATURE:0.0}
     read-timeout-ms: ${AI_READ_TIMEOUT_MS:300000}
     embedding-provider: ${EMBEDDING_PROVIDER:${AI_PROVIDER:mock}}
     embedding-base-url: ${EMBEDDING_BASE_URL:${LLM_BASE_URL:}}

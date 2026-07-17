@@ -195,16 +195,16 @@ Rules:
 - Create backend/src/test/java/com/example/codereview/ai/langchain4j/LangChain4jAgentModelClientTest.java.
 - Create or extend WireMock provider contract fixtures.
 
-- [ ] First test system/user message ordering, model selection, temperature, timeout, response text, finish reason, and token usage mapping.
-- [ ] Test OpenAI-compatible base URLs with and without a trailing slash.
-- [ ] Test 401, 429, 5xx, malformed JSON, timeout, empty choices, and provider responses that omit token usage.
-- [ ] Map retryable provider failures separately from invalid model output and permanent authentication/configuration failures.
-- [ ] Preserve the existing AgentModelClient boundary so Agent state and persistence do not depend on LangChain4j classes.
-- [ ] Keep bounded one-attempt JSON repair in StructuredAgentModelService; the repair call consumes model-call and token budget.
-- [ ] Persist provider, model, input/output token counts, response hash, prompt schema version, latency, and terminal status.
-- [ ] Never persist API keys, authorization headers, complete private prompts, or chain-of-thought.
-- [ ] Add Micrometer and OpenTelemetry observations with bounded tags only.
-- [ ] Commit with: feat: adapt agent model calls through langchain4j
+- [x] First test system/user message ordering, model selection, temperature, timeout, response text, finish reason, and token usage mapping.
+- [x] Test OpenAI-compatible base URLs with and without a trailing slash.
+- [x] Test 401, 429, 5xx, malformed JSON, timeout, empty choices, and provider responses that omit token usage.
+- [x] Map retryable provider failures separately from invalid model output and permanent authentication/configuration failures.
+- [x] Preserve the existing AgentModelClient boundary so Agent state and persistence do not depend on LangChain4j classes.
+- [x] Keep bounded one-attempt JSON repair in StructuredAgentModelService; the repair call consumes model-call and token budget.
+- [x] Persist provider, model, input/output token counts, response hash, prompt schema version, latency, and terminal status.
+- [x] Never persist API keys, authorization headers, complete private prompts, or chain-of-thought.
+- [x] Add Micrometer and OpenTelemetry observations with bounded tags only.
+- [x] Commit with: feat: adapt agent model calls through langchain4j
 
 **Exit evidence:**
 
@@ -219,7 +219,7 @@ Rules:
 - Modify backend/src/main/java/com/example/codereview/rag/EmbeddingClient.java if metadata needs a provider-neutral result record.
 - Modify backend/src/main/java/com/example/codereview/rag/RagService.java.
 - Modify backend/src/main/java/com/example/codereview/knowledge/KnowledgeService.java.
-- Create backend/src/main/resources/db/migration/V14__embedding_model_metadata.sql.
+- Create backend/src/main/resources/db/migration/V15__embedding_model_metadata.sql (V14 is used by Task 2 model-call audit metadata).
 - Create backend/src/test/java/com/example/codereview/ai/langchain4j/LangChain4jEmbeddingClientTest.java.
 - Extend RagService and knowledge ingestion tests.
 

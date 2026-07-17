@@ -20,26 +20,36 @@ public record PromptEnvelope(
     }
 
     public String render() {
+        return systemMessage() + "\n" + userMessage();
+    }
+
+    public String systemMessage() {
         return """
                 <trusted_policy version="%s">
                 %s
                 </trusted_policy>
-                <untrusted_repository_content>
-                %s
-                </untrusted_repository_content>
-                <tool_evidence>
-                %s
-                </tool_evidence>
                 <required_output_schema version="%s">
                 %s
                 </required_output_schema>
                 """.formatted(
                 safe(promptVersion),
                 safe(trustedPolicy),
-                safe(untrustedRepositoryContent),
-                safe(toolEvidence),
                 safe(schemaVersion),
                 safe(outputSchema)
+        );
+    }
+
+    public String userMessage() {
+        return """
+                <untrusted_repository_content>
+                %s
+                </untrusted_repository_content>
+                <tool_evidence>
+                %s
+                </tool_evidence>
+                """.formatted(
+                safe(untrustedRepositoryContent),
+                safe(toolEvidence)
         );
     }
 
