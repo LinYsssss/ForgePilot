@@ -1,0 +1,14 @@
+diff --git a/src/files.ts b/src/files.ts
+--- a/src/files.ts
++++ b/src/files.ts
+@@ -1,5 +1,9 @@
+ import { readFileSync } from 'node:fs'
+-import { join } from 'node:path'
++import { join, resolve, sep } from 'node:path'
+ export function read(root: string, requested: string) {
+-  return readFileSync(join(root, requested), 'utf8')
++  const base = resolve(root) + sep
++  const target = resolve(join(root, requested))
++  if (!target.startsWith(base)) throw new Error('path escapes root')
++  return readFileSync(target, 'utf8')
+ }

@@ -7,8 +7,8 @@
 - 功能分支：`feat/pr-gatekeeper-agent`
 - 隔离工作树：`F:\202605New\.worktrees\pr-gatekeeper-agent`
 - 基线分支提交：`fad60d2 chore: ignore isolated worktrees`
-- 当前阶段：Phase 4 Task 11（版本化评测集；Phase 3 Docker 动态验收待补跑）
-- 最新完成任务：Phase 4 Task 10（人工审批 API 与 Vue UI）
+- 当前阶段：Phase 4 Task 12（质量与成本指标；Phase 3 Docker 动态验收待补跑）
+- 最新完成任务：Phase 4 Task 11（版本化评测集）
 
 ## 2. 已完成范围
 
@@ -74,7 +74,7 @@ a4a6f6f feat: execute repository read tools in sandbox
 
 ### Phase 4：插件、Patch 与评测
 
-已完成 Task 1 至 Task 10：
+已完成 Task 1 至 Task 11：
 
 - `RepositoryProfile`、`ChangeSet`、`ChangeAnalysis`、`ToolCommand` 和 `LanguagePlugin` 契约。
 - 纯语言、混合语言和构建文件变更的确定性插件选择。
@@ -101,6 +101,8 @@ a4a6f6f feat: execute repository read tools in sandbox
 - `V12__patch_validation_results.sql` 持久化 apply/build/test/scan 独立状态、目标 fingerprint/reproducer 是否消失、结构化 before/after 结果、有界日志和验证时间；仅 apply 成功且目标消失的 Patch 具备审批资格，构建和测试失败仍独立保留。
 - `V13__patch_approval_constraints.sql` 与审批实体/API 记录 approver、APPROVED/REJECTED、不可变 Patch hash、head SHA、comment 和时间；项目所有者授权、Agent Run/Patch 归属和 stale head 每次决定前重新校验，相同决定幂等、冲突决定不可变。
 - Vue 新增并实际挂载 Agent 审批工作区，拆分 Timeline、Findings/证据、Patch diff/下载/验证日志和 Approval 组件；只有 apply 成功、目标消失且未 stale 的 Patch 可批准，无效 Patch 禁用批准按钮。
+- `evaluation/manifest.json` 固定 corpus/schema、digest-pinned 工具镜像、模型、prompt/finding schema、temperature=0 和预算；6 个 Java/Python/TypeScript 案例覆盖 TP、TN、歧义、Prompt Injection、broken build 与 known patch，并隔离 development/holdout。
+- `EvaluationCorpusService` 校验每个案例的 category、severity、location、non-findings、可选 Patch、fixture、唯一 ID 和 split；`run-agent-evaluation.ps1` 默认 development 且剥离标签，生成物写入已忽略的 `evaluation/results/`。
 
 对应提交：
 
@@ -114,14 +116,15 @@ c24117f feat: add javascript typescript analysis plugin
 a14674d feat: add hybrid review context retrieval
 72a9f61 feat: validate generated patch candidates
 b7f0f3b feat: verify candidate patches in sandbox
-Task 10（本次提交） feat: add human patch approval workflow
+b6e0abe feat: add human patch approval workflow
+Task 11（本次提交） test: add versioned agent evaluation corpus
 ```
 
 ## 3. 最新验证证据
 
 ```text
 backend: mvn test
-结果: 185 tests, 0 failures, 0 errors, 3 skipped
+结果: 186 tests, 0 failures, 0 errors, 3 skipped
 
 frontend: npm test
 结果: 4 passed
@@ -160,11 +163,11 @@ git diff --check
 
 ## 5. 下一步严格顺序
 
-继续记录 Phase 3 Task 12 动态验收缺口，并实施 Phase 4 Task 11：
+继续记录 Phase 3 Task 12 动态验收缺口，并实施 Phase 4 Task 12：
 
-1. 创建版本化 `evaluation/manifest.json` 与 Java、Python、TypeScript 正负例、环境不完整和 Patch 场景夹具。
-2. 新增可重复执行的 `scripts/run-agent-evaluation.ps1`，固定 corpus、规则、模型/prompt/schema 版本和随机性设置。
-3. 后端提供评测报告 DTO/service，保留逐案例期望与实际结果供后续指标计算。
+1. 计算 precision、recall、F1、high-risk recall、false-positive rate、location accuracy、Patch apply/build/test rate、duration 和 cost。
+2. 初始门槛为 recall >= 0.80、precision >= 0.70、location accuracy >= 0.90、repairable Patch apply >= 0.70，并支持回归失败。
+3. 导出稳定 JSON/Markdown 报告至 `evaluation/results/`，timestamp 本地产物继续忽略。
 4. 每个 Task 独立提交；Docker 动态验收未完成时不得宣称 Phase 3 最终放行。
 
 ## 6. 继续开发提示词
@@ -175,5 +178,5 @@ git diff --check
 先读取 docs/PR守门Agent实施进度.md、Phase 3/4 计划、git status 和最近 20 个提交。
 Phase 1、Phase 2 和 Phase 3 Task 1-11 已完成；Task 12 的代码、静态加固和运维文档已完成，但 Docker 动态验收待补跑。不要重复实现，不要修改冻结的 V1-V4。
 
-继续记录 Phase 3 Task 12 的 Docker 阻塞，同时从 Phase 4 Task 11 版本化评测集开始，严格 TDD、每个 Task 独立提交。Patch 使用 V11、验证结果使用 V12、审批约束使用 V13，不得修改 V1-V13。完成前运行后端全量测试、前端测试与构建、Runner 测试和 git diff --check。Docker/Testcontainers 不可用导致的未验证项目必须明确记录。
+继续记录 Phase 3 Task 12 的 Docker 阻塞，同时从 Phase 4 Task 12 质量与成本指标开始，严格 TDD、每个 Task 独立提交。不得修改 V1-V13。完成前运行后端全量测试、前端测试与构建、Runner 测试和 git diff --check。Docker/Testcontainers 不可用导致的未验证项目必须明确记录。
 ```
