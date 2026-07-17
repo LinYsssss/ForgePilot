@@ -123,7 +123,8 @@ b7f0f3b feat: verify candidate patches in sandbox
 b6e0abe feat: add human patch approval workflow
 fdc38ed test: add versioned agent evaluation corpus
 3684993 feat: report agent evaluation metrics
-Task 13（本次提交） feat: add agent observability and release verification
+e18b5e6 feat: add agent observability and release verification
+c3b3c95 feat: complete observable pr gatekeeper agent
 ```
 
 ## 3. 最新验证证据
