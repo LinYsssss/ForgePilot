@@ -21,6 +21,8 @@ public record EvaluationMetrics(double precision, double recall, double f1, doub
         List<String> failures = new ArrayList<>();
         if (recall < 0.80) failures.add("recall < 0.80");
         if (precision < 0.70) failures.add("precision < 0.70");
+        if (highRisk < 0.80) failures.add("high-risk recall < 0.80");
+        if (fpr > 0.10) failures.add("false-positive rate > 0.10");
         if (location < 0.90) failures.add("location accuracy < 0.90");
         if (apply < 0.70) failures.add("patch application < 0.70");
         return new EvaluationMetrics(precision, recall, f1, highRisk, fpr, location, apply, build, test,

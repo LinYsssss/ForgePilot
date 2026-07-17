@@ -17,3 +17,5 @@ This is the deterministic small-matrix baseline used to verify metric calculatio
 | Total cost | 1.2500 |
 
 Gate: **PASS**
+
+Thresholds: recall ≥ 0.80, precision ≥ 0.70, high-risk recall ≥ 0.80, false-positive rate ≤ 0.10, location accuracy ≥ 0.90, repairable Patch apply ≥ 0.70.

@@ -325,3 +325,30 @@ npm run build
 | `docs/11_本地开发与联调手册.md` | 本地启动与联调 |
 | `docs/12_服务器部署与演示手册.md` | 服务器部署与演示 |
 | `代码仓库智能审查平台_需求规格说明书.md` | 需求规格说明 |
+# PR Gatekeeper Agent demo and verification
+
+The Phase 4 implementation includes language plugins, evidence-based gates, hybrid context retrieval,
+scope-validated and sandbox-verified Patch candidates, human approval, a versioned evaluation corpus,
+quality metrics, and OpenTelemetry/Prometheus deployment configuration.
+
+## Verified local baseline
+
+- Backend: 190 tests, 0 failures/errors, 3 Docker-dependent tests skipped.
+- Sandbox Runner: 37 tests, 0 failures/errors/skips.
+- Frontend: 4 tests passed and the production Vite build passed.
+- Evaluation manifest: 6 versioned cases; deterministic input validation passed.
+- The committed evaluation baseline is a known confusion-matrix calculation, not a real Docker corpus run.
+
+## Demo procedure
+
+1. Configure `deploy/.env` with database, RabbitMQ, signing, SCM, and model credentials.
+2. Run `docker compose -f deploy/docker-compose.yml config`, then build and start the stack.
+3. Verify backend health and Prometheus metrics, and open Prometheus on the loopback-bound port `9090`.
+4. Deliver a signed GitHub/GitLab PR webhook and follow its Agent Run timeline.
+5. Confirm the same trace is visible across webhook handling, RabbitMQ steps, model calls, and Sandbox jobs.
+6. Inspect findings/evidence, generate a Patch Candidate, run baseline/apply/patched validation, then approve or reject it in the Agent UI.
+7. Run `scripts/run-agent-evaluation.ps1 -Split development`, then the holdout suite without using holdout labels for tuning.
+8. Export JSON/Markdown metrics and enforce the documented quality gates.
+
+Docker is required for final release acceptance. On hosts without Docker, Compose, Testcontainers,
+container security, real trace propagation, and real corpus benchmark results remain unverified.

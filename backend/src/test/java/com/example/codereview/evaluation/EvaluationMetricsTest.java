@@ -27,6 +27,7 @@ class EvaluationMetricsTest {
                 6, 4, 4, 10, 2, 2, 7, 10, 10, 6, 6, 6, 10_000, 10, 0.5));
         assertThat(metrics.gate().passed()).isFalse();
         assertThat(metrics.gate().failures()).contains("recall < 0.80", "precision < 0.70",
+                "high-risk recall < 0.80", "false-positive rate > 0.10",
                 "location accuracy < 0.90", "patch application < 0.70");
     }
 }
