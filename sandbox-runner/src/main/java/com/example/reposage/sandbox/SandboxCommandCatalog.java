@@ -21,7 +21,10 @@ public final class SandboxCommandCatalog {
                 entry("java.spotbugs", "/opt/spotbugs/bin/spotbugs", "-textui", "-xml:withMessages",
                         "-output", "/tmp/spotbugs.xml", "/workspace"),
                 entry("java.checkstyle", "/usr/bin/java", "-jar", "/opt/checkstyle/checkstyle.jar",
-                        "-c", "/opt/reposage/rulesets/checkstyle.xml", "/workspace"));
+                        "-c", "/opt/reposage/rulesets/checkstyle.xml", "/workspace"),
+                entry("python.ruff", "/usr/local/bin/ruff", "check", "--output-format", "json", "/workspace"),
+                entry("python.bandit", "/usr/local/bin/bandit", "-r", "/workspace", "-f", "json"),
+                entry("python.pytest", "/usr/local/bin/pytest", "--junitxml=/tmp/pytest.xml", "/workspace"));
     }
 
     private static Map.Entry<String, ContainerPolicy.CommandSpec> entry(String id, String... command) {

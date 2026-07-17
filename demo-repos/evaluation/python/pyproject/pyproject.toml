@@ -1,0 +1,4 @@
+[project]
+name = "python-evaluation-case"
+version = "1.0.0"
+requires-python = ">=3.11"

@@ -7,8 +7,8 @@
 - 功能分支：`feat/pr-gatekeeper-agent`
 - 隔离工作树：`F:\202605New\.worktrees\pr-gatekeeper-agent`
 - 基线分支提交：`fad60d2 chore: ignore isolated worktrees`
-- 当前阶段：Phase 4 Task 3（Python 插件；Phase 3 Docker 动态验收待补跑）
-- 最新完成任务：Phase 4 Task 2（Java 插件）
+- 当前阶段：Phase 4 Task 4（JavaScript/TypeScript 插件；Phase 3 Docker 动态验收待补跑）
+- 最新完成任务：Phase 4 Task 3（Python 插件）
 
 ## 2. 已完成范围
 
@@ -74,7 +74,7 @@ a4a6f6f feat: execute repository read tools in sandbox
 
 ### Phase 4：插件、Patch 与评测
 
-已完成 Task 1 至 Task 2：
+已完成 Task 1 至 Task 3：
 
 - `RepositoryProfile`、`ChangeSet`、`ChangeAnalysis`、`ToolCommand` 和 `LanguagePlugin` 契约。
 - 纯语言、混合语言和构建文件变更的确定性插件选择。
@@ -83,19 +83,22 @@ a4a6f6f feat: execute repository read tools in sandbox
 - Java 插件检测 Maven/Gradle，使用 JavaParser 提取变更类、方法、注解和调用；PMD、SpotBugs、Checkstyle XML 及 SARIF 归一化为 `FindingCandidate`。
 - backend 和 Runner 同步注册 Maven/Gradle compile/test、PMD、SpotBugs、Checkstyle 固定命令 ID；Runner 使用固定可执行路径与参数，不调用 shell 解释器。
 - Java Maven/Gradle 评测夹具位于 `demo-repos/evaluation/java/`。
+- Python 插件检测 `pyproject.toml`、`requirements.txt` 和 `.py` 变更，注册 Ruff、Bandit、Pytest 固定命令；Ruff/Bandit JSON 归一化为 Finding，Pytest JUnit 归一化为独立验证结果而非缺陷。
+- Runner 同步注册固定 Ruff/Bandit/Pytest 可执行路径；Python 评测夹具位于 `demo-repos/evaluation/python/`。
 
 对应提交：
 
 ```text
 92dcd30 feat: define language plugin and evidence contracts
-Task 2（本次提交） feat: add java analysis plugin
+881c066 feat: add java analysis plugin
+Task 3（本次提交） feat: add python analysis plugin
 ```
 
 ## 3. 最新验证证据
 
 ```text
 backend: mvn test
-结果: 153 tests, 0 failures, 0 errors, 3 skipped
+结果: 157 tests, 0 failures, 0 errors, 3 skipped
 
 frontend: npm test
 结果: 3 passed
@@ -104,7 +107,7 @@ frontend: npm run build
 结果: PASS
 
 sandbox-runner: mvn test
-结果: 32 tests, 0 failures, 0 errors, 0 skipped
+结果: 33 tests, 0 failures, 0 errors, 0 skipped
 
 git diff --check
 结果: PASS（当前 Task）
@@ -134,11 +137,11 @@ git diff --check
 
 ## 5. 下一步严格顺序
 
-继续记录 Phase 3 Task 12 动态验收缺口，并实施 Phase 4 Task 3：
+继续记录 Phase 3 Task 12 动态验收缺口，并实施 Phase 4 Task 4：
 
-1. 为 Python 插件先写 `pyproject.toml`、`requirements.txt`、`.py` 变更检测测试。
-2. 注册 Ruff、Bandit、Pytest 固定命令 ID，并同步 Runner 白名单。
-3. 将 Ruff/Bandit JSON 和 Pytest JUnit 输出归一化为 Finding/验证结果。
+1. 为 JS/TS 插件先写包管理器和 Jest/Vitest 检测测试。
+2. 注册 ESLint、Semgrep、TypeScript、Jest、Vitest 固定命令 ID，并同步 Runner 白名单。
+3. 归一化 ESLint/Semgrep/TypeScript/测试输出，且不执行未明确白名单化的 `package.json` scripts。
 4. 每个 Task 独立提交；Docker 动态验收未完成时不得宣称 Phase 3 最终放行。
 
 ## 6. 继续开发提示词
@@ -149,5 +152,5 @@ git diff --check
 先读取 docs/PR守门Agent实施进度.md、Phase 3/4 计划、git status 和最近 20 个提交。
 Phase 1、Phase 2 和 Phase 3 Task 1-11 已完成；Task 12 的代码、静态加固和运维文档已完成，但 Docker 动态验收待补跑。不要重复实现，不要修改冻结的 V1-V4。
 
-继续记录 Phase 3 Task 12 的 Docker 阻塞，同时从 Phase 4 Task 3 Python 插件开始，严格 TDD、每个 Task 独立提交。Finding/Evidence 已使用 V8，Patch 迁移必须使用 V9。不得在宿主机直接执行仓库命令，不得接受消息中的任意 Shell 命令。完成前运行后端全量测试、前端测试与构建、Runner 测试和 git diff --check。Docker/Testcontainers 不可用导致的未验证项目必须明确记录。
+继续记录 Phase 3 Task 12 的 Docker 阻塞，同时从 Phase 4 Task 4 JavaScript/TypeScript 插件开始，严格 TDD、每个 Task 独立提交。Finding/Evidence 已使用 V8，Patch 迁移必须使用 V9。不得在宿主机直接执行仓库命令，不得接受消息中的任意 Shell 命令，尤其不得执行未白名单化的 `package.json` scripts。完成前运行后端全量测试、前端测试与构建、Runner 测试和 git diff --check。Docker/Testcontainers 不可用导致的未验证项目必须明确记录。
 ```
