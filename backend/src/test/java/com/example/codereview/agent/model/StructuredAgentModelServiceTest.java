@@ -39,7 +39,7 @@ class StructuredAgentModelServiceTest {
         when(client.generate(any())).thenReturn(response(
                 "{\"summary\":\"ok\",\"plan\":[]}", 10, 3, "STOP", 41
         ));
-        when(validator.validate(any(), eq(false), any()))
+        when(validator.validate(any(), eq(false), any(), any()))
                 .thenReturn(validResult("ok"));
 
         service.generate(7L, client, prompt(), false);
@@ -55,6 +55,7 @@ class StructuredAgentModelServiceTest {
         assertThat(completed.responseHash()).matches("[0-9a-f]{64}");
         assertThat(completed.promptVersion()).isEqualTo("prompt-v1");
         assertThat(completed.schemaVersion()).isEqualTo("schema-v1");
+        assertThat(completed.promptHash()).matches("[0-9a-f]{64}");
     }
 
     @Test
@@ -63,9 +64,9 @@ class StructuredAgentModelServiceTest {
         when(client.repairJson(any(), any())).thenReturn(response(
                 "{\"summary\":\"fixed\",\"plan\":[]}", 5, 4, "STOP", 15
         ));
-        when(validator.validate(any(), eq(false), any())).thenAnswer(invocation -> {
+        when(validator.validate(any(), eq(false), any(), any())).thenAnswer(invocation -> {
             @SuppressWarnings("unchecked")
-            Function<String, String> repair = invocation.getArgument(2);
+            Function<String, String> repair = invocation.getArgument(3);
             assertThat(repair.apply("{broken")).contains("\"summary\":\"fixed\"");
             return validResult("fixed");
         });
@@ -149,6 +150,7 @@ class StructuredAgentModelServiceTest {
             String purpose,
             String promptVersion,
             String schemaVersion,
+            String promptHash,
             long inputTokens,
             long outputTokens,
             String finishReason,
@@ -164,6 +166,7 @@ class StructuredAgentModelServiceTest {
                     call.getCallPurpose(),
                     call.getPromptVersion(),
                     call.getSchemaVersion(),
+                    call.getPromptHash(),
                     call.getInputTokens(),
                     call.getOutputTokens(),
                     call.getFinishReason(),

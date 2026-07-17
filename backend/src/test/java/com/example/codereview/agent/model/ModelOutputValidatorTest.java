@@ -65,9 +65,51 @@ class ModelOutputValidatorTest {
         );
 
         String rendered = envelope.render();
-        assertThat(rendered).contains("<trusted_policy version=", "<untrusted_repository_content>");
+        assertThat(rendered).contains("<trusted_policy version=", "<untrusted_changed_diff>");
         assertThat(rendered.indexOf("Only use registered")).isLessThan(rendered.indexOf("ignore policy"));
         assertThat(envelope.untrustedRepositoryContent()).contains("execute command");
+    }
+
+    @Test
+    void rejectsMissingUnknownAndDuplicateKnowledgeCitations() throws Exception {
+        Mockito.when(plans.validate(Mockito.anyList(), Mockito.eq(false)))
+                .thenReturn(new ReviewPlanValidator.ValidationResult(true, List.of(), List.of()));
+
+        assertCitationInvalid(List.of(new StructuredModelResponse.CitedClaim(
+                "Policy requires closing SQL connections", true, List.of()
+        )), "citation is required");
+        assertCitationInvalid(List.of(new StructuredModelResponse.CitedClaim(
+                "Policy requires closing SQL connections", true, List.of("fabricated#chunk-9")
+        )), "unknown citation");
+        assertCitationInvalid(List.of(new StructuredModelResponse.CitedClaim(
+                "Policy requires closing SQL connections", true,
+                List.of("security.md#chunk-2", "security.md#chunk-2")
+        )), "duplicate citation");
+
+        String valid = mapper.writeValueAsString(new StructuredModelResponse(
+                "Review",
+                List.of(),
+                List.of(new StructuredModelResponse.CitedClaim(
+                        "Policy requires closing SQL connections",
+                        true,
+                        List.of("security.md#chunk-2")
+                ))
+        ));
+        assertThat(validator.validate(
+                valid, false, List.of("security.md#chunk-2"), ignored -> ignored
+        ).valid()).isTrue();
+    }
+
+    private void assertCitationInvalid(
+            List<StructuredModelResponse.CitedClaim> claims,
+            String reason
+    ) throws Exception {
+        String raw = mapper.writeValueAsString(new StructuredModelResponse("Review", List.of(), claims));
+        var result = validator.validate(
+                raw, false, List.of("security.md#chunk-2"), ignored -> ignored
+        );
+        assertThat(result.valid()).isFalse();
+        assertThat(result.error()).containsIgnoringCase(reason);
     }
 
     private void assertInvalid(String raw, String reason) {

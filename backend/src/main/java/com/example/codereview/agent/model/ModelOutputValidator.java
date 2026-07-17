@@ -7,6 +7,8 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.function.Function;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -34,7 +36,17 @@ public class ModelOutputValidator {
             boolean approved,
             Function<String, String> repair
     ) {
-        ValidationResult first = validateOnce(rawOutput, approved);
+        return validate(rawOutput, approved, List.of(), repair);
+    }
+
+    public ValidationResult validate(
+            String rawOutput,
+            boolean approved,
+            List<String> allowedCitationIds,
+            Function<String, String> repair
+    ) {
+        Set<String> allowed = Set.copyOf(allowedCitationIds == null ? List.of() : allowedCitationIds);
+        ValidationResult first = validateOnce(rawOutput, approved, allowed);
         if (first.valid()) {
             return first;
         }
@@ -44,11 +56,11 @@ public class ModelOutputValidator {
         } catch (RuntimeException ex) {
             return invalid("JSON repair failed");
         }
-        ValidationResult second = validateOnce(repaired, approved);
+        ValidationResult second = validateOnce(repaired, approved, allowed);
         return second.valid() ? second : invalid(second.error());
     }
 
-    private ValidationResult validateOnce(String rawOutput, boolean approved) {
+    private ValidationResult validateOnce(String rawOutput, boolean approved, Set<String> allowedCitationIds) {
         if (rawOutput == null || rawOutput.isBlank()) {
             return invalid("model output is empty");
         }
@@ -68,6 +80,10 @@ public class ModelOutputValidator {
             if (!planResult.valid()) {
                 return invalid(String.join("; ", planResult.errors()));
             }
+            String citationError = validateCitations(response.claims(), allowedCitationIds);
+            if (citationError != null) {
+                return invalid(citationError);
+            }
             return new ValidationResult(true, response, null, null);
         } catch (JsonProcessingException ex) {
             String message = ex.getOriginalMessage();
@@ -76,6 +92,28 @@ public class ModelOutputValidator {
             }
             return invalid(limit(message));
         }
+    }
+
+    private String validateCitations(
+            List<StructuredModelResponse.CitedClaim> claims,
+            Set<String> allowedCitationIds
+    ) {
+        for (StructuredModelResponse.CitedClaim claim : claims) {
+            List<String> citations = claim.citationIds();
+            if (claim.knowledgeBacked() && citations.isEmpty()) {
+                return "citation is required for knowledge-backed claim";
+            }
+            Set<String> unique = new HashSet<>();
+            for (String citation : citations) {
+                if (citation == null || citation.isBlank() || !allowedCitationIds.contains(citation)) {
+                    return "unknown citation: " + limit(citation);
+                }
+                if (!unique.add(citation)) {
+                    return "duplicate citation: " + citation;
+                }
+            }
+        }
+        return null;
     }
 
     private String unwrapMarkdown(String raw) {

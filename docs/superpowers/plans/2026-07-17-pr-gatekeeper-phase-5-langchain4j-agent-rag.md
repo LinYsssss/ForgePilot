@@ -276,16 +276,16 @@ Rules:
 - Create backend/src/test/java/com/example/codereview/agent/prompt/AgentPromptAssemblerTest.java.
 - Add prompt-injection fixtures under evaluation/cases/.
 
-- [ ] Test system policy, task instruction, changed code, tool evidence, and retrieved knowledge occupy distinct delimited sections.
-- [ ] Mark repository text, comments, diffs, tool logs, and RAG documents as untrusted data.
-- [ ] Test instructions embedded in code or documents cannot add tools, change project scope, request secrets, disable evidence rules, or authorize publication.
-- [ ] Apply independent byte/token budgets to diff, code context, tool output, and RAG context.
-- [ ] Use deterministic truncation that retains source references and records which sections were truncated.
-- [ ] Require every knowledge-backed claim to reference one or more supplied citation IDs.
-- [ ] Reject unknown, duplicated, or fabricated citation IDs during structured-output validation.
-- [ ] Version every prompt and persist the version/hash, not an unrestricted full private prompt.
-- [ ] Add redaction tests for tokens, passwords, private keys, authorization headers, and environment variables.
-- [ ] Commit with: feat: assemble cited agent prompts safely
+- [x] Test system policy, task instruction, changed code, tool evidence, and retrieved knowledge occupy distinct delimited sections.
+- [x] Mark repository text, comments, diffs, tool logs, and RAG documents as untrusted data.
+- [x] Test instructions embedded in code or documents cannot add tools, change project scope, request secrets, disable evidence rules, or authorize publication.
+- [x] Apply independent byte/token budgets to diff, code context, tool output, and RAG context.
+- [x] Use deterministic truncation that retains source references and records which sections were truncated.
+- [x] Require every knowledge-backed claim to reference one or more supplied citation IDs.
+- [x] Reject unknown, duplicated, or fabricated citation IDs during structured-output validation.
+- [x] Version every prompt and persist the version/hash, not an unrestricted full private prompt.
+- [x] Add redaction tests for tokens, passwords, private keys, authorization headers, and environment variables.
+- [x] Commit with: feat: assemble cited agent prompts safely
 
 **Exit evidence:**
 

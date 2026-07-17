@@ -38,6 +38,9 @@ public class AgentModelCall {
     @Column(nullable = false, length = 40)
     private String schemaVersion;
 
+    @Column(nullable = false, length = 64)
+    private String promptHash;
+
     @Column(nullable = false)
     private long inputTokens;
 
@@ -87,6 +90,7 @@ public class AgentModelCall {
         this.model = response.model();
         this.promptVersion = prompt.promptVersion();
         this.schemaVersion = prompt.schemaVersion();
+        this.promptHash = prompt.promptHash();
         this.inputTokens = response.inputTokens();
         this.outputTokens = response.outputTokens();
         this.callPurpose = callPurpose;
@@ -112,6 +116,7 @@ public class AgentModelCall {
         call.model = model;
         call.promptVersion = prompt.promptVersion();
         call.schemaVersion = prompt.schemaVersion();
+        call.promptHash = prompt.promptHash();
         call.inputTokens = 0;
         call.outputTokens = 0;
         call.callPurpose = callPurpose;
@@ -148,6 +153,10 @@ public class AgentModelCall {
 
     public String getSchemaVersion() {
         return schemaVersion;
+    }
+
+    public String getPromptHash() {
+        return promptHash;
     }
 
     public long getInputTokens() {

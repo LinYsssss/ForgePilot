@@ -7,8 +7,8 @@
 - 功能分支：`feat/pr-gatekeeper-agent`
 - 隔离工作树：`F:\202605New\.worktrees\pr-gatekeeper-agent`
 - 基线分支提交：`fad60d2 chore: ignore isolated worktrees`
-- 当前阶段：Phase 5 Task 4 已完成，下一步 Task 5 安全 Prompt 与 Citation 组装
-- 最新完成任务：Phase 5 Task 4（项目隔离的 LangChain4j ContentRetriever 与 Hybrid Review Context 适配）
+- 当前阶段：Phase 5 Task 5 已完成，下一步 Task 6 Typed Agent State Executors
+- 最新完成任务：Phase 5 Task 5（注入防护 Prompt、分区预算、Citation 白名单与 prompt hash 审计）
 
 ## 2. 已完成范围
 
@@ -169,13 +169,24 @@ Task 4 已完成：
 - threshold、规范化内容去重、稳定排序、top-K 和 UTF-8 byte budget 均在 domain service 执行。
 - LangChain4j `Content` metadata 携带精确 citation、source name、chunk index、document type、source version、hybrid score 和 `untrusted` 标记，供后续 Finding/SCM 引用复用。
 
-下一步严格执行 Task 5，构建注入防护、分区预算、引用校验和敏感信息脱敏的版本化 Prompt。
+Task 5 已完成：
+
+- 新增版本化 `review-v1` Prompt 模板与 `PromptTemplateRegistry`，未知版本拒绝，不允许通过路径输入加载任意资源。
+- `AgentPromptAssembler` 将 trusted policy、task instruction、changed diff、code context、tool evidence、retrieved knowledge 和 output schema 放入独立标签区；代码、注释、diff、工具日志及 RAG 文档均明确标为不可信数据。
+- 模板明确禁止不可信文本新增工具、扩大 project/document scope、请求秘密、关闭证据规则、批准 Patch 或授权 SCM 发布。
+- diff/code/tool/RAG 分别执行独立 UTF-8 byte 与近似 token budget；按 Unicode code point 确定性截断，保留已纳入的 citation header，并记录 truncated sections。
+- Authorization、token/password/secret/API key/environment assignment、GitHub token 与 private key 内容均在进入 Prompt 前脱敏。
+- `StructuredModelResponse.CitedClaim` 与 `ModelOutputValidator` 要求 knowledge-backed claim 至少引用一个已供应 ID，并拒绝空、未知、重复或伪造 Citation。
+- `PromptEnvelope` 计算稳定 SHA-256；`V16__agent_model_prompt_hash.sql` 只持久化 prompt version/hash，不持久化完整私有 Prompt。
+- 新增代码注释与恶意 RAG 文档双重 Prompt Injection 评测夹具。
+
+下一步严格执行 Task 6，用完整注册表和 typed state executors 替换占位 `AgentStepHandler`。
 
 ## 3. 最新验证证据
 
 ```text
 backend: mvn test
-结果: 231 tests, 0 failures, 0 errors, 3 skipped
+结果: 235 tests, 0 failures, 0 errors, 3 skipped
 
 frontend: npm test
 结果: 4 passed
@@ -205,7 +216,7 @@ git diff --check
 
 ## 4. 安全边界与已知限制
 
-- V1 至 V14 Flyway 迁移已冻结，不得修改；V15 已用于 Embedding metadata，后续新增迁移从 V16 开始。
+- V1 至 V15 Flyway 迁移已冻结，不得修改；V16 已用于 prompt hash 审计，后续新增迁移从 V17 开始。
 - 后端不得运行仓库控制的命令，也不得挂载 Docker Socket。
 - Sandbox Runner 是受信任的单机演示编排组件；Compose 不是恶意多租户隔离边界。
 - 分析容器不得继承 Docker Socket、SCM Token、LLM Key 或数据库凭据。
@@ -220,9 +231,9 @@ git diff --check
 
 Task 1 前的源码核查确认 AgentStepHandler 仍是占位实现，StructuredAgentModelService 与 ReviewContextService 尚未进入生产 Agent 步骤链路。现在已建立 LangChain4j 依赖和 runtime 边界；后续仍不能重写现有控制面，而应继续以 LangChain4j 作为模型、Embedding、Retriever 和受控 Tool Calling 适配层，补齐真实分状态 Agent 编排。
 
-Phase 5 Task 1-4 已按 TDD 完成。下一步从 Task 5 开始实现安全 Prompt 与 Citation 组装。V1-V14 均不得修改，V15 已使用，后续新增迁移从 V16 开始。每个 Task 后运行 backend、frontend 和 sandbox-runner 全量测试及 git diff --check。
+Phase 5 Task 1-5 已按 TDD 完成。下一步从 Task 6 开始实现 typed state executors。V1-V15 均不得修改，V16 已使用，后续新增迁移从 V17 开始。每个 Task 后运行 backend、frontend 和 sandbox-runner 全量测试及 git diff --check。
 
-Phase 1-4 计划代码 Task 已完成；Phase 5 Task 1-4 已完成，Task 5-12 尚未实施。最终发布仍必须在具备 Docker 的环境执行以下动态验收：
+Phase 1-4 计划代码 Task 已完成；Phase 5 Task 1-5 已完成，Task 6-12 尚未实施。最终发布仍必须在具备 Docker 的环境执行以下动态验收：
 
 1. `docker compose config`、全部镜像构建与服务健康检查。
 2. PostgreSQL/RabbitMQ Testcontainers 三个跳过测试、RabbitMQ→Runner、Patch apply/validate 和依赖缓存真实联调。
@@ -240,5 +251,5 @@ Phase 1-4 计划代码 Task 已完成；Phase 5 Task 1-4 已完成，Task 5-12 �
 先读取 docs/PR守门Agent实施进度.md、Phase 3/4 计划、git status 和最近 20 个提交。
 Phase 1、Phase 2 和 Phase 3 Task 1-11 已完成；Task 12 的代码、静态加固和运维文档已完成，但 Docker 动态验收待补跑。不要重复实现，不要修改冻结的 V1-V4。
 
-Phase 1-4 的代码 Task 已实现。Phase 5 Task 1-4 已完成：固定 LangChain4j 1.8.0 与 runtime 边界，实现 Chat/Embedding adapter、调用审计、版本化向量、项目级 re-index，以及 typed-scope Hybrid Review ContentRetriever；V14/V15 已使用。下一步从 Phase 5 Task 5 开始，严格 TDD 实现安全 Prompt/Citation 组装；后续迁移从 V16 开始，不修改 V1-V15。现有 AgentStepHandler 仍是占位实现，必须在后续 Task 6 按计划接通真实分状态执行链路。当前主机无 Docker，不能宣称 Phase 3/4/5 最终发布验收通过。
+Phase 1-4 的代码 Task 已实现。Phase 5 Task 1-5 已完成：固定 LangChain4j 1.8.0 与 runtime 边界，实现 Chat/Embedding adapter、调用审计、版本化向量、项目级 re-index、typed-scope Retriever 和安全 Prompt/Citation 组装；V14-V16 已使用。下一步从 Phase 5 Task 6 开始，严格 TDD 用 typed state executors 替换占位 `AgentStepHandler`；后续迁移从 V17 开始，不修改 V1-V16。当前主机无 Docker，不能宣称 Phase 3/4/5 最终发布验收通过。
 ```

@@ -47,6 +47,7 @@ public class StructuredAgentModelService {
         ModelOutputValidator.ValidationResult result = validator.validate(
                 response.content(),
                 approved,
+                prompt.citationIds(),
                 invalid -> {
                     generation.fail("model output required JSON repair");
                     audit.save(generation);
