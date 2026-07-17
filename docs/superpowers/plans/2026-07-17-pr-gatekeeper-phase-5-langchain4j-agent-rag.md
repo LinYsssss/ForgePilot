@@ -170,14 +170,14 @@ Rules:
 - Modify backend/src/main/resources/application.yml.
 - Modify backend/src/test/resources/application-test.yml if present.
 
-- [ ] Add a failing compatibility test proving the chosen LangChain4j version supports Java 17 and the project Spring Boot version.
-- [ ] Pin one explicit LangChain4j version through dependency management; do not use a floating range or latest alias.
-- [ ] Add only the modules needed for the selected OpenAI-compatible chat/embedding integration and core message/tool/retriever APIs.
-- [ ] Run Maven dependency tree and reject a second logging implementation, incompatible Jackson override, or conflicting HTTP stack.
-- [ ] Introduce app.ai.runtime with allowed values legacy and langchain4j.
-- [ ] Keep test behavior deterministic and make production langchain4j configuration fail fast when URL, key, or model is absent.
-- [ ] Document the exact selected LangChain4j version, modules, Java requirement, and known API names in the test and progress document.
-- [ ] Commit with: build: add pinned langchain4j integration boundary
+- [x] Add a failing compatibility test proving the chosen LangChain4j version supports Java 17 and the project Spring Boot version.
+- [x] Pin one explicit LangChain4j version through dependency management; do not use a floating range or latest alias.
+- [x] Add only the modules needed for the selected OpenAI-compatible chat/embedding integration and core message/tool/retriever APIs.
+- [x] Run Maven dependency tree and reject a second logging implementation, incompatible Jackson override, or conflicting HTTP stack.
+- [x] Introduce app.ai.runtime with allowed values legacy and langchain4j.
+- [x] Keep test behavior deterministic and make production langchain4j configuration fail fast when URL, key, or model is absent.
+- [x] Document the exact selected LangChain4j version, modules, Java requirement, and known API names in the test and progress document.
+- [x] Commit with: build: add pinned langchain4j integration boundary
 
 **Exit evidence:**
 

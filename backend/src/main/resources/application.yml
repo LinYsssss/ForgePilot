@@ -120,6 +120,7 @@ app:
     full-context: ${RAG_FULL_CONTEXT:false}
     max-context-chars: ${RAG_MAX_CONTEXT_CHARS:6000}
   ai:
+    runtime: ${AI_RUNTIME:legacy}
     provider: ${AI_PROVIDER:mock}
     base-url: ${LLM_BASE_URL:}
     api-key: ${LLM_API_KEY:}
