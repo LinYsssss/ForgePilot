@@ -610,6 +610,10 @@
       <template v-else-if="tab === 'agent'">
         <div class="panel">
           <div class="panel-head"><div><h2>Agent 审查与 Patch 审批</h2><div class="sub">查看 Timeline、Finding 证据、验证日志与候选 Patch</div></div></div>
+          <div v-if="agentRunDetail" class="agent-live-status">
+            <span class="status-pill" :class="'st-' + agentRunDetail.status">{{ agentRunDetail.status }}</span>
+            <span>{{ agentPolling ? '正在自动刷新持久化状态' : (agentRunDetail.terminal ? '运行已结束' : '自动刷新已暂停') }}</span>
+          </div>
           <div class="grid three">
             <label class="field">最近 Agent Run
               <select v-model.number="agentRunId" @change="selectAgentRun">
@@ -748,6 +752,8 @@ const agentHeadSha = ref('')
 const agentTimeline = ref([])
 const agentFindings = ref([])
 const agentPatch = ref(null)
+const agentRunDetail = ref(null)
+const agentPolling = ref(false)
 
 const openFeedback = reactive({})
 const feedbackMap = reactive({})
@@ -766,6 +772,7 @@ const chosenDocs = ref(new Set())
 const demoRepoPath = import.meta.env.VITE_DEMO_REPO_PATH || 'F:\\202605New\\demo-repos\\mall-order-service'
 
 let pollTimer = null
+let agentPollTimer = null
 const pollingActive = ref(false)
 
 const tabTitles = { dashboard: '概览', projects: '项目管理', repository: '仓库配置', pullRequests: 'PR 工作流', knowledge: 'RAG 知识库', reviews: '代码审查', agent: 'Agent 审批', aiLogs: 'AI 调用日志' }
@@ -1333,9 +1340,12 @@ async function loadAgentWorkspace() {
       api(`/projects/${activeProject.value.projectId}/agent-runs/${agentRunId.value}/patches`),
     ])
     agentTimeline.value = timeline.steps || []
+    agentRunDetail.value = timeline.run || null
     agentPatch.value = patches.length ? { ...patches[patches.length - 1], downloadUrl: `data:text/x-diff;charset=utf-8,${encodeURIComponent(patches[patches.length - 1].patchContent || '')}` } : null
     agentFindings.value = (agentPatch.value?.findingIds || []).map(id => ({ id, severity: 'INFO', title: `Finding #${id}`, description: '详见持久化证据与置信度记录', evidence: [] }))
     if (!agentHeadSha.value) agentHeadSha.value = timeline.run?.headSha || agentPatch.value?.headSha || ''
+    if (timeline.run?.terminal) stopAgentPolling()
+    else startAgentPolling()
   } finally { busy.agent = false }
 }
 async function loadAgentRuns() {
@@ -1357,6 +1367,20 @@ async function selectAgentRun() {
 async function openAgentWorkspace() {
   tab.value = 'agent'
   await run(loadAgentRuns)
+  if (agentRunId.value) await run(loadAgentWorkspace)
+}
+function startAgentPolling() {
+  if (agentPollTimer || !agentRunId.value) return
+  agentPolling.value = true
+  agentPollTimer = setInterval(async () => {
+    if (tab.value !== 'agent' || busy.agent) return
+    try { await loadAgentWorkspace() } catch { stopAgentPolling() }
+  }, 3000)
+}
+function stopAgentPolling() {
+  if (agentPollTimer) clearInterval(agentPollTimer)
+  agentPollTimer = null
+  agentPolling.value = false
 }
 async function onPatchDecided() { toastMsg('Patch 审批决定已记录', 'success'); await loadAgentWorkspace() }
 function onPatchError(error) { toastMsg(error?.message || 'Patch 审批失败', 'error') }
@@ -1406,5 +1430,5 @@ onMounted(async () => {
     authenticated.value = false
   }
 })
-onUnmounted(stopPolling)
+onUnmounted(() => { stopPolling(); stopAgentPolling() })
 </script>

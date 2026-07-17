@@ -14,7 +14,7 @@
 
 ## 后续迭代
 
-1. 接入 Agent Run 列表和自动刷新，从 PR 直接打开最新 head。
+1. 已接入项目 Agent Run 列表、最新 head 默认选择和非终态自动刷新；后续从 PR 行直接打开对应 Run。
 2. citation 点击定位 diff 行和 RAG 来源，增加 evidence drawer。
 3. 增加 shadow/legacy/langchain4j 质量门详情页。
 4. 长列表虚拟滚动、键盘导航和移动端布局。
