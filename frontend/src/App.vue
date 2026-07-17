@@ -1419,7 +1419,20 @@ function diffLines(diff) {
   })
 }
 
+function focusEvidenceAnchor() {
+  const prefix = '#agent-evidence='
+  if (!window.location.hash.startsWith(prefix)) return
+  const location = decodeURIComponent(window.location.hash.slice(prefix.length))
+  const separator = location.lastIndexOf(':')
+  const path = separator > 0 ? location.slice(0, separator) : location
+  const target = document.querySelector(`[data-evidence-path="${CSS.escape(path)}"]`)
+  if (!target) return
+  target.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  target.classList.add('evidence-focus')
+  setTimeout(() => target.classList.remove('evidence-focus'), 1800)
+}
 onMounted(async () => {
+  window.addEventListener('hashchange', focusEvidenceAnchor)
   try {
     await loadMe()
     authenticated.value = !!me.userId
@@ -1430,5 +1443,5 @@ onMounted(async () => {
     authenticated.value = false
   }
 })
-onUnmounted(() => { stopPolling(); stopAgentPolling() })
+onUnmounted(() => { stopPolling(); stopAgentPolling(); window.removeEventListener('hashchange', focusEvidenceAnchor) })
 </script>
