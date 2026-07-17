@@ -7,7 +7,7 @@
 - 功能分支：`feat/pr-gatekeeper-agent`
 - 隔离工作树：`F:\202605New\.worktrees\pr-gatekeeper-agent`
 - 基线分支提交：`fad60d2 chore: ignore isolated worktrees`
-- 当前阶段：Phase 3 Task 12（安全与集成验证）
+- 当前阶段：Phase 3 Task 12（安全与集成验证；Docker 动态验收待补跑）
 - 最新完成任务：Phase 3 Task 11（SCM 结果发布）
 
 ## 2. 已完成范围
@@ -51,6 +51,7 @@ bf9446f feat: project agent results to legacy reports
 9. Maven/Gradle/Python/npm/pnpm/yarn 锁文件内容寻址缓存键、独立联网准备策略、安全环境变量白名单、分析任务只读缓存挂载和缺缓存 `ENVIRONMENT_INCOMPLETE` 结果。
 10. ZIP/TAR/压缩归档安全解包、绝对路径/遍历/符号链接和私网子模块 URL 防护；Runner `repo.unpack`、`git.file`、`git.diff`、`code.search` 有界处理器；后端三个只读 Agent 工具及签名 RabbitMQ 网关。
 11. GitHub Check Run/PR comment 与 GitLab Commit Status/MR Note 发布客户端；发布内容包含摘要、阻断 Finding、证据链接、Agent Run URL 和 Patch 状态；暴露 Patch 内容必须审批；WireMock 契约测试覆盖请求头、关键字段和未审批零请求拒绝。
+12. 已新增 PostgreSQL/RabbitMQ Testcontainers 的 GitHub Webhook→Agent Run 集成测试，Compose 改为必填数据库/MQ 密码并将 RabbitMQ、backend、model-service 宿主端口绑定回环地址；新增 SCM/Sandbox 运维与安全验收手册。当前主机无 Docker，集成测试和容器隔离动态验收仍未通过。
 
 依赖缓存只有存在 `.complete` 标记才视为可用；准备请求受命令、时限、大小和环境变量白名单约束。真实依赖下载、Docker 挂载和 RabbitMQ Runner 请求/响应联调仍需在有 Docker/RabbitMQ 的环境补跑。
 
@@ -67,14 +68,15 @@ c9ee713 feat: define signed sandbox job protocol
 aed5f6e feat: enforce sandbox container policy
 05e69c3 feat: prepare isolated dependency caches
 a4a6f6f feat: execute repository read tools in sandbox
-Task 11（本次提交） feat: publish agent reviews to scm providers
+52efc6b feat: publish agent reviews to scm providers
+Task 12（本次提交） docs: document scm and sandbox operations
 ```
 
 ## 3. 最新验证证据
 
 ```text
 backend: mvn test
-结果: 140 tests, 0 failures, 0 errors, 2 skipped
+结果: 141 tests, 0 failures, 0 errors, 3 skipped
 
 frontend: npm test
 结果: 3 passed
@@ -93,6 +95,7 @@ git diff --check
 
 - `InfrastructureIntegrationTest`
 - `LegacySchemaMigrationIntegrationTest`
+- `GitHubWebhookAgentRunIntegrationTest`
 
 本机没有 `docker` 命令，因此以下项目尚未验证，不能记录为通过：
 
@@ -112,12 +115,12 @@ git diff --check
 
 ## 5. 下一步严格顺序
 
-从 Phase 3 Task 12 开始：
+继续 Phase 3 Task 12 动态验收，然后进入 Phase 4：
 
-1. 运行后端和 Runner 单元测试并记录 Docker/Testcontainers 跳过项。
-2. 在可用环境运行 Testcontainers webhook-to-run 集成测试。
-3. 在可用环境运行 Docker Compose 安全冒烟，验证恶意命令、网络、Docker Socket、云元数据和宿主路径隔离。
-4. 检查 Runner 环境变量和日志不泄露 SCM/LLM 密钥，并独立提交 `docs: document scm and sandbox operations`。
+1. 在可用环境运行三个 Testcontainers 集成测试。
+2. 运行 Docker Compose 安全冒烟，验证恶意命令、网络、Docker Socket、云元数据和宿主路径隔离。
+3. 检查 Runner/分析容器环境变量和日志不泄露 SCM/LLM 密钥。
+4. Docker 动态验收未完成时保持明确风险记录；代码开发可继续 Phase 4 Task 1，但不得宣称 Phase 3 最终放行。
 
 ## 6. 继续开发提示词
 
@@ -125,7 +128,7 @@ git diff --check
 请在 F:\202605New\.worktrees\pr-gatekeeper-agent 的 feat/pr-gatekeeper-agent 分支继续 PR 守门 Agent。
 
 先读取 docs/PR守门Agent实施进度.md、Phase 3/4 计划、git status 和最近 20 个提交。
-Phase 1、Phase 2 和 Phase 3 Task 1-11 已完成，不要重复实现，不要修改冻结的 V1-V4。
+Phase 1、Phase 2 和 Phase 3 Task 1-11 已完成；Task 12 的代码、静态加固和运维文档已完成，但 Docker 动态验收待补跑。不要重复实现，不要修改冻结的 V1-V4。
 
-从 Phase 3 Task 12 安全与集成验证开始，严格 TDD、每个 Task 独立提交。不得在宿主机直接执行仓库命令，不得接受消息中的任意 Shell 命令。完成前运行后端全量测试、前端测试与构建、Runner 测试和 git diff --check。Docker/Testcontainers 不可用导致的未验证项目必须明确记录。
+继续记录 Phase 3 Task 12 的 Docker 阻塞，同时从 Phase 4 Task 1 插件契约开始，严格 TDD、每个 Task 独立提交。不得在宿主机直接执行仓库命令，不得接受消息中的任意 Shell 命令。完成前运行后端全量测试、前端测试与构建、Runner 测试和 git diff --check。Docker/Testcontainers 不可用导致的未验证项目必须明确记录。
 ```

@@ -4,7 +4,7 @@ services:
     environment:
       POSTGRES_DB: code_review
       POSTGRES_USER: code_review
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-change-me}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
@@ -14,11 +14,11 @@ services:
   rabbitmq:
     image: rabbitmq:3-management
     environment:
-      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USERNAME:-code_review}
-      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-change-me}
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USERNAME:?RABBITMQ_USERNAME is required}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:?RABBITMQ_PASSWORD is required}
     ports:
-      - "5672:5672"
-      - "15672:15672"
+      - "127.0.0.1:5672:5672"
+      - "127.0.0.1:15672:15672"
 
   backend:
     build:
@@ -30,7 +30,7 @@ services:
       - rabbitmq
       - model-service
     ports:
-      - "8080:8080"
+      - "127.0.0.1:8080:8080"
     volumes:
       - ../demo-repos:/app/demo-repos:ro
       - backend_work:/app/.work
@@ -43,8 +43,8 @@ services:
       context: ../sandbox-runner
     environment:
       RABBITMQ_HOST: rabbitmq
-      RABBITMQ_USERNAME: ${RABBITMQ_USERNAME:-code_review}
-      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-change-me}
+      RABBITMQ_USERNAME: ${RABBITMQ_USERNAME:?RABBITMQ_USERNAME is required}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:?RABBITMQ_PASSWORD is required}
       SANDBOX_SIGNING_SECRET: ${SANDBOX_SIGNING_SECRET:?SANDBOX_SIGNING_SECRET is required}
       SANDBOX_DEPENDENCY_CACHE_ROOT: /app/.cache/dependencies
       SANDBOX_ARCHIVE_ROOT: /app/archives
@@ -64,7 +64,7 @@ services:
       MODEL_PATH: /app/models/risk_classifier.joblib
       MODEL_VERSION: docker-demo-v1
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
 
   frontend:
     build:
