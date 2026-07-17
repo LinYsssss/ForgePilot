@@ -273,7 +273,7 @@ git diff --check
 
 Task 1 前的源码核查确认 AgentStepHandler 当时仍是占位实现，StructuredAgentModelService 与 ReviewContextService 尚未进入生产 Agent 步骤链路。Task 6 已用 typed state executors 替换占位 handler；后续仍不能重写现有控制面，而应继续以 LangChain4j 作为模型、Embedding、Retriever 和受控 Tool Calling 适配层，将真实业务逐状态接入。
 
-Phase 5 Task 1-9 已按 TDD 完成。下一步从 Task 10 开始接入 approval-aware SCM publication 和 idempotent recovery。V1-V16 均不得修改，V17 已使用，后续新增迁移从 V18 开始。每个 Task 后运行 backend、frontend 和 sandbox-runner 全量测试及 git diff --check。
+Phase 5 Task 1-10 已按 TDD 完成。Task 10 已接入 approval-aware SCM publication、持久化幂等键、发布前 head/授权/Patch hash 复核，以及 WAITING_APPROVAL 外部唤醒；提交为 `3312058 feat: publish completed langchain4j agent reviews`。V1-V16 均未修改，V17/V18 已使用，后续新增迁移从 V19 开始。Task 10 目标测试通过；完整门禁仍需重跑 backend、frontend 和 sandbox-runner 全量测试及 git diff --check。
 
 Phase 1-4 计划代码 Task 已完成；Phase 5 Task 1-9 已完成，Task 10-12 尚未实施。最终发布仍必须在具备 Docker 的环境执行以下动态验收：
 
