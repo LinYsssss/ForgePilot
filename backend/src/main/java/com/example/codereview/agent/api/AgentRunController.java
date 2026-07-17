@@ -41,6 +41,11 @@ public class AgentRunController {
         return ApiResponse.ok(agentRunService.detail(id, currentUserProvider.getRequired().userId()));
     }
 
+    @GetMapping("/project/{projectId}")
+    public ApiResponse<java.util.List<AgentRunDetail>> projectRuns(@PathVariable Long projectId) {
+        return ApiResponse.ok(agentRunService.listForProject(projectId, currentUserProvider.getRequired().userId()));
+    }
+
     @GetMapping("/{id}/timeline")
     public ApiResponse<AgentRunTimeline> timeline(@PathVariable Long id) {
         return ApiResponse.ok(agentRunService.timeline(id, currentUserProvider.getRequired().userId()));

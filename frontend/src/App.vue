@@ -55,7 +55,7 @@
         <button :class="{ active: tab === 'reviews' }" @click="goTab('reviews')" :disabled="!activeProject">
           <span class="nav-ico" aria-hidden="true">✓</span> 审查
         </button>
-        <button :class="{ active: tab === 'agent' }" @click="tab = 'agent'" :disabled="!activeProject">
+        <button :class="{ active: tab === 'agent' }" @click="openAgentWorkspace" :disabled="!activeProject">
           <span class="nav-ico" aria-hidden="true">◆</span> Agent 审批
         </button>
         <button :class="{ active: tab === 'aiLogs' }" @click="openProjectAiLogs" :disabled="!activeProject">
@@ -611,9 +611,14 @@
         <div class="panel">
           <div class="panel-head"><div><h2>Agent 审查与 Patch 审批</h2><div class="sub">查看 Timeline、Finding 证据、验证日志与候选 Patch</div></div></div>
           <div class="grid three">
-            <label class="field">Agent Run ID<input v-model.number="agentRunId" type="number" min="1" /></label>
+            <label class="field">最近 Agent Run
+              <select v-model.number="agentRunId" @change="selectAgentRun">
+                <option :value="null">请选择</option>
+                <option v-for="runItem in agentRuns" :key="runItem.id" :value="runItem.id">#{{ runItem.id }} · {{ runItem.status }} · {{ shortCommit(runItem.headSha) }}</option>
+              </select>
+            </label>
             <label class="field">当前 Head SHA<input v-model="agentHeadSha" /></label>
-            <div class="actions"><button :disabled="!agentRunId || busy.agent" @click="run(loadAgentWorkspace)">加载 Agent Run</button></div>
+            <div class="actions"><button :disabled="busy.agentRuns" class="secondary" @click="run(loadAgentRuns)">刷新列表</button><button :disabled="!agentRunId || busy.agent" @click="run(loadAgentWorkspace)">加载</button></div>
           </div>
         </div>
         <AgentReviewWorkspace v-if="agentRunId && agentPatch" :project-id="activeProject.projectId"
@@ -738,6 +743,7 @@ const searchQuery = ref('发货前是否需要校验支付状态')
 const docType = ref('BUSINESS_FLOW')
 const confirmModal = ref(null)
 const agentRunId = ref(null)
+const agentRuns = ref([])
 const agentHeadSha = ref('')
 const agentTimeline = ref([])
 const agentFindings = ref([])
@@ -1331,6 +1337,26 @@ async function loadAgentWorkspace() {
     agentFindings.value = (agentPatch.value?.findingIds || []).map(id => ({ id, severity: 'INFO', title: `Finding #${id}`, description: '详见持久化证据与置信度记录', evidence: [] }))
     if (!agentHeadSha.value) agentHeadSha.value = timeline.run?.headSha || agentPatch.value?.headSha || ''
   } finally { busy.agent = false }
+}
+async function loadAgentRuns() {
+  if (!activeProject.value) return
+  busy.agentRuns = true
+  try {
+    agentRuns.value = await api(`/agent-runs/project/${activeProject.value.projectId}`)
+    if (!agentRunId.value && agentRuns.value.length) {
+      agentRunId.value = agentRuns.value[0].id
+      agentHeadSha.value = agentRuns.value[0].headSha || ''
+    }
+  } finally { busy.agentRuns = false }
+}
+async function selectAgentRun() {
+  const selected = agentRuns.value.find(item => item.id === agentRunId.value)
+  if (selected) agentHeadSha.value = selected.headSha || ''
+  if (agentRunId.value) await loadAgentWorkspace()
+}
+async function openAgentWorkspace() {
+  tab.value = 'agent'
+  await run(loadAgentRuns)
 }
 async function onPatchDecided() { toastMsg('Patch 审批决定已记录', 'success'); await loadAgentWorkspace() }
 function onPatchError(error) { toastMsg(error?.message || 'Patch 审批失败', 'error') }

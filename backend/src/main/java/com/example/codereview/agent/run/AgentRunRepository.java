@@ -13,4 +13,6 @@ public interface AgentRunRepository extends JpaRepository<AgentRun, Long> {
      * can be superseded when a newer head arrives.
      */
     List<AgentRun> findByTriggerKeyStartingWith(String triggerKeyPrefix);
+
+    List<AgentRun> findByProjectIdOrderByCreatedAtDesc(Long projectId);
 }

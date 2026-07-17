@@ -59,6 +59,13 @@ public class AgentRunService {
     }
 
     @Transactional(readOnly = true)
+    public List<AgentRunDetail> listForProject(Long projectId, Long userId) {
+        projects.getRequired(projectId, userId);
+        return runs.findByProjectIdOrderByCreatedAtDesc(projectId).stream()
+                .map(run -> toDetail(run)).toList();
+    }
+
+    @Transactional(readOnly = true)
     public AgentRunTimeline timeline(Long runId, Long userId) {
         AgentRun run = requireOwnedRun(runId, userId);
         List<AgentStepView> stepViews = steps.findByAgentRunIdOrderBySequenceNo(run.getId())
