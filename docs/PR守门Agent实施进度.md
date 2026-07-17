@@ -228,7 +228,7 @@ Task 9 已完成：
 
 ```text
 backend: mvn test
-结果: 268 tests, 0 failures, 0 errors, 3 skipped
+结果: 274 tests, 0 failures, 0 errors, 3 skipped（修复 Webhook installation 测试夹具后复验）
 
 frontend: npm test
 结果: 4 passed
@@ -277,7 +277,7 @@ Phase 5 Task 1-10 已按 TDD 完成。Task 10 已接入 approval-aware SCM publi
 
 Task 11 正在实施：`app.ai.rollout` 支持 `disabled`、`shadow`、`selected-projects` 和 `default`。shadow 模式允许运行同 corpus 的脱敏评测，但 PatchApprovalService 与 SCM publication 均拒绝写操作。回滚只需把 `app.ai.runtime` 改回 `legacy`（或把 rollout 改为 `disabled`）并重启服务；不得回滚 V14-V18，也不得删除 LangChain4j 已生成的调用日志、Citation、Finding、Patch 和发布审计记录。评测输入同时保存 LangChain4j、Prompt、Embedding 与 Retrieval 版本，并比较质量、延迟、成本以及四项零容忍安全率。
 
-Phase 1-4 计划代码 Task 已完成；Phase 5 Task 1-9 已完成，Task 10-12 尚未实施。最终发布仍必须在具备 Docker 的环境执行以下动态验收：
+Phase 1-4 计划代码 Task 已完成；Phase 5 Task 1-11 已完成，Task 12 的动态验收已执行可运行检查但 Docker/Testcontainers 仍待具备 Docker 的环境。最终发布仍必须在具备 Docker 的环境执行以下动态验收：
 
 1. `docker compose config`、全部镜像构建与服务健康检查。
 2. PostgreSQL/RabbitMQ Testcontainers 三个跳过测试、RabbitMQ→Runner、Patch apply/validate 和依赖缓存真实联调。
