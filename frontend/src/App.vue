@@ -617,7 +617,7 @@
           <div class="grid three">
             <label class="field">Run 状态筛选
               <select v-model="agentRunFilter">
-                <option value="ALL">全部</option><option value="ACTIVE">运行中</option><option value="WAITING">等待审批</option><option value="FAILED">失败</option><option value="DONE">已完成</option>
+                <option value="ALL">全部（{{ agentRuns.length }}）</option><option value="ACTIVE">运行中（{{ agentRunCounts.active }}）</option><option value="WAITING">等待审批（{{ agentRunCounts.waiting }}）</option><option value="FAILED">失败（{{ agentRunCounts.failed }}）</option><option value="DONE">已完成（{{ agentRunCounts.done }}）</option>
               </select>
             </label>
             <label class="field">最近 Agent Run
@@ -793,6 +793,12 @@ const filteredAgentRuns = computed(() => agentRuns.value.filter(runItem => {
   if (agentRunFilter.value === 'WAITING') return ['WAITING_APPROVAL', 'WAITING_EXTERNAL'].includes(runItem.status)
   if (agentRunFilter.value === 'FAILED') return ['FAILED', 'TIMED_OUT', 'DEAD'].includes(runItem.status)
   return ['SUCCEEDED', 'COMPLETED', 'CANCELED'].includes(runItem.status)
+}))
+const agentRunCounts = computed(() => ({
+  active: agentRuns.value.filter(item => ['RECEIVED', 'PREPARING_REPOSITORY', 'ANALYZING_CHANGE', 'RETRIEVING_CONTEXT', 'PLANNING', 'EXECUTING_TOOLS', 'VERIFYING_FINDINGS', 'GENERATING_PATCH', 'VALIDATING_PATCH', 'PUBLISHING_RESULT'].includes(item.status)).length,
+  waiting: agentRuns.value.filter(item => ['WAITING_APPROVAL', 'WAITING_EXTERNAL'].includes(item.status)).length,
+  failed: agentRuns.value.filter(item => ['FAILED', 'TIMED_OUT', 'DEAD'].includes(item.status)).length,
+  done: agentRuns.value.filter(item => ['SUCCEEDED', 'COMPLETED', 'CANCELED'].includes(item.status)).length,
 }))
 const prReports = computed(() => {
   if (!activePullRequest.value) return []
