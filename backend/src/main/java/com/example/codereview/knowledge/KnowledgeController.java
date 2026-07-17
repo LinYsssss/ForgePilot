@@ -3,6 +3,7 @@ package com.example.codereview.knowledge;
 import com.example.codereview.common.api.ApiResponse;
 import com.example.codereview.common.security.CurrentUserProvider;
 import com.example.codereview.knowledge.KnowledgeDtos.DocumentResponse;
+import com.example.codereview.knowledge.KnowledgeDtos.ReindexResponse;
 import com.example.codereview.knowledge.KnowledgeDtos.SearchRequest;
 import com.example.codereview.knowledge.KnowledgeDtos.SearchResponse;
 import jakarta.validation.Valid;
@@ -57,6 +58,14 @@ public class KnowledgeController {
                 currentUserProvider.getRequired().userId(),
                 request.query(),
                 request.topK()
+        ));
+    }
+
+    @PostMapping("/reindex")
+    public ApiResponse<ReindexResponse> reindex(@PathVariable Long projectId) {
+        return ApiResponse.ok(knowledgeService.reindex(
+                projectId,
+                currentUserProvider.getRequired().userId()
         ));
     }
 }

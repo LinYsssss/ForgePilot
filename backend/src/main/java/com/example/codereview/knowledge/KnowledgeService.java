@@ -3,6 +3,7 @@ package com.example.codereview.knowledge;
 import com.example.codereview.common.exception.BusinessException;
 import com.example.codereview.ai.AiCallLogService;
 import com.example.codereview.knowledge.KnowledgeDtos.DocumentResponse;
+import com.example.codereview.knowledge.KnowledgeDtos.ReindexResponse;
 import com.example.codereview.knowledge.KnowledgeDtos.SearchResponse;
 import com.example.codereview.project.ProjectService;
 import com.example.codereview.rag.EmbeddingClient;
@@ -15,7 +16,10 @@ import java.util.ArrayList;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.multipart.MultipartFile;
 
 @Service
@@ -32,6 +36,7 @@ public class KnowledgeService {
     private final int chunkSize;
     private final int overlap;
     private final boolean fullContext;
+    private final TransactionTemplate reindexTransactions;
 
     public KnowledgeService(
             ProjectService projectService,
@@ -42,6 +47,7 @@ public class KnowledgeService {
             EmbeddingJson embeddingJson,
             VectorIndexService vectorIndexService,
             AiCallLogService aiCallLogService,
+            PlatformTransactionManager transactionManager,
             @Value("${app.rag.chunk-size}") int chunkSize,
             @Value("${app.rag.overlap}") int overlap,
             @Value("${app.rag.full-context}") boolean fullContext
@@ -57,6 +63,8 @@ public class KnowledgeService {
         this.chunkSize = chunkSize;
         this.overlap = overlap;
         this.fullContext = fullContext;
+        this.reindexTransactions = new TransactionTemplate(transactionManager);
+        this.reindexTransactions.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
     }
 
     @Transactional
@@ -88,6 +96,41 @@ public class KnowledgeService {
         return new SearchResponse(ragService.search(projectId, query, topK));
     }
 
+    public ReindexResponse reindex(Long projectId, Long userId) {
+        projectService.getRequired(projectId, userId);
+        List<KnowledgeDocument> projectDocuments = documents.findByProjectIdOrderByCreatedAtDesc(projectId);
+        if (fullContext) {
+            return new ReindexResponse(projectDocuments.size(), 0, projectDocuments.size(), 0);
+        }
+        EmbeddingClient.EmbeddingDescriptor descriptor = embeddingClient.descriptor();
+        int indexed = 0;
+        int skipped = 0;
+        int failed = 0;
+        for (KnowledgeDocument document : projectDocuments) {
+            if (isCurrent(document, descriptor)) {
+                skipped++;
+                continue;
+            }
+            try {
+                reindexTransactions.executeWithoutResult(status -> {
+                    vectorIndexService.deleteByDocumentId(document.getId());
+                    chunks.deleteByDocumentId(document.getId());
+                    index(document);
+                    document.markIndexed();
+                    documents.save(document);
+                });
+                indexed++;
+            } catch (RuntimeException ex) {
+                failed++;
+                reindexTransactions.executeWithoutResult(status -> {
+                    document.markFailed();
+                    documents.save(document);
+                });
+            }
+        }
+        return new ReindexResponse(projectDocuments.size(), indexed, skipped, failed);
+    }
+
     @Transactional
     public void delete(Long projectId, Long userId, Long documentId) {
         projectService.getRequired(projectId, userId);
@@ -105,7 +148,8 @@ public class KnowledgeService {
         List<String> parts = splitForIndexing(document.getContentText(), chunkSize, overlap);
         for (int i = 0; i < parts.size(); i++) {
             String part = parts.get(i);
-            String embedding = fullContext ? null : embeddingJson.write(embedForIndex(document.getProjectId(), part));
+            EmbeddingClient.EmbeddingResult embedding = fullContext
+                    ? null : embedForIndex(document.getProjectId(), part);
             KnowledgeChunk chunk = chunks.save(new KnowledgeChunk(
                     document.getId(),
                     document.getProjectId(),
@@ -113,7 +157,11 @@ public class KnowledgeService {
                     document.getFileName(),
                     i,
                     part,
-                    embedding
+                    embedding == null ? null : embeddingJson.write(embedding.vector()),
+                    embedding == null ? null : embedding.provider(),
+                    embedding == null ? null : embedding.model(),
+                    embedding == null ? null : embedding.version(),
+                    embedding == null ? null : embedding.dimension()
             ));
             if (!fullContext) {
                 vectorIndexService.index(chunk);
@@ -121,15 +169,15 @@ public class KnowledgeService {
         }
     }
 
-    private List<Double> embedForIndex(Long projectId, String text) {
+    private EmbeddingClient.EmbeddingResult embedForIndex(Long projectId, String text) {
         long start = System.nanoTime();
         try {
-            List<Double> embedding = embeddingClient.embed(text);
+            EmbeddingClient.EmbeddingResult embedding = embeddingClient.embed(text);
             aiCallLogService.embeddingSuccess(
                     projectId,
                     AiCallLogService.EMBEDDING_INDEX,
                     text == null ? 0 : text.length(),
-                    embedding.size(),
+                    embedding.dimension(),
                     elapsedMs(start)
             );
             return embedding;
@@ -157,6 +205,22 @@ public class KnowledgeService {
             return structured;
         }
         return fixedChunks(normalized, safeChunkSize, safeOverlap);
+    }
+
+    private boolean isCurrent(
+            KnowledgeDocument document,
+            EmbeddingClient.EmbeddingDescriptor descriptor
+    ) {
+        List<KnowledgeChunk> documentChunks = chunks.findByProjectIdAndDocumentIdIn(
+                document.getProjectId(),
+                List.of(document.getId())
+        );
+        return !documentChunks.isEmpty() && documentChunks.stream().allMatch(chunk -> descriptor.matches(
+                chunk.getEmbeddingProvider(),
+                chunk.getEmbeddingModel(),
+                chunk.getEmbeddingVersion(),
+                chunk.getEmbeddingDimension()
+        ));
     }
 
     private static List<String> structuredBlocks(String text, int chunkSize) {

@@ -41,4 +41,12 @@ public final class KnowledgeDtos {
 
     public record SearchResponse(List<SearchMatch> matches) {
     }
+
+    public record ReindexResponse(
+            int totalDocuments,
+            int indexedDocuments,
+            int skippedDocuments,
+            int failedDocuments
+    ) {
+    }
 }

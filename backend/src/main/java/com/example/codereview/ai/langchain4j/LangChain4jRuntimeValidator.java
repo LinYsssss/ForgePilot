@@ -60,17 +60,20 @@ public final class LangChain4jRuntimeValidator {
                     "Production langchain4j runtime requires app.ai.provider=openai-compatible"
             );
         }
+        if (!OPENAI_COMPATIBLE.equalsIgnoreCase(embeddingProvider)) {
+            throw new IllegalStateException(
+                    "Production langchain4j runtime requires app.ai.embedding-provider=openai-compatible"
+            );
+        }
 
         List<String> missing = new ArrayList<>();
         requireText("app.ai.base-url", baseUrl, missing);
         requireText("app.ai.api-key", apiKey, missing);
         requireModel("app.ai.chat-model", chatModel, missing);
 
-        if (OPENAI_COMPATIBLE.equalsIgnoreCase(embeddingProvider)) {
-            requireText("app.ai.embedding-base-url", embeddingBaseUrl, missing);
-            requireText("app.ai.embedding-api-key", embeddingApiKey, missing);
-            requireModel("app.ai.embedding-model", embeddingModel, missing);
-        }
+        requireText("app.ai.embedding-base-url", embeddingBaseUrl, missing);
+        requireText("app.ai.embedding-api-key", embeddingApiKey, missing);
+        requireModel("app.ai.embedding-model", embeddingModel, missing);
 
         if (!missing.isEmpty()) {
             throw new IllegalStateException(

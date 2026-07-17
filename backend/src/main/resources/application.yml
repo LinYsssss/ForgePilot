@@ -131,6 +131,10 @@ app:
     embedding-base-url: ${EMBEDDING_BASE_URL:${LLM_BASE_URL:}}
     embedding-api-key: ${EMBEDDING_API_KEY:${LLM_API_KEY:}}
     embedding-model: ${LLM_EMBEDDING_MODEL:mock-embedding}
+    embedding-version: ${EMBEDDING_VERSION:${LLM_EMBEDDING_MODEL:mock-embedding}}
+    embedding-dimensions: ${EMBEDDING_DIMENSIONS:0}
+    embedding-max-input-chars: ${EMBEDDING_MAX_INPUT_CHARS:32000}
+    embedding-read-timeout-ms: ${EMBEDDING_READ_TIMEOUT_MS:${AI_READ_TIMEOUT_MS:300000}}
   sandbox:
     signing-secret: ${SANDBOX_SIGNING_SECRET:}
     tool-image: ${SANDBOX_TOOL_IMAGE:}

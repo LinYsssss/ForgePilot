@@ -223,16 +223,16 @@ Rules:
 - Create backend/src/test/java/com/example/codereview/ai/langchain4j/LangChain4jEmbeddingClientTest.java.
 - Extend RagService and knowledge ingestion tests.
 
-- [ ] Start with tests for real numeric embedding mapping, empty input, provider error, dimension mismatch, NaN/infinite values, and maximum input size.
-- [ ] Add nullable legacy metadata for embedding provider, model, dimension, and version without editing V1.
-- [ ] Mark existing rows as legacy or unknown; do not falsely label mock vectors as real-model vectors.
-- [ ] Persist metadata atomically with each indexed chunk.
-- [ ] Reject search across incompatible embedding model/version/dimension instead of silently returning meaningless cosine scores.
-- [ ] Define a re-index operation that is project-scoped, idempotent, resumable, and does not expose one project's chunks to another.
-- [ ] Keep mock embeddings available only for deterministic tests and explicitly configured demonstrations.
-- [ ] Preserve both memory and pgvector retrieval modes.
-- [ ] Verify deletion removes both chunk metadata and pgvector rows.
-- [ ] Commit with: feat: index versioned embeddings through langchain4j
+- [x] Start with tests for real numeric embedding mapping, empty input, provider error, dimension mismatch, NaN/infinite values, and maximum input size.
+- [x] Add nullable legacy metadata for embedding provider, model, dimension, and version without editing V1.
+- [x] Mark existing rows as legacy or unknown; do not falsely label mock vectors as real-model vectors.
+- [x] Persist metadata atomically with each indexed chunk.
+- [x] Reject search across incompatible embedding model/version/dimension instead of silently returning meaningless cosine scores.
+- [x] Define a re-index operation that is project-scoped, idempotent, resumable, and does not expose one project's chunks to another.
+- [x] Keep mock embeddings available only for deterministic tests and explicitly configured demonstrations.
+- [x] Preserve both memory and pgvector retrieval modes.
+- [x] Verify deletion removes both chunk metadata and pgvector rows.
+- [x] Commit with: feat: index versioned embeddings through langchain4j
 
 **Exit evidence:**
 

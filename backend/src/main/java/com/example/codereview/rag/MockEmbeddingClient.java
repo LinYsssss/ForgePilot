@@ -12,9 +12,17 @@ import org.springframework.stereotype.Service;
 public class MockEmbeddingClient implements EmbeddingClient {
 
     private static final int DIMENSIONS = 64;
+    private static final String PROVIDER = "mock";
+    private static final String MODEL = "mock-hash-64";
+    private static final String VERSION = "mock-hash-v1";
 
     @Override
-    public List<Double> embed(String text) {
+    public EmbeddingDescriptor descriptor() {
+        return new EmbeddingDescriptor(PROVIDER, MODEL, VERSION, DIMENSIONS);
+    }
+
+    @Override
+    public EmbeddingResult embed(String text) {
         double[] vector = new double[DIMENSIONS];
         String normalized = text == null ? "" : text.toLowerCase();
         for (String token : normalized.split("[^\\p{IsHan}\\p{Alnum}_]+")) {
@@ -33,7 +41,7 @@ public class MockEmbeddingClient implements EmbeddingClient {
         for (double value : vector) {
             result.add(norm == 0 ? 0.0 : value / norm);
         }
-        return result;
+        return new EmbeddingResult(PROVIDER, MODEL, VERSION, DIMENSIONS, result);
     }
 
     private int hash(String value) {

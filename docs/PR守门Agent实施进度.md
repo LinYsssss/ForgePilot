@@ -7,8 +7,8 @@
 - 功能分支：`feat/pr-gatekeeper-agent`
 - 隔离工作树：`F:\202605New\.worktrees\pr-gatekeeper-agent`
 - 基线分支提交：`fad60d2 chore: ignore isolated worktrees`
-- 当前阶段：Phase 5 Task 2 已完成，下一步 Task 3 LangChain4j Embedding 与版本化向量
-- 最新完成任务：Phase 5 Task 2（Chat Model 适配、错误分类、调用审计与独立 JSON repair）
+- 当前阶段：Phase 5 Task 3 已完成，下一步 Task 4 将 Hybrid Review Context 暴露为 LangChain4j Retriever
+- 最新完成任务：Phase 5 Task 3（LangChain4j Embedding、版本化向量、兼容性门禁与项目级 re-index）
 
 ## 2. 已完成范围
 
@@ -149,13 +149,24 @@ Task 2 已完成：
 - 新增 `V14__agent_model_call_metadata.sql`，未修改 V1-V13。Task 3 的 Embedding metadata 迁移顺延为 V15。
 - 模型 observation 仅使用 provider、model、purpose 三个有界标签。
 
-尚未实现 LangChain4j Embedding 调用适配，下一步严格执行 Task 3。
+Task 3 已完成：
+
+- 新增 `LangChain4jEmbeddingClient`，使用 LangChain4j 1.8.0 `EmbeddingModel` 与 JDK HTTP Client；固定 provider/model/version，限制最大输入，关闭框架重试与请求/响应日志。
+- WireMock 覆盖真实数值向量、空输入、超限、401、429、5xx、timeout、malformed response、维度不符以及 NaN/Infinity 拒绝；错误不回显 provider body 或密钥。
+- `EmbeddingClient` 改为 provider-neutral 的 descriptor/result 契约；mock 与 legacy client 保持兼容，但 `prod + langchain4j` 已禁止 mock embedding，mock 仅保留给非生产测试和显式演示配置。
+- `V15__embedding_model_metadata.sql` 为每个 chunk 增加 nullable provider/model/version/dimension，并将既有向量标为 `legacy-unknown`；未修改 V1-V14。
+- memory 与 pgvector 搜索均强制 provider/model/version/dimension 兼容；不兼容或 legacy 数据返回明确 re-index-required 错误，不再静默计算无意义余弦分数。
+- pgvector SQL 同时约束 project 与 embedding metadata；真实 WireMock provider 已覆盖上传索引→memory RAG 检索已知向量。
+- 新增项目级 `/api/projects/{projectId}/knowledge/reindex`：逐文档 `REQUIRES_NEW`、跨项目隔离、当前版本幂等跳过、失败文档可在下一轮单独恢复。
+- 文档删除继续先删除 pgvector 行，再删除 chunk metadata；测试覆盖两者。
+
+下一步严格执行 Task 4，将现有 Hybrid Review Context 以项目隔离、引用不变的方式适配为 LangChain4j `ContentRetriever`。
 
 ## 3. 最新验证证据
 
 ```text
 backend: mvn test
-结果: 214 tests, 0 failures, 0 errors, 3 skipped
+结果: 226 tests, 0 failures, 0 errors, 3 skipped
 
 frontend: npm test
 结果: 4 passed
@@ -185,7 +196,7 @@ git diff --check
 
 ## 4. 安全边界与已知限制
 
-- V1 至 V13 Flyway 迁移已冻结，不得修改；V14 已用于模型调用审计，下一新增迁移从 V15 开始。
+- V1 至 V14 Flyway 迁移已冻结，不得修改；V15 已用于 Embedding metadata，后续新增迁移从 V16 开始。
 - 后端不得运行仓库控制的命令，也不得挂载 Docker Socket。
 - Sandbox Runner 是受信任的单机演示编排组件；Compose 不是恶意多租户隔离边界。
 - 分析容器不得继承 Docker Socket、SCM Token、LLM Key 或数据库凭据。
@@ -200,9 +211,9 @@ git diff --check
 
 Task 1 前的源码核查确认 AgentStepHandler 仍是占位实现，StructuredAgentModelService 与 ReviewContextService 尚未进入生产 Agent 步骤链路。现在已建立 LangChain4j 依赖和 runtime 边界；后续仍不能重写现有控制面，而应继续以 LangChain4j 作为模型、Embedding、Retriever 和受控 Tool Calling 适配层，补齐真实分状态 Agent 编排。
 
-Phase 5 Task 1-2 已按 TDD 完成。下一步从 Task 3 开始实现 LangChain4j Embedding 适配与版本化向量。V1-V13 均不得修改，V14 已使用，新增迁移从 V15 开始。每个 Task 后运行 backend、frontend 和 sandbox-runner 全量测试及 git diff --check。
+Phase 5 Task 1-3 已按 TDD 完成。下一步从 Task 4 开始将 Hybrid Review Context 暴露为 LangChain4j Retriever。V1-V14 均不得修改，V15 已使用，后续新增迁移从 V16 开始。每个 Task 后运行 backend、frontend 和 sandbox-runner 全量测试及 git diff --check。
 
-Phase 1-4 计划代码 Task 已完成；Phase 5 Task 1-2 已完成，Task 3-12 尚未实施。最终发布仍必须在具备 Docker 的环境执行以下动态验收：
+Phase 1-4 计划代码 Task 已完成；Phase 5 Task 1-3 已完成，Task 4-12 尚未实施。最终发布仍必须在具备 Docker 的环境执行以下动态验收：
 
 1. `docker compose config`、全部镜像构建与服务健康检查。
 2. PostgreSQL/RabbitMQ Testcontainers 三个跳过测试、RabbitMQ→Runner、Patch apply/validate 和依赖缓存真实联调。
@@ -220,5 +231,5 @@ Phase 1-4 计划代码 Task 已完成；Phase 5 Task 1-2 已完成，Task 3-12 �
 先读取 docs/PR守门Agent实施进度.md、Phase 3/4 计划、git status 和最近 20 个提交。
 Phase 1、Phase 2 和 Phase 3 Task 1-11 已完成；Task 12 的代码、静态加固和运维文档已完成，但 Docker 动态验收待补跑。不要重复实现，不要修改冻结的 V1-V4。
 
-Phase 1-4 的代码 Task 已实现。Phase 5 Task 1-2 已完成：固定 LangChain4j 1.8.0 与 runtime 边界，并实现 Chat Model adapter、错误分类、调用审计和独立 JSON repair；V14 已用于模型调用 metadata。下一步从 Phase 5 Task 3 开始，严格 TDD 实现 Embedding adapter 与版本化向量，迁移从 V15 开始，不修改 V1-V13。现有 AgentStepHandler 仍是占位实现，必须在后续 Task 6 按计划接通真实分状态执行链路。当前主机无 Docker，不能宣称 Phase 3/4/5 最终发布验收通过。
+Phase 1-4 的代码 Task 已实现。Phase 5 Task 1-3 已完成：固定 LangChain4j 1.8.0 与 runtime 边界，实现 Chat/Embedding adapter、调用审计、版本化向量、兼容性拒绝和项目级 re-index；V14/V15 已使用。下一步从 Phase 5 Task 4 开始，严格 TDD 将 Hybrid Review Context 暴露为 LangChain4j Retriever；后续迁移从 V16 开始，不修改 V1-V15。现有 AgentStepHandler 仍是占位实现，必须在后续 Task 6 按计划接通真实分状态执行链路。当前主机无 Docker，不能宣称 Phase 3/4/5 最终发布验收通过。
 ```

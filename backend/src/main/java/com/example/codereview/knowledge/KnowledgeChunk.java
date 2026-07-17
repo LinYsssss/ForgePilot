@@ -32,6 +32,17 @@ public class KnowledgeChunk {
     @Column(columnDefinition = "text")
     private String embeddingJson;
 
+    @Column(length = 80)
+    private String embeddingProvider;
+
+    @Column(length = 160)
+    private String embeddingModel;
+
+    @Column(length = 160)
+    private String embeddingVersion;
+
+    private Integer embeddingDimension;
+
     @Column(nullable = false)
     private Instant createdAt;
 
@@ -39,6 +50,23 @@ public class KnowledgeChunk {
     }
 
     public KnowledgeChunk(Long documentId, Long projectId, String docType, String sourceName, int chunkIndex, String content, String embeddingJson) {
+        this(documentId, projectId, docType, sourceName, chunkIndex, content, embeddingJson,
+                null, null, null, null);
+    }
+
+    public KnowledgeChunk(
+            Long documentId,
+            Long projectId,
+            String docType,
+            String sourceName,
+            int chunkIndex,
+            String content,
+            String embeddingJson,
+            String embeddingProvider,
+            String embeddingModel,
+            String embeddingVersion,
+            Integer embeddingDimension
+    ) {
         this.documentId = documentId;
         this.projectId = projectId;
         this.docType = docType;
@@ -46,11 +74,19 @@ public class KnowledgeChunk {
         this.chunkIndex = chunkIndex;
         this.content = content;
         this.embeddingJson = embeddingJson;
+        this.embeddingProvider = embeddingProvider;
+        this.embeddingModel = embeddingModel;
+        this.embeddingVersion = embeddingVersion;
+        this.embeddingDimension = embeddingDimension;
         this.createdAt = Instant.now();
     }
 
     public Long getId() {
         return id;
+    }
+
+    public Long getDocumentId() {
+        return documentId;
     }
 
     public Long getProjectId() {
@@ -75,5 +111,21 @@ public class KnowledgeChunk {
 
     public String getEmbeddingJson() {
         return embeddingJson;
+    }
+
+    public String getEmbeddingProvider() {
+        return embeddingProvider;
+    }
+
+    public String getEmbeddingModel() {
+        return embeddingModel;
+    }
+
+    public String getEmbeddingVersion() {
+        return embeddingVersion;
+    }
+
+    public Integer getEmbeddingDimension() {
+        return embeddingDimension;
     }
 }

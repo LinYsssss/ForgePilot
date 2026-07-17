@@ -60,7 +60,11 @@ class LangChain4jRuntimeTest {
                         "app.ai.provider=openai-compatible",
                         "app.ai.base-url=",
                         "app.ai.api-key=do-not-echo-this-secret",
-                        "app.ai.chat-model="
+                        "app.ai.chat-model=",
+                        "app.ai.embedding-provider=openai-compatible",
+                        "app.ai.embedding-base-url=https://embeddings.example.test/v1",
+                        "app.ai.embedding-api-key=embedding-secret",
+                        "app.ai.embedding-model=embedding-model"
                 )
                 .run(context -> {
                     assertThat(context).hasFailed();
@@ -87,7 +91,7 @@ class LangChain4jRuntimeTest {
     }
 
     @Test
-    void productionLangChain4jRuntimeStartsWithRealChatAndExplicitMockEmbedding() {
+    void productionLangChain4jRuntimeRejectsMockEmbeddingProvider() {
         contextRunner
                 .withPropertyValues(
                         "spring.profiles.active=prod",
@@ -98,7 +102,11 @@ class LangChain4jRuntimeTest {
                         "app.ai.chat-model=review-model",
                         "app.ai.embedding-provider=mock"
                 )
-                .run(context -> assertThat(context).hasNotFailed());
+                .run(context -> {
+                    assertThat(context).hasFailed();
+                    assertThat(rootCause(context.getStartupFailure()))
+                            .hasMessageContaining("app.ai.embedding-provider=openai-compatible");
+                });
     }
 
     @Test

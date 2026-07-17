@@ -102,13 +102,18 @@ public class RagService {
                     .map(this::toMatch)
                     .toList();
         }
-        List<Double> queryEmbedding = embedForSearch(projectId, query);
+        EmbeddingClient.EmbeddingResult queryEmbedding = embedForSearch(projectId, query);
+        List<KnowledgeChunk> scopedChunks = chunksFor(projectId, documentIds);
+        validateCompatibility(scopedChunks, queryEmbedding);
         if ("pgvector".equalsIgnoreCase(mode) && jdbcTemplate != null && (documentIds == null || documentIds.isEmpty())) {
             return searchPgVector(projectId, queryEmbedding, limit);
         }
-        return chunksFor(projectId, documentIds)
+        return scopedChunks
                 .stream()
-                .map(chunk -> new ScoredChunk(chunk, cosine(queryEmbedding, embeddingJson.read(chunk.getEmbeddingJson()))))
+                .map(chunk -> new ScoredChunk(chunk, cosine(
+                        queryEmbedding.vector(),
+                        embeddingJson.read(chunk.getEmbeddingJson())
+                )))
                 .filter(scored -> scored.score > 0)
                 .sorted(Comparator.comparingDouble(ScoredChunk::score).reversed())
                 .limit(limit)
@@ -131,14 +136,22 @@ public class RagService {
         );
     }
 
-    private List<SearchMatch> searchPgVector(Long projectId, List<Double> queryEmbedding, int limit) {
-        String vector = embeddingJson.toPgVector(queryEmbedding);
+    private List<SearchMatch> searchPgVector(
+            Long projectId,
+            EmbeddingClient.EmbeddingResult queryEmbedding,
+            int limit
+    ) {
+        String vector = embeddingJson.toPgVector(queryEmbedding.vector());
         return jdbcTemplate.query("""
                         select kc.id, kc.source_name, kc.doc_type, kc.chunk_index, kc.content,
                                1 - (kv.embedding <=> cast(? as vector)) as score
                         from knowledge_chunk kc
                         join knowledge_chunk_vector kv on kv.chunk_id = kc.id
                         where kc.project_id = ?
+                          and kc.embedding_provider = ?
+                          and kc.embedding_model = ?
+                          and kc.embedding_version = ?
+                          and kc.embedding_dimension = ?
                         order by kv.embedding <=> cast(? as vector)
                         limit ?
                         """,
@@ -152,9 +165,33 @@ public class RagService {
                 ),
                 vector,
                 projectId,
+                queryEmbedding.provider(),
+                queryEmbedding.model(),
+                queryEmbedding.version(),
+                queryEmbedding.dimension(),
                 vector,
                 limit
         );
+    }
+
+    private void validateCompatibility(
+            List<KnowledgeChunk> candidates,
+            EmbeddingClient.EmbeddingResult query
+    ) {
+        for (KnowledgeChunk chunk : candidates) {
+            if (!query.provider().equals(chunk.getEmbeddingProvider())
+                    || !query.model().equals(chunk.getEmbeddingModel())
+                    || !query.version().equals(chunk.getEmbeddingVersion())
+                    || chunk.getEmbeddingDimension() == null
+                    || query.dimension() != chunk.getEmbeddingDimension()) {
+                String existingVersion = chunk.getEmbeddingVersion() == null
+                        ? "legacy-unknown" : chunk.getEmbeddingVersion();
+                throw new EmbeddingReindexRequiredException(
+                        "Embedding re-index required: stored version " + existingVersion
+                                + " is incompatible with " + query.version()
+                );
+            }
+        }
     }
 
     private double cosine(List<Double> left, List<Double> right) {
@@ -177,15 +214,15 @@ public class RagService {
         return dot / (Math.sqrt(leftNorm) * Math.sqrt(rightNorm));
     }
 
-    private List<Double> embedForSearch(Long projectId, String query) {
+    private EmbeddingClient.EmbeddingResult embedForSearch(Long projectId, String query) {
         long start = System.nanoTime();
         try {
-            List<Double> embedding = embeddingClient.embed(query);
+            EmbeddingClient.EmbeddingResult embedding = embeddingClient.embed(query);
             aiCallLogService.embeddingSuccess(
                     projectId,
                     AiCallLogService.EMBEDDING_SEARCH,
                     query == null ? 0 : query.length(),
-                    embedding.size(),
+                    embedding.dimension(),
                     elapsedMs(start)
             );
             return embedding;
