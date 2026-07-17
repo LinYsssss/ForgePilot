@@ -55,6 +55,9 @@
         <button :class="{ active: tab === 'reviews' }" @click="goTab('reviews')" :disabled="!activeProject">
           <span class="nav-ico" aria-hidden="true">✓</span> 审查
         </button>
+        <button :class="{ active: tab === 'agent' }" @click="tab = 'agent'" :disabled="!activeProject">
+          <span class="nav-ico" aria-hidden="true">◆</span> Agent 审批
+        </button>
         <button :class="{ active: tab === 'aiLogs' }" @click="openProjectAiLogs" :disabled="!activeProject">
           <span class="nav-ico" aria-hidden="true">◷</span> AI 日志
         </button>
@@ -603,6 +606,22 @@
         </div>
       </template>
 
+      <!-- ============ AGENT PATCH APPROVAL ============ -->
+      <template v-else-if="tab === 'agent'">
+        <div class="panel">
+          <div class="panel-head"><div><h2>Agent 审查与 Patch 审批</h2><div class="sub">查看 Timeline、Finding 证据、验证日志与候选 Patch</div></div></div>
+          <div class="grid three">
+            <label class="field">Agent Run ID<input v-model.number="agentRunId" type="number" min="1" /></label>
+            <label class="field">当前 Head SHA<input v-model="agentHeadSha" /></label>
+            <div class="actions"><button :disabled="!agentRunId || busy.agent" @click="run(loadAgentWorkspace)">加载 Agent Run</button></div>
+          </div>
+        </div>
+        <AgentReviewWorkspace v-if="agentRunId && agentPatch" :project-id="activeProject.projectId"
+          :agent-run-id="agentRunId" :current-head-sha="agentHeadSha" :timeline="agentTimeline"
+          :findings="agentFindings" :patch="agentPatch" @decided="onPatchDecided" @error="onPatchError" />
+        <div v-else class="empty"><p>输入 Agent Run ID 与当前 Head SHA 后加载候选 Patch。</p></div>
+      </template>
+
       <!-- ============ AI LOGS ============ -->
       <template v-else-if="tab === 'aiLogs'">
         <div class="panel">
@@ -681,6 +700,7 @@
 <script setup>
 import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
 import { api } from './api/client'
+import AgentReviewWorkspace from './components/agent/AgentReviewWorkspace.vue'
 
 const authenticated = ref(false)
 const tab = ref('dashboard')
@@ -717,6 +737,11 @@ const searched = ref(false)
 const searchQuery = ref('发货前是否需要校验支付状态')
 const docType = ref('BUSINESS_FLOW')
 const confirmModal = ref(null)
+const agentRunId = ref(null)
+const agentHeadSha = ref('')
+const agentTimeline = ref([])
+const agentFindings = ref([])
+const agentPatch = ref(null)
 
 const openFeedback = reactive({})
 const feedbackMap = reactive({})
@@ -737,7 +762,7 @@ const demoRepoPath = import.meta.env.VITE_DEMO_REPO_PATH || 'F:\\202605New\\demo
 let pollTimer = null
 const pollingActive = ref(false)
 
-const tabTitles = { dashboard: '概览', projects: '项目管理', repository: '仓库配置', pullRequests: 'PR 工作流', knowledge: 'RAG 知识库', reviews: '代码审查', aiLogs: 'AI 调用日志' }
+const tabTitles = { dashboard: '概览', projects: '项目管理', repository: '仓库配置', pullRequests: 'PR 工作流', knowledge: 'RAG 知识库', reviews: '代码审查', agent: 'Agent 审批', aiLogs: 'AI 调用日志' }
 const tabTitle = computed(() => tabTitles[tab.value] || 'RepoSage')
 const repoBound = computed(() => commits.value.length > 0 || repoForm._bound)
 const needsToken = computed(() => /^https?:\/\//i.test(repoForm.repoUrl.trim()))
@@ -1292,6 +1317,23 @@ async function loadAiLogs(taskId = null) {
   aiLogs.value = await api(`/ai/logs?${query}`)
   aiLogScope.value = taskId ? `任务 #${taskId} 维度` : '项目维度'
 }
+
+async function loadAgentWorkspace() {
+  if (!activeProject.value || !agentRunId.value) return
+  busy.agent = true
+  try {
+    const [timeline, patches] = await Promise.all([
+      api(`/agent-runs/${agentRunId.value}/timeline`),
+      api(`/projects/${activeProject.value.projectId}/agent-runs/${agentRunId.value}/patches`),
+    ])
+    agentTimeline.value = timeline.steps || []
+    agentPatch.value = patches.length ? { ...patches[patches.length - 1], downloadUrl: `data:text/x-diff;charset=utf-8,${encodeURIComponent(patches[patches.length - 1].patchContent || '')}` } : null
+    agentFindings.value = (agentPatch.value?.findingIds || []).map(id => ({ id, severity: 'INFO', title: `Finding #${id}`, description: '详见持久化证据与置信度记录', evidence: [] }))
+    if (!agentHeadSha.value) agentHeadSha.value = timeline.run?.headSha || agentPatch.value?.headSha || ''
+  } finally { busy.agent = false }
+}
+async function onPatchDecided() { toastMsg('Patch 审批决定已记录', 'success'); await loadAgentWorkspace() }
+function onPatchError(error) { toastMsg(error?.message || 'Patch 审批失败', 'error') }
 async function openProjectAiLogs() { if (!activeProject.value) return; await loadAiLogs(); tab.value = 'aiLogs' }
 async function openTaskAiLogs(taskId) { await loadAiLogs(taskId); tab.value = 'aiLogs' }
 function toggleDate(date) { collapsedDates[date] = !collapsedDates[date] }

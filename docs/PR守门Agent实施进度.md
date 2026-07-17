@@ -7,8 +7,8 @@
 - 功能分支：`feat/pr-gatekeeper-agent`
 - 隔离工作树：`F:\202605New\.worktrees\pr-gatekeeper-agent`
 - 基线分支提交：`fad60d2 chore: ignore isolated worktrees`
-- 当前阶段：Phase 4 Task 10（人工审批 API 与 Vue UI；Phase 3 Docker 动态验收待补跑）
-- 最新完成任务：Phase 4 Task 9（Sandbox Patch apply/validate）
+- 当前阶段：Phase 4 Task 11（版本化评测集；Phase 3 Docker 动态验收待补跑）
+- 最新完成任务：Phase 4 Task 10（人工审批 API 与 Vue UI）
 
 ## 2. 已完成范围
 
@@ -74,7 +74,7 @@ a4a6f6f feat: execute repository read tools in sandbox
 
 ### Phase 4：插件、Patch 与评测
 
-已完成 Task 1 至 Task 9：
+已完成 Task 1 至 Task 10：
 
 - `RepositoryProfile`、`ChangeSet`、`ChangeAnalysis`、`ToolCommand` 和 `LanguagePlugin` 契约。
 - 纯语言、混合语言和构建文件变更的确定性插件选择。
@@ -99,6 +99,8 @@ a4a6f6f feat: execute repository read tools in sandbox
 - Unified diff 策略拒绝绝对路径、路径遍历、二进制内容、rename、伪造 `---/+++` 标记、CI/CODEOWNERS/Flyway 等受保护文件，以及文件数和新增+删除行数超限；stale head SHA 和跨 Agent Run Finding 绑定在持久化前拒绝。
 - Runner 固定注册 `patch.apply.check`、`patch.apply` 和 `patch.validate`，安全解包后在同一临时工作区依次执行 baseline、apply check、apply 和 patched validation；验证命令、镜像与 CPU/内存/PID/超时限制保持一致，不接受任意 Shell。
 - `V12__patch_validation_results.sql` 持久化 apply/build/test/scan 独立状态、目标 fingerprint/reproducer 是否消失、结构化 before/after 结果、有界日志和验证时间；仅 apply 成功且目标消失的 Patch 具备审批资格，构建和测试失败仍独立保留。
+- `V13__patch_approval_constraints.sql` 与审批实体/API 记录 approver、APPROVED/REJECTED、不可变 Patch hash、head SHA、comment 和时间；项目所有者授权、Agent Run/Patch 归属和 stale head 每次决定前重新校验，相同决定幂等、冲突决定不可变。
+- Vue 新增并实际挂载 Agent 审批工作区，拆分 Timeline、Findings/证据、Patch diff/下载/验证日志和 Approval 组件；只有 apply 成功、目标消失且未 stale 的 Patch 可批准，无效 Patch 禁用批准按钮。
 
 对应提交：
 
@@ -111,17 +113,18 @@ c24117f feat: add javascript typescript analysis plugin
 1c73d51 feat: verify and deduplicate findings
 a14674d feat: add hybrid review context retrieval
 72a9f61 feat: validate generated patch candidates
-Task 9（本次提交） feat: verify candidate patches in sandbox
+b7f0f3b feat: verify candidate patches in sandbox
+Task 10（本次提交） feat: add human patch approval workflow
 ```
 
 ## 3. 最新验证证据
 
 ```text
 backend: mvn test
-结果: 183 tests, 0 failures, 0 errors, 3 skipped
+结果: 185 tests, 0 failures, 0 errors, 3 skipped
 
 frontend: npm test
-结果: 3 passed
+结果: 4 passed
 
 frontend: npm run build
 结果: PASS
@@ -157,11 +160,11 @@ git diff --check
 
 ## 5. 下一步严格顺序
 
-继续记录 Phase 3 Task 12 动态验收缺口，并实施 Phase 4 Task 10：
+继续记录 Phase 3 Task 12 动态验收缺口，并实施 Phase 4 Task 11：
 
-1. 新增审批 API/service/DTO，并校验项目成员权限、stale head、Patch 验证资格和重复请求幂等。
-2. 审批记录 approver、decision、不可变 Patch hash、head SHA、comment 和时间；未经审批不得发布 Patch 内容。
-3. 前端拆分 Agent timeline、findings、patch diff 和 approval 组件，展示证据、置信度、验证日志、Patch 下载、批准和拒绝；无效 Patch 禁用审批。
+1. 创建版本化 `evaluation/manifest.json` 与 Java、Python、TypeScript 正负例、环境不完整和 Patch 场景夹具。
+2. 新增可重复执行的 `scripts/run-agent-evaluation.ps1`，固定 corpus、规则、模型/prompt/schema 版本和随机性设置。
+3. 后端提供评测报告 DTO/service，保留逐案例期望与实际结果供后续指标计算。
 4. 每个 Task 独立提交；Docker 动态验收未完成时不得宣称 Phase 3 最终放行。
 
 ## 6. 继续开发提示词
@@ -172,5 +175,5 @@ git diff --check
 先读取 docs/PR守门Agent实施进度.md、Phase 3/4 计划、git status 和最近 20 个提交。
 Phase 1、Phase 2 和 Phase 3 Task 1-11 已完成；Task 12 的代码、静态加固和运维文档已完成，但 Docker 动态验收待补跑。不要重复实现，不要修改冻结的 V1-V4。
 
-继续记录 Phase 3 Task 12 的 Docker 阻塞，同时从 Phase 4 Task 10 人工审批 API 与 Vue UI 开始，严格 TDD、每个 Task 独立提交。Patch 使用 V11、验证结果使用 V12；后续迁移从 V13 开始，不得修改 V1-V12。不得在宿主机直接执行仓库命令，不得接受消息中的任意 Shell 命令。完成前运行后端全量测试、前端测试与构建、Runner 测试和 git diff --check。Docker/Testcontainers 不可用导致的未验证项目必须明确记录。
+继续记录 Phase 3 Task 12 的 Docker 阻塞，同时从 Phase 4 Task 11 版本化评测集开始，严格 TDD、每个 Task 独立提交。Patch 使用 V11、验证结果使用 V12、审批约束使用 V13，不得修改 V1-V13。完成前运行后端全量测试、前端测试与构建、Runner 测试和 git diff --check。Docker/Testcontainers 不可用导致的未验证项目必须明确记录。
 ```

@@ -1,0 +1,2 @@
+<template><section class="panel"><h3>Patch Diff</h3><a v-if="downloadUrl" :href="downloadUrl" download>下载 Patch</a><pre class="diff">{{ patchContent || '暂无 Patch' }}</pre><details><summary>验证日志</summary><pre>{{ validationLog }}</pre></details></section></template>
+<script setup>defineProps({ patchContent: { type: String, default: '' }, validationLog: { type: String, default: '' }, downloadUrl: { type: String, default: '' } })</script>

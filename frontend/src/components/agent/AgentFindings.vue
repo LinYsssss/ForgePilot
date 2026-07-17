@@ -1,0 +1,2 @@
+<template><section class="panel"><h3>Findings 与证据</h3><article v-for="finding in findings" :key="finding.id" class="finding"><b>{{ finding.severity }} · {{ finding.title }}</b><p>{{ finding.description }}</p><p>置信度 {{ finding.confidence ?? '-' }}</p><ul><li v-for="e in finding.evidence || []" :key="e.contentHash || e.reference">{{ e.reference || e.filePath }} — {{ e.excerpt }}</li></ul></article></section></template>
+<script setup>defineProps({ findings: { type: Array, default: () => [] } })</script>
