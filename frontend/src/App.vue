@@ -611,14 +611,14 @@
         <div class="panel">
           <div class="panel-head"><div><h2>Agent 审查与 Patch 审批</h2><div class="sub">查看 Timeline、Finding 证据、验证日志与候选 Patch</div></div></div>
           <div v-if="agentRunDetail" class="agent-live-status">
-            <span class="status-pill" :class="'st-' + agentRunDetail.status">{{ agentRunDetail.status }}</span>
+            <span class="status-pill" :class="'st-' + agentRunDetail.status" :title="agentRunDetail.status">{{ statusLabel(agentRunDetail.status) }}</span>
             <span>{{ agentPolling ? '正在自动刷新持久化状态' : (agentRunDetail.terminal ? '运行已结束' : '自动刷新已暂停') }}</span>
           </div>
           <div class="grid three">
             <label class="field">最近 Agent Run
               <select v-model.number="agentRunId" @change="selectAgentRun">
                 <option :value="null">请选择</option>
-                <option v-for="runItem in agentRuns" :key="runItem.id" :value="runItem.id">#{{ runItem.id }} · {{ runItem.status }} · {{ shortCommit(runItem.headSha) }}</option>
+                <option v-for="runItem in agentRuns" :key="runItem.id" :value="runItem.id">#{{ runItem.id }} · {{ statusLabel(runItem.status) }} · {{ shortCommit(runItem.headSha) }}</option>
               </select>
             </label>
             <label class="field">当前 Head SHA<input v-model="agentHeadSha" /></label>
