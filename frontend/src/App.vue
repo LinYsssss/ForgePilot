@@ -613,7 +613,7 @@
           <div v-if="agentRunDetail" class="agent-live-status">
             <span class="status-pill" :class="'st-' + agentRunDetail.status" :title="agentRunDetail.status">{{ statusLabel(agentRunDetail.status) }}</span>
             <span>{{ agentPolling ? '正在自动刷新持久化状态' : (agentRunDetail.terminal ? '运行已结束' : '自动刷新已暂停') }}</span>
-            <button v-if="!agentRunDetail.terminal" class="sm danger" :disabled="busy.agentControl" @click="run(cancelAgentRun)">取消运行</button>
+            <button v-if="!agentRunDetail.terminal" class="sm danger" :disabled="busy.agentControl" @click="askCancelAgentRun">取消运行</button>
             <button v-if="['FAILED','TIMED_OUT'].includes(agentRunDetail.status)" class="sm secondary" :disabled="busy.agentControl" @click="run(retryAgentRun)">重试失败步骤</button>
           </div>
           <div class="grid three">
@@ -1410,6 +1410,14 @@ async function cancelAgentRun() {
   busy.agentControl = true
   try { await api(`/agent-runs/${agentRunId.value}/cancel`, { method: 'POST' }); await loadAgentWorkspace(); toastMsg('Agent Run 已取消', 'success') }
   finally { busy.agentControl = false }
+}
+function askCancelAgentRun() {
+  confirmModal.value = {
+    title: `取消 Agent Run #${agentRunId.value}？`,
+    body: '当前步骤将停止并进入 CANCELED。Timeline、模型调用、工具调用、Finding、Patch 和发布审计记录都会保留。',
+    confirmLabel: '确认取消',
+    onConfirm: cancelAgentRun,
+  }
 }
 async function retryAgentRun() {
   if (!agentRunId.value) return
