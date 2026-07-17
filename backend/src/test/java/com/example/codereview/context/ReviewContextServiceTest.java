@@ -65,4 +65,42 @@ class ReviewContextServiceTest {
         assertThat(ranker.rank(List.of(genericVector, securitySymbol), List.of("AuthService"),
                 List.of("connection"))).containsExactly(securitySymbol, genericVector);
     }
+
+    @Test
+    void hybridRankerRetainsDocumentedWeightsExactly() {
+        HybridContextRanker ranker = new HybridContextRanker();
+        SearchMatch match = new SearchMatch(1L, "security.md", "SECURITY", 0, 0.5,
+                "AuthService connection policy");
+
+        double score = ranker.score(
+                match,
+                List.of("AuthService", "MissingSymbol"),
+                List.of("connection", "missing-term")
+        );
+
+        assertThat(score).isEqualTo(
+                0.5 * 0.40
+                        + 0.5 * 0.25
+                        + 0.5 * 0.20
+                        + 1.0 * 0.15
+        );
+    }
+
+    @Test
+    void appliesStableTopKAfterHybridRankingAndDeduplication() {
+        SearchMatch first = new SearchMatch(1L, "security.md", "SECURITY", 0, 0.9,
+                "AuthService policy one");
+        SearchMatch second = new SearchMatch(2L, "design.md", "DESIGN", 0, 0.8,
+                "AuthService policy two");
+        when(ragService.search(7L, "symbol:AuthService", 24, List.of()))
+                .thenReturn(List.of(second, first));
+        ReviewContextService service = new ReviewContextService(ragService, new HybridContextRanker());
+        ReviewContextService.Request request = new ReviewContextService.Request(
+                7L, List.of(), "abc123", 4096, 0.0, 1,
+                List.of(), List.of("AuthService"), List.of(), List.of(), List.of(), List.of());
+
+        assertThat(service.retrieve(request))
+                .extracting(ReviewContextService.ContextEvidence::reference)
+                .containsExactly("security.md#chunk-0");
+    }
 }

@@ -42,14 +42,24 @@ public class ReviewContextService {
         int usedBytes = 0;
         for (SearchMatch match : unique.values()) {
             ContextEvidence evidence = new ContextEvidence(
-                    match.content(), match.sourceName() + "#chunk-" + match.chunkIndex(),
-                    request.sourceVersion(), match.docType(), match.score(), true);
+                    match.content(),
+                    match.sourceName() + "#chunk-" + match.chunkIndex(),
+                    match.sourceName(),
+                    match.chunkIndex(),
+                    request.sourceVersion(),
+                    match.docType(),
+                    ranker.score(match, request.symbols(), lexicalTerms),
+                    true
+            );
             int bytes = evidence.content().getBytes(StandardCharsets.UTF_8).length;
             if (request.contextByteBudget() > 0 && usedBytes + bytes > request.contextByteBudget()) {
                 continue;
             }
             result.add(evidence);
             usedBytes += bytes;
+            if (result.size() >= request.topK()) {
+                break;
+            }
         }
         return List.copyOf(result);
     }
@@ -80,9 +90,26 @@ public class ReviewContextService {
     }
 
     public record Request(Long projectId, List<Long> documentIds, String sourceVersion,
-                          int contextByteBudget, double scoreThreshold, List<String> changedPaths,
+                          int contextByteBudget, double scoreThreshold, int topK, List<String> changedPaths,
                           List<String> symbols, List<String> imports, List<String> annotations,
                           List<String> strings, List<String> toolRuleIds) {
+        public Request(
+                Long projectId,
+                List<Long> documentIds,
+                String sourceVersion,
+                int contextByteBudget,
+                double scoreThreshold,
+                List<String> changedPaths,
+                List<String> symbols,
+                List<String> imports,
+                List<String> annotations,
+                List<String> strings,
+                List<String> toolRuleIds
+        ) {
+            this(projectId, documentIds, sourceVersion, contextByteBudget, scoreThreshold, 8,
+                    changedPaths, symbols, imports, annotations, strings, toolRuleIds);
+        }
+
         public Request {
             Objects.requireNonNull(projectId, "projectId");
             sourceVersion = requireText(sourceVersion, "sourceVersion");
@@ -93,14 +120,23 @@ public class ReviewContextService {
             annotations = copy(annotations);
             strings = copy(strings);
             toolRuleIds = copy(toolRuleIds);
-            if (contextByteBudget < 0 || scoreThreshold < 0 || scoreThreshold > 1) {
+            if (contextByteBudget < 0 || scoreThreshold < 0 || scoreThreshold > 1
+                    || topK <= 0 || topK > 100) {
                 throw new IllegalArgumentException("invalid context retrieval limits");
             }
         }
     }
 
-    public record ContextEvidence(String content, String reference, String sourceVersion,
-                                  String documentType, double vectorScore, boolean untrusted) {
+    public record ContextEvidence(
+            String content,
+            String reference,
+            String sourceName,
+            int chunkIndex,
+            String sourceVersion,
+            String documentType,
+            double score,
+            boolean untrusted
+    ) {
     }
 
     private static <T> List<T> copy(List<T> values) {

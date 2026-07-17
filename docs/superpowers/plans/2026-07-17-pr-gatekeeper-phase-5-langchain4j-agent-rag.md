@@ -250,16 +250,16 @@ Rules:
 - Create backend/src/test/java/com/example/codereview/ai/langchain4j/LangChain4jReviewContentRetrieverTest.java.
 - Extend backend/src/test/java/com/example/codereview/context/ReviewContextServiceTest.java.
 
-- [ ] Test changed paths, symbols, imports, annotations, strings, and tool rule IDs are carried into retrieval.
-- [ ] Test project scope is mandatory and document scope cannot widen it.
-- [ ] Test the adapter returns no cross-project content even when chunk IDs or references collide.
-- [ ] Test vector, lexical, symbol, and document-type scores retain their deterministic weights.
-- [ ] Test thresholding, normalized-content deduplication, stable ordering, top-K, and UTF-8 byte budget.
-- [ ] Map source name, chunk index, document type, source version, score, and untrusted marker into LangChain4j Content metadata.
-- [ ] Preserve the exact citation reference used by Finding evidence and SCM output.
-- [ ] Reject retrieval calls missing project ID, source version, or bounded budget.
-- [ ] Do not use a global EmbeddingStoreContentRetriever that bypasses project/document isolation.
-- [ ] Commit with: feat: expose hybrid review context to langchain4j
+- [x] Test changed paths, symbols, imports, annotations, strings, and tool rule IDs are carried into retrieval.
+- [x] Test project scope is mandatory and document scope cannot widen it.
+- [x] Test the adapter returns no cross-project content even when chunk IDs or references collide.
+- [x] Test vector, lexical, symbol, and document-type scores retain their deterministic weights.
+- [x] Test thresholding, normalized-content deduplication, stable ordering, top-K, and UTF-8 byte budget.
+- [x] Map source name, chunk index, document type, source version, score, and untrusted marker into LangChain4j Content metadata.
+- [x] Preserve the exact citation reference used by Finding evidence and SCM output.
+- [x] Reject retrieval calls missing project ID, source version, or bounded budget.
+- [x] Do not use a global EmbeddingStoreContentRetriever that bypasses project/document isolation.
+- [x] Commit with: feat: expose hybrid review context to langchain4j
 
 **Exit evidence:**
 
