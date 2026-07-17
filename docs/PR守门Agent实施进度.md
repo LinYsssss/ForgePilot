@@ -275,6 +275,8 @@ Task 1 前的源码核查确认 AgentStepHandler 当时仍是占位实现，Stru
 
 Phase 5 Task 1-10 已按 TDD 完成。Task 10 已接入 approval-aware SCM publication、持久化幂等键、发布前 head/授权/Patch hash 复核，以及 WAITING_APPROVAL 外部唤醒；提交为 `3312058 feat: publish completed langchain4j agent reviews`。V1-V16 均未修改，V17/V18 已使用，后续新增迁移从 V19 开始。Task 10 目标测试通过；完整门禁仍需重跑 backend、frontend 和 sandbox-runner 全量测试及 git diff --check。
 
+Task 11 正在实施：`app.ai.rollout` 支持 `disabled`、`shadow`、`selected-projects` 和 `default`。shadow 模式允许运行同 corpus 的脱敏评测，但 PatchApprovalService 与 SCM publication 均拒绝写操作。回滚只需把 `app.ai.runtime` 改回 `legacy`（或把 rollout 改为 `disabled`）并重启服务；不得回滚 V14-V18，也不得删除 LangChain4j 已生成的调用日志、Citation、Finding、Patch 和发布审计记录。评测输入同时保存 LangChain4j、Prompt、Embedding 与 Retrieval 版本，并比较质量、延迟、成本以及四项零容忍安全率。
+
 Phase 1-4 计划代码 Task 已完成；Phase 5 Task 1-9 已完成，Task 10-12 尚未实施。最终发布仍必须在具备 Docker 的环境执行以下动态验收：
 
 1. `docker compose config`、全部镜像构建与服务健康检查。

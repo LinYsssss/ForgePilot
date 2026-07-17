@@ -32,6 +32,9 @@ class WebhookAgentRunServiceTest {
     @Autowired
     private AgentRunRepository agentRuns;
 
+    @Autowired
+    private ScmInstallationRepository installations;
+
     @Test
     void oneEventCreatesOneReceivedRun() {
         WebhookAgentRunService.StartResult result = service.startFromEvent(event("headA"), installation());
@@ -75,12 +78,17 @@ class WebhookAgentRunServiceTest {
                 "base000", headSha, "opened", "delivery-" + headSha);
     }
 
-    private static ScmInstallation installation() {
+    private ScmInstallation installation() {
+        var existing = installations.findByProviderAndExternalInstallationId(ScmProviderType.GITHUB, "inst-1");
+        if (existing.isPresent()) return existing.get();
         ScmInstallation installation = new ScmInstallation();
         installation.setProvider(ScmProviderType.GITHUB);
         installation.setExternalInstallationId("inst-1");
         installation.setProjectId(10L);
         installation.setRepositoryId(20L);
-        return installation;
+        installation.setApiBaseUrl("https://api.example.test");
+        installation.setEncryptedCredential("encrypted-test-token");
+        installation.setActive(true);
+        return installations.save(installation);
     }
 }

@@ -1,6 +1,13 @@
 {
   "corpusVersion": "pr-gatekeeper-eval-v1",
   "schemaVersion": "evaluation-manifest-v1",
+  "runtimeMetadata": {
+    "runtimeModes": ["legacy", "langchain4j"],
+    "langchain4jVersion": "1.8.0",
+    "promptVersion": "pr-gatekeeper-v1",
+    "embeddingVersion": "text-embedding-v1",
+    "retrievalVersion": "hybrid-review-context-v1"
+  },
   "fixedRun": {
     "toolImage": "reposage-tools@sha256:abcdef",
     "model": "gpt-5",

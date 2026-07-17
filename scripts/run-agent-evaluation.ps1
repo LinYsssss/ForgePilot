@@ -1,6 +1,7 @@
 param(
   [string]$Manifest = (Join-Path $PSScriptRoot '..\evaluation\manifest.json'),
   [ValidateSet('development','holdout','all')][string]$Split = 'development',
+  [ValidateSet('legacy','langchain4j','compare')][string]$Runtime = 'compare',
   [string]$ObservedResults,
   [string]$Output = (Join-Path $PSScriptRoot '..\evaluation\results\latest-input.json')
 )
@@ -19,7 +20,8 @@ foreach ($case in $cases) {
 if ($Split -eq 'development') {
   $cases = @($cases | ForEach-Object { [pscustomobject]@{ id=$_.id; split=$_.split; language=$_.language; fixture=$_.fixture } })
 }
-$result = [ordered]@{ corpusVersion=$data.corpusVersion; schemaVersion=$data.schemaVersion; fixedRun=$data.fixedRun; split=$Split; cases=$cases; observedResults=$ObservedResults }
+$runtimes = if ($Runtime -eq 'compare') { @('legacy','langchain4j') } else { @($Runtime) }
+$result = [ordered]@{ corpusVersion=$data.corpusVersion; schemaVersion=$data.schemaVersion; runtimeMetadata=$data.runtimeMetadata; runtimes=$runtimes; split=$Split; fixedRun=$data.fixedRun; cases=$cases; observedResults=$ObservedResults; safetyGates=[ordered]@{ fabricatedCitationRate=0; crossProjectRetrievalRate=0; unauthorizedToolExecutionRate=0; unapprovedPatchPublicationRate=0 } }
 $outputPath = [IO.Path]::GetFullPath($Output)
 New-Item -ItemType Directory -Force (Split-Path $outputPath) | Out-Null
 $result | ConvertTo-Json -Depth 20 | Set-Content -Encoding UTF8 $outputPath

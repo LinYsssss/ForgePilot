@@ -12,6 +12,8 @@ public class PatchApprovalService {
     private final PatchCandidateRepository patches; private final PatchApprovalRepository approvals;
     private final AgentRunRepository runs; private final ProjectService projects;
     private final com.example.codereview.agent.queue.AgentStepWakeupService wakeup;
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.example.codereview.ai.langchain4j.LangChain4jRolloutPolicy rolloutPolicy;
 
     @org.springframework.beans.factory.annotation.Autowired
     public PatchApprovalService(PatchCandidateRepository patches, PatchApprovalRepository approvals,
@@ -28,6 +30,9 @@ public class PatchApprovalService {
     @Transactional
     public PatchApproval decide(Long projectId, Long patchId, Long agentRunId, Long approverId,
                                 String currentHeadSha, PatchApprovalDecision decision, String comment) {
+        if (rolloutPolicy != null && rolloutPolicy.shadow()) {
+            throw new IllegalStateException("Patch approval is disabled in LangChain4j shadow mode");
+        }
         projects.getRequired(projectId, approverId);
         PatchCandidate patch = patches.findById(patchId)
                 .orElseThrow(() -> new IllegalArgumentException("patch candidate not found"));

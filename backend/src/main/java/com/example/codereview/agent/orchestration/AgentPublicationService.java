@@ -29,6 +29,9 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class AgentPublicationService {
 
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.example.codereview.ai.langchain4j.LangChain4jRolloutPolicy rolloutPolicy;
+
     private final AgentScmContextRepository scmContexts;
     private final ScmInstallationRepository installations;
     private final AgentPublicationRepository publications;
@@ -69,6 +72,10 @@ public class AgentPublicationService {
 
     @Transactional
     public AgentPublication publish(Long runId, String headSha) {
+        if (rolloutPolicy != null && !rolloutPolicy.allowsScmWrites()) {
+            throw new AgentStepExecutionException(AgentFailureType.SECURITY_VIOLATION,
+                    "SCM publication is disabled by LangChain4j rollout policy");
+        }
         AgentScmContext context = scmContexts.findByAgentRunId(runId)
                 .orElseThrow(() -> new IllegalArgumentException("SCM publication context is missing"));
         context.requireHead(headSha);
