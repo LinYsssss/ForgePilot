@@ -625,6 +625,7 @@
                 <option :value="null">请选择</option>
                 <option v-for="runItem in filteredAgentRuns" :key="runItem.id" :value="runItem.id">#{{ runItem.id }} · {{ statusLabel(runItem.status) }} · {{ shortCommit(runItem.headSha) }}</option>
               </select>
+              <small v-if="!filteredAgentRuns.length" class="field-hint">当前筛选没有匹配项，<button type="button" class="inline-link" @click="agentRunFilter = 'ALL'">显示全部</button></small>
             </label>
             <label class="field">当前 Head SHA<input v-model="agentHeadSha" /></label>
             <div class="actions"><button :disabled="busy.agentRuns" class="secondary" @click="run(loadAgentRuns)">刷新列表</button><button :disabled="!agentRunId || busy.agent" @click="run(loadAgentWorkspace)">加载</button></div>
