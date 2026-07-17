@@ -615,10 +615,15 @@
             <span>{{ agentPolling ? '正在自动刷新持久化状态' : (agentRunDetail.terminal ? '运行已结束' : '自动刷新已暂停') }}</span>
           </div>
           <div class="grid three">
+            <label class="field">Run 状态筛选
+              <select v-model="agentRunFilter">
+                <option value="ALL">全部</option><option value="ACTIVE">运行中</option><option value="WAITING">等待审批</option><option value="FAILED">失败</option><option value="DONE">已完成</option>
+              </select>
+            </label>
             <label class="field">最近 Agent Run
               <select v-model.number="agentRunId" @change="selectAgentRun">
                 <option :value="null">请选择</option>
-                <option v-for="runItem in agentRuns" :key="runItem.id" :value="runItem.id">#{{ runItem.id }} · {{ statusLabel(runItem.status) }} · {{ shortCommit(runItem.headSha) }}</option>
+                <option v-for="runItem in filteredAgentRuns" :key="runItem.id" :value="runItem.id">#{{ runItem.id }} · {{ statusLabel(runItem.status) }} · {{ shortCommit(runItem.headSha) }}</option>
               </select>
             </label>
             <label class="field">当前 Head SHA<input v-model="agentHeadSha" /></label>
@@ -748,6 +753,7 @@ const docType = ref('BUSINESS_FLOW')
 const confirmModal = ref(null)
 const agentRunId = ref(null)
 const agentRuns = ref([])
+const agentRunFilter = ref('ALL')
 const agentHeadSha = ref('')
 const agentTimeline = ref([])
 const agentFindings = ref([])
@@ -780,6 +786,13 @@ const tabTitle = computed(() => tabTitles[tab.value] || 'RepoSage')
 const repoBound = computed(() => commits.value.length > 0 || repoForm._bound)
 const needsToken = computed(() => /^https?:\/\//i.test(repoForm.repoUrl.trim()))
 const highRiskCount = computed(() => reports.value.filter(r => r.overallRisk === 'HIGH').length)
+const filteredAgentRuns = computed(() => agentRuns.value.filter(runItem => {
+  if (agentRunFilter.value === 'ALL') return true
+  if (agentRunFilter.value === 'ACTIVE') return ['RECEIVED', 'PREPARING_REPOSITORY', 'ANALYZING_CHANGE', 'RETRIEVING_CONTEXT', 'PLANNING', 'EXECUTING_TOOLS', 'VERIFYING_FINDINGS', 'GENERATING_PATCH', 'VALIDATING_PATCH', 'PUBLISHING_RESULT'].includes(runItem.status)
+  if (agentRunFilter.value === 'WAITING') return ['WAITING_APPROVAL', 'WAITING_EXTERNAL'].includes(runItem.status)
+  if (agentRunFilter.value === 'FAILED') return ['FAILED', 'TIMED_OUT', 'DEAD'].includes(runItem.status)
+  return ['SUCCEEDED', 'COMPLETED', 'CANCELED'].includes(runItem.status)
+}))
 const prReports = computed(() => {
   if (!activePullRequest.value) return []
   const taskIds = new Set(tasks.value.filter(t => t.pullRequestId === activePullRequest.value.pullRequestId).map(t => t.taskId))
