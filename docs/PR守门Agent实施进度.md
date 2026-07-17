@@ -7,8 +7,8 @@
 - 功能分支：`feat/pr-gatekeeper-agent`
 - 隔离工作树：`F:\202605New\.worktrees\pr-gatekeeper-agent`
 - 基线分支提交：`fad60d2 chore: ignore isolated worktrees`
-- 当前阶段：Phase 4 Task 5（确定性证据置信度；Phase 3 Docker 动态验收待补跑）
-- 最新完成任务：Phase 4 Task 4（JavaScript/TypeScript 插件）
+- 当前阶段：Phase 4 Task 6（Finding 复核与去重；Phase 3 Docker 动态验收待补跑）
+- 最新完成任务：Phase 4 Task 5（确定性证据置信度）
 
 ## 2. 已完成范围
 
@@ -74,7 +74,7 @@ a4a6f6f feat: execute repository read tools in sandbox
 
 ### Phase 4：插件、Patch 与评测
 
-已完成 Task 1 至 Task 4：
+已完成 Task 1 至 Task 5：
 
 - `RepositoryProfile`、`ChangeSet`、`ChangeAnalysis`、`ToolCommand` 和 `LanguagePlugin` 契约。
 - 纯语言、混合语言和构建文件变更的确定性插件选择。
@@ -87,6 +87,9 @@ a4a6f6f feat: execute repository read tools in sandbox
 - Runner 同步注册固定 Ruff/Bandit/Pytest 可执行路径；Python 评测夹具位于 `demo-repos/evaluation/python/`。
 - JavaScript/TypeScript 插件检测 npm/pnpm/yarn、TypeScript、Jest/Vitest；ESLint/Semgrep/tsc/Jest/Vitest 均通过 Runner 固定二进制执行，不调用 `npm run`、`npx` 或 payload 中的 scripts。
 - ESLint/Semgrep/TypeScript 输出归一化为 Finding，Jest/Vitest JSON 归一化为验证结果；恶意 `package.json` script 夹具证明其不会进入命令契约。
+- 证据置信度使用版本 `evidence-confidence-v1` 和固定权重：tool `0.35`、location `0.20`、knowledge `0.20`、verifier `0.15`、test `0.10`；冲突与过期位置负向扣分并 clamp 到 `[0,1]`。
+- Gate 仅阻断 HIGH/CRITICAL、置信度达到可配置阈值且代码位置有效的 Finding；模型单独信号无法阻断。
+- `V9__finding_confidence_decisions.sql` 持久化决策版本、阈值、结果及每项贡献；Patch 迁移继续顺延为 V10。
 
 对应提交：
 
@@ -94,14 +97,15 @@ a4a6f6f feat: execute repository read tools in sandbox
 92dcd30 feat: define language plugin and evidence contracts
 881c066 feat: add java analysis plugin
 1c2fa5b feat: add python analysis plugin
-Task 4（本次提交） feat: add javascript typescript analysis plugin
+c24117f feat: add javascript typescript analysis plugin
+Task 5（本次提交） feat: calculate evidence-based gate decisions
 ```
 
 ## 3. 最新验证证据
 
 ```text
 backend: mvn test
-结果: 161 tests, 0 failures, 0 errors, 3 skipped
+结果: 166 tests, 0 failures, 0 errors, 3 skipped
 
 frontend: npm test
 结果: 3 passed
@@ -140,11 +144,11 @@ git diff --check
 
 ## 5. 下一步严格顺序
 
-继续记录 Phase 3 Task 12 动态验收缺口，并实施 Phase 4 Task 5：
+继续记录 Phase 3 Task 12 动态验收缺口，并实施 Phase 4 Task 6：
 
-1. 按固定权重测试 tool `0.35`、location `0.20`、knowledge `0.20`、verifier `0.15`、test `0.10`。
-2. 测试冲突证据、过期行号和 `[0,1]` clamp，持久化版本与每项贡献。
-3. Gate 仅允许 HIGH/CRITICAL、置信度至少 `0.75` 且有有效代码位置的 Finding 阻断。
+1. 使用 category、规范化文件、symbol 和行邻域 hash 构造稳定 fingerprint。
+2. 合并工具、知识和模型证据，同一来源不得重复加分；冲突证据进入复核结果。
+3. 持久化被拒候选及 rejection reason，供评测统计。
 4. 每个 Task 独立提交；Docker 动态验收未完成时不得宣称 Phase 3 最终放行。
 
 ## 6. 继续开发提示词
@@ -155,5 +159,5 @@ git diff --check
 先读取 docs/PR守门Agent实施进度.md、Phase 3/4 计划、git status 和最近 20 个提交。
 Phase 1、Phase 2 和 Phase 3 Task 1-11 已完成；Task 12 的代码、静态加固和运维文档已完成，但 Docker 动态验收待补跑。不要重复实现，不要修改冻结的 V1-V4。
 
-继续记录 Phase 3 Task 12 的 Docker 阻塞，同时从 Phase 4 Task 5 确定性证据置信度开始，严格 TDD、每个 Task 独立提交。Finding/Evidence 已使用 V8，Patch 迁移必须使用 V9。不得在宿主机直接执行仓库命令，不得接受消息中的任意 Shell 命令。完成前运行后端全量测试、前端测试与构建、Runner 测试和 git diff --check。Docker/Testcontainers 不可用导致的未验证项目必须明确记录。
+继续记录 Phase 3 Task 12 的 Docker 阻塞，同时从 Phase 4 Task 6 Finding 复核与去重开始，严格 TDD、每个 Task 独立提交。Finding/Evidence 使用 V8、置信度决策使用 V9，Patch 迁移必须使用 V10。不得在宿主机直接执行仓库命令，不得接受消息中的任意 Shell 命令。完成前运行后端全量测试、前端测试与构建、Runner 测试和 git diff --check。Docker/Testcontainers 不可用导致的未验证项目必须明确记录。
 ```
