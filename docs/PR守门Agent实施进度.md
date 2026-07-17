@@ -7,8 +7,8 @@
 - 功能分支：`feat/pr-gatekeeper-agent`
 - 隔离工作树：`F:\202605New\.worktrees\pr-gatekeeper-agent`
 - 基线分支提交：`fad60d2 chore: ignore isolated worktrees`
-- 当前阶段：Phase 4 Task 8（Patch Candidate 持久化与校验；Phase 3 Docker 动态验收待补跑）
-- 最新完成任务：Phase 4 Task 7（Hybrid Review Context）
+- 当前阶段：Phase 4 Task 9（Sandbox Patch apply/validate；Phase 3 Docker 动态验收待补跑）
+- 最新完成任务：Phase 4 Task 8（Patch Candidate 持久化与校验）
 
 ## 2. 已完成范围
 
@@ -74,7 +74,7 @@ a4a6f6f feat: execute repository read tools in sandbox
 
 ### Phase 4：插件、Patch 与评测
 
-已完成 Task 1 至 Task 7：
+已完成 Task 1 至 Task 8：
 
 - `RepositoryProfile`、`ChangeSet`、`ChangeAnalysis`、`ToolCommand` 和 `LanguagePlugin` 契约。
 - 纯语言、混合语言和构建文件变更的确定性插件选择。
@@ -95,6 +95,8 @@ a4a6f6f feat: execute repository read tools in sandbox
 - Hybrid Review Context 从 changed paths、symbols、imports、annotations、字符串和工具 rule ID 构造确定性查询，并通过 project/document 双重范围调用 RAG。
 - 混合排序固定组合 vector `0.40`、lexical `0.25`、changed-symbol `0.20` 和 document-type `0.15`；结果经过阈值过滤、规范化内容去重和 UTF-8 字节预算约束。
 - 每个上下文来源均标记为不可信证据，携带 PR head SHA/source version 及 `source#chunk-N` 精确引用；知识文档索引优先 Markdown 标题和 fenced code 边界，无法识别结构时保留固定字符分块回退。
+- `V11__patch_candidates_and_approvals.sql` 新增不可变 Patch Candidate、Finding 关联和审批请求表，不修改 V1-V10；Patch 绑定 Agent Run、head SHA、Finding IDs、generator model、prompt version 和内容 SHA-256。
+- Unified diff 策略拒绝绝对路径、路径遍历、二进制内容、rename、伪造 `---/+++` 标记、CI/CODEOWNERS/Flyway 等受保护文件，以及文件数和新增+删除行数超限；stale head SHA 和跨 Agent Run Finding 绑定在持久化前拒绝。
 
 对应提交：
 
@@ -105,14 +107,15 @@ a4a6f6f feat: execute repository read tools in sandbox
 c24117f feat: add javascript typescript analysis plugin
 7e95b48 feat: calculate evidence-based gate decisions
 1c73d51 feat: verify and deduplicate findings
-Task 7（本次提交） feat: add hybrid review context retrieval
+a14674d feat: add hybrid review context retrieval
+Task 8（本次提交） feat: validate generated patch candidates
 ```
 
 ## 3. 最新验证证据
 
 ```text
 backend: mvn test
-结果: 174 tests, 0 failures, 0 errors, 3 skipped
+结果: 181 tests, 0 failures, 0 errors, 3 skipped
 
 frontend: npm test
 结果: 3 passed
@@ -151,11 +154,11 @@ git diff --check
 
 ## 5. 下一步严格顺序
 
-继续记录 Phase 3 Task 12 动态验收缺口，并实施 Phase 4 Task 8：
+继续记录 Phase 3 Task 12 动态验收缺口，并实施 Phase 4 Task 9：
 
-1. 使用 `V11` 新增 Patch Candidate 与审批持久化，不使用计划中已冲突的原 V8 编号。
-2. 校验 unified diff，并拒绝绝对路径、路径遍历、二进制 Patch、受保护文件、过多文件和过多变更行。
-3. Patch 必须绑定 Agent Run、head SHA、Finding IDs、生成模型和 prompt version；当前 PR head SHA 不一致时拒绝。
+1. 增加固定 `patch.apply` 和 `patch.validate` 工具及 Runner 处理器，不接受任意 Shell。
+2. 覆盖 clean apply、stale SHA、冲突、编译失败、测试失败和成功验证；baseline 与 patched 使用相同镜像和限制。
+3. 持久化结构化 before/after delta 和有界日志；仅 apply 成功才允许进入审批，build/test 状态独立记录，并要求目标 Finding fingerprint 或 reproducer 消失。
 4. 每个 Task 独立提交；Docker 动态验收未完成时不得宣称 Phase 3 最终放行。
 
 ## 6. 继续开发提示词
@@ -166,5 +169,5 @@ git diff --check
 先读取 docs/PR守门Agent实施进度.md、Phase 3/4 计划、git status 和最近 20 个提交。
 Phase 1、Phase 2 和 Phase 3 Task 1-11 已完成；Task 12 的代码、静态加固和运维文档已完成，但 Docker 动态验收待补跑。不要重复实现，不要修改冻结的 V1-V4。
 
-继续记录 Phase 3 Task 12 的 Docker 阻塞，同时从 Phase 4 Task 8 Patch Candidate 持久化与校验开始，严格 TDD、每个 Task 独立提交。Finding/Evidence 使用 V8、置信度决策使用 V9、Finding 复核使用 V10，Patch 迁移必须使用 V11。不得在宿主机直接执行仓库命令，不得接受消息中的任意 Shell 命令。完成前运行后端全量测试、前端测试与构建、Runner 测试和 git diff --check。Docker/Testcontainers 不可用导致的未验证项目必须明确记录。
+继续记录 Phase 3 Task 12 的 Docker 阻塞，同时从 Phase 4 Task 9 Sandbox Patch apply/validate 开始，严格 TDD、每个 Task 独立提交。Patch 持久化已使用 V11；若 Task 9 需要新增字段，必须使用 V12，不得修改 V1-V11。不得在宿主机直接执行仓库命令，不得接受消息中的任意 Shell 命令。完成前运行后端全量测试、前端测试与构建、Runner 测试和 git diff --check。Docker/Testcontainers 不可用导致的未验证项目必须明确记录。
 ```
