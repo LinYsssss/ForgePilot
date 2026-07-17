@@ -102,7 +102,7 @@ public class KnowledgeService {
     }
 
     private void index(KnowledgeDocument document) {
-        List<String> parts = split(document.getContentText());
+        List<String> parts = splitForIndexing(document.getContentText(), chunkSize, overlap);
         for (int i = 0; i < parts.size(); i++) {
             String part = parts.get(i);
             String embedding = fullContext ? null : embeddingJson.write(embedForIndex(document.getProjectId(), part));
@@ -145,15 +145,60 @@ public class KnowledgeService {
         }
     }
 
-    private List<String> split(String text) {
+    static List<String> splitForIndexing(String text, int chunkSize, int overlap) {
         String normalized = text == null ? "" : text.replace("\r\n", "\n").trim();
         if (normalized.isBlank()) {
             throw new BusinessException(400, "文档内容为空");
         }
-        List<String> parts = new ArrayList<>();
-        int start = 0;
         int safeChunkSize = Math.max(200, chunkSize);
         int safeOverlap = Math.max(0, Math.min(overlap, safeChunkSize / 2));
+        List<String> structured = structuredBlocks(normalized, safeChunkSize);
+        if (structured.size() > 1) {
+            return structured;
+        }
+        return fixedChunks(normalized, safeChunkSize, safeOverlap);
+    }
+
+    private static List<String> structuredBlocks(String text, int chunkSize) {
+        List<String> rawBlocks = List.of(text.split("\\n\\s*\\n"));
+        if (rawBlocks.size() < 2) {
+            return List.of(text);
+        }
+        List<String> parts = new ArrayList<>();
+        StringBuilder current = new StringBuilder();
+        for (String raw : rawBlocks) {
+            String block = raw.strip();
+            boolean boundary = block.startsWith("#") || block.startsWith("```");
+            if ((boundary || current.length() + block.length() + 2 > chunkSize) && !current.isEmpty()) {
+                parts.add(current.toString());
+                current.setLength(0);
+            }
+            if (block.length() > chunkSize) {
+                if (!current.isEmpty()) {
+                    parts.add(current.toString());
+                    current.setLength(0);
+                }
+                parts.addAll(fixedChunks(block, chunkSize, 0));
+            } else {
+                if (!current.isEmpty()) {
+                    current.append("\n\n");
+                }
+                current.append(block);
+                if (block.startsWith("```") && block.endsWith("```") && block.length() > 3) {
+                    parts.add(current.toString());
+                    current.setLength(0);
+                }
+            }
+        }
+        if (!current.isEmpty()) {
+            parts.add(current.toString());
+        }
+        return parts;
+    }
+
+    private static List<String> fixedChunks(String normalized, int safeChunkSize, int safeOverlap) {
+        List<String> parts = new ArrayList<>();
+        int start = 0;
         while (start < normalized.length()) {
             int end = Math.min(normalized.length(), start + safeChunkSize);
             parts.add(normalized.substring(start, end));

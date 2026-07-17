@@ -53,6 +53,11 @@ public class RagService {
         return scopedSearch(projectId, query, limit, null);
     }
 
+    public List<SearchMatch> search(Long projectId, String query, Integer topK, Collection<Long> documentIds) {
+        int limit = topK == null || topK <= 0 ? defaultTopK : topK;
+        return scopedSearch(projectId, query, limit, documentIds);
+    }
+
     public String buildContext(Long projectId, String query) {
         return buildContext(projectId, query, null);
     }
