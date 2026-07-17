@@ -8,6 +8,8 @@ import com.example.codereview.agent.model.ModelOutputValidator;
 import com.example.codereview.agent.model.LangChainToolSchemaMapper;
 import com.example.codereview.agent.model.StructuredAgentModelService;
 import com.example.codereview.agent.orchestration.AgentStepExecutionContext;
+import com.example.codereview.agent.orchestration.AgentAnalysisContextRepository;
+import com.example.codereview.agent.orchestration.AgentChangeAnalysisCheckpoint;
 import com.example.codereview.agent.orchestration.AgentStepExecutor;
 import com.example.codereview.agent.orchestration.AgentStepResult;
 import com.example.codereview.agent.plan.ReviewPlan;
@@ -43,6 +45,7 @@ public final class PlanningStepExecutor implements AgentStepExecutor {
     private final ObjectMapper mapper;
     private final AgentModelBudgetPolicy modelBudget;
     private final LangChainToolSchemaMapper toolSchemas;
+    private final AgentAnalysisContextRepository analysisContexts;
 
     @Autowired
     public PlanningStepExecutor(
@@ -53,7 +56,8 @@ public final class PlanningStepExecutor implements AgentStepExecutor {
             AgentToolRegistry tools,
             ObjectMapper mapper,
             AgentModelBudgetPolicy modelBudget,
-            LangChainToolSchemaMapper toolSchemas
+            LangChainToolSchemaMapper toolSchemas,
+            AgentAnalysisContextRepository analysisContexts
     ) {
         this.models = models;
         this.client = client;
@@ -63,6 +67,7 @@ public final class PlanningStepExecutor implements AgentStepExecutor {
         this.mapper = mapper;
         this.modelBudget = modelBudget;
         this.toolSchemas = toolSchemas;
+        this.analysisContexts = analysisContexts;
     }
 
     public PlanningStepExecutor(
@@ -74,7 +79,7 @@ public final class PlanningStepExecutor implements AgentStepExecutor {
             ObjectMapper mapper
     ) {
         this(models, client, prompts, plans, tools, mapper, AgentModelBudgetPolicy.defaults(),
-                new LangChainToolSchemaMapper(mapper));
+                new LangChainToolSchemaMapper(mapper), null);
     }
 
     public PlanningStepExecutor() {
@@ -86,6 +91,7 @@ public final class PlanningStepExecutor implements AgentStepExecutor {
         this.mapper = null;
         this.modelBudget = null;
         this.toolSchemas = null;
+        this.analysisContexts = null;
     }
 
     @Override
@@ -108,15 +114,17 @@ public final class PlanningStepExecutor implements AgentStepExecutor {
         Set<String> available = descriptors.stream()
                 .map(AgentToolRegistry.ToolDescriptor::name)
                 .collect(java.util.stream.Collectors.toUnmodifiableSet());
+        Set<String> activePlugins = activePlugins(context.agentRunId());
         ReviewPlanValidator.PlanPolicy policy = new ReviewPlanValidator.PlanPolicy(
-                available, Set.of(), available, 8, true
+                available, activePlugins, available, 8, true
         );
         var prompt = prompts.assemble(new AgentPromptAssembler.Input(
                 "review-v1",
                 "Create a bounded review plan using only the supplied registered read-only tools.",
                 "",
                 "",
-                "Available LangChain4j tool specifications: " + toolSchemas.mapAll(descriptors),
+                "Active language plugins: " + activePlugins
+                        + "\nAvailable LangChain4j tool specifications: " + toolSchemas.mapAll(descriptors),
                 List.of(),
                 OUTPUT_SCHEMA,
                 "review-plan-v1",
@@ -170,6 +178,27 @@ public final class PlanningStepExecutor implements AgentStepExecutor {
 
     private AgentPromptAssembler.SectionBudget budget() {
         return new AgentPromptAssembler.SectionBudget(8_192, 2_048);
+    }
+
+    private Set<String> activePlugins(Long agentRunId) {
+        if (analysisContexts == null) {
+            return Set.of();
+        }
+        return analysisContexts.findByAgentRunId(agentRunId)
+                .map(value -> {
+                    try {
+                        return Set.copyOf(mapper.readValue(
+                                value.getChangeSetJson(), AgentChangeAnalysisCheckpoint.class
+                        ).pluginIds());
+                    } catch (JsonProcessingException ex) {
+                        throw new AgentStepExecutionException(
+                                AgentFailureType.INTERNAL_ERROR,
+                                "Active language plugin checkpoint is invalid",
+                                ex
+                        );
+                    }
+                })
+                .orElse(Set.of());
     }
 
 }

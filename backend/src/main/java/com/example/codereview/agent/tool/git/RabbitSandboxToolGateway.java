@@ -54,7 +54,8 @@ public final class RabbitSandboxToolGateway implements SandboxToolGateway {
         SandboxJob job = new SandboxJob(
                 "tool-" + UUID.randomUUID(),
                 request.archiveRef(),
-                imageDigest,
+                request instanceof LanguageCommandRequest language
+                        ? language.imageDigest() : imageDigest,
                 commandId(request),
                 commandArgs(request),
                 new SandboxJob.Limits(1000, 512, 128, timeoutMs),
@@ -101,6 +102,9 @@ public final class RabbitSandboxToolGateway implements SandboxToolGateway {
         if (request instanceof PatchValidateRequest) {
             return "patch.validate";
         }
+        if (request instanceof LanguageCommandRequest value) {
+            return value.commandId();
+        }
         throw new IllegalArgumentException("unsupported sandbox tool request");
     }
 
@@ -117,6 +121,9 @@ public final class RabbitSandboxToolGateway implements SandboxToolGateway {
         if (request instanceof PatchValidateRequest value) {
             return List.of(value.boundHeadSha(), value.currentHeadSha(), value.validationCommandId(),
                     value.targetFingerprint());
+        }
+        if (request instanceof LanguageCommandRequest value) {
+            return value.arguments();
         }
         throw new IllegalArgumentException("unsupported sandbox tool request");
     }

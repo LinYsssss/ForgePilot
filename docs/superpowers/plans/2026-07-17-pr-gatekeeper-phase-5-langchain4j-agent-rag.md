@@ -358,21 +358,22 @@ Rules:
 - Reuse ReviewContextService, FindingDeduplicator, FindingVerifier, FindingConfidenceService, and GateDecisionService.
 - Create integration tests under backend/src/test/java/com/example/codereview/agent/orchestration/.
 
-- [ ] Test repository preparation uses only signed sandbox jobs and fixed command IDs.
-- [ ] Build RepositoryProfile and ChangeSet from persisted SCM event and bounded repository tools.
-- [ ] Select Java, Python, and JavaScript/TypeScript plugins deterministically, including mixed-language PRs.
-- [ ] Retrieve context through LangChain4jReviewContentRetriever using changed-code signals and tool rule IDs.
-- [ ] Ask the model for schema-valid candidate findings with explicit code/tool/knowledge citations.
-- [ ] Normalize and persist model, static-tool, knowledge, and verifier evidence without double-counting a source.
-- [ ] Reject model-only blocking findings, stale locations, fabricated citations, and cross-head-SHA evidence.
-- [ ] Run deduplication, independent verification, deterministic confidence, and gate decision in backend code.
-- [ ] Ensure clean PRs and rejected findings skip Patch generation and proceed to publication.
-- [ ] Commit with: feat: produce agent findings from tools and rag
+- [x] Test repository preparation uses only signed sandbox jobs and fixed command IDs.
+- [x] Build RepositoryProfile and ChangeSet from persisted SCM event and bounded repository tools.
+- [x] Select Java, Python, and JavaScript/TypeScript plugins deterministically, including mixed-language PRs.
+- [x] Retrieve context through LangChain4jReviewContentRetriever using changed-code signals and tool rule IDs.
+- [x] Ask the model for schema-valid candidate findings with explicit code/tool/knowledge citations.
+- [x] Normalize and persist model, static-tool, knowledge, and verifier evidence without double-counting a source.
+- [x] Reject model-only blocking findings, stale locations, fabricated citations, and cross-head-SHA evidence.
+- [x] Run deduplication, independent verification, deterministic confidence, and gate decision in backend code.
+- [x] Ensure clean PRs and rejected findings skip Patch generation and proceed to publication.
+- [x] Commit with: feat: produce agent findings from tools and rag
 
 **Exit evidence:**
 
 - Java, Python, TypeScript, and mixed-language fixtures produce persisted, cited, confidence-scored findings.
 - Prompt-only claims cannot block a PR.
+- Static commands execute only as plugin-declared command IDs through `language.command` and the existing signed sandbox gateway; repository archives remain trusted, pre-provisioned `workspace://` inputs and require Docker/Runner dynamic acceptance outside this host.
 
 ### Task 9: Integrate model-generated Patch candidates with the existing safety workflow
 
