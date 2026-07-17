@@ -29,6 +29,9 @@ services:
       - postgres
       - rabbitmq
       - model-service
+      - otel-collector
+    environment:
+      OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: http://otel-collector:4318/v1/traces
     ports:
       - "127.0.0.1:8080:8080"
     volumes:
@@ -48,8 +51,10 @@ services:
       SANDBOX_SIGNING_SECRET: ${SANDBOX_SIGNING_SECRET:?SANDBOX_SIGNING_SECRET is required}
       SANDBOX_DEPENDENCY_CACHE_ROOT: /app/.cache/dependencies
       SANDBOX_ARCHIVE_ROOT: /app/archives
+      OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: http://otel-collector:4318/v1/traces
     depends_on:
       - rabbitmq
+      - otel-collector
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - sandbox_work:/app/.work
@@ -83,6 +88,27 @@ services:
       - backend
     ports:
       - "80:80"
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.104.0
+    command: ["--config=/etc/otelcol/config.yml"]
+    volumes:
+      - ./observability/otel-collector.yml:/etc/otelcol/config.yml:ro
+    ports:
+      - "127.0.0.1:4317:4317"
+      - "127.0.0.1:4318:4318"
+      - "127.0.0.1:9464:9464"
+
+  prometheus:
+    image: prom/prometheus:v2.53.0
+    command: ["--config.file=/etc/prometheus/prometheus.yml"]
+    volumes:
+      - ./observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    depends_on:
+      - backend
+      - otel-collector
+    ports:
+      - "127.0.0.1:9090:9090"
 
 volumes:
   postgres_data:

@@ -12,6 +12,12 @@ logging:
     level: "%5p [%X{traceId:-}]"
 
 management:
+  tracing:
+    sampling:
+      probability: ${OTEL_TRACES_SAMPLER_PROBABILITY:1.0}
+  otlp:
+    tracing:
+      endpoint: ${OTEL_EXPORTER_OTLP_TRACES_ENDPOINT:http://otel-collector:4318/v1/traces}
   endpoints:
     web:
       exposure:

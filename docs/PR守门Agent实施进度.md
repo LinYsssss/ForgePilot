@@ -7,8 +7,8 @@
 - 功能分支：`feat/pr-gatekeeper-agent`
 - 隔离工作树：`F:\202605New\.worktrees\pr-gatekeeper-agent`
 - 基线分支提交：`fad60d2 chore: ignore isolated worktrees`
-- 当前阶段：Phase 4 Task 13（OpenTelemetry 与最终发布验收；Phase 3 Docker 动态验收待补跑）
-- 最新完成任务：Phase 4 Task 12（质量与成本指标）
+- 当前阶段：Phase 4 Task 13 代码完成，Docker/Compose/Testcontainers/真实评测动态验收待补跑
+- 最新完成任务：Phase 4 Task 13（OpenTelemetry 与静态发布验收）
 
 ## 2. 已完成范围
 
@@ -74,7 +74,7 @@ a4a6f6f feat: execute repository read tools in sandbox
 
 ### Phase 4：插件、Patch 与评测
 
-已完成 Task 1 至 Task 12：
+已完成 Task 1 至 Task 13 的可执行代码与静态验证：
 
 - `RepositoryProfile`、`ChangeSet`、`ChangeAnalysis`、`ToolCommand` 和 `LanguagePlugin` 契约。
 - 纯语言、混合语言和构建文件变更的确定性插件选择。
@@ -105,6 +105,8 @@ a4a6f6f feat: execute repository read tools in sandbox
 - `EvaluationCorpusService` 校验每个案例的 category、severity、location、non-findings、可选 Patch、fixture、唯一 ID 和 split；`run-agent-evaluation.ps1` 默认 development 且剥离标签，生成物写入已忽略的 `evaluation/results/`。
 - `EvaluationMetrics` 计算 precision、recall、F1、high-risk recall、false-positive rate、location accuracy、Patch apply/build/test rate、平均耗时和总成本；固定质量门为 recall 0.80、precision 0.70、location 0.90、repairable Patch apply 0.70。
 - `EvaluationReportExporter` 输出稳定 JSON/Markdown；仓库 baseline 明确标注为已知混淆矩阵验证，不冒充 Docker corpus 实跑结果，timestamp 本地产物保持忽略。
+- Backend 与 Runner 接入 Micrometer OpenTelemetry bridge/OTLP exporter，Spring HTTP/RabbitMQ observation 传播 W3C trace context，现有 Outbox trace ID 保留跨事务关联；指标标签静态测试拒绝 run/job/trace/project/repository 等无界 ID。
+- Compose 新增 digest/version 固定的 OTel Collector 与 Prometheus 服务、回环绑定的 OTLP/Prometheus 端口和 Collector memory limiter/batch；当前主机没有 Docker，因此配置解析、镜像构建、真实 trace/metrics 流和安全隔离仍未动态验收。
 
 对应提交：
 
@@ -120,14 +122,15 @@ a14674d feat: add hybrid review context retrieval
 b7f0f3b feat: verify candidate patches in sandbox
 b6e0abe feat: add human patch approval workflow
 fdc38ed test: add versioned agent evaluation corpus
-Task 12（本次提交） feat: report agent evaluation metrics
+3684993 feat: report agent evaluation metrics
+Task 13（本次提交） feat: add agent observability and release verification
 ```
 
 ## 3. 最新验证证据
 
 ```text
 backend: mvn test
-结果: 189 tests, 0 failures, 0 errors, 3 skipped
+结果: 190 tests, 0 failures, 0 errors, 3 skipped
 
 frontend: npm test
 结果: 4 passed
@@ -166,11 +169,13 @@ git diff --check
 
 ## 5. 下一步严格顺序
 
-继续记录 Phase 3 Task 12 动态验收缺口，并实施 Phase 4 Task 13：
+所有计划代码 Task 已完成。最终发布仍必须在具备 Docker 的环境执行以下动态验收：
 
-1. 接入 OpenTelemetry，并贯通 webhook、RabbitMQ、模型调用和 Sandbox Job trace context。
-2. 增加 Prometheus、OTel Collector 配置与 Compose 服务，检查指标标签不含无界 ID。
-3. 运行后端、前端、Runner、Compose、安全与评测套件，逐项完成最终发布审计；Docker 不可用项必须保持未通过。
+1. `docker compose config`、全部镜像构建与服务健康检查。
+2. PostgreSQL/RabbitMQ Testcontainers 三个跳过测试、RabbitMQ→Runner、Patch apply/validate 和依赖缓存真实联调。
+3. Docker Socket、网络、只读根文件系统、非 root、资源限制、宿主路径与凭据隔离动态安全验收。
+4. Webhook→Agent→工具/模型→Sandbox→SCM 的真实 trace，以及 Prometheus 指标采集。
+5. 真实 development/holdout corpus 执行与质量门；当前 baseline 仅为确定性混淆矩阵验证。
 4. 每个 Task 独立提交；Docker 动态验收未完成时不得宣称 Phase 3 最终放行。
 
 ## 6. 继续开发提示词
@@ -181,5 +186,5 @@ git diff --check
 先读取 docs/PR守门Agent实施进度.md、Phase 3/4 计划、git status 和最近 20 个提交。
 Phase 1、Phase 2 和 Phase 3 Task 1-11 已完成；Task 12 的代码、静态加固和运维文档已完成，但 Docker 动态验收待补跑。不要重复实现，不要修改冻结的 V1-V4。
 
-继续记录 Phase 3 Task 12 的 Docker 阻塞，同时从 Phase 4 Task 13 OpenTelemetry 与最终发布验收开始，严格 TDD、独立提交。不得修改 V1-V13。完成前运行后端全量测试、前端测试与构建、Runner 测试、评测脚本、git diff --check，并在 Docker 可用时运行 Compose/Testcontainers/安全验收；不可用时必须明确保持未通过。
+计划中的代码 Task 1-13 均已实现。下一步只做最终完成度审计与 Docker 环境动态验收，不重复已有实现，不修改 V1-V13。当前主机无 Docker，不能宣称 Phase 3/4 最终发布验收通过。具备 Docker 后运行 Compose/Testcontainers/安全/真实评测套件，并将结果写回本文。
 ```

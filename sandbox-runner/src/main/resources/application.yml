@@ -14,6 +14,17 @@ spring:
         default-requeue-rejected: false
         prefetch: ${SANDBOX_PREFETCH:1}
 
+management:
+  tracing:
+    sampling:
+      probability: ${OTEL_TRACES_SAMPLER_PROBABILITY:1.0}
+  otlp:
+    tracing:
+      endpoint: ${OTEL_EXPORTER_OTLP_TRACES_ENDPOINT:http://otel-collector:4318/v1/traces}
+  metrics:
+    tags:
+      application: ${spring.application.name}
+
 app:
   sandbox:
     signing-secret: ${SANDBOX_SIGNING_SECRET:}
