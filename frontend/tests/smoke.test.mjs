@@ -36,5 +36,7 @@ test('agent workspace keeps run filtering, live refresh, and citation navigation
   assert.match(app, /filteredAgentRuns/)
   assert.match(app, /startAgentPolling/)
   assert.match(app, /agent-evidence=/)
+  assert.match(app, /\/cancel/)
+  assert.match(app, /\/retry/)
   assert.match(findings, /data-evidence-path/)
 })

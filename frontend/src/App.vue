@@ -613,6 +613,8 @@
           <div v-if="agentRunDetail" class="agent-live-status">
             <span class="status-pill" :class="'st-' + agentRunDetail.status" :title="agentRunDetail.status">{{ statusLabel(agentRunDetail.status) }}</span>
             <span>{{ agentPolling ? '正在自动刷新持久化状态' : (agentRunDetail.terminal ? '运行已结束' : '自动刷新已暂停') }}</span>
+            <button v-if="!agentRunDetail.terminal" class="sm danger" :disabled="busy.agentControl" @click="run(cancelAgentRun)">取消运行</button>
+            <button v-if="['FAILED','TIMED_OUT'].includes(agentRunDetail.status)" class="sm secondary" :disabled="busy.agentControl" @click="run(retryAgentRun)">重试失败步骤</button>
           </div>
           <div class="grid three">
             <label class="field">Run 状态筛选
@@ -1403,6 +1405,18 @@ function stopAgentPolling() {
   agentPolling.value = false
 }
 async function onPatchDecided() { toastMsg('Patch 审批决定已记录', 'success'); await loadAgentWorkspace() }
+async function cancelAgentRun() {
+  if (!agentRunId.value) return
+  busy.agentControl = true
+  try { await api(`/agent-runs/${agentRunId.value}/cancel`, { method: 'POST' }); await loadAgentWorkspace(); toastMsg('Agent Run 已取消', 'success') }
+  finally { busy.agentControl = false }
+}
+async function retryAgentRun() {
+  if (!agentRunId.value) return
+  busy.agentControl = true
+  try { await api(`/agent-runs/${agentRunId.value}/retry`, { method: 'POST' }); await loadAgentWorkspace(); toastMsg('失败步骤已重新入队', 'success') }
+  finally { busy.agentControl = false }
+}
 function onPatchError(error) { toastMsg(error?.message || 'Patch 审批失败', 'error') }
 async function openProjectAiLogs() { if (!activeProject.value) return; await loadAiLogs(); tab.value = 'aiLogs' }
 async function openTaskAiLogs(taskId) { await loadAiLogs(taskId); tab.value = 'aiLogs' }
