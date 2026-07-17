@@ -277,6 +277,8 @@ Phase 5 Task 1-10 已按 TDD 完成。Task 10 已接入 approval-aware SCM publi
 
 Task 11 正在实施：`app.ai.rollout` 支持 `disabled`、`shadow`、`selected-projects` 和 `default`。shadow 模式允许运行同 corpus 的脱敏评测，但 PatchApprovalService 与 SCM publication 均拒绝写操作。回滚只需把 `app.ai.runtime` 改回 `legacy`（或把 rollout 改为 `disabled`）并重启服务；不得回滚 V14-V18，也不得删除 LangChain4j 已生成的调用日志、Citation、Finding、Patch 和发布审计记录。评测输入同时保存 LangChain4j、Prompt、Embedding 与 Retrieval 版本，并比较质量、延迟、成本以及四项零容忍安全率。
 
+前端优化已直接落地（提交 `0358714`、`5bd41c1`、`0e7b4e9`、`89defda`、`83e5e86`、`5e3aa1b`、`830a281`、`78949f1`、`0c05fc2`、`35bff40`、`4722458`、`1557283`、`0e83b9d`、`9cb9b2e`）：Agent Run 项目列表、状态筛选与计数、自动刷新、取消/重试二次确认、Timeline 状态摘要、Finding citation 证据抽屉与定位、带行号 Patch Diff、运行状态本地化和契约测试。最新前端门禁为 5 tests passed、生产构建通过、git diff --check 通过。前端只读取后端权威状态，不执行模型、工具、Sandbox 或 SCM 发布。
+
 Phase 1-4 计划代码 Task 已完成；Phase 5 Task 1-11 已完成，Task 12 的动态验收已执行可运行检查但 Docker/Testcontainers 仍待具备 Docker 的环境。最终发布仍必须在具备 Docker 的环境执行以下动态验收：
 
 1. `docker compose config`、全部镜像构建与服务健康检查。
