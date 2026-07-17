@@ -304,21 +304,22 @@ Rules:
 - Create backend/src/test/java/com/example/codereview/agent/orchestration/AgentStepExecutorRegistryTest.java.
 - Extend AgentStepExecutionService and recovery tests.
 
-- [ ] Start with a failing test proving AgentStepHandler no longer returns a generic accepted string.
-- [ ] Require exactly one executor for every executable state and reject duplicate or missing registrations at startup.
-- [ ] Make executor input/output provider-neutral, bounded, JSON-serializable, and versioned.
-- [ ] Persist enough output to resume the next state without rerunning a successful external side effect.
-- [ ] Keep AgentStepExecutionService responsible for locks, attempts, retry classification, metrics, and terminal failure.
-- [ ] Keep state transitions in AgentRunTransitionService and AgentStateMachine; executors return outcomes and never mutate status ad hoc.
-- [ ] Verify cancellation before model, retrieval, tool, sandbox, and SCM calls.
-- [ ] Verify duplicate RabbitMQ deliveries do not repeat completed model/tool/publication work.
-- [ ] Classify invalid model output, budget exhaustion, environment incomplete, security violation, retryable provider error, and permanent provider error separately.
-- [ ] Commit with: feat: dispatch persisted agent steps by state
+- [x] Start with a failing test proving AgentStepHandler no longer returns a generic accepted string.
+- [x] Require exactly one executor for every executable state and reject duplicate or missing registrations at startup.
+- [x] Make executor input/output provider-neutral, bounded, JSON-serializable, and versioned.
+- [x] Persist enough output to resume the next state without rerunning a successful external side effect.
+- [x] Keep AgentStepExecutionService responsible for locks, attempts, retry classification, metrics, and terminal failure.
+- [x] Keep state transitions in AgentRunTransitionService and AgentStateMachine; executors return outcomes and never mutate status ad hoc.
+- [x] Verify cancellation before model, retrieval, tool, sandbox, and SCM calls.
+- [x] Verify duplicate RabbitMQ deliveries do not repeat completed model/tool/publication work.
+- [x] Classify invalid model output, budget exhaustion, environment incomplete, security violation, retryable provider error, and permanent provider error separately.
+- [x] Commit with: feat: dispatch persisted agent steps by state
 
 **Exit evidence:**
 
 - Every nonterminal state has an executable, tested handler.
 - Recovery tests resume from persisted state-specific output.
+- Task 6 executors intentionally persist state-specific typed checkpoints without auto-advancing; Tasks 7-10 replace these safe wiring checkpoints with real planning, tool, RAG, Patch, approval, and publication behavior.
 
 ### Task 7: Implement planning and the bounded LangChain4j tool loop
 

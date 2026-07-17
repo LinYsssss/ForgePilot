@@ -5,9 +5,12 @@ import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
 
 import com.example.codereview.agent.error.AgentFailureType;
 import com.example.codereview.agent.outbox.AgentOutboxEvent;
+import com.example.codereview.agent.orchestration.AgentStepResult;
 import com.example.codereview.agent.outbox.AgentOutboxRepository;
 import com.example.codereview.agent.run.AgentRun;
 import com.example.codereview.agent.run.AgentRunRepository;
@@ -102,25 +105,28 @@ class AgentStepConsumerTest {
     void successfulStepIgnoresDuplicateDelivery() {
         Fixture fixture = fixture("task8-success");
         AgentStepMessage message = fixture.message(0);
-        when(handler.execute(message)).thenReturn("completed");
+        when(handler.execute(any())).thenReturn(
+                AgentStepResult.checkpoint(AgentRunStatus.PREPARING_REPOSITORY)
+        );
 
         assertThat(consumer.consume(message))
                 .isEqualTo(AgentStepExecutionService.ExecutionOutcome.SUCCEEDED);
         assertThat(consumer.consume(message))
                 .isEqualTo(AgentStepExecutionService.ExecutionOutcome.DUPLICATE_IGNORED);
 
-        verify(handler, times(1)).execute(message);
+        verify(handler, times(1)).execute(any());
         AgentStep persisted = step(fixture.run().getId());
         assertThat(persisted.getStatus()).isEqualTo(AgentStepStatus.SUCCEEDED);
         assertThat(persisted.getAttempt()).isZero();
-        assertThat(persisted.getOutputSummary()).isEqualTo("completed");
+        assertThat(persisted.getOutputSummary())
+                .contains("agent-step-result-v1", "PREPARING_REPOSITORY", "typed-executor-ready");
     }
 
     @Test
     void retryableInfrastructureFailureSchedulesOnlyNextAttempt() throws Exception {
         Fixture fixture = fixture("task8-retry");
         AgentStepMessage message = fixture.message(0);
-        when(handler.execute(message)).thenThrow(new AgentStepExecutionException(
+        when(handler.execute(any())).thenThrow(new AgentStepExecutionException(
                 AgentFailureType.RETRYABLE_INFRASTRUCTURE,
                 "temporary broker failure"
         ));
@@ -143,7 +149,7 @@ class AgentStepConsumerTest {
         assertThat(consumer.consume(message))
                 .isEqualTo(AgentStepExecutionService.ExecutionOutcome.STALE_OR_ACTIVE_IGNORED);
         assertThat(outbox.count()).isEqualTo(1);
-        verify(handler, times(1)).execute(message);
+        verify(handler, times(1)).execute(any());
     }
 
     @Test
@@ -151,11 +157,16 @@ class AgentStepConsumerTest {
         Fixture fixture = fixture("task8-retry-success");
         AgentStepMessage first = fixture.message(0);
         AgentStepMessage retry = fixture.message(1);
-        when(handler.execute(first)).thenThrow(new AgentStepExecutionException(
-                AgentFailureType.RETRYABLE_INFRASTRUCTURE,
-                "temporary"
-        ));
-        when(handler.execute(retry)).thenReturn("recovered");
+        when(handler.execute(any())).thenAnswer(invocation -> {
+            var context = invocation.getArgument(0, com.example.codereview.agent.orchestration.AgentStepExecutionContext.class);
+            if (context.attempt() == 0) {
+                throw new AgentStepExecutionException(
+                        AgentFailureType.RETRYABLE_INFRASTRUCTURE,
+                        "temporary"
+                );
+            }
+            return AgentStepResult.checkpoint(AgentRunStatus.PREPARING_REPOSITORY);
+        });
 
         assertThat(consumer.consume(first))
                 .isEqualTo(AgentStepExecutionService.ExecutionOutcome.RETRY_SCHEDULED);
@@ -188,6 +199,56 @@ class AgentStepConsumerTest {
     }
 
     @Test
+    void retryableProviderFailureSchedulesRetry() {
+        Fixture fixture = fixture("task8-provider-retry");
+        when(handler.execute(any())).thenThrow(new AgentStepExecutionException(
+                AgentFailureType.RETRYABLE_PROVIDER_ERROR,
+                "provider unavailable"
+        ));
+
+        assertThat(consumer.consume(fixture.message(0)))
+                .isEqualTo(AgentStepExecutionService.ExecutionOutcome.RETRY_SCHEDULED);
+        assertThat(runs.findById(fixture.run().getId()).orElseThrow().getStatus())
+                .isEqualTo(AgentRunStatus.RETRY_WAIT);
+    }
+
+    @Test
+    void typedPermanentFailuresRemainDistinctAndDoNotRetry() {
+        assertNonRetryableFailure(
+                "task8-provider-permanent",
+                AgentFailureType.PERMANENT_PROVIDER_ERROR,
+                "provider rejected request"
+        );
+        setUp();
+        assertNonRetryableFailure(
+                "task8-environment-incomplete",
+                AgentFailureType.ENVIRONMENT_INCOMPLETE,
+                "dependency cache missing"
+        );
+        setUp();
+        assertNonRetryableFailure(
+                "task8-invalid-model",
+                AgentFailureType.INVALID_MODEL_OUTPUT,
+                "fabricated citation"
+        );
+    }
+
+    @Test
+    void cancellationIsCheckedBeforeExecutorDispatch() {
+        Fixture fixture = fixture("task8-canceled-before-dispatch");
+        AgentRun run = runs.findById(fixture.run().getId()).orElseThrow();
+        run.requestCancellation();
+        runs.saveAndFlush(run);
+
+        assertThat(consumer.consume(fixture.message(0)))
+                .isEqualTo(AgentStepExecutionService.ExecutionOutcome.FAILED);
+
+        assertThat(runs.findById(run.getId()).orElseThrow().getStatus())
+                .isEqualTo(AgentRunStatus.CANCELED);
+        verify(handler, never()).execute(any());
+    }
+
+    @Test
     void agentQueueTopologyUsesDedicatedRoutingAndDelayDeadLettering() {
         Queue stepQueue = context.getBean("agentStepQueue", Queue.class);
         Queue delayQueue = context.getBean("agentDelayQueue", Queue.class);
@@ -214,7 +275,7 @@ class AgentStepConsumerTest {
     ) {
         Fixture fixture = fixture(triggerKey);
         AgentStepMessage message = fixture.message(0);
-        when(handler.execute(message)).thenThrow(new AgentStepExecutionException(
+        when(handler.execute(any())).thenThrow(new AgentStepExecutionException(
                 failureType,
                 messageText
         ));

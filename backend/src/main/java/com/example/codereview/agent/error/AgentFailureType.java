@@ -2,6 +2,9 @@ package com.example.codereview.agent.error;
 
 public enum AgentFailureType {
     RETRYABLE_INFRASTRUCTURE,
+    RETRYABLE_PROVIDER_ERROR,
+    PERMANENT_PROVIDER_ERROR,
+    ENVIRONMENT_INCOMPLETE,
     BUDGET_EXCEEDED,
     SECURITY_VIOLATION,
     INVALID_MODEL_OUTPUT,

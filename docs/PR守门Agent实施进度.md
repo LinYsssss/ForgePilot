@@ -7,8 +7,8 @@
 - 功能分支：`feat/pr-gatekeeper-agent`
 - 隔离工作树：`F:\202605New\.worktrees\pr-gatekeeper-agent`
 - 基线分支提交：`fad60d2 chore: ignore isolated worktrees`
-- 当前阶段：Phase 5 Task 5 已完成，下一步 Task 6 Typed Agent State Executors
-- 最新完成任务：Phase 5 Task 5（注入防护 Prompt、分区预算、Citation 白名单与 prompt hash 审计）
+- 当前阶段：Phase 5 Task 6 已完成，下一步 Task 7 Planning 与 Bounded Tool Loop
+- 最新完成任务：Phase 5 Task 6（typed state executors、版本化 checkpoint 与失败分类）
 
 ## 2. 已完成范围
 
@@ -180,13 +180,21 @@ Task 5 已完成：
 - `PromptEnvelope` 计算稳定 SHA-256；`V16__agent_model_prompt_hash.sql` 只持久化 prompt version/hash，不持久化完整私有 Prompt。
 - 新增代码注释与恶意 RAG 文档双重 Prompt Injection 评测夹具。
 
-下一步严格执行 Task 6，用完整注册表和 typed state executors 替换占位 `AgentStepHandler`。
+Task 6 已完成：
+
+- `AgentStepHandler` 已由占位字符串实现替换为 typed registry dispatch，所有可执行状态均有且仅有一个 executor。
+- executor 输入输出保持 provider-neutral、JSON 可序列化和版本化；checkpoint 限制为 8000 UTF-8 bytes，并持久化供恢复与幂等判断使用。
+- `AgentStepExecutionService` 继续统一负责锁、attempt、取消检查、retry 分类、指标和终态失败；executor 不绕过状态机私自修改状态。
+- 新增 retryable/permanent provider error 与 environment incomplete 分类，并覆盖取消、重复投递、非法模型输出和不同失败类型。
+- 当前各状态 executor 仅写入 state-specific typed checkpoint，不自动推进状态；这是 Task 7-10 接入真实 planning、tool、RAG、Patch、审批和发布链路的安全基座，避免未实现业务空跑完整流程。
+
+下一步严格执行 Task 7，实现 Planning 与 bounded LangChain4j tool loop。
 
 ## 3. 最新验证证据
 
 ```text
 backend: mvn test
-结果: 235 tests, 0 failures, 0 errors, 3 skipped
+结果: 241 tests, 0 failures, 0 errors, 3 skipped
 
 frontend: npm test
 结果: 4 passed
@@ -229,11 +237,11 @@ git diff --check
 
 - docs/superpowers/plans/2026-07-17-pr-gatekeeper-phase-5-langchain4j-agent-rag.md
 
-Task 1 前的源码核查确认 AgentStepHandler 仍是占位实现，StructuredAgentModelService 与 ReviewContextService 尚未进入生产 Agent 步骤链路。现在已建立 LangChain4j 依赖和 runtime 边界；后续仍不能重写现有控制面，而应继续以 LangChain4j 作为模型、Embedding、Retriever 和受控 Tool Calling 适配层，补齐真实分状态 Agent 编排。
+Task 1 前的源码核查确认 AgentStepHandler 当时仍是占位实现，StructuredAgentModelService 与 ReviewContextService 尚未进入生产 Agent 步骤链路。Task 6 已用 typed state executors 替换占位 handler；后续仍不能重写现有控制面，而应继续以 LangChain4j 作为模型、Embedding、Retriever 和受控 Tool Calling 适配层，将真实业务逐状态接入。
 
-Phase 5 Task 1-5 已按 TDD 完成。下一步从 Task 6 开始实现 typed state executors。V1-V15 均不得修改，V16 已使用，后续新增迁移从 V17 开始。每个 Task 后运行 backend、frontend 和 sandbox-runner 全量测试及 git diff --check。
+Phase 5 Task 1-6 已按 TDD 完成。下一步从 Task 7 开始实现 Planning 与 bounded LangChain4j tool loop。V1-V16 均不得修改，后续新增迁移从 V17 开始。每个 Task 后运行 backend、frontend 和 sandbox-runner 全量测试及 git diff --check。
 
-Phase 1-4 计划代码 Task 已完成；Phase 5 Task 1-5 已完成，Task 6-12 尚未实施。最终发布仍必须在具备 Docker 的环境执行以下动态验收：
+Phase 1-4 计划代码 Task 已完成；Phase 5 Task 1-6 已完成，Task 7-12 尚未实施。最终发布仍必须在具备 Docker 的环境执行以下动态验收：
 
 1. `docker compose config`、全部镜像构建与服务健康检查。
 2. PostgreSQL/RabbitMQ Testcontainers 三个跳过测试、RabbitMQ→Runner、Patch apply/validate 和依赖缓存真实联调。
@@ -251,5 +259,5 @@ Phase 1-4 计划代码 Task 已完成；Phase 5 Task 1-5 已完成，Task 6-12 �
 先读取 docs/PR守门Agent实施进度.md、Phase 3/4 计划、git status 和最近 20 个提交。
 Phase 1、Phase 2 和 Phase 3 Task 1-11 已完成；Task 12 的代码、静态加固和运维文档已完成，但 Docker 动态验收待补跑。不要重复实现，不要修改冻结的 V1-V4。
 
-Phase 1-4 的代码 Task 已实现。Phase 5 Task 1-5 已完成：固定 LangChain4j 1.8.0 与 runtime 边界，实现 Chat/Embedding adapter、调用审计、版本化向量、项目级 re-index、typed-scope Retriever 和安全 Prompt/Citation 组装；V14-V16 已使用。下一步从 Phase 5 Task 6 开始，严格 TDD 用 typed state executors 替换占位 `AgentStepHandler`；后续迁移从 V17 开始，不修改 V1-V16。当前主机无 Docker，不能宣称 Phase 3/4/5 最终发布验收通过。
+Phase 1-4 的代码 Task 已实现。Phase 5 Task 1-6 已完成：固定 LangChain4j 1.8.0 与 runtime 边界，实现 Chat/Embedding adapter、调用审计、版本化向量、项目级 re-index、typed-scope Retriever、安全 Prompt/Citation 组装，以及 typed state executor 注册、版本化 checkpoint 和统一失败分类；V14-V16 已使用。下一步从 Phase 5 Task 7 开始，严格 TDD 实现 Planning 与 bounded LangChain4j tool loop；后续迁移从 V17 开始，不修改 V1-V16。当前主机无 Docker，不能宣称 Phase 3/4/5 最终发布验收通过。
 ```
