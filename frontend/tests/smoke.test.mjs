@@ -29,3 +29,12 @@ test('invalid or stale patches disable human approval', () => {
   assert.equal(canApprovePatch({ applyStatus: 'SUCCEEDED', targetDisappeared: true, stale: true }), false)
   assert.equal(canApprovePatch({ applyStatus: 'SUCCEEDED', targetDisappeared: true, stale: false }), true)
 })
+
+test('agent workspace keeps run filtering, live refresh, and citation navigation', async () => {
+  const app = await readFile(new URL('../src/App.vue', import.meta.url), 'utf8')
+  const findings = await readFile(new URL('../src/components/agent/AgentFindings.vue', import.meta.url), 'utf8')
+  assert.match(app, /filteredAgentRuns/)
+  assert.match(app, /startAgentPolling/)
+  assert.match(app, /agent-evidence=/)
+  assert.match(findings, /data-evidence-path/)
+})
