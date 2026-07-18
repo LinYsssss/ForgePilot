@@ -251,6 +251,8 @@ git diff --check
 
 本机没有 `docker` 命令，因此以下项目尚未验证，不能记录为通过：
 
+- 已新增 `scripts/verify-langchain4j-agent.ps1` 作为统一验收入口；无 Docker 时输出 `DYNAMIC_ACCEPTANCE_INCOMPLETE` 并失败退出，不会误报放行。
+
 - `docker compose config` 和镜像构建。
 - RabbitMQ 到 Runner 的真实消息联调。
 - Docker Socket、容器网络和宿主路径隔离。
