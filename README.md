@@ -2,6 +2,8 @@
 
 RepoSage 以 Git Commit 的 Diff 为输入，结合项目知识库和大模型，生成结构化的代码审查报告：风险等级、问题定位、证据来源和修复建议。它适合作为「AI + 工程实践」的完整示例项目——既能用真实大模型跑通，也能在零配置（无 Key、无外部服务）下本地演示。
 
+它包含两条能力线：一是**交互式审查**——手动针对某次 commit / PR 的 Diff 触发审查；二是**事件驱动的 PR 守门 Agent**——由 GitHub/GitLab 的 PR webhook 自动触发一条持久化、可观测、带预算护栏的 Agent 流水线，在签名沙箱里取证，产出带证据的问题与门禁裁决，并可生成经人工审批的修复补丁。
+
 ---
 
 ## 它能做什么
@@ -51,6 +53,48 @@ Nginx :80 ──► Vue 前端（静态页面）
 
 ---
 
+## PR 守门 Agent（事件驱动的自动审查）
+
+除手动审查外，RepoSage 还实现了一条把「PR 事件」变成「带证据的审查结论 + 可选修复补丁」的自动流水线。整条链路以 PostgreSQL 为事实源，**模型输出一律视为不可信**，由确定性后端逐级校验后才允许影响结论。
+
+```text
+GitHub / GitLab PR Webhook
+  │  HMAC-SHA256 / X-Gitlab-Token 常时验签（对原始字节）、delivery 去重幂等
+  ▼
+归一化 PR 事件 ──► 创建 Agent Run（状态机 + 事务 Outbox + 预算护栏 + 重启恢复）
+  │                 同一 PR 出现新 head 时，旧的活跃 Run 经状态机置为 CANCELED
+  ▼
+Agent 步骤（RabbitMQ 异步，traceId 全程透传）
+  │   只读工具 git.diff / git.file / code.search 在【签名沙箱】里取证
+  │   LangChain4j 适配大模型：结构化输出 + schema/权限/路径/大小/预算/工具白名单校验 + 引用校验（防伪造证据）
+  ▼
+带证据的 Findings + 置信度加权 + 门禁裁决（高危 + 有效定位 + 置信度达阈值才拦截）
+  │
+  └─►（可选）生成补丁候选 → 沙箱内 baseline / apply / patched 三段校验
+           补丁内容【必须人工审批】，head 变更（stale-head）直接拒绝
+  ▼
+回写 PR 评论 / Check（GitHub）· MR note / commit status（GitLab）
+       评论只含 findings 与补丁状态标签，【绝不含补丁内容】
+```
+
+**安全边界（诚实声明）：**
+
+- 模型只能调用只读工具，**没有 `scm.publish`、也没有模型可调的 `patch.apply`**；补丁应用与结果回写都由后端确定性代码执行，不由模型决定。
+- 沙箱容器：`--network none`、只读根文件系统、`--cap-drop ALL`、`no-new-privileges`、非 root（65534）、CPU/内存/PID 限额、命令白名单、工作区路径围栏；镜像按 `@sha256` 摘要固定；作业以 HMAC 签名 + nonce 防重放。
+- Runner 不接收任何 SCM / LLM / 数据库密钥，只拿到「已脱敏的仓库归档引用 + 签名作业」；Prompt 与工具输出均做密钥脱敏。
+- 单机 Docker Compose 面向**受控演示环境**，不构成对抗恶意多租户的安全隔离边界。
+
+**本地验证基线**（最近一次记录；依赖 Docker 的项在无 Docker 主机上未验证）：
+
+- 后端 `mvn test`：190 项通过，3 项依赖 Docker 的 Testcontainers 用例明确跳过。
+- Sandbox Runner：37 项通过；前端：4 项测试通过 + 生产 Vite 构建通过。
+- 评测语料：6 个版本化用例，确定性输入校验通过；提交进仓库的评测基线是**已知混淆矩阵的计算**，不是真实 Docker 语料跑分。
+- 最终发布验收需要 Docker；缺 Docker 时，容器安全、真实链路追踪、语料基准跑分均属**未验证**。
+
+Demo 与运维细节见 `docs/PR守门Agent SCM与Sandbox运维验收.md`；Agent 运行时间线可在前端「审查工作台」查看，或经下方 `/api/agent-runs/**` 接口访问。
+
+---
+
 ## 技术栈
 
 | 模块 | 技术 |
@@ -62,6 +106,8 @@ Nginx :80 ──► Vue 前端（静态页面）
 | 大模型接口 | OpenAI 兼容 Chat API（MiMo 等），或内置 Mock |
 | 检索 | 全量注入（默认推荐）／内存余弦／pgvector（可选） |
 | 轻量模型 | FastAPI、scikit-learn、joblib |
+| PR 守门 Agent | SCM Webhook（GitHub/GitLab）、Agent 状态机 + 事务 Outbox、LangChain4j 适配大模型、签名 Docker 沙箱（独立 `sandbox-runner` 模块） |
+| 可观测 | Micrometer / Prometheus、OpenTelemetry、traceId（MDC）全链路关联 |
 | 部署 | Docker Compose、Nginx |
 
 ---
@@ -180,7 +226,7 @@ RAG_FULL_CONTEXT=true
 
 ## 使用流程
 
-1. 注册 / 登录。
+1. 登录（已关闭公开注册，首个管理员由 `SEED_ADMIN_*` 环境变量种子创建）。
 2. 创建项目。
 3. 绑定 Git 仓库（演示可用 `demo-repos/mall-order-service`）。
 4. 上传知识库文档（Markdown / TXT），如 `security-policy.md`、`order-flow.md`。
@@ -197,11 +243,11 @@ RAG_FULL_CONTEXT=true
 
 ## API 速查
 
-统一前缀 `/api`，除注册登录外均需请求头 `Authorization: Bearer <token>`。
+统一前缀 `/api`，除登录与 SCM webhook 外均需请求头 `Authorization: Bearer <token>`（webhook 改用 HMAC/Token 验签）。
 
 | 模块 | 方法与路径 |
 | --- | --- |
-| 认证 | `POST /api/auth/register`、`POST /api/auth/login`、`GET /api/auth/me` |
+| 认证 | `POST /api/auth/login`、`GET /api/auth/me`（无公开注册，首个管理员由 `SEED_ADMIN_*` 种子创建） |
 | 项目 | `POST /api/projects`、`GET /api/projects`、`GET/PUT/DELETE /api/projects/{projectId}` |
 | 仓库 | `POST/GET/DELETE /api/projects/{projectId}/repository`、`GET .../commits`、`GET .../commits/{commitId}/diff` |
 | PR 工作流 | `POST/GET/PUT /api/projects/{projectId}/pull-requests`、`POST .../pull-requests/{pullRequestId}/review-task`、`POST/GET .../pull-requests/{pullRequestId}/actions` |
@@ -210,6 +256,9 @@ RAG_FULL_CONTEXT=true
 | 反馈 | `POST/GET /api/review-issues/{issueId}/feedback` |
 | MQ 日志 | `GET /api/mq/logs` |
 | AI 日志 | `GET /api/ai/logs` |
+| Agent Run | `GET /api/agent-runs/{id}`、`GET .../{id}/timeline`、`POST .../{id}/cancel`、`POST .../{id}/retry`、`GET .../{id}/events`（SSE）、`GET /api/agent-runs/project/{projectId}` |
+| 补丁审批 | `GET /api/projects/{projectId}/agent-runs/{agentRunId}/patches`、`POST .../patches/{patchId}/approval`（人工审批，仅项目 owner） |
+| SCM Webhook | `POST /api/webhooks/scm/github`、`POST /api/webhooks/scm/gitlab`（HMAC/Token 验签，无需 Bearer） |
 
 接口字段细节见 `docs/03_接口设计文档.md`。
 
@@ -287,7 +336,7 @@ npm run build
 
 首次运行时，脚本会根据 `model-service/requirements.txt` 将 Python 依赖安装到被 Git 忽略的本地目录。
 
-后端冒烟（启动后端后执行，跑通注册→建项目→绑仓库→传知识库→审查→报告→反馈全链路）：
+后端冒烟（启动后端后执行，跑通登录→建项目→绑仓库→传知识库→审查→报告→反馈全链路）：
 
 ```text
 .\scripts\smoke-backend.ps1
@@ -325,30 +374,3 @@ npm run build
 | `docs/11_本地开发与联调手册.md` | 本地启动与联调 |
 | `docs/12_服务器部署与演示手册.md` | 服务器部署与演示 |
 | `代码仓库智能审查平台_需求规格说明书.md` | 需求规格说明 |
-# PR Gatekeeper Agent demo and verification
-
-The Phase 4 implementation includes language plugins, evidence-based gates, hybrid context retrieval,
-scope-validated and sandbox-verified Patch candidates, human approval, a versioned evaluation corpus,
-quality metrics, and OpenTelemetry/Prometheus deployment configuration.
-
-## Verified local baseline
-
-- Backend: 190 tests, 0 failures/errors, 3 Docker-dependent tests skipped.
-- Sandbox Runner: 37 tests, 0 failures/errors/skips.
-- Frontend: 4 tests passed and the production Vite build passed.
-- Evaluation manifest: 6 versioned cases; deterministic input validation passed.
-- The committed evaluation baseline is a known confusion-matrix calculation, not a real Docker corpus run.
-
-## Demo procedure
-
-1. Configure `deploy/.env` with database, RabbitMQ, signing, SCM, and model credentials.
-2. Run `docker compose -f deploy/docker-compose.yml config`, then build and start the stack.
-3. Verify backend health and Prometheus metrics, and open Prometheus on the loopback-bound port `9090`.
-4. Deliver a signed GitHub/GitLab PR webhook and follow its Agent Run timeline.
-5. Confirm the same trace is visible across webhook handling, RabbitMQ steps, model calls, and Sandbox jobs.
-6. Inspect findings/evidence, generate a Patch Candidate, run baseline/apply/patched validation, then approve or reject it in the Agent UI.
-7. Run `scripts/run-agent-evaluation.ps1 -Split development`, then the holdout suite without using holdout labels for tuning.
-8. Export JSON/Markdown metrics and enforce the documented quality gates.
-
-Docker is required for final release acceptance. On hosts without Docker, Compose, Testcontainers,
-container security, real trace propagation, and real corpus benchmark results remain unverified.
