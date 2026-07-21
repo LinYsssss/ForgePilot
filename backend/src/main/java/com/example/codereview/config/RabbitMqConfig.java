@@ -38,6 +38,7 @@ public class RabbitMqConfig {
     public static final String SANDBOX_EXCHANGE = "sandbox.exchange";
     public static final String SANDBOX_JOB_QUEUE = "sandbox.job.queue";
     public static final String SANDBOX_JOB_ROUTING_KEY = "sandbox.job";
+    public static final String SANDBOX_DEAD_ROUTING_KEY = "sandbox.dead";
 
     @Bean
     DirectExchange reviewExchange() {
@@ -137,7 +138,10 @@ public class RabbitMqConfig {
 
     @Bean
     Queue sandboxJobQueue() {
-        return QueueBuilder.durable(SANDBOX_JOB_QUEUE).build();
+        return QueueBuilder.durable(SANDBOX_JOB_QUEUE)
+                .deadLetterExchange(SANDBOX_EXCHANGE)
+                .deadLetterRoutingKey(SANDBOX_DEAD_ROUTING_KEY)
+                .build();
     }
 
     @Bean
