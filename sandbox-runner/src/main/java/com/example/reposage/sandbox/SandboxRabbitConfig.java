@@ -49,6 +49,11 @@ public class SandboxRabbitConfig {
     }
 
     @Bean
+    ObjectMapper objectMapper() {
+        return new ObjectMapper().findAndRegisterModules();
+    }
+
+    @Bean
     MessageConverter sandboxMessageConverter(ObjectMapper objectMapper) {
         return new Jackson2JsonMessageConverter(objectMapper);
     }
