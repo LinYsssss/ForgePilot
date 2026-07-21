@@ -61,10 +61,15 @@ public class GitCliService {
             Files.createDirectories(workRoot);
             Path localPath = resolveRepositoryPath(repository.getId());
             if (Files.exists(localPath.resolve(".git"))) {
-                run(localPath, repository, "fetch", "--all", "--prune");
-                run(localPath, repository, "checkout", repository.getDefaultBranch());
-                run(localPath, repository, "pull", "--ff-only", "origin", repository.getDefaultBranch());
-                return localPath;
+                if (remoteMatches(localPath, repository)) {
+                    run(localPath, repository, "fetch", "--all", "--prune");
+                    run(localPath, repository, "checkout", repository.getDefaultBranch());
+                    run(localPath, repository, "pull", "--ff-only", "origin", repository.getDefaultBranch());
+                    return localPath;
+                }
+                // 已存在的工作副本指向的是另一个远端(改绑了仓库,或工作卷比数据库存活更久导致 id 复用),
+                // 丢弃后按当前 repoUrl 重新克隆,避免读到别的仓库的历史。
+                deleteWorkingCopyLocked(repository.getId());
             }
             run(workRoot.toAbsolutePath(), repository, "clone", repository.getRepoUrl(), localPath.toString());
             run(localPath, repository, "checkout", repository.getDefaultBranch());
@@ -72,6 +77,30 @@ public class GitCliService {
         } catch (IOException ex) {
             throw new BusinessException(6001, "准备仓库目录失败");
         }
+    }
+
+    private boolean remoteMatches(Path localPath, CodeRepositoryEntity repository) {
+        String actual = currentRemoteUrl(localPath, repository);
+        return actual != null && normalizeRemote(actual).equals(normalizeRemote(repository.getRepoUrl()));
+    }
+
+    private String currentRemoteUrl(Path localPath, CodeRepositoryEntity repository) {
+        try {
+            return run(localPath, repository, "remote", "get-url", "origin").trim();
+        } catch (BusinessException ex) {
+            return null;
+        }
+    }
+
+    private String normalizeRemote(String url) {
+        if (url == null) {
+            return "";
+        }
+        String normalized = url.trim().replace('\\', '/').replaceAll("/+$", "");
+        if (normalized.regionMatches(true, normalized.length() - 4, ".git", 0, 4)) {
+            normalized = normalized.substring(0, normalized.length() - 4);
+        }
+        return normalized;
     }
 
     public List<CommitResponse> listCommits(CodeRepositoryEntity repository, int limit) {

@@ -49,10 +49,15 @@ public class RepositoryService {
                         request.defaultBranch(),
                         encryptedToken
                 ));
+        boolean repoUrlChanged = entity.getId() != null && !request.repoUrl().equals(entity.getRepoUrl());
         if (entity.getId() != null) {
             entity.update(request.repoUrl(), request.provider(), request.defaultBranch(), encryptedToken);
         }
         repositories.save(entity);
+        if (repoUrlChanged) {
+            // 改绑到新的仓库地址时丢弃旧的本地克隆,避免下次读提交时命中旧仓库。
+            gitCliService.deleteWorkingCopy(entity.getId());
+        }
         return RepositoryResponse.from(entity);
     }
 
