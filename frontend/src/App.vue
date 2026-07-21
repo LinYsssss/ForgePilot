@@ -187,7 +187,7 @@
           </div>
           <label class="field" v-if="needsToken" style="margin-top:16px">
             访问令牌 (私有仓库需要，加密存储，不回显)
-            <input v-model="repoForm.accessToken" type="password" placeholder="ghp_… / glpat-…" />
+            <input v-model="repoForm.accessToken" type="password" :placeholder="repoForm._tokenConfigured ? '已保存令牌，留空则沿用原令牌' : 'ghp_… / glpat-…'" />
           </label>
           <div class="actions">
             <button @click="run(bindRepository)" :disabled="busy.bind">
@@ -901,7 +901,7 @@ async function refreshAll() {
   try {
     await loadProjects()
     if (activeProject.value) {
-      await Promise.allSettled([loadDocuments(), loadReviews(), loadPullRequests(), loadAiLogs()])
+      await Promise.allSettled([loadRepository(), loadDocuments(), loadReviews(), loadPullRequests(), loadAiLogs()])
     }
   } finally { busy.refresh = false }
 }
@@ -962,6 +962,22 @@ function useDemoRepository() {
   repoForm.provider = 'LOCAL'
   repoForm.defaultBranch = activeProject.value?.defaultBranch || 'main'
   repoForm.accessToken = ''
+}
+async function loadRepository() {
+  if (!activeProject.value) return
+  try {
+    const repo = await api(`/projects/${activeProject.value.projectId}/repository`)
+    if (repo && repo.repoUrl) {
+      repoForm.repoUrl = repo.repoUrl
+      if (repo.provider) repoForm.provider = repo.provider
+      repoForm.defaultBranch = repo.defaultBranch || repoForm.defaultBranch
+      repoForm.accessToken = ''
+      repoForm._bound = true
+      repoForm._tokenConfigured = !!repo.tokenConfigured
+    }
+  } catch {
+    // 未绑定(detail 返回 404)或读取失败:保留当前表单，不清空用户正在填写的内容
+  }
 }
 async function bindRepository() {
   busy.bind = true
@@ -1204,7 +1220,7 @@ function resetReviewState() {
   commits.value = []; selectedCommit.value = null; diffFiles.value = []
   tasks.value = []; reports.value = []; activeTask.value = null; reportDetail.value = null; mqLogs.value = []
   pullRequests.value = []; activePullRequest.value = null; prActions.value = []; actionReportDetail.value = null; actionIssueIds.value = new Set()
-  repoForm._bound = false
+  Object.assign(repoForm, { repoUrl: '', provider: 'GITHUB', defaultBranch: activeProject.value?.defaultBranch || 'main', accessToken: '', _bound: false, _tokenConfigured: false })
   chosenDocs.value = new Set()
   resetPullRequestForm()
 }

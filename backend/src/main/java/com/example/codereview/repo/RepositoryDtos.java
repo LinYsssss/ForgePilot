@@ -22,16 +22,21 @@ public final class RepositoryDtos {
             Long repositoryId,
             Long projectId,
             String repoUrl,
+            String provider,
             String defaultBranch,
-            String status
+            String status,
+            boolean tokenConfigured
     ) {
         public static RepositoryResponse from(CodeRepositoryEntity entity) {
+            String token = entity.getAccessTokenCiphertext();
             return new RepositoryResponse(
                     entity.getId(),
                     entity.getProjectId(),
                     entity.getRepoUrl(),
+                    entity.getProvider(),
                     entity.getDefaultBranch(),
-                    entity.getStatus()
+                    entity.getStatus(),
+                    token != null && !token.isBlank()
             );
         }
     }

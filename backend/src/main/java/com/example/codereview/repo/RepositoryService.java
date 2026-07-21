@@ -40,17 +40,23 @@ public class RepositoryService {
         if (request.defaultBranch() != null && !request.defaultBranch().isBlank()) {
             GitInputValidator.requireSafeRef(request.defaultBranch(), "默认分支");
         }
-        String encryptedToken = cryptoService.encrypt(request.accessToken());
-        CodeRepositoryEntity entity = repositories.findByProjectId(projectId)
-                .orElseGet(() -> new CodeRepositoryEntity(
-                        projectId,
-                        request.repoUrl(),
-                        request.provider(),
-                        request.defaultBranch(),
-                        encryptedToken
-                ));
-        boolean repoUrlChanged = entity.getId() != null && !request.repoUrl().equals(entity.getRepoUrl());
-        if (entity.getId() != null) {
+        CodeRepositoryEntity entity = repositories.findByProjectId(projectId).orElse(null);
+        boolean repoUrlChanged = entity != null && !request.repoUrl().equals(entity.getRepoUrl());
+        String requestToken = request.accessToken();
+        String encryptedToken;
+        if ((requestToken == null || requestToken.isBlank())
+                && entity != null
+                && entity.getAccessTokenCiphertext() != null
+                && !entity.getAccessTokenCiphertext().isBlank()) {
+            // 已绑定且本次令牌留空:保留原有令牌,避免被覆盖成空(否则回填表单后再次绑定会清掉私有库令牌)。
+            encryptedToken = entity.getAccessTokenCiphertext();
+        } else {
+            encryptedToken = cryptoService.encrypt(requestToken == null ? "" : requestToken);
+        }
+        if (entity == null) {
+            entity = new CodeRepositoryEntity(projectId, request.repoUrl(), request.provider(),
+                    request.defaultBranch(), encryptedToken);
+        } else {
             entity.update(request.repoUrl(), request.provider(), request.defaultBranch(), encryptedToken);
         }
         repositories.save(entity);
