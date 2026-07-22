@@ -763,16 +763,16 @@
 
 <script setup>
 import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
+import { fmtDate, fmtTime, shortCommit } from './utils/format'
+import { useTheme } from './composables/useTheme'
+import { useToast } from './composables/useToast'
 import { api } from './api/client'
 import AgentReviewWorkspace from './components/agent/AgentReviewWorkspace.vue'
 
 const authenticated = ref(false)
 const tab = ref('dashboard')
 
-const theme = ref(localStorage.getItem('theme') || 'dark')
-function applyTheme() { document.documentElement.setAttribute('data-theme', theme.value) }
-function toggleTheme() { theme.value = theme.value === 'dark' ? 'light' : 'dark'; localStorage.setItem('theme', theme.value); applyTheme() }
-applyTheme()
+const { theme, toggleTheme } = useTheme()
 
 const me = reactive({ userId: null, username: '', nickname: '', role: '' })
 const projects = ref([])
@@ -816,7 +816,7 @@ const feedbackMap = reactive({})
 const fbDraft = reactive({})
 
 const busy = reactive({})
-const toast = reactive({ text: '', type: '' })
+const { toast, toastMsg } = useToast()
 
 const auth = reactive({ username: 'ysainlin', password: '' })
 const projectForm = reactive({ projectId: null, name: '', description: '', defaultBranch: 'main' })
@@ -937,11 +937,6 @@ const groupedAiLogs = computed(() => {
     return { date, relative: relativeDay(date), items, taskGroups }
   })
 })
-
-function toastMsg(text, type = '') {
-  toast.text = text; toast.type = type
-  setTimeout(() => (toast.text = ''), 3200)
-}
 
 async function run(action, key) {
   if (key) busy[key] = true
@@ -1584,9 +1579,6 @@ async function openTaskAiLogs(taskId) { await loadAiLogs(taskId); tab.value = 'a
 function toggleDate(date) { collapsedDates[date] = !collapsedDates[date] }
 
 /* ---------- helpers ---------- */
-function shortCommit(id) { return id ? id.slice(0, 8) : '-' }
-function fmtTime(t) { if (!t) return '-'; const d = new Date(t); return `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}` }
-function fmtDate(t) { if (!t) return '-'; const d = new Date(t); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}` }
 function relativeDay(dateStr) {
   const today = fmtDate(new Date().toISOString())
   const y = new Date(); y.setDate(y.getDate() - 1)
