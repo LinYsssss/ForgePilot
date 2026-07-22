@@ -10,6 +10,12 @@ services:
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     ports:
       - "127.0.0.1:5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U code_review -d code_review"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
 
   rabbitmq:
     image: rabbitmq:3-management
@@ -19,6 +25,12 @@ services:
     ports:
       - "127.0.0.1:5672:5672"
       - "127.0.0.1:15672:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 15s
+      timeout: 10s
+      retries: 12
+      start_period: 30s
 
   backend:
     build:
@@ -26,10 +38,14 @@ services:
     env_file:
       - .env
     depends_on:
-      - postgres
-      - rabbitmq
-      - model-service
-      - otel-collector
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      model-service:
+        condition: service_started
+      otel-collector:
+        condition: service_started
     environment:
       OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: http://otel-collector:4318/v1/traces
     ports:
@@ -37,6 +53,12 @@ services:
     volumes:
       - ../demo-repos:/app/demo-repos:ro
       - backend_work:/app/.work
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8080/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 12
+      start_period: 70s
 
   # Trusted orchestration component for controlled single-host demos. This is not a hostile
   # multi-tenant isolation boundary. Only the runner receives the Docker socket; containers it
@@ -53,8 +75,10 @@ services:
       SANDBOX_ARCHIVE_ROOT: /app/archives
       OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: http://otel-collector:4318/v1/traces
     depends_on:
-      - rabbitmq
-      - otel-collector
+      rabbitmq:
+        condition: service_healthy
+      otel-collector:
+        condition: service_started
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - sandbox_work:/app/.work

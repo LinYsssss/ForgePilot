@@ -11,9 +11,9 @@ public final class ReviewDtos {
     }
 
     public record CreateReviewTaskRequest(
-            String commitId,
-            String baseCommitId,
-            String branch,
+            @jakarta.validation.constraints.Size(max = 80) String commitId,
+            @jakarta.validation.constraints.Size(max = 80) String baseCommitId,
+            @jakarta.validation.constraints.Size(max = 200) String branch,
             List<Long> documentIds,
             Long pullRequestId
     ) {

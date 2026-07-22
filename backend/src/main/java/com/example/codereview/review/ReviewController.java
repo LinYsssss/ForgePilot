@@ -6,6 +6,7 @@ import com.example.codereview.review.ReviewDtos.CreateReviewTaskRequest;
 import com.example.codereview.review.ReviewDtos.ReviewReportDetail;
 import com.example.codereview.review.ReviewDtos.ReviewReportSummary;
 import com.example.codereview.review.ReviewDtos.ReviewTaskResponse;
+import jakarta.validation.Valid;
 import java.util.List;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -28,7 +29,7 @@ public class ReviewController {
     }
 
     @PostMapping("/tasks")
-    public ApiResponse<ReviewTaskResponse> createTask(@PathVariable Long projectId, @RequestBody CreateReviewTaskRequest request) {
+    public ApiResponse<ReviewTaskResponse> createTask(@PathVariable Long projectId, @Valid @RequestBody CreateReviewTaskRequest request) {
         return ApiResponse.ok(reviewService.create(projectId, currentUserProvider.getRequired().userId(), request));
     }
 
