@@ -35,6 +35,9 @@ public class SecurityConfig {
                 .exceptionHandling(ex -> ex.authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
                 .authorizeHttpRequests(auth -> {
                     auth.requestMatchers("/api/auth/login", "/api/actuator/health", "/actuator/health").permitAll();
+                    // Prometheus 在容器网络内直连 backend:8080 抓取指标,自身不带鉴权令牌,故放行该端点。
+                    // 公网侧由 nginx 只暴露 /actuator/health、其余 /actuator/* 返回 404,指标不外泄。
+                    auth.requestMatchers("/actuator/prometheus").permitAll();
                     // SCM webhooks are unauthenticated at the bearer-token layer; each delivery is
                     // instead gated by per-installation HMAC/token verification in the controller.
                     auth.requestMatchers("/api/webhooks/**").permitAll();
