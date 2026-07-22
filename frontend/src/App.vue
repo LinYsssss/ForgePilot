@@ -9,7 +9,7 @@
       <p class="auth-sub">AI 代码仓库智能审查平台</p>
       <div class="grid">
         <label class="field">用户名
-          <input v-model="auth.username" placeholder="developer" autocomplete="username" @keyup.enter="login" />
+          <input v-model="auth.username" placeholder="ysainlin" autocomplete="username" @keyup.enter="login" />
         </label>
         <label class="field">密码
           <input v-model="auth.password" type="password" placeholder="至少 6 位" autocomplete="current-password" @keyup.enter="login" />
@@ -813,7 +813,7 @@ const fbDraft = reactive({})
 const busy = reactive({})
 const toast = reactive({ text: '', type: '' })
 
-const auth = reactive({ username: 'developer', password: '123456' })
+const auth = reactive({ username: 'ysainlin', password: '' })
 const projectForm = reactive({ projectId: null, name: '', description: '', defaultBranch: 'main' })
 const repoForm = reactive({ repoUrl: '', provider: 'GITHUB', defaultBranch: 'main', accessToken: '' })
 const reviewForm = reactive({ commitId: '', baseCommitId: '', branch: '' })
