@@ -452,7 +452,12 @@
         </div>
 
         <div class="panel">
-          <div class="panel-head"><div><h2>已入库文档</h2><div class="sub">共 {{ documents.length }} 篇</div></div></div>
+          <div class="panel-head">
+            <div><h2>已入库文档</h2><div class="sub">共 {{ documents.length }} 篇</div></div>
+            <button class="sm secondary" :disabled="!documents.length || busy.reindex" @click="run(reindexKnowledge, 'reindex')">
+              <span v-if="busy.reindex" class="spinner dark"></span>重建索引
+            </button>
+          </div>
           <div v-if="!documents.length" class="empty"><div class="ico" aria-hidden="true">▣</div><p>知识库为空</p><p>上传业务流程或安全规范文档。</p></div>
           <div v-else class="doc-grid">
             <div v-for="d in documents" :key="d.documentId" class="doc-card">
@@ -824,6 +829,7 @@ const demoRepoPath = import.meta.env.VITE_DEMO_REPO_PATH || 'F:\\202605New\\demo
 
 let pollTimer = null
 let agentPollTimer = null
+let agentEventSource = null
 const pollingActive = ref(false)
 
 const tabTitles = { dashboard: '概览', projects: '项目管理', repository: '仓库配置', pullRequests: 'PR 工作流', knowledge: 'RAG 知识库', reviews: '代码审查', agent: 'Agent 审批', aiLogs: 'AI 调用日志' }
@@ -1306,6 +1312,11 @@ async function loadDocuments() {
   const ids = new Set(documents.value.map(d => d.documentId))
   chosenDocs.value = new Set([...chosenDocs.value].filter(id => ids.has(id)))
 }
+async function reindexKnowledge() {
+  const r = await api(`/projects/${activeProject.value.projectId}/knowledge/reindex`, { method: 'POST' })
+  await loadDocuments()
+  toastMsg(`索引已重建：${r.indexedDocuments}/${r.totalDocuments} 篇` + (r.failedDocuments ? `，${r.failedDocuments} 失败` : ''), 'success')
+}
 async function deleteDocument(id) {
   await api(`/projects/${activeProject.value.projectId}/knowledge/documents/${id}`, { method: 'DELETE' })
   await loadDocuments()
@@ -1512,16 +1523,30 @@ async function openAgentWorkspace() {
   if (agentRunId.value) await run(loadAgentWorkspace)
 }
 function startAgentPolling() {
-  if (agentPollTimer || !agentRunId.value) return
+  if (!agentRunId.value) return
   agentPolling.value = true
-  agentPollTimer = setInterval(async () => {
+  openAgentEvents() // 优先 SSE 实时推送(每次同步到当前 run)
+  if (agentPollTimer) return
+  agentPollTimer = setInterval(async () => { // 轮询兜底:SSE 不可用/断开时仍能更新
     if (tab.value !== 'agent' || busy.agent) return
     try { await loadAgentWorkspace() } catch { stopAgentPolling() }
-  }, 3000)
+  }, 8000)
+}
+function openAgentEvents() {
+  if (!agentRunId.value) return
+  if (agentEventSource && agentEventSource._runId === agentRunId.value) return
+  if (agentEventSource) { agentEventSource.close(); agentEventSource = null }
+  try {
+    const es = new EventSource(`/api/agent-runs/${agentRunId.value}/events`)
+    es._runId = agentRunId.value
+    es.onmessage = () => { if (tab.value === 'agent' && !busy.agent) loadAgentWorkspace().catch(() => {}) }
+    agentEventSource = es
+  } catch { agentEventSource = null }
 }
 function stopAgentPolling() {
   if (agentPollTimer) clearInterval(agentPollTimer)
   agentPollTimer = null
+  if (agentEventSource) { agentEventSource.close(); agentEventSource = null }
   agentPolling.value = false
 }
 async function onPatchDecided() { toastMsg('Patch 审批决定已记录', 'success'); await loadAgentWorkspace() }

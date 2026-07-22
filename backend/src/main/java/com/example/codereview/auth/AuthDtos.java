@@ -1,21 +1,10 @@
 package com.example.codereview.auth;
 
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Pattern;
-import jakarta.validation.constraints.Size;
 
 public final class AuthDtos {
 
     private AuthDtos() {
-    }
-
-    public record RegisterRequest(
-            @NotBlank @Size(min = 3, max = 64)
-            @Pattern(regexp = "^[A-Za-z0-9_.-]+$", message = "用户名只能包含字母、数字、下划线、点和连字符")
-            String username,
-            @NotBlank @Size(min = 6, max = 128) String password,
-            @Size(max = 64) String nickname
-    ) {
     }
 
     public record LoginRequest(

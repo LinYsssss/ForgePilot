@@ -3,7 +3,6 @@ package com.example.codereview.auth;
 import com.example.codereview.auth.AuthDtos.AuthResponse;
 import com.example.codereview.auth.AuthDtos.LoginRequest;
 import com.example.codereview.auth.AuthDtos.MeResponse;
-import com.example.codereview.auth.AuthDtos.RegisterRequest;
 import com.example.codereview.common.exception.BusinessException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;

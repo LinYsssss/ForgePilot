@@ -56,12 +56,14 @@ public class PatchApprovalService {
         if (wakeup != null) wakeup.wakeWaiting(agentRunId);
         return saved;
     }
-    public List<PatchCandidate> list(Long projectId, Long agentRunId, Long userId) {
+    public PatchListView list(Long projectId, Long agentRunId, Long userId) {
         projects.getRequired(projectId, userId);
         AgentRun run = runs.findById(agentRunId).orElseThrow(() -> new IllegalArgumentException("agent run not found"));
         if (!projectId.equals(run.getProjectId())) throw new IllegalArgumentException("agent run does not belong to project");
-        return patches.findByAgentRunIdOrderByIdAsc(agentRunId);
+        return new PatchListView(run.getHeadSha(), patches.findByAgentRunIdOrderByIdAsc(agentRunId));
     }
+
+    public record PatchListView(String runHeadSha, List<PatchCandidate> patches) {}
     private static String bounded(String value, int limit) {
         if (value == null) return ""; return value.length() <= limit ? value : value.substring(0, limit);
     }

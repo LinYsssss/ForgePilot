@@ -24,8 +24,8 @@ public class PatchApprovalController {
     @GetMapping
     public ApiResponse<java.util.List<PatchResponse>> list(@PathVariable Long projectId,
                                                             @PathVariable Long agentRunId) {
-        return ApiResponse.ok(service.list(projectId, agentRunId, users.getRequired().userId())
-                .stream().map(PatchResponse::from).toList());
+        var view = service.list(projectId, agentRunId, users.getRequired().userId());
+        return ApiResponse.ok(view.patches().stream().map(p -> PatchResponse.from(p, view.runHeadSha())).toList());
     }
     public record Request(@NotBlank String currentHeadSha, @NotNull PatchApprovalDecision decision, String comment) {}
     public record Response(Long approvalId, Long patchCandidateId, Long approverId, PatchApprovalDecision decision,
@@ -37,9 +37,11 @@ public class PatchApprovalController {
                                 String status, String applyStatus, String buildStatus, String testStatus,
                                 String scanStatus, boolean targetDisappeared, String validationLog,
                                 String validationResultJson, java.util.Set<Long> findingIds, boolean stale) {
-        static PatchResponse from(PatchCandidate p) { return new PatchResponse(p.getId(), p.getAgentRunId(),
+        static PatchResponse from(PatchCandidate p, String runHeadSha) {
+            boolean stale = runHeadSha != null && p.getHeadSha() != null && !runHeadSha.equals(p.getHeadSha());
+            return new PatchResponse(p.getId(), p.getAgentRunId(),
                 p.getHeadSha(), p.getPatchHash(), p.getPatchContent(), p.getStatus(), p.getApplyStatus(),
                 p.getBuildStatus(), p.getTestStatus(), p.getScanStatus(), p.isTargetDisappeared(),
-                p.getValidationLog(), p.getValidationResultJson(), p.getFindingIds(), false); }
+                p.getValidationLog(), p.getValidationResultJson(), p.getFindingIds(), stale); }
     }
 }
