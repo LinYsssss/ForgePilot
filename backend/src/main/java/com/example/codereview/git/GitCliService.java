@@ -92,7 +92,8 @@ public class GitCliService {
         }
     }
 
-    private String normalizeRemote(String url) {
+    // 包级可见以便单测覆盖归一化规则(去空白/末尾斜杠/单个 .git 后缀)。
+    String normalizeRemote(String url) {
         if (url == null) {
             return "";
         }

@@ -46,9 +46,11 @@ public class RepositoryService {
         String encryptedToken;
         if ((requestToken == null || requestToken.isBlank())
                 && entity != null
+                && !repoUrlChanged
                 && entity.getAccessTokenCiphertext() != null
                 && !entity.getAccessTokenCiphertext().isBlank()) {
-            // 已绑定且本次令牌留空:保留原有令牌,避免被覆盖成空(否则回填表单后再次绑定会清掉私有库令牌)。
+            // 同一仓库且本次令牌留空:保留原有令牌,避免被覆盖成空(否则回填表单后再次绑定会清掉私有库令牌)。
+            // 改绑到不同仓库时不保留——旧库令牌对新库通常无效,应要求重新填写。
             encryptedToken = entity.getAccessTokenCiphertext();
         } else {
             encryptedToken = cryptoService.encrypt(requestToken == null ? "" : requestToken);
