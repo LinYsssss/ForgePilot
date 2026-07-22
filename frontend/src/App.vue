@@ -104,6 +104,44 @@
           </div>
         </div>
 
+        <div v-if="activeProject && reports.length" class="viz-row">
+          <div class="panel viz">
+            <div class="panel-head"><div><h2>风险分布</h2><div class="sub">按报告总体风险</div></div></div>
+            <div class="donut-wrap">
+              <svg class="donut" viewBox="0 0 120 120" role="img" :aria-label="`风险分布，共 ${reports.length} 份报告`">
+                <circle class="donut-track" cx="60" cy="60" r="50" />
+                <circle v-for="s in riskDonut" :key="s.key" class="donut-seg" cx="60" cy="60" r="50"
+                  :stroke-dasharray="`${s.dash} ${s.C - s.dash}`" :stroke-dashoffset="s.offset"
+                  :style="{ stroke: s.color }" transform="rotate(-90 60 60)"
+                  @mouseenter="showTip($event, `${s.label}风险 · ${s.count} (${s.pct}%)`)" @mousemove="moveTip" @mouseleave="hideTip" />
+                <text class="donut-total" x="60" y="57">{{ reports.length }}</text>
+                <text class="donut-cap" x="60" y="71">报告</text>
+              </svg>
+              <div class="legend">
+                <button v-for="s in riskDistribution" :key="s.key" class="legend-item"
+                  @mouseenter="showTip($event, `${s.label}风险 · ${s.count}`)" @mousemove="moveTip" @mouseleave="hideTip">
+                  <span class="dot" :style="{ background: s.color }"></span>
+                  <span class="lg-label">{{ s.label }}风险</span>
+                  <span class="lg-count mono">{{ s.count }}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+          <div class="panel viz">
+            <div class="panel-head">
+              <div><h2>审查活动</h2><div class="sub">近 {{ activitySeries.length }} 次审查 · 问题数</div></div>
+              <span class="badge plain">累计 {{ totalIssues }} 问题</span>
+            </div>
+            <div class="cols">
+              <div v-for="a in activitySeries" :key="a.reportId" class="col-cell"
+                @mouseenter="showTip($event, `${a.when} · ${a.issues} 问题`)" @mousemove="moveTip" @mouseleave="hideTip">
+                <div class="col-bar" :style="{ height: Math.max(a.h, 6) + '%' }"></div>
+              </div>
+            </div>
+          </div>
+          <div v-show="vizTip.show" class="viz-tip" :style="{ left: vizTip.x + 'px', top: vizTip.y + 'px' }">{{ vizTip.text }}</div>
+        </div>
+
         <div class="panel">
           <div class="panel-head">
             <div><h2>最近审查报告</h2><div class="sub">{{ activeProject ? activeProject.name : '请选择项目' }}</div></div>
@@ -556,6 +594,9 @@
                 <span v-if="severityTally.MEDIUM" class="sev-tally risk-MEDIUM">{{ severityTally.MEDIUM }} 中危</span>
                 <span v-if="severityTally.LOW" class="sev-tally risk-LOW">{{ severityTally.LOW }} 低危</span>
               </div>
+              <div class="sev-strip" v-if="severityStrip.length" role="img" aria-label="严重度分布">
+                <span v-for="seg in severityStrip" :key="seg.key" class="sev-seg" :style="{ width: seg.pct + '%', background: seg.color }" :title="`${seg.label}危 ${seg.count}`"></span>
+              </div>
             </div>
           </div>
 
@@ -569,12 +610,13 @@
             </div>
             <p>{{ issue.description }}</p>
             <div class="kv" v-if="issue.impact"><b>影响</b><span>{{ issue.impact }}</span></div>
-            <div class="kv" v-if="issue.evidence"><b>证据</b><span>{{ issue.evidence }}</span></div>
-            <div class="kv"><b>建议</b><span>{{ issue.suggestion }}</span></div>
-            <div class="conf" v-if="issue.confidence != null">
-              置信度
+            <div class="callout co-evidence" v-if="issue.evidence"><span class="co-tag">证据</span><span class="co-body">{{ issue.evidence }}</span></div>
+            <div class="callout co-fix" v-if="issue.suggestion"><span class="co-tag">建议</span><span class="co-body">{{ issue.suggestion }}</span></div>
+            <div class="conf" v-if="issue.confidence != null" :class="confClass(issue.confidence)">
+              <span class="conf-label">置信度</span>
               <span class="conf-bar"><span :style="{ width: Math.round(issue.confidence*100) + '%' }"></span></span>
-              {{ Math.round(issue.confidence*100) }}%
+              <span class="conf-pct">{{ Math.round(issue.confidence*100) }}%</span>
+              <span class="conf-tag">{{ confText(issue.confidence) }}</span>
             </div>
 
             <div class="issue-foot">
@@ -789,6 +831,46 @@ const tabTitle = computed(() => tabTitles[tab.value] || 'RepoSage')
 const repoBound = computed(() => commits.value.length > 0 || repoForm._bound)
 const needsToken = computed(() => /^https?:\/\//i.test(repoForm.repoUrl.trim()))
 const highRiskCount = computed(() => reports.value.filter(r => r.overallRisk === 'HIGH').length)
+const totalIssues = computed(() => reports.value.reduce((s, r) => s + (r.issueCount || 0), 0))
+const RISK_META = [
+  { key: 'HIGH', label: '高', color: 'var(--risk-high)' },
+  { key: 'MEDIUM', label: '中', color: 'var(--risk-medium)' },
+  { key: 'LOW', label: '低', color: 'var(--risk-low)' },
+  { key: 'NONE', label: '无', color: 'var(--risk-none)' },
+]
+const riskDistribution = computed(() => {
+  const counts = {}
+  for (const r of reports.value) counts[r.overallRisk] = (counts[r.overallRisk] || 0) + 1
+  return RISK_META.map(m => ({ ...m, count: counts[m.key] || 0 })).filter(m => m.count > 0)
+})
+const riskDonut = computed(() => {
+  const total = reports.value.length || 1
+  const C = 2 * Math.PI * 50
+  const GAP = riskDistribution.value.length > 1 ? (1.4 / 100) * C : 0 // 段间 ~2px 视觉间隙
+  let cum = 0
+  return riskDistribution.value.map(m => {
+    const frac = m.count / total
+    const seg = { ...m, pct: Math.round(frac * 100), dash: Math.max(frac * C - GAP, 2), offset: -cum, C }
+    cum += frac * C
+    return seg
+  })
+})
+const activitySeries = computed(() => {
+  const rs = [...reports.value]
+    .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt))
+    .slice(-14)
+  const max = Math.max(1, ...rs.map(r => r.issueCount || 0))
+  return rs.map(r => ({
+    reportId: r.reportId,
+    issues: r.issueCount || 0,
+    when: fmtTime(r.createdAt),
+    h: Math.round(((r.issueCount || 0) / max) * 100),
+  }))
+})
+const vizTip = reactive({ show: false, x: 0, y: 0, text: '' })
+function showTip(e, text) { vizTip.text = text; vizTip.x = e.clientX; vizTip.y = e.clientY; vizTip.show = true }
+function moveTip(e) { vizTip.x = e.clientX; vizTip.y = e.clientY }
+function hideTip() { vizTip.show = false }
 const filteredAgentRuns = computed(() => agentRuns.value.filter(runItem => {
   if (agentRunFilter.value === 'ALL') return true
   if (agentRunFilter.value === 'ACTIVE') return ['RECEIVED', 'PREPARING_REPOSITORY', 'ANALYZING_CHANGE', 'RETRIEVING_CONTEXT', 'PLANNING', 'EXECUTING_TOOLS', 'VERIFYING_FINDINGS', 'GENERATING_PATCH', 'VALIDATING_PATCH', 'PUBLISHING_RESULT'].includes(runItem.status)
@@ -818,6 +900,18 @@ const severityTally = computed(() => {
   if (reportDetail.value) for (const i of reportDetail.value.issues) t[i.severity] = (t[i.severity] || 0) + 1
   return t
 })
+const SEV_META = [
+  { key: 'HIGH', label: '高', color: 'var(--risk-high)' },
+  { key: 'MEDIUM', label: '中', color: 'var(--risk-medium)' },
+  { key: 'LOW', label: '低', color: 'var(--risk-low)' },
+]
+const severityStrip = computed(() => {
+  const t = severityTally.value
+  const total = SEV_META.reduce((s, m) => s + (t[m.key] || 0), 0) || 1
+  return SEV_META.map(m => ({ ...m, count: t[m.key] || 0, pct: (t[m.key] || 0) / total * 100 })).filter(m => m.count > 0)
+})
+function confClass(c) { return c >= 0.75 ? 'c-high' : c >= 0.5 ? 'c-mid' : 'c-low' }
+function confText(c) { return c >= 0.75 ? '高置信' : c >= 0.5 ? '中等' : '较低' }
 
 const groupedAiLogs = computed(() => {
   const byDate = new Map()
@@ -980,9 +1074,17 @@ async function loadRepository() {
   }
 }
 async function bindRepository() {
+  if (!repoForm.repoUrl.trim()) return toastMsg('请填写 Git 地址', 'error')
   busy.bind = true
   try {
-    await api(`/projects/${activeProject.value.projectId}/repository`, { method: 'POST', body: JSON.stringify(repoForm) })
+    // 只发后端 BindRepositoryRequest 声明的字段,避免把 UI 内部标志(_bound/_tokenConfigured)一并 POST。
+    const body = JSON.stringify({
+      repoUrl: repoForm.repoUrl,
+      provider: repoForm.provider,
+      defaultBranch: repoForm.defaultBranch,
+      accessToken: repoForm.accessToken,
+    })
+    await api(`/projects/${activeProject.value.projectId}/repository`, { method: 'POST', body })
     repoForm._bound = true
     repoForm.accessToken = ''
     toastMsg('仓库已绑定', 'success')
@@ -1055,7 +1157,7 @@ async function savePullRequest() {
   if (!pullRequestForm.baseSha.trim() || !pullRequestForm.headSha.trim()) return toastMsg('请填写 Base 和 Head', 'error')
   busy.pullRequest = true
   try {
-    const body = JSON.stringify({
+    const payload = {
       prNumber: pullRequestForm.prNumber || null,
       title: pullRequestForm.title,
       authorName: pullRequestForm.authorName,
@@ -1065,12 +1167,14 @@ async function savePullRequest() {
       headSha: pullRequestForm.headSha,
       provider: pullRequestForm.provider,
       externalPrId: pullRequestForm.externalPrId,
-      status: pullRequestForm.status,
-    })
+    }
     if (pullRequestForm.pullRequestId) {
+      // status 仅 UpdatePullRequestRequest 有;创建端点(CreatePullRequestRequest)无该字段。
+      const body = JSON.stringify({ ...payload, status: pullRequestForm.status })
       await api(`/projects/${activeProject.value.projectId}/pull-requests/${pullRequestForm.pullRequestId}`, { method: 'PUT', body })
       toastMsg('PR 已更新', 'success')
     } else {
+      const body = JSON.stringify(payload)
       const created = await api(`/projects/${activeProject.value.projectId}/pull-requests`, { method: 'POST', body })
       activePullRequest.value = created
       toastMsg('PR 已登记', 'success')

@@ -821,3 +821,60 @@ button.vote.on-NEED_DISCUSSION { background: var(--risk-medium-bg); color: var(-
 .evidence-focus{outline:2px solid var(--accent);outline-offset:4px;border-radius:4px}
 .numbered-diff{overflow:auto;max-height:520px;font-family:var(--mono,ui-monospace,monospace);font-size:12px}.diff-row{display:grid;grid-template-columns:42px minmax(max-content,1fr);white-space:pre;line-height:1.55}.diff-number{color:var(--muted);text-align:right;padding-right:12px;border-right:1px solid var(--border);user-select:none}.diff-row code{padding-left:10px}.diff-row.add{background:rgba(34,197,94,.1)}.diff-row.del{background:rgba(239,68,68,.1)}.diff-row.hunk{color:#60a5fa;background:rgba(59,130,246,.08)}.diff-row.meta{color:var(--muted)}
 .field-hint{display:block;color:var(--muted);font-size:12px;margin-top:5px}.inline-link{border:0;background:none;color:var(--accent);padding:0;cursor:pointer;font:inherit}
+
+/* ============================================================
+   DASHBOARD VIZ · 阶段1(风险分布环形 + 审查活动柱)
+   复用 Observatory 令牌;风险用保留的状态色,活动为单一 accent 色。
+   ============================================================ */
+.viz-row { display: grid; grid-template-columns: minmax(230px, 0.85fr) 1.4fr; gap: var(--sp-4); margin-bottom: var(--sp-5); }
+@media (max-width: 760px) { .viz-row { grid-template-columns: 1fr; } }
+.panel.viz { margin-bottom: 0; }
+
+.donut-wrap { display: flex; align-items: center; gap: var(--sp-5); flex-wrap: wrap; }
+.donut { width: 128px; height: 128px; flex: none; }
+.donut-track { fill: none; stroke: var(--surface-3); stroke-width: 12; }
+.donut-seg { fill: none; stroke-width: 12; stroke-linecap: butt; cursor: default; transition: stroke-width var(--t-fast) var(--ease-out); }
+.donut-seg:hover { stroke-width: 15; }
+.donut-total { fill: var(--text); font-family: var(--font-display); font-size: 27px; font-weight: 800; text-anchor: middle; letter-spacing: -0.02em; }
+.donut-cap { fill: var(--text-dim); font-size: 10.5px; text-anchor: middle; letter-spacing: 0.14em; }
+.legend { display: flex; flex-direction: column; gap: 2px; min-width: 118px; flex: 1; }
+.legend-item { display: flex; align-items: center; gap: var(--sp-2); background: none; border: 0; padding: 5px 7px; border-radius: var(--r-xs); color: var(--text-soft); font-size: var(--fs-sm); cursor: default; transition: background var(--t-fast); }
+.legend-item:hover { background: var(--surface-2); }
+.legend .dot { width: 10px; height: 10px; border-radius: 3px; flex: none; box-shadow: 0 0 9px -1px currentColor; }
+.legend .lg-label { flex: 1; text-align: left; }
+.legend .lg-count { color: var(--text); font-weight: 700; }
+
+.cols { display: flex; align-items: flex-end; gap: 5px; height: 128px; padding-top: var(--sp-3); }
+.col-cell { flex: 1 1 0; max-width: 46px; height: 100%; display: flex; align-items: flex-end; justify-content: center; cursor: default; }
+.col-bar { width: 100%; min-height: 4px; background: linear-gradient(180deg, var(--accent), var(--accent-strong)); border-radius: 3px 3px 0 0; box-shadow: 0 0 14px -5px var(--accent-glow); transition: filter var(--t-fast); }
+.col-cell:hover .col-bar { filter: brightness(1.2) saturate(1.1); }
+
+.viz-tip { position: fixed; z-index: var(--z-toast); transform: translate(-50%, calc(-100% - 12px)); background: var(--surface-3); color: var(--text); border: 1px solid var(--border-strong); border-radius: var(--r-xs); padding: 5px 9px; font-size: var(--fs-sm); font-family: var(--font-mono); white-space: nowrap; pointer-events: none; box-shadow: var(--e-2); }
+
+/* ============================================================
+   REPORT DETAIL 精修 · 阶段2(严重度分布条 + 证据/建议卡片 + 置信度分级)
+   ============================================================ */
+.sev-strip { display: flex; gap: 2px; height: 7px; margin-top: var(--sp-3); border-radius: var(--r-full); overflow: hidden; max-width: 340px; }
+.sev-seg { height: 100%; min-width: 3px; border-radius: 2px; }
+
+.issue .callout { position: relative; display: grid; grid-template-columns: auto 1fr; gap: var(--sp-3); align-items: baseline; margin: var(--sp-2) 0; padding: var(--sp-3) var(--sp-3) var(--sp-3) var(--sp-4); border-radius: var(--r-sm); border: 1px solid var(--border-faint); }
+.issue .callout::before { content: ""; position: absolute; left: 0; top: 8px; bottom: 8px; width: 3px; border-radius: var(--r-full); }
+.issue .callout .co-tag { font-size: var(--fs-xs); font-weight: 800; letter-spacing: 0.04em; padding: 2px 8px; border-radius: var(--r-full); white-space: nowrap; }
+.issue .callout .co-body { color: var(--text-soft); font-size: var(--fs-sm); line-height: 1.62; }
+.co-evidence { background: var(--surface-inset); }
+.co-evidence::before { background: var(--text-dim); }
+.co-evidence .co-tag { color: var(--text-dim); background: var(--surface-3); }
+.co-evidence .co-body { font-family: var(--font-mono); font-size: var(--fs-xs); color: var(--code-text); word-break: break-word; }
+.co-fix { background: var(--accent-soft); border-color: var(--accent-ring); }
+.co-fix::before { background: var(--accent); box-shadow: 0 0 10px -2px var(--accent-glow); }
+.co-fix .co-tag { color: var(--accent-contrast); background: var(--accent); }
+
+.issue .conf .conf-label { color: var(--text-dim); }
+.issue .conf .conf-pct { color: var(--text); font-weight: 700; font-family: var(--font-mono); }
+.issue .conf .conf-tag { font-size: var(--fs-xs); font-weight: 700; padding: 1px 7px; border-radius: var(--r-full); }
+.conf.c-high .conf-bar > span { background: linear-gradient(90deg, var(--accent-strong), var(--accent)); }
+.conf.c-high .conf-tag { color: var(--risk-low); background: var(--risk-low-bg); }
+.conf.c-mid .conf-bar > span { background: linear-gradient(90deg, var(--risk-medium), #ffc76b); }
+.conf.c-mid .conf-tag { color: var(--risk-medium); background: var(--risk-medium-bg); }
+.conf.c-low .conf-bar > span { background: var(--risk-none); }
+.conf.c-low .conf-tag { color: var(--risk-none); background: var(--risk-none-bg); }
