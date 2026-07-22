@@ -766,17 +766,15 @@ import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
 import { fmtDate, fmtTime, shortCommit } from './utils/format'
 import { useTheme } from './composables/useTheme'
 import { useToast } from './composables/useToast'
+import { useSession } from './composables/useSession'
 import { api } from './api/client'
 import AgentReviewWorkspace from './components/agent/AgentReviewWorkspace.vue'
 
-const authenticated = ref(false)
+const { authenticated, me, projects, activeProject } = useSession()
 const tab = ref('dashboard')
 
 const { theme, toggleTheme } = useTheme()
 
-const me = reactive({ userId: null, username: '', nickname: '', role: '' })
-const projects = ref([])
-const activeProject = ref(null)
 const commits = ref([])
 const selectedCommit = ref(null)
 const diffFiles = ref([])
