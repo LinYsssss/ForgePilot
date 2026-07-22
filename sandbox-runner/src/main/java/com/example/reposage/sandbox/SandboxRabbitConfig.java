@@ -1,5 +1,6 @@
 package com.example.reposage.sandbox;
 
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.amqp.core.Binding;
 import org.springframework.amqp.core.BindingBuilder;
@@ -50,7 +51,12 @@ public class SandboxRabbitConfig {
 
     @Bean
     ObjectMapper objectMapper() {
-        return new ObjectMapper().findAndRegisterModules();
+        // 消息由 backend 的 Spring ObjectMapper 序列化;消费端对未知字段容错,
+        // 这样 backend 给 SandboxJob 加字段时不会导致反序列化失败。
+        // (SandboxJob 无 java.time 字段,时间用 long epoch 秒,故不涉及日期格式差异。)
+        return new ObjectMapper()
+                .findAndRegisterModules()
+                .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
     }
 
     @Bean
