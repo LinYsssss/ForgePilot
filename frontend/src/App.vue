@@ -544,21 +544,7 @@
             <button class="sm danger" @click="askDeleteReport(reportDetail)">删除报告</button>
           </div>
 
-          <div class="report-summary">
-            <div class="risk-dial" :class="'r-' + reportDetail.overallRisk">{{ reportDetail.overallRisk }}</div>
-            <div class="rs-body">
-              <h3>{{ reportDetail.summary || '审查完成' }}</h3>
-              <div class="rs-meta">
-                <span class="sev-tally risk-NONE">共 {{ reportDetail.issues.length }} 问题</span>
-                <span v-if="severityTally.HIGH" class="sev-tally risk-HIGH">{{ severityTally.HIGH }} 高危</span>
-                <span v-if="severityTally.MEDIUM" class="sev-tally risk-MEDIUM">{{ severityTally.MEDIUM }} 中危</span>
-                <span v-if="severityTally.LOW" class="sev-tally risk-LOW">{{ severityTally.LOW }} 低危</span>
-              </div>
-              <div class="sev-strip" v-if="severityStrip.length" role="img" aria-label="严重度分布">
-                <span v-for="seg in severityStrip" :key="seg.key" class="sev-seg" :style="{ width: seg.pct + '%', background: seg.color }" :title="`${seg.label}危 ${seg.count}`"></span>
-              </div>
-            </div>
-          </div>
+          <ReportSummary :report="reportDetail" />
 
           <div v-if="!reportDetail.issues.length" class="empty"><div class="ico" aria-hidden="true">✓</div><p>未发现明显风险</p></div>
           <div v-for="issue in sortedIssues" :key="issue.issueId" class="issue" :class="'sevbar-' + issue.severity">
@@ -726,6 +712,7 @@ import { api } from './api/client'
 import AgentReviewWorkspace from './components/agent/AgentReviewWorkspace.vue'
 import DashboardViz from './components/DashboardViz.vue'
 import DashboardStats from './components/DashboardStats.vue'
+import ReportSummary from './components/ReportSummary.vue'
 
 const { authenticated, me, projects, activeProject } = useSession()
 const tab = ref('dashboard')
@@ -815,21 +802,6 @@ const SEV_ORDER = { HIGH: 0, MEDIUM: 1, LOW: 2, NONE: 3 }
 const sortedIssues = computed(() => {
   if (!reportDetail.value) return []
   return [...reportDetail.value.issues].sort((a, b) => (SEV_ORDER[a.severity] ?? 9) - (SEV_ORDER[b.severity] ?? 9))
-})
-const severityTally = computed(() => {
-  const t = { HIGH: 0, MEDIUM: 0, LOW: 0, NONE: 0 }
-  if (reportDetail.value) for (const i of reportDetail.value.issues) t[i.severity] = (t[i.severity] || 0) + 1
-  return t
-})
-const SEV_META = [
-  { key: 'HIGH', label: '高', color: 'var(--risk-high)' },
-  { key: 'MEDIUM', label: '中', color: 'var(--risk-medium)' },
-  { key: 'LOW', label: '低', color: 'var(--risk-low)' },
-]
-const severityStrip = computed(() => {
-  const t = severityTally.value
-  const total = SEV_META.reduce((s, m) => s + (t[m.key] || 0), 0) || 1
-  return SEV_META.map(m => ({ ...m, count: t[m.key] || 0, pct: (t[m.key] || 0) / total * 100 })).filter(m => m.count > 0)
 })
 function confClass(c) { return c >= 0.75 ? 'c-high' : c >= 0.5 ? 'c-mid' : 'c-low' }
 function confText(c) { return c >= 0.75 ? '高置信' : c >= 0.5 ? '中等' : '较低' }
