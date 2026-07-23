@@ -93,16 +93,7 @@
 
       <!-- ============ DASHBOARD ============ -->
       <template v-if="tab === 'dashboard'">
-        <div class="stat-grid">
-          <div class="stat"><span class="spark" aria-hidden="true">▤</span><div class="label">项目总数</div><div class="value">{{ projects.length }}</div></div>
-          <div class="stat"><span class="spark" aria-hidden="true">✓</span><div class="label">审查任务</div><div class="value">{{ tasks.length }}</div></div>
-          <div class="stat"><span class="spark" aria-hidden="true">▦</span><div class="label">审查报告</div><div class="value">{{ reports.length }}</div></div>
-          <div class="stat">
-            <span class="spark" aria-hidden="true">⚠</span>
-            <div class="label">高风险报告</div>
-            <div class="value" :class="highRiskCount ? 'tinted-high' : 'tinted-ok'">{{ highRiskCount }}</div>
-          </div>
-        </div>
+        <DashboardStats :project-count="projects.length" :task-count="tasks.length" :report-count="reports.length" :high-risk="highRiskCount" />
 
         <DashboardViz v-if="activeProject" :reports="reports" />
 
@@ -734,6 +725,7 @@ import { useSession } from './composables/useSession'
 import { api } from './api/client'
 import AgentReviewWorkspace from './components/agent/AgentReviewWorkspace.vue'
 import DashboardViz from './components/DashboardViz.vue'
+import DashboardStats from './components/DashboardStats.vue'
 
 const { authenticated, me, projects, activeProject } = useSession()
 const tab = ref('dashboard')
