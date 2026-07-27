@@ -4,7 +4,7 @@
       <div><span>Agent Run</span><strong>#{{ agentRunId }}</strong></div>
       <div><span>Head SHA</span><code>{{ shortSha }}</code></div>
       <div><span>完成步骤</span><strong>{{ completedSteps }}/{{ timeline.length }}</strong></div>
-      <div><span>Findings</span><strong>{{ findings.length }}</strong></div>
+      <div><span>Findings</span><strong>{{ activeFindings }}</strong></div>
       <div><span>Patch</span><strong>{{ patchState }}</strong></div>
     </section>
     <AgentTimeline :steps="timeline" />
@@ -22,6 +22,8 @@ import PatchApprovalPanel from './PatchApprovalPanel.vue'
 const props = defineProps({ projectId: Number, agentRunId: Number, currentHeadSha: String, timeline: { type: Array, default: () => [] }, findings: { type: Array, default: () => [] }, patch: Object })
 defineEmits(['decided', 'error'])
 const completedSteps = computed(() => props.timeline.filter(step => ['SUCCEEDED', 'COMPLETED', 'SUCCESS'].includes(step.status)).length)
+// 被验证器否决的 Finding 不计入摘要,否则会高估这次 run 的问题数
+const activeFindings = computed(() => props.findings.filter(f => f.status !== 'rejected').length)
 const shortSha = computed(() => props.currentHeadSha ? props.currentHeadSha.slice(0, 12) : '-')
 const patchState = computed(() => props.patch?.status || 'NONE')
 </script>

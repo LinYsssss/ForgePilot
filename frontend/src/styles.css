@@ -239,7 +239,6 @@ button.warn { background: transparent; color: var(--risk-medium); border: 1px so
 button.warn:hover:not(:disabled) { background: var(--risk-medium-bg); border-color: var(--risk-medium); }
 
 button.sm { min-height: 32px; padding: 0 12px; font-size: var(--fs-sm); border-radius: var(--r-xs); }
-button.icon { min-height: 34px; min-width: 34px; padding: 0; }
 
 /* ============================================================
    LAYOUT
@@ -687,7 +686,6 @@ button.vote.on-NEED_DISCUSSION { background: var(--risk-medium-bg); color: var(-
 .spinner.dark { border-color: var(--border-strong); border-top-color: var(--accent); }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-.loading-overlay { display: flex; align-items: center; justify-content: center; gap: var(--sp-3); padding: var(--sp-8); color: var(--text-dim); font-weight: 600; }
 
 .skeleton { display: grid; gap: var(--sp-2); }
 .sk-row {
@@ -907,3 +905,12 @@ button.vote.on-NEED_DISCUSSION { background: var(--risk-medium-bg); color: var(-
 .issue .callout { transition: border-color var(--t-fast) var(--ease-out), background var(--t-fast); }
 .co-fix:hover { border-color: var(--accent); }
 .co-evidence:hover { border-color: var(--border-strong); }
+
+/* ============================================================
+   补齐:模板里在用、却一直没有规则的类(此前渲染成普通正文)
+   ============================================================ */
+.warning { color: var(--risk-medium); background: var(--risk-medium-bg); border-left: 3px solid var(--risk-medium); border-radius: var(--r-xs); padding: var(--sp-2) var(--sp-3); font-size: var(--fs-sm); margin: var(--sp-2) 0; }
+.muted { color: var(--text-dim); font-size: var(--fs-sm); }
+/* 被验证器否决的 Finding:整体降噪,与已验证的区分开 */
+.finding.rejected { opacity: 0.62; }
+.finding.rejected .finding-head b { text-decoration: line-through; text-decoration-color: var(--text-dim); }
