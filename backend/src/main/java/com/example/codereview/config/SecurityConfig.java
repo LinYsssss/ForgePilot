@@ -41,6 +41,8 @@ public class SecurityConfig {
                     // SCM webhooks are unauthenticated at the bearer-token layer; each delivery is
                     // instead gated by per-installation HMAC/token verification in the controller.
                     auth.requestMatchers("/api/webhooks/**").permitAll();
+                    // SCM installation onboarding 持有 webhook 验签密钥与回写凭据,仅管理员可操作。
+                    auth.requestMatchers("/api/scm/installations/**").hasRole("ADMIN");
                     if (h2ConsoleEnabled) {
                         auth.requestMatchers("/h2-console/**").permitAll();
                     }

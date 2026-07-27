@@ -239,6 +239,36 @@ RAG_FULL_CONTEXT=true
 
 **验证大模型与全量注入是否生效**：报告中的问题应能引用到你上传文档里的具体内容（例如发货问题引用 `order-flow.md` 的支付校验规则），说明完整项目上下文确实进入了 Prompt。
 
+### 接入自动 PR 守门（Webhook）
+
+手动流程（第 9 步）不需要任何配置。若要让 GitHub / GitLab 的 PR 事件**自动**触发守门 Agent，按下面三步接线：
+
+1. **平台需公网可达**——webhook 是 SCM 主动回调；内网部署可用 `cloudflared` / `ngrok` 之类隧道暴露 nginx 的 80 端口。
+2. **注册 SCM 安装**（管理员）——webhook 的验签密钥与项目绑定都存在 `scm_installation` 表，未注册的事件会被 `NO_INSTALLATION` 忽略：
+
+   ```bash
+   curl -X POST http://<host>/api/scm/installations \
+     -H "Authorization: Bearer <管理员 token>" -H 'Content-Type: application/json' \
+     -d '{
+           "provider": "GITHUB",
+           "externalInstallationId": "<GitHub App installation id / GitLab 项目 id>",
+           "webhookSecret": "<与 SCM 侧填写的同一个密钥>",
+           "projectId": <平台项目 id>,
+           "credential": "<可选：GitHub App 私钥 / GitLab access token>"
+         }'
+   ```
+
+   - `repositoryId` 留空会自动取该项目已绑定的仓库。
+   - **`credential` 留空 = 只产出报告、不回写 PR**；需要把结论/评论回写到 PR 时才填。
+   - 密钥与凭据一律加密入库，接口只回 `secretConfigured` / `credentialConfigured` 布尔位，不回显明文。
+   - 同一 `(provider, externalInstallationId)` 重复注册为更新（并重新激活）；`DELETE /api/scm/installations/{id}` 停用。
+
+3. **在 SCM 侧配置 webhook**：
+   - GitHub：Payload URL 填 `https://<host>/api/webhooks/scm/github`，Content type `application/json`，Secret 填上一步的 `webhookSecret`，事件只勾 **Pull requests**。
+   - GitLab：URL 填 `https://<host>/api/webhooks/scm/gitlab`，Secret token 填 `webhookSecret`，触发器勾 **Merge request events**。
+
+接好后开 / 更新 PR 即会自动建 Agent Run（`opened` / `reopened` / `synchronize` / `ready_for_review` 才审），在「Agent 审批」页可看时间线、门禁裁决与待审批补丁。
+
 ---
 
 ## API 速查
@@ -259,6 +289,7 @@ RAG_FULL_CONTEXT=true
 | Agent Run | `GET /api/agent-runs/{id}`、`GET .../{id}/timeline`、`POST .../{id}/cancel`、`POST .../{id}/retry`、`GET .../{id}/events`（SSE）、`GET /api/agent-runs/project/{projectId}` |
 | 补丁审批 | `GET /api/projects/{projectId}/agent-runs/{agentRunId}/patches`、`POST .../patches/{patchId}/approval`（人工审批，仅项目 owner） |
 | SCM Webhook | `POST /api/webhooks/scm/github`、`POST /api/webhooks/scm/gitlab`（HMAC/Token 验签，无需 Bearer） |
+| SCM 安装管理 | `POST /api/scm/installations`、`GET /api/scm/installations`、`DELETE /api/scm/installations/{id}`（仅 ADMIN） |
 
 接口字段细节见 `docs/03_接口设计文档.md`。
 
