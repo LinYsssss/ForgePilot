@@ -269,6 +269,29 @@ RAG_FULL_CONTEXT=true
 
 接好后开 / 更新 PR 即会自动建 Agent Run（`opened` / `reopened` / `synchronize` / `ready_for_review` 才审），在「Agent 审批」页可看时间线、门禁裁决与待审批补丁。
 
+### 审查结论通知（钉钉）
+
+审查完成后可推送结论摘要到钉钉群。默认关闭，开启需在 `deploy/.env` 配置：
+
+```env
+DINGTALK_ENABLED=true
+DINGTALK_WEBHOOK_URL=https://oapi.dingtalk.com/robot/send?access_token=<你的 token>
+DINGTALK_SECRET=<机器人「加签」密钥>        # 安全设置选「加签」时填
+DINGTALK_KEYWORD=RepoSage                 # 安全设置选「自定义关键词」时改填这个
+DINGTALK_MIN_RISK=LOW                     # 低于该等级不打扰:NONE < LOW < MEDIUM < HIGH
+NOTIFY_BASE_URL=https://<你的域名>         # 可选,通知里附「查看完整报告」链接
+```
+
+在钉钉群「群设置 → 智能群助手 → 添加机器人 → 自定义」创建机器人，安全设置三选一（加签 / 自定义关键词 / IP 白名单），把 Webhook 地址填到上面。
+
+- 只推**结论摘要**（项目、风险等级、问题数、摘要），**不推 diff 或证据原文**，避免代码内容外泄。
+- 通知在事务提交后发送；发送失败只记日志，**不影响审查结果写入**。
+
+### 导出报告
+
+报告详情页可导出 **Markdown**（人读 / 传阅）或 **SARIF 2.1.0**（可上传 GitHub Code Scanning）：
+`GET /api/projects/{projectId}/reviews/reports/{reportId}/export?format=markdown|sarif`
+
 ---
 
 ## API 速查
@@ -290,6 +313,8 @@ RAG_FULL_CONTEXT=true
 | 补丁审批 | `GET /api/projects/{projectId}/agent-runs/{agentRunId}/patches`、`POST .../patches/{patchId}/approval`（人工审批，仅项目 owner） |
 | SCM Webhook | `POST /api/webhooks/scm/github`、`POST /api/webhooks/scm/gitlab`（HMAC/Token 验签，无需 Bearer） |
 | SCM 安装管理 | `POST /api/scm/installations`、`GET /api/scm/installations`、`DELETE /api/scm/installations/{id}`（仅 ADMIN） |
+| Agent Findings | `GET /api/projects/{projectId}/agent-runs/{agentRunId}/findings`（含证据链与门禁裁决） |
+| 报告导出 | `GET /api/projects/{projectId}/reviews/reports/{reportId}/export?format=markdown\|sarif` |
 
 接口字段细节见 `docs/03_接口设计文档.md`。
 

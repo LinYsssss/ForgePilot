@@ -87,6 +87,17 @@ app:
     enabled: ${RATE_LIMIT_ENABLED:true}
     limit: ${RATE_LIMIT_REQUESTS:120}
     window-seconds: ${RATE_LIMIT_WINDOW_SECONDS:60}
+  notify:
+    # 报告链接前缀,填了会在通知里附「查看完整报告」
+    base-url: ${NOTIFY_BASE_URL:}
+    dingtalk:
+      enabled: ${DINGTALK_ENABLED:false}
+      webhook-url: ${DINGTALK_WEBHOOK_URL:}
+      # 机器人安全设置用「加签」时填密钥;用「自定义关键词」则改填 keyword
+      secret: ${DINGTALK_SECRET:}
+      keyword: ${DINGTALK_KEYWORD:}
+      # 低于该风险等级不通知:NONE < LOW < MEDIUM < HIGH
+      min-risk: ${DINGTALK_MIN_RISK:LOW}
   security:
     token-secret: ${JWT_SECRET:dev-secret-change-me}
     token-ttl-seconds: ${TOKEN_TTL_SECONDS:86400}
