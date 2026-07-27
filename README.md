@@ -259,6 +259,7 @@ RAG_FULL_CONTEXT=true
    ```
 
    - `repositoryId` 留空会自动取该项目已绑定的仓库。
+   - 该端点按**平台管理员**作用域工作（`hasRole("ADMIN")`），管理员**无需是目标项目的 owner**。`externalInstallationId` 会自动去除首尾空格，重复注册即更新。
    - **`credential` 留空 = 只产出报告、不回写 PR**；需要把结论/评论回写到 PR 时才填。
    - 密钥与凭据一律加密入库，接口只回 `secretConfigured` / `credentialConfigured` 布尔位，不回显明文。
    - 同一 `(provider, externalInstallationId)` 重复注册为更新（并重新激活）；`DELETE /api/scm/installations/{id}` 停用。

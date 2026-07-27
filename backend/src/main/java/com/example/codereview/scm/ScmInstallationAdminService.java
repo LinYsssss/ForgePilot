@@ -2,7 +2,7 @@ package com.example.codereview.scm;
 
 import com.example.codereview.common.exception.BusinessException;
 import com.example.codereview.common.security.CryptoService;
-import com.example.codereview.project.ProjectService;
+import com.example.codereview.project.ProjectRepository;
 import com.example.codereview.repo.CodeRepositoryJpaRepository;
 import com.example.codereview.scm.ScmInstallationDtos.InstallationResponse;
 import com.example.codereview.scm.ScmInstallationDtos.RegisterInstallationRequest;
@@ -15,29 +15,38 @@ import org.springframework.transaction.annotation.Transactional;
  * (按 provider+externalInstallationId 认领事件、用其中加密的 secret 验签、
  * 经 projectId/repositoryId 落到平台项目),此前没有任何入口能创建这条记录。
  * 密钥一律经 CryptoService 加密后入库,响应中仅回布尔位、绝不回显。
+ *
+ * <p>授权边界是 SecurityConfig 上的 {@code hasRole("ADMIN")}:三个方法一致地按
+ * 平台管理员作用域工作,不再要求管理员同时是目标项目的 owner。
  */
 @Service
 public class ScmInstallationAdminService {
 
     private final ScmInstallationRepository installations;
-    private final ProjectService projectService;
+    private final ProjectRepository projects;
     private final CodeRepositoryJpaRepository repositories;
     private final CryptoService cryptoService;
 
     public ScmInstallationAdminService(ScmInstallationRepository installations,
-                                       ProjectService projectService,
+                                       ProjectRepository projects,
                                        CodeRepositoryJpaRepository repositories,
                                        CryptoService cryptoService) {
         this.installations = installations;
-        this.projectService = projectService;
+        this.projects = projects;
         this.repositories = repositories;
         this.cryptoService = cryptoService;
     }
 
     @Transactional
-    public InstallationResponse register(Long userId, RegisterInstallationRequest request) {
-        // 绑定目标必须是注册者名下存在的项目(getRequired 同时做归属校验)。
-        projectService.getRequired(request.projectId(), userId);
+    public InstallationResponse register(RegisterInstallationRequest request) {
+        // 该端点整体由 SecurityConfig 的 hasRole("ADMIN") 把关,平台管理员即授权边界,
+        // 因此这里只校验项目存在(不要求管理员同时是项目 owner,否则无法为他人的项目接入 webhook)。
+        if (!projects.existsById(request.projectId())) {
+            throw new BusinessException(404, "项目不存在");
+        }
+        // 复制粘贴 installation id 常带首尾空格:先归一化再查,否则查不到旧记录却又以
+        // 去空格后的值写入,会撞上 (provider, external_installation_id) 唯一约束。
+        String externalId = request.externalInstallationId().trim();
         Long repositoryId = request.repositoryId();
         if (repositoryId == null) {
             // 未显式指定时,自动补当前项目绑定的仓库,webhook 流程靠它定位代码库。
@@ -48,10 +57,10 @@ public class ScmInstallationAdminService {
 
         // (provider, externalInstallationId) 有唯一约束:存在即整体更新并重新激活。
         ScmInstallation entity = installations
-                .findByProviderAndExternalInstallationId(request.provider(), request.externalInstallationId())
+                .findByProviderAndExternalInstallationId(request.provider(), externalId)
                 .orElseGet(ScmInstallation::new);
         entity.setProvider(request.provider());
-        entity.setExternalInstallationId(request.externalInstallationId().trim());
+        entity.setExternalInstallationId(externalId);
         entity.setDisplayName(blankToNull(request.displayName()));
         entity.setAppId(blankToNull(request.appId()));
         entity.setApiBaseUrl(blankToNull(request.apiBaseUrl()));
@@ -66,6 +75,7 @@ public class ScmInstallationAdminService {
         return InstallationResponse.from(installations.save(entity));
     }
 
+    @Transactional(readOnly = true)
     public List<InstallationResponse> list() {
         return installations.findAll().stream().map(InstallationResponse::from).toList();
     }

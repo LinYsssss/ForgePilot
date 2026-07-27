@@ -11,7 +11,7 @@ import static org.mockito.Mockito.when;
 
 import com.example.codereview.common.exception.BusinessException;
 import com.example.codereview.common.security.CryptoService;
-import com.example.codereview.project.ProjectService;
+import com.example.codereview.project.ProjectRepository;
 import com.example.codereview.repo.CodeRepositoryEntity;
 import com.example.codereview.repo.CodeRepositoryJpaRepository;
 import com.example.codereview.scm.ScmInstallationDtos.InstallationResponse;
@@ -22,18 +22,18 @@ import org.junit.jupiter.api.Test;
 
 class ScmInstallationAdminServiceTest {
 
-    private static final Long USER_ID = 1L;
     private static final Long PROJECT_ID = 2L;
 
     private final ScmInstallationRepository installations = mock(ScmInstallationRepository.class);
-    private final ProjectService projectService = mock(ProjectService.class);
+    private final ProjectRepository projects = mock(ProjectRepository.class);
     private final CodeRepositoryJpaRepository repositories = mock(CodeRepositoryJpaRepository.class);
     private final CryptoService cryptoService = mock(CryptoService.class);
     private ScmInstallationAdminService service;
 
     @BeforeEach
     void setUp() {
-        service = new ScmInstallationAdminService(installations, projectService, repositories, cryptoService);
+        service = new ScmInstallationAdminService(installations, projects, repositories, cryptoService);
+        when(projects.existsById(PROJECT_ID)).thenReturn(true);
         when(cryptoService.encrypt(anyString())).thenAnswer(inv -> "enc(" + inv.getArgument(0) + ")");
         when(installations.save(any(ScmInstallation.class))).thenAnswer(inv -> inv.getArgument(0));
     }
@@ -51,9 +51,8 @@ class ScmInstallationAdminServiceTest {
         when(boundRepo.getId()).thenReturn(77L);
         when(repositories.findByProjectId(PROJECT_ID)).thenReturn(Optional.of(boundRepo));
 
-        InstallationResponse resp = service.register(USER_ID, request("42", null, null));
+        InstallationResponse resp = service.register(request("42", null, null));
 
-        verify(projectService).getRequired(PROJECT_ID, USER_ID);
         verify(cryptoService).encrypt("hook-secret");
         assertThat(resp.repositoryId()).isEqualTo(77L);
         assertThat(resp.secretConfigured()).isTrue();
@@ -71,7 +70,7 @@ class ScmInstallationAdminServiceTest {
         when(installations.findByProviderAndExternalInstallationId(ScmProviderType.GITHUB, "42"))
                 .thenReturn(Optional.of(existing));
 
-        InstallationResponse resp = service.register(USER_ID, request("42", "", 9L));
+        InstallationResponse resp = service.register(request("42", "", 9L));
 
         assertThat(existing.getEncryptedCredential()).isEqualTo("enc(old-cred)"); // 留空不覆盖
         assertThat(resp.credentialConfigured()).isTrue();
@@ -86,10 +85,35 @@ class ScmInstallationAdminServiceTest {
                 .thenReturn(Optional.empty());
         when(repositories.findByProjectId(PROJECT_ID)).thenReturn(Optional.empty());
 
-        InstallationResponse resp = service.register(USER_ID, request("42", "glpat-token", null));
+        InstallationResponse resp = service.register(request("42", "glpat-token", null));
 
         verify(cryptoService).encrypt("glpat-token");
         assertThat(resp.credentialConfigured()).isTrue();
+    }
+
+    @Test
+    void installationIdIsTrimmedBeforeLookupSoPastedWhitespaceStillUpserts() {
+        ScmInstallation existing = new ScmInstallation();
+        existing.setProvider(ScmProviderType.GITHUB);
+        existing.setExternalInstallationId("42");
+        when(installations.findByProviderAndExternalInstallationId(ScmProviderType.GITHUB, "42"))
+                .thenReturn(Optional.of(existing));
+
+        // 粘贴带首尾空格的 id:必须命中同一条记录(否则会撞唯一约束报 500)
+        InstallationResponse resp = service.register(request("  42 ", null, 9L));
+
+        assertThat(resp.externalInstallationId()).isEqualTo("42");
+        verify(installations, never()).findByProviderAndExternalInstallationId(ScmProviderType.GITHUB, "  42 ");
+    }
+
+    @Test
+    void unknownProjectIsNotFound() {
+        when(projects.existsById(404L)).thenReturn(false);
+
+        assertThatThrownBy(() -> service.register(new RegisterInstallationRequest(
+                ScmProviderType.GITHUB, "42", "hook-secret", null, 404L, null, null, null, null)))
+                .isInstanceOf(BusinessException.class)
+                .satisfies(ex -> assertThat(((BusinessException) ex).getHttpStatus()).isEqualTo(404));
     }
 
     @Test
