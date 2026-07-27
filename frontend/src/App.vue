@@ -712,7 +712,7 @@ import { fmtDate, fmtTime, shortCommit } from './utils/format'
 import { useTheme } from './composables/useTheme'
 import { useToast } from './composables/useToast'
 import { useSession } from './composables/useSession'
-import { api, apiDownload } from './api/client'
+import { API_BASE, api, apiDownload } from './api/client'
 import AgentReviewWorkspace from './components/agent/AgentReviewWorkspace.vue'
 import DashboardViz from './components/DashboardViz.vue'
 import DashboardStats from './components/DashboardStats.vue'
@@ -776,6 +776,9 @@ const demoRepoPath = import.meta.env.VITE_DEMO_REPO_PATH || 'F:\\202605New\\demo
 let pollTimer = null
 let agentPollTimer = null
 let agentEventSource = null
+let agentEventRunId = null   // 配对追踪当前 SSE 连接对应的 run(不往 EventSource 实例上挂属性)
+let agentEventAt = 0         // 最近一次收到 SSE 事件的时间戳,用于让轮询退避
+let agentEventDebounce = null
 const pollingActive = ref(false)
 
 const tabTitles = { dashboard: '概览', projects: '项目管理', repository: '仓库配置', pullRequests: 'PR 工作流', knowledge: 'RAG 知识库', reviews: '代码审查', agent: 'Agent 审批', aiLogs: 'AI 调用日志' }
@@ -1428,26 +1431,40 @@ function startAgentPolling() {
   agentPolling.value = true
   openAgentEvents() // 优先 SSE 实时推送(每次同步到当前 run)
   if (agentPollTimer) return
-  agentPollTimer = setInterval(async () => { // 轮询兜底:SSE 不可用/断开时仍能更新
+  agentPollTimer = setInterval(async () => {
+    // 轮询是兜底:SSE 近期推过就跳过这一轮,避免两条通道重复拉取。
     if (tab.value !== 'agent' || busy.agent) return
+    if (Date.now() - agentEventAt < 15000) return
     try { await loadAgentWorkspace() } catch { stopAgentPolling() }
   }, 8000)
 }
 function openAgentEvents() {
   if (!agentRunId.value) return
-  if (agentEventSource && agentEventSource._runId === agentRunId.value) return
+  if (agentEventSource && agentEventRunId === agentRunId.value) return
   if (agentEventSource) { agentEventSource.close(); agentEventSource = null }
   try {
-    const es = new EventSource(`/api/agent-runs/${agentRunId.value}/events`)
-    es._runId = agentRunId.value
-    es.onmessage = () => { if (tab.value === 'agent' && !busy.agent) loadAgentWorkspace().catch(() => {}) }
+    // 后端用具名事件推送(agent-run / agent-step),onmessage 只收无名事件,必须显式监听。
+    const es = new EventSource(`${API_BASE}/agent-runs/${agentRunId.value}/events`)
+    const onEvent = () => {
+      agentEventAt = Date.now()
+      if (tab.value !== 'agent' || busy.agent) return
+      clearTimeout(agentEventDebounce)
+      agentEventDebounce = setTimeout(() => loadAgentWorkspace().catch(() => {}), 300)
+    }
+    es.addEventListener('agent-run', onEvent)
+    es.addEventListener('agent-step', onEvent)
+    es.onerror = () => { agentEventAt = 0 } // 断流则让轮询立刻接管
     agentEventSource = es
-  } catch { agentEventSource = null }
+    agentEventRunId = agentRunId.value
+  } catch { agentEventSource = null; agentEventRunId = null }
 }
 function stopAgentPolling() {
   if (agentPollTimer) clearInterval(agentPollTimer)
   agentPollTimer = null
+  clearTimeout(agentEventDebounce)
   if (agentEventSource) { agentEventSource.close(); agentEventSource = null }
+  agentEventRunId = null
+  agentEventAt = 0
   agentPolling.value = false
 }
 async function onPatchDecided() { toastMsg('Patch 审批决定已记录', 'success'); await loadAgentWorkspace() }
