@@ -2,10 +2,12 @@ package com.example.codereview.patch;
 
 import com.example.codereview.agent.run.AgentRun;
 import com.example.codereview.agent.run.AgentRunRepository;
+import com.example.codereview.common.exception.BusinessException;
 import com.example.codereview.project.ProjectService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
+import java.util.Objects;
 
 @Service
 public class PatchApprovalService {
@@ -31,24 +33,26 @@ public class PatchApprovalService {
     public PatchApproval decide(Long projectId, Long patchId, Long agentRunId, Long approverId,
                                 String currentHeadSha, PatchApprovalDecision decision, String comment) {
         if (rolloutPolicy != null && rolloutPolicy.shadow()) {
-            throw new IllegalStateException("Patch approval is disabled in LangChain4j shadow mode");
+            throw new BusinessException(503, "影子模式下补丁审批已停用");
         }
         projects.getRequired(projectId, approverId);
         PatchCandidate patch = patches.findById(patchId)
-                .orElseThrow(() -> new IllegalArgumentException("patch candidate not found"));
-        AgentRun run = runs.findById(agentRunId).orElseThrow(() -> new IllegalArgumentException("agent run not found"));
+                .orElseThrow(() -> new BusinessException(404, "补丁候选不存在"));
+        AgentRun run = runs.findById(agentRunId).orElseThrow(() -> new BusinessException(404, "Agent Run 不存在"));
         if (!projectId.equals(run.getProjectId()) || !agentRunId.equals(patch.getAgentRunId())) {
-            throw new IllegalArgumentException("patch candidate does not belong to project agent run");
+            throw new BusinessException(404, "补丁候选不属于该项目的 Agent Run");
         }
-        if (!run.getHeadSha().equals(currentHeadSha) || !patch.getHeadSha().equals(currentHeadSha)) {
-            throw new IllegalArgumentException("stale head SHA");
+        // head 变了说明补丁已过期:这是可预期的业务分支(前端会显示 stale),不是系统故障。
+        // getHeadSha 可能为 null,用 Objects.equals 避免 NPE 被兜成 500。
+        if (!Objects.equals(run.getHeadSha(), currentHeadSha) || !Objects.equals(patch.getHeadSha(), currentHeadSha)) {
+            throw new BusinessException(409, "补丁已过期(head 已变更),请刷新后重试");
         }
         if (decision == PatchApprovalDecision.APPROVED && !patch.isApprovable()) {
-            throw new IllegalStateException("patch is not eligible for approval");
+            throw new BusinessException(409, "该补丁未通过校验,不可批准");
         }
         var existing = approvals.findByPatchCandidateIdAndApproverId(patchId, approverId);
         if (existing.isPresent()) {
-            if (existing.get().getDecision() != decision) throw new IllegalStateException("approval decision is immutable");
+            if (existing.get().getDecision() != decision) throw new BusinessException(409, "审批结论不可更改");
             return existing.get();
         }
         PatchApproval saved = approvals.save(new PatchApproval(patchId, approverId, decision,
@@ -58,8 +62,8 @@ public class PatchApprovalService {
     }
     public PatchListView list(Long projectId, Long agentRunId, Long userId) {
         projects.getRequired(projectId, userId);
-        AgentRun run = runs.findById(agentRunId).orElseThrow(() -> new IllegalArgumentException("agent run not found"));
-        if (!projectId.equals(run.getProjectId())) throw new IllegalArgumentException("agent run does not belong to project");
+        AgentRun run = runs.findById(agentRunId).orElseThrow(() -> new BusinessException(404, "Agent Run 不存在"));
+        if (!projectId.equals(run.getProjectId())) throw new BusinessException(404, "Agent Run 不属于该项目");
         return new PatchListView(run.getHeadSha(), patches.findByAgentRunIdOrderByIdAsc(agentRunId));
     }
 

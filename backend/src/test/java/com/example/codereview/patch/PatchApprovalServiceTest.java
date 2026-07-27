@@ -7,6 +7,7 @@ import static org.mockito.Mockito.when;
 
 import com.example.codereview.agent.run.AgentRun;
 import com.example.codereview.agent.run.AgentRunRepository;
+import com.example.codereview.common.exception.BusinessException;
 import com.example.codereview.project.ProjectService;
 import java.util.List;
 import java.util.Optional;
@@ -54,8 +55,46 @@ class PatchApprovalServiceTest {
 
         assertThat(service.decide(5L, 9L, 7L, 11L, "head", PatchApprovalDecision.APPROVED, "again"))
                 .isSameAs(existing);
+        // head 变更是可预期的业务冲突,必须是 409 而不是 500
         assertThatThrownBy(() -> service.decide(5L, 9L, 7L, 11L, "new-head",
-                PatchApprovalDecision.APPROVED, "stale")).hasMessageContaining("stale");
+                PatchApprovalDecision.APPROVED, "stale"))
+                .isInstanceOf(BusinessException.class)
+                .satisfies(ex -> assertThat(((BusinessException) ex).getHttpStatus()).isEqualTo(409));
+    }
+
+    @Test
+    void missingPatchOrRunIsNotFoundRatherThanServerError() {
+        AgentRun run = new AgentRun(5L, 2L, 3L, "trigger", "head");
+        PatchApprovalService service = new PatchApprovalService(patches, approvals, runs, projects);
+
+        when(patches.findById(9L)).thenReturn(Optional.empty());
+        assertThatThrownBy(() -> service.decide(5L, 9L, 7L, 11L, "head", PatchApprovalDecision.APPROVED, ""))
+                .isInstanceOf(BusinessException.class)
+                .satisfies(ex -> assertThat(((BusinessException) ex).getHttpStatus()).isEqualTo(404));
+
+        when(patches.findById(9L)).thenReturn(Optional.of(validatedPatch()));
+        when(runs.findById(7L)).thenReturn(Optional.empty());
+        assertThatThrownBy(() -> service.decide(5L, 9L, 7L, 11L, "head", PatchApprovalDecision.APPROVED, ""))
+                .isInstanceOf(BusinessException.class)
+                .satisfies(ex -> assertThat(((BusinessException) ex).getHttpStatus()).isEqualTo(404));
+
+        when(runs.findById(99L)).thenReturn(Optional.empty());
+        assertThatThrownBy(() -> service.list(5L, 99L, 11L))
+                .isInstanceOf(BusinessException.class)
+                .satisfies(ex -> assertThat(((BusinessException) ex).getHttpStatus()).isEqualTo(404));
+    }
+
+    @Test
+    void nullRunHeadShaYieldsConflictNotNullPointer() {
+        PatchCandidate patch = validatedPatch();
+        AgentRun run = new AgentRun(5L, 2L, 3L, "trigger", null); // head 未知
+        when(patches.findById(9L)).thenReturn(Optional.of(patch));
+        when(runs.findById(7L)).thenReturn(Optional.of(run));
+        PatchApprovalService service = new PatchApprovalService(patches, approvals, runs, projects);
+
+        assertThatThrownBy(() -> service.decide(5L, 9L, 7L, 11L, "head", PatchApprovalDecision.APPROVED, ""))
+                .isInstanceOf(BusinessException.class)
+                .satisfies(ex -> assertThat(((BusinessException) ex).getHttpStatus()).isEqualTo(409));
     }
 
     private static PatchCandidate validatedPatch() {
