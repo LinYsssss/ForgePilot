@@ -128,7 +128,7 @@
             <label class="field">描述<input v-model="projectForm.description" placeholder="电商订单服务" /></label>
           </div>
           <div class="actions">
-            <button @click="run(saveProject)" :disabled="busy.project">
+            <button @click="run(saveProject, 'project')" :disabled="busy.project">
               <span v-if="busy.project" class="spinner"></span>{{ projectForm.projectId ? '保存修改' : '创建项目' }}
             </button>
           </div>
@@ -298,22 +298,9 @@
                 <span class="mono">{{ activePullRequest.sourceBranch }} → {{ activePullRequest.targetBranch }}</span>
               </div>
 
-              <div class="kb-select compact">
-                <div class="kb-head">
-                  <span class="section-title" style="margin:0">参与 PR 审查的知识库</span>
-                  <div class="kb-tools">
-                    <button class="sm secondary" @click="selectAllDocs" :disabled="!documents.length">全选</button>
-                    <button class="sm secondary" @click="clearDocs" :disabled="!documents.length">清空</button>
-                  </div>
-                </div>
-                <div v-if="!documents.length" class="hint">该项目暂无知识库文档；不选则审查仅基于 PR diff。</div>
-                <div v-else class="kb-chips">
-                  <label v-for="d in documents" :key="d.documentId" class="kb-chip" :class="{ on: chosenDocs.has(d.documentId) }">
-                    <input type="checkbox" :checked="chosenDocs.has(d.documentId)" @change="toggleDoc(d.documentId)" />
-                    <span class="kb-name">{{ d.fileName }}</span>
-                  </label>
-                </div>
-              </div>
+              <KnowledgeDocPicker v-model="prDocs" :documents="documents" compact
+                title="参与 PR 审查的知识库"
+                empty-hint="该项目暂无知识库文档；不选则审查仅基于 PR diff。" />
 
               <div class="actions">
                 <button @click="run(createPrReview)" :disabled="busy.prReview">
@@ -460,24 +447,9 @@
             <label class="field">分支<input v-model="reviewForm.branch" :placeholder="activeProject ? activeProject.defaultBranch : 'main'" /></label>
           </div>
 
-          <div class="kb-select">
-            <div class="kb-head">
-              <span class="section-title" style="margin:0">参与审查的知识库</span>
-              <div class="kb-tools">
-                <button class="sm secondary" @click="selectAllDocs" :disabled="!documents.length">全选</button>
-                <button class="sm secondary" @click="clearDocs" :disabled="!documents.length">清空</button>
-              </div>
-            </div>
-            <div v-if="!documents.length" class="hint">该项目暂无知识库文档；不选则审查仅基于代码 diff。可在“知识库”页上传。</div>
-            <div v-else class="kb-chips">
-              <label v-for="d in documents" :key="d.documentId" class="kb-chip" :class="{ on: chosenDocs.has(d.documentId) }">
-                <input type="checkbox" :checked="chosenDocs.has(d.documentId)" @change="toggleDoc(d.documentId)" />
-                <span class="kb-name">📄 {{ d.fileName }}</span>
-                <span class="badge plain">{{ d.docType }}</span>
-              </label>
-            </div>
-            <p class="hint">已选 {{ chosenDocs.size }} / {{ documents.length }} 篇。不选 = 使用全部知识库。</p>
-          </div>
+          <KnowledgeDocPicker v-model="reviewDocs" :documents="documents" show-meta show-count
+            title="参与审查的知识库"
+            empty-hint="该项目暂无知识库文档；不选则审查仅基于代码 diff。可在“知识库”页上传。" />
 
           <div class="actions">
             <button @click="run(createReview)" :disabled="busy.review">
@@ -717,6 +689,7 @@ import AgentReviewWorkspace from './components/agent/AgentReviewWorkspace.vue'
 import DashboardViz from './components/DashboardViz.vue'
 import DashboardStats from './components/DashboardStats.vue'
 import ReportSummary from './components/ReportSummary.vue'
+import KnowledgeDocPicker from './components/KnowledgeDocPicker.vue'
 
 const { authenticated, me, projects, activeProject } = useSession()
 const tab = ref('dashboard')
@@ -770,7 +743,8 @@ const repoForm = reactive({ repoUrl: '', provider: 'GITHUB', defaultBranch: 'mai
 const reviewForm = reactive({ commitId: '', baseCommitId: '', branch: '' })
 const pullRequestForm = reactive({ pullRequestId: null, prNumber: null, title: '', authorName: '', sourceBranch: '', targetBranch: 'main', baseSha: '', headSha: '', provider: 'GITHUB', externalPrId: '', status: 'OPEN' })
 const prActionForm = reactive({ actionType: 'REQUEST_CHANGES', reportId: null, reason: '', requirement: '' })
-const chosenDocs = ref(new Set())
+const reviewDocs = ref(new Set())   // 审查页选中的知识库文档
+const prDocs = ref(new Set())       // PR 页独立持有,两处不再互相污染
 const demoRepoPath = import.meta.env.VITE_DEMO_REPO_PATH || 'F:\\202605New\\demo-repos\\mall-order-service'
 
 let pollTimer = null
@@ -1118,7 +1092,7 @@ async function createPrReview() {
   if (!activePullRequest.value) return
   busy.prReview = true
   try {
-    const documentIds = Array.from(chosenDocs.value)
+    const documentIds = Array.from(prDocs.value)
     await api(`/projects/${activeProject.value.projectId}/pull-requests/${activePullRequest.value.pullRequestId}/review-task`, {
       method: 'POST',
       body: JSON.stringify({ documentIds }),
@@ -1199,7 +1173,8 @@ async function uploadDocument() {
 async function loadDocuments() {
   documents.value = await api(`/projects/${activeProject.value.projectId}/knowledge/documents`)
   const ids = new Set(documents.value.map(d => d.documentId))
-  chosenDocs.value = new Set([...chosenDocs.value].filter(id => ids.has(id)))
+  reviewDocs.value = new Set([...reviewDocs.value].filter(id => ids.has(id)))
+  prDocs.value = new Set([...prDocs.value].filter(id => ids.has(id)))
 }
 async function reindexKnowledge() {
   const r = await api(`/projects/${activeProject.value.projectId}/knowledge/reindex`, { method: 'POST' })
@@ -1225,14 +1200,14 @@ function resetReviewState() {
   tasks.value = []; reports.value = []; activeTask.value = null; reportDetail.value = null; mqLogs.value = []
   pullRequests.value = []; activePullRequest.value = null; prActions.value = []; actionReportDetail.value = null; actionIssueIds.value = new Set()
   Object.assign(repoForm, { repoUrl: '', provider: 'GITHUB', defaultBranch: activeProject.value?.defaultBranch || 'main', accessToken: '', _bound: false, _tokenConfigured: false })
-  chosenDocs.value = new Set()
+  chosenDocsReset()
   resetPullRequestForm()
 }
 async function createReview() {
   busy.review = true
   try {
     const commitId = reviewForm.commitId || selectedCommit.value?.commitId || ''
-    const documentIds = Array.from(chosenDocs.value)
+    const documentIds = Array.from(reviewDocs.value)
     await api(`/projects/${activeProject.value.projectId}/reviews/tasks`, { method: 'POST', body: JSON.stringify({ ...reviewForm, commitId, documentIds }) })
     await loadReviews()
     activeTask.value = tasks.value[0] || null
@@ -1241,13 +1216,7 @@ async function createReview() {
     maybeStartPolling()
   } finally { busy.review = false }
 }
-function toggleDoc(id) {
-  const next = new Set(chosenDocs.value)
-  next.has(id) ? next.delete(id) : next.add(id)
-  chosenDocs.value = next
-}
-function selectAllDocs() { chosenDocs.value = new Set(documents.value.map(d => d.documentId)) }
-function clearDocs() { chosenDocs.value = new Set() }
+function chosenDocsReset() { reviewDocs.value = new Set(); prDocs.value = new Set() }
 async function loadReviews() {
   busy.reviews = true
   try {
