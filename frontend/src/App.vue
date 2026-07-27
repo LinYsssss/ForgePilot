@@ -541,7 +541,11 @@
         <div class="panel" v-if="reportDetail">
           <div class="panel-head">
             <div><h2>审查报告 #{{ reportDetail.reportId }}</h2><div class="sub"><span class="mono">{{ shortCommit(reportDetail.commitId) }}</span> · {{ fmtTime(reportDetail.createdAt) }}</div></div>
-            <button class="sm danger" @click="askDeleteReport(reportDetail)">删除报告</button>
+            <div class="head-actions">
+              <button class="sm secondary" :disabled="busy.export" @click="run(() => exportReport('markdown'), 'export')">导出 Markdown</button>
+              <button class="sm secondary" :disabled="busy.export" @click="run(() => exportReport('sarif'), 'export')">导出 SARIF</button>
+              <button class="sm danger" @click="askDeleteReport(reportDetail)">删除报告</button>
+            </div>
           </div>
 
           <ReportSummary :report="reportDetail" />
@@ -708,7 +712,7 @@ import { fmtDate, fmtTime, shortCommit } from './utils/format'
 import { useTheme } from './composables/useTheme'
 import { useToast } from './composables/useToast'
 import { useSession } from './composables/useSession'
-import { api } from './api/client'
+import { api, apiDownload } from './api/client'
 import AgentReviewWorkspace from './components/agent/AgentReviewWorkspace.vue'
 import DashboardViz from './components/DashboardViz.vue'
 import DashboardStats from './components/DashboardStats.vue'
@@ -1274,6 +1278,20 @@ function askDeleteTask(t) {
       toastMsg('任务已删除', 'success')
     },
   }
+}
+async function exportReport(format) {
+  if (!reportDetail.value) return
+  const { blob, filename } = await apiDownload(
+    `/projects/${activeProject.value.projectId}/reviews/reports/${reportDetail.value.reportId}/export?format=${format}`)
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = filename
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+  URL.revokeObjectURL(url)
+  toastMsg('报告已导出：' + filename, 'success')
 }
 function askDeleteReport(r) {
   confirmModal.value = {

@@ -1,19 +1,25 @@
 package com.example.codereview.review;
 
 import com.example.codereview.common.api.ApiResponse;
+import com.example.codereview.common.exception.BusinessException;
 import com.example.codereview.common.security.CurrentUserProvider;
 import com.example.codereview.review.ReviewDtos.CreateReviewTaskRequest;
 import com.example.codereview.review.ReviewDtos.ReviewReportDetail;
 import com.example.codereview.review.ReviewDtos.ReviewReportSummary;
 import com.example.codereview.review.ReviewDtos.ReviewTaskResponse;
 import jakarta.validation.Valid;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -21,10 +27,13 @@ import org.springframework.web.bind.annotation.RestController;
 public class ReviewController {
 
     private final ReviewService reviewService;
+    private final ReviewReportExporter reportExporter;
     private final CurrentUserProvider currentUserProvider;
 
-    public ReviewController(ReviewService reviewService, CurrentUserProvider currentUserProvider) {
+    public ReviewController(ReviewService reviewService, ReviewReportExporter reportExporter,
+                            CurrentUserProvider currentUserProvider) {
         this.reviewService = reviewService;
+        this.reportExporter = reportExporter;
         this.currentUserProvider = currentUserProvider;
     }
 
@@ -68,5 +77,39 @@ public class ReviewController {
     public ApiResponse<Void> deleteReport(@PathVariable Long projectId, @PathVariable Long reportId) {
         reviewService.deleteReport(projectId, currentUserProvider.getRequired().userId(), reportId);
         return ApiResponse.ok();
+    }
+
+    /**
+     * 导出报告。返回原始文件(不包 ApiResponse),便于浏览器下载或 CI 直接消费:
+     * {@code markdown} 供人阅读,{@code sarif} 可上传 GitHub Code Scanning。
+     */
+    @GetMapping("/reports/{reportId}/export")
+    public ResponseEntity<byte[]> exportReport(@PathVariable Long projectId, @PathVariable Long reportId,
+                                               @RequestParam(defaultValue = "markdown") String format) {
+        ReviewReportDetail report = reviewService.reportDetail(
+                projectId, currentUserProvider.getRequired().userId(), reportId);
+        String normalized = format == null ? "markdown" : format.trim().toLowerCase();
+        String body;
+        MediaType contentType;
+        String extension;
+        switch (normalized) {
+            case "sarif" -> {
+                body = reportExporter.toSarif(report);
+                contentType = MediaType.APPLICATION_JSON;
+                extension = "sarif";
+            }
+            case "markdown", "md" -> {
+                body = reportExporter.toMarkdown(report);
+                contentType = MediaType.valueOf("text/markdown");
+                extension = "md";
+            }
+            default -> throw new BusinessException(400, "不支持的导出格式：" + format);
+        }
+        byte[] bytes = body.getBytes(StandardCharsets.UTF_8);
+        return ResponseEntity.ok()
+                .contentType(contentType)
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=\"reposage-report-" + reportId + "." + extension + "\"")
+                .body(bytes);
     }
 }
