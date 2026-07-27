@@ -1370,14 +1370,15 @@ async function loadAgentWorkspace() {
   if (!activeProject.value || !agentRunId.value) return
   busy.agent = true
   try {
-    const [timeline, patches] = await Promise.all([
+    const [timeline, patches, findings] = await Promise.all([
       api(`/agent-runs/${agentRunId.value}/timeline`),
       api(`/projects/${activeProject.value.projectId}/agent-runs/${agentRunId.value}/patches`),
+      api(`/projects/${activeProject.value.projectId}/agent-runs/${agentRunId.value}/findings`).catch(() => []),
     ])
     agentTimeline.value = timeline.steps || []
     agentRunDetail.value = timeline.run || null
     agentPatch.value = patches.length ? { ...patches[patches.length - 1], downloadUrl: `data:text/x-diff;charset=utf-8,${encodeURIComponent(patches[patches.length - 1].patchContent || '')}` } : null
-    agentFindings.value = (agentPatch.value?.findingIds || []).map(id => ({ id, severity: 'INFO', title: `Finding #${id}`, description: '详见持久化证据与置信度记录', evidence: [] }))
+    agentFindings.value = findings || []
     if (!agentHeadSha.value) agentHeadSha.value = timeline.run?.headSha || agentPatch.value?.headSha || ''
     if (timeline.run?.terminal) stopAgentPolling()
     else startAgentPolling()
