@@ -25,7 +25,8 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
         "spring.jpa.hibernate.ddl-auto=create-drop",
         "spring.rabbitmq.listener.simple.auto-startup=false",
         "management.health.rabbit.enabled=false",
-        "app.agent.outbox.scheduler.enabled=true",
+        "app.agent.scheduling.enabled=true",
+        "app.agent.recovery.enabled=false",
         "app.agent.outbox.initial-delay-ms=100",
         "app.agent.outbox.fixed-delay-ms=100",
         // Both requeue and retry push next-attempt-at out by this much; the default 10s would make

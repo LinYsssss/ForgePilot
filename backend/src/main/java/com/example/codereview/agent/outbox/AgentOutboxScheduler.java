@@ -4,7 +4,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -14,13 +13,11 @@ import org.springframework.stereotype.Component;
  * <p>Without it {@code publishAvailable} was only ever reached from tests, so an Agent run enqueued
  * its first event and then sat in PENDING forever.
  *
- * <p>{@code @EnableScheduling} lives on this class rather than on a global configuration so that
- * scheduling infrastructure only exists when the scheduler itself does — test contexts, which leave
- * the flag off, are completely unaffected.
+ * <p>Scheduling infrastructure comes from {@code AgentSchedulingConfig}, which is gated on the same
+ * flag — test contexts leave it off and are completely unaffected.
  */
 @Component
-@ConditionalOnProperty(value = "app.agent.outbox.scheduler.enabled", havingValue = "true")
-@EnableScheduling
+@ConditionalOnProperty(value = "app.agent.scheduling.enabled", havingValue = "true")
 public class AgentOutboxScheduler {
 
     private static final Logger log = LoggerFactory.getLogger(AgentOutboxScheduler.class);

@@ -8,13 +8,27 @@
 
 app:
   agent:
+    # 后台调度总开关：Outbox 排空与 Step 恢复 watchdog 都靠它。
+    # 默认关闭：测试上下文一旦后台运行就会与断言竞态，且没有 Broker 时
+    # 每秒一次的连接失败会淹没日志。prod profile 显式打开；本地演示用
+    # AGENT_SCHEDULING_ENABLED=true 打开。
+    scheduling:
+      enabled: ${AGENT_SCHEDULING_ENABLED:false}
     queue:
       max-retry: ${AGENT_QUEUE_MAX_RETRY:3}
       retry-delay-ms: ${AGENT_QUEUE_RETRY_DELAY_MS:5000}
+    step:
+      # 初始租约。Worker 每 heartbeat-interval 续租一次，因此该值只需覆盖
+      # "两次心跳之间 + 时钟偏差"，不需要按最慢的一步来设。
+      lease-duration: ${AGENT_STEP_LEASE_DURATION:3m}
+      heartbeat-interval: ${AGENT_STEP_HEARTBEAT_INTERVAL:45s}
     recovery:
       enabled: ${AGENT_RECOVERY_ENABLED:true}
       stale-threshold: ${AGENT_RECOVERY_STALE_THRESHOLD:5m}
       batch-size: ${AGENT_RECOVERY_BATCH_SIZE:100}
+      # 周期 watchdog：只在启动时恢复会让进程内挂掉的 Step 一直卡到下次重启。
+      interval-ms: ${AGENT_RECOVERY_INTERVAL_MS:60000}
+      initial-delay-ms: ${AGENT_RECOVERY_INITIAL_DELAY_MS:60000}
     budget:
       max-elapsed: ${AGENT_MAX_ELAPSED:10m}
       max-tool-calls: ${AGENT_MAX_TOOL_CALLS:20}
@@ -42,11 +56,6 @@ app:
       batch-size: ${AGENT_OUTBOX_BATCH_SIZE:50}
       fixed-delay-ms: ${AGENT_OUTBOX_FIXED_DELAY_MS:1000}
       initial-delay-ms: ${AGENT_OUTBOX_INITIAL_DELAY_MS:5000}
-      scheduler:
-        # 默认关闭：测试上下文一旦后台发布就会与断言竞态，而且没有 Broker 时
-        # 每秒一次的连接失败会淹没日志。prod profile 显式打开；本地演示用
-        # AGENT_OUTBOX_SCHEDULER_ENABLED=true 打开。
-        enabled: ${AGENT_OUTBOX_SCHEDULER_ENABLED:false}
   notify:
     # 报告链接前缀,填了会在通知里附「查看完整报告」
     base-url: ${NOTIFY_BASE_URL:}
