@@ -1,6 +1,7 @@
 package com.example.codereview.scm.github;
 
 import com.example.codereview.common.api.ApiResponse;
+import com.example.codereview.common.api.ErrorCode;
 import com.example.codereview.common.exception.BusinessException;
 import com.example.codereview.common.security.CryptoService;
 import com.example.codereview.scm.NormalizedPullRequestEvent;
@@ -110,7 +111,7 @@ public class GitHubWebhookController {
             delivery.setStatus(WebhookDeliveryStatus.REJECTED);
             deliveries.save(delivery);
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(new ApiResponse<>(401, "Webhook 签名校验失败", null));
+                    .body(ApiResponse.error(ErrorCode.WEBHOOK_SIGNATURE_INVALID, "Webhook 签名校验失败"));
         }
         delivery.setStatus(WebhookDeliveryStatus.VERIFIED);
 

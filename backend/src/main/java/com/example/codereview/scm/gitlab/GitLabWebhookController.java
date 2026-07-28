@@ -1,6 +1,7 @@
 package com.example.codereview.scm.gitlab;
 
 import com.example.codereview.common.api.ApiResponse;
+import com.example.codereview.common.api.ErrorCode;
 import com.example.codereview.common.security.CryptoService;
 import com.example.codereview.scm.NormalizedPullRequestEvent;
 import com.example.codereview.scm.ScmInstallation;
@@ -103,7 +104,7 @@ public class GitLabWebhookController {
             delivery.setStatus(WebhookDeliveryStatus.REJECTED);
             deliveries.save(delivery);
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(new ApiResponse<>(401, "Webhook 令牌校验失败", null));
+                    .body(ApiResponse.error(ErrorCode.WEBHOOK_SIGNATURE_INVALID, "Webhook 令牌校验失败"));
         }
         delivery.setStatus(WebhookDeliveryStatus.VERIFIED);
 
