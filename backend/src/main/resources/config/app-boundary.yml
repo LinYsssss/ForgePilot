@@ -23,6 +23,11 @@ app:
     auth-cookie-name: ${AUTH_COOKIE_NAME:reposage_auth}
     auth-cookie-secure: ${AUTH_COOKIE_SECURE:false}
     auth-cookie-same-site: ${AUTH_COOKIE_SAME_SITE:Lax}
+    login:
+      # 按用户名维度的失败节流,与 ratelimit 的 IP 维度互补:
+      # 只按 IP 拦不住换代理猛撞同一账号,只按用户名拦不住同 IP 轮撞多个账号。
+      max-failures-per-username: ${LOGIN_MAX_FAILURES_PER_USERNAME:10}
+      failure-window-seconds: ${LOGIN_FAILURE_WINDOW_SECONDS:600}
     seed-admin:
       username: ${SEED_ADMIN_USERNAME:}
       password: ${SEED_ADMIN_PASSWORD:}

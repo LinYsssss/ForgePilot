@@ -2,6 +2,7 @@ package com.example.codereview.auth;
 
 import com.example.codereview.auth.AuthDtos.AuthResponse;
 import com.example.codereview.auth.AuthDtos.LoginRequest;
+import com.example.codereview.auth.AuthDtos.LoginResult;
 import com.example.codereview.auth.AuthDtos.MeResponse;
 import com.example.codereview.common.api.ApiResponse;
 import com.example.codereview.common.security.CurrentUserProvider;
@@ -29,9 +30,10 @@ public class AuthController {
 
     @PostMapping("/login")
     public ApiResponse<AuthResponse> login(@Valid @RequestBody LoginRequest request, HttpServletResponse response) {
-        AuthResponse authResponse = authService.login(request);
-        authCookieService.writeLoginCookie(authResponse.token(), response);
-        return ApiResponse.ok(authResponse);
+        // 令牌只写进 HttpOnly Cookie,不回到响应体——避免前端把它落到 localStorage 被 XSS 取走。
+        LoginResult result = authService.login(request);
+        authCookieService.writeLoginCookie(result.token(), response);
+        return ApiResponse.ok(result.response());
     }
 
     @GetMapping("/me")

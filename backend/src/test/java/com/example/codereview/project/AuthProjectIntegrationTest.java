@@ -163,8 +163,12 @@ class AuthProjectIntegrationTest {
                         ))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(0))
+                // 令牌只在 HttpOnly Cookie 里,响应体不再返回
+                .andExpect(jsonPath("$.data.token").doesNotExist())
                 .andReturn();
-        return objectMapper.readTree(login.getResponse().getContentAsString()).path("data").path("token").asText();
+        Cookie authCookie = login.getResponse().getCookie("reposage_auth");
+        org.assertj.core.api.Assertions.assertThat(authCookie).isNotNull();
+        return authCookie.getValue();
     }
 
     private Long createProjectAndGetId(String token, String name) throws Exception {

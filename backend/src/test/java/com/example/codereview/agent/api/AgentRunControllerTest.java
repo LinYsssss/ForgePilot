@@ -248,8 +248,10 @@ class AgentRunControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(0))
                 .andReturn();
-        return objectMapper.readTree(login.getResponse().getContentAsString())
-                .path("data").path("token").asText();
+        // 令牌只在 HttpOnly Cookie 里,响应体不再返回
+        jakarta.servlet.http.Cookie authCookie = login.getResponse().getCookie("reposage_auth");
+        Assertions.assertThat(authCookie).isNotNull();
+        return authCookie.getValue();
     }
 
     private Long createProject(String token, String name) throws Exception {
