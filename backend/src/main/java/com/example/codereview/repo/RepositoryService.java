@@ -1,5 +1,6 @@
 package com.example.codereview.repo;
 
+import com.example.codereview.common.api.ErrorCode;
 import com.example.codereview.common.exception.BusinessException;
 import com.example.codereview.common.security.CryptoService;
 import com.example.codereview.git.GitCliService;
@@ -84,7 +85,7 @@ public class RepositoryService {
     public CodeRepositoryEntity getRequired(Long projectId, Long userId) {
         projectService.getRequired(projectId, userId);
         return repositories.findByProjectId(projectId)
-                .orElseThrow(() -> new BusinessException(404, "项目尚未绑定仓库"));
+                .orElseThrow(() -> new BusinessException(ErrorCode.REPOSITORY_NOT_FOUND, "项目尚未绑定仓库"));
     }
 
     @Transactional

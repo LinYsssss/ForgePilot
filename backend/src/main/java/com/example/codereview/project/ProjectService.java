@@ -1,5 +1,6 @@
 package com.example.codereview.project;
 
+import com.example.codereview.common.api.ErrorCode;
 import com.example.codereview.common.exception.BusinessException;
 import com.example.codereview.project.ProjectDtos.CreateProjectRequest;
 import com.example.codereview.project.ProjectDtos.ProjectResponse;
@@ -35,9 +36,9 @@ public class ProjectService {
 
     public ProjectEntity getRequired(Long projectId, Long userId) {
         ProjectEntity project = projects.findById(projectId)
-                .orElseThrow(() -> new BusinessException(404, "项目不存在"));
+                .orElseThrow(() -> new BusinessException(ErrorCode.PROJECT_NOT_FOUND, "项目不存在"));
         if (!project.getOwnerId().equals(userId)) {
-            throw new BusinessException(403, "无权访问该项目");
+            throw new BusinessException(ErrorCode.PROJECT_FORBIDDEN, "无权访问该项目");
         }
         return project;
     }

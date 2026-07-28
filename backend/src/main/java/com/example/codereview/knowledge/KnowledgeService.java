@@ -1,5 +1,6 @@
 package com.example.codereview.knowledge;
 
+import com.example.codereview.common.api.ErrorCode;
 import com.example.codereview.common.api.PageResponse;
 import com.example.codereview.common.exception.BusinessException;
 import com.example.codereview.ai.AiCallLogService;
@@ -191,9 +192,9 @@ public class KnowledgeService {
     public void delete(Long projectId, Long userId, Long documentId) {
         projectService.getRequired(projectId, userId);
         KnowledgeDocument document = documents.findById(documentId)
-                .orElseThrow(() -> new BusinessException(404, "文档不存在"));
+                .orElseThrow(() -> new BusinessException(ErrorCode.KNOWLEDGE_DOCUMENT_NOT_FOUND, "文档不存在"));
         if (!document.getProjectId().equals(projectId)) {
-            throw new BusinessException(403, "无权删除该文档");
+            throw new BusinessException(ErrorCode.PROJECT_FORBIDDEN, "无权删除该文档");
         }
         vectorIndexService.deleteByDocumentId(documentId);
         chunks.deleteByDocumentId(documentId);

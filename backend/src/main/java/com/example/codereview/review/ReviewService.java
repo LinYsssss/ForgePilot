@@ -1,5 +1,6 @@
 package com.example.codereview.review;
 
+import com.example.codereview.common.api.ErrorCode;
 import com.example.codereview.common.exception.BusinessException;
 import com.example.codereview.ai.AiCallLogRepository;
 import com.example.codereview.feedback.FeedbackRepository;
@@ -157,7 +158,7 @@ public class ReviewService {
         ReviewTask task = tasks.findById(taskId)
                 .orElseThrow(() -> new BusinessException(6002, "审查任务不存在"));
         if (!task.getProjectId().equals(projectId)) {
-            throw new BusinessException(403, "无权访问该任务");
+            throw new BusinessException(ErrorCode.PROJECT_FORBIDDEN, "无权访问该任务");
         }
         return ReviewTaskResponse.from(task);
     }
@@ -188,9 +189,9 @@ public class ReviewService {
     public void deleteReport(Long projectId, Long userId, Long reportId) {
         repositoryService.getRequired(projectId, userId);
         ReviewReport report = reports.findById(reportId)
-                .orElseThrow(() -> new BusinessException(404, "审查报告不存在"));
+                .orElseThrow(() -> new BusinessException(ErrorCode.REVIEW_REPORT_NOT_FOUND, "审查报告不存在"));
         if (!report.getProjectId().equals(projectId)) {
-            throw new BusinessException(403, "无权访问该报告");
+            throw new BusinessException(ErrorCode.PROJECT_FORBIDDEN, "无权访问该报告");
         }
         purgeReport(report);
     }
@@ -209,7 +210,7 @@ public class ReviewService {
         ReviewTask task = tasks.findById(taskId)
                 .orElseThrow(() -> new BusinessException(6002, "审查任务不存在"));
         if (!task.getProjectId().equals(projectId)) {
-            throw new BusinessException(403, "无权访问该任务");
+            throw new BusinessException(ErrorCode.PROJECT_FORBIDDEN, "无权访问该任务");
         }
         return task;
     }
@@ -236,9 +237,9 @@ public class ReviewService {
     public ReviewReportDetail reportDetail(Long projectId, Long userId, Long reportId) {
         repositoryService.getRequired(projectId, userId);
         ReviewReport report = reports.findById(reportId)
-                .orElseThrow(() -> new BusinessException(404, "审查报告不存在"));
+                .orElseThrow(() -> new BusinessException(ErrorCode.REVIEW_REPORT_NOT_FOUND, "审查报告不存在"));
         if (!report.getProjectId().equals(projectId)) {
-            throw new BusinessException(403, "无权访问该报告");
+            throw new BusinessException(ErrorCode.PROJECT_FORBIDDEN, "无权访问该报告");
         }
         List<ReviewIssueResponse> issueResponses = issues.findByReportId(report.getId())
                 .stream()
@@ -272,9 +273,9 @@ public class ReviewService {
             return null;
         }
         PullRequestEntity pullRequest = pullRequests.findById(pullRequestId)
-                .orElseThrow(() -> new BusinessException(404, "PR 不存在"));
+                .orElseThrow(() -> new BusinessException(ErrorCode.PULL_REQUEST_NOT_FOUND, "PR 不存在"));
         if (!pullRequest.getProjectId().equals(projectId)) {
-            throw new BusinessException(403, "PR 不属于当前项目");
+            throw new BusinessException(ErrorCode.PROJECT_FORBIDDEN, "PR 不属于当前项目");
         }
         return pullRequest;
     }

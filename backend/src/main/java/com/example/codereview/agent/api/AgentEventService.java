@@ -1,5 +1,6 @@
 package com.example.codereview.agent.api;
 
+import com.example.codereview.common.api.ErrorCode;
 import com.example.codereview.agent.api.AgentRunDtos.AgentRunDetail;
 import com.example.codereview.agent.api.AgentRunDtos.AgentStepView;
 import com.example.codereview.agent.run.AgentRun;
@@ -80,11 +81,11 @@ public class AgentEventService {
     public SseEmitter subscribe(Long runId, Long userId, Long lastEventId) {
         AgentRunDetail detail = agentRunService.detail(runId, userId); // authorizes: 404/403
         if (totalSubscribers.get() >= maxTotalSubscribers) {
-            throw new BusinessException(429, "Agent 事件订阅已达全局上限");
+            throw new BusinessException(ErrorCode.RATE_LIMITED, "Agent 事件订阅已达全局上限");
         }
         List<SseEmitter> existing = emitters.get(runId);
         if (!detail.terminal() && existing != null && existing.size() >= maxSubscribersPerRun) {
-            throw new BusinessException(429, "该运行的事件订阅已达上限");
+            throw new BusinessException(ErrorCode.RATE_LIMITED, "该运行的事件订阅已达上限");
         }
 
         SseEmitter emitter = new SseEmitter(emitterTimeoutMs);

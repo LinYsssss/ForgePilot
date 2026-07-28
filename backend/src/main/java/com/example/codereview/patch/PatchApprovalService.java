@@ -1,5 +1,6 @@
 package com.example.codereview.patch;
 
+import com.example.codereview.common.api.ErrorCode;
 import com.example.codereview.agent.run.AgentRun;
 import com.example.codereview.agent.run.AgentRunRepository;
 import com.example.codereview.common.exception.BusinessException;
@@ -37,22 +38,22 @@ public class PatchApprovalService {
         }
         projects.getRequired(projectId, approverId);
         PatchCandidate patch = patches.findById(patchId)
-                .orElseThrow(() -> new BusinessException(404, "补丁候选不存在"));
-        AgentRun run = runs.findById(agentRunId).orElseThrow(() -> new BusinessException(404, "Agent Run 不存在"));
+                .orElseThrow(() -> new BusinessException(ErrorCode.PATCH_NOT_FOUND, "补丁候选不存在"));
+        AgentRun run = runs.findById(agentRunId).orElseThrow(() -> new BusinessException(ErrorCode.AGENT_RUN_NOT_FOUND, "Agent Run 不存在"));
         if (!projectId.equals(run.getProjectId()) || !agentRunId.equals(patch.getAgentRunId())) {
-            throw new BusinessException(404, "补丁候选不属于该项目的 Agent Run");
+            throw new BusinessException(ErrorCode.PATCH_NOT_FOUND, "补丁候选不属于该项目的 Agent Run");
         }
         // head 变了说明补丁已过期:这是可预期的业务分支(前端会显示 stale),不是系统故障。
         // getHeadSha 可能为 null,用 Objects.equals 避免 NPE 被兜成 500。
         if (!Objects.equals(run.getHeadSha(), currentHeadSha) || !Objects.equals(patch.getHeadSha(), currentHeadSha)) {
-            throw new BusinessException(409, "补丁已过期(head 已变更),请刷新后重试");
+            throw new BusinessException(ErrorCode.PATCH_STALE, "补丁已过期(head 已变更),请刷新后重试");
         }
         if (decision == PatchApprovalDecision.APPROVED && !patch.isApprovable()) {
-            throw new BusinessException(409, "该补丁未通过校验,不可批准");
+            throw new BusinessException(ErrorCode.PATCH_APPROVAL_CONFLICT, "该补丁未通过校验,不可批准");
         }
         var existing = approvals.findByPatchCandidateIdAndApproverId(patchId, approverId);
         if (existing.isPresent()) {
-            if (existing.get().getDecision() != decision) throw new BusinessException(409, "审批结论不可更改");
+            if (existing.get().getDecision() != decision) throw new BusinessException(ErrorCode.PATCH_APPROVAL_CONFLICT, "审批结论不可更改");
             return existing.get();
         }
         PatchApproval saved = approvals.save(new PatchApproval(patchId, approverId, decision,
@@ -62,8 +63,8 @@ public class PatchApprovalService {
     }
     public PatchListView list(Long projectId, Long agentRunId, Long userId) {
         projects.getRequired(projectId, userId);
-        AgentRun run = runs.findById(agentRunId).orElseThrow(() -> new BusinessException(404, "Agent Run 不存在"));
-        if (!projectId.equals(run.getProjectId())) throw new BusinessException(404, "Agent Run 不属于该项目");
+        AgentRun run = runs.findById(agentRunId).orElseThrow(() -> new BusinessException(ErrorCode.AGENT_RUN_NOT_FOUND, "Agent Run 不存在"));
+        if (!projectId.equals(run.getProjectId())) throw new BusinessException(ErrorCode.AGENT_RUN_NOT_FOUND, "Agent Run 不属于该项目");
         return new PatchListView(run.getHeadSha(), patches.findByAgentRunIdOrderByIdAsc(agentRunId));
     }
 

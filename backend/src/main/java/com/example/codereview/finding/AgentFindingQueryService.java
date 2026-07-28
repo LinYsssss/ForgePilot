@@ -1,5 +1,6 @@
 package com.example.codereview.finding;
 
+import com.example.codereview.common.api.ErrorCode;
 import com.example.codereview.agent.run.AgentRun;
 import com.example.codereview.agent.run.AgentRunRepository;
 import com.example.codereview.common.exception.BusinessException;
@@ -39,9 +40,9 @@ public class AgentFindingQueryService {
     public List<AgentFindingResponse> list(Long projectId, Long agentRunId, Long userId) {
         projectService.getRequired(projectId, userId);
         AgentRun run = runs.findById(agentRunId)
-                .orElseThrow(() -> new BusinessException(404, "Agent Run 不存在"));
+                .orElseThrow(() -> new BusinessException(ErrorCode.AGENT_RUN_NOT_FOUND, "Agent Run 不存在"));
         if (!projectId.equals(run.getProjectId())) {
-            throw new BusinessException(404, "Agent Run 不属于该项目");
+            throw new BusinessException(ErrorCode.AGENT_RUN_NOT_FOUND, "Agent Run 不属于该项目");
         }
 
         List<Finding> rows = findings.findByAgentRunIdOrderByIdAsc(agentRunId);

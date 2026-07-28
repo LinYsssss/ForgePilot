@@ -1,5 +1,6 @@
 package com.example.codereview.feedback;
 
+import com.example.codereview.common.api.ErrorCode;
 import com.example.codereview.auth.UserAccount;
 import com.example.codereview.auth.UserAccountRepository;
 import com.example.codereview.common.exception.BusinessException;
@@ -88,7 +89,7 @@ public class FeedbackService {
         ReviewIssue issue = issues.findById(issueId)
                 .orElseThrow(() -> new BusinessException(404, "审查问题不存在"));
         ReviewReport report = reports.findById(issue.getReportId())
-                .orElseThrow(() -> new BusinessException(404, "审查报告不存在"));
+                .orElseThrow(() -> new BusinessException(ErrorCode.REVIEW_REPORT_NOT_FOUND, "审查报告不存在"));
         projectService.getRequired(report.getProjectId(), userId);
     }
 }
