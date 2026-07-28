@@ -10,8 +10,6 @@ import com.example.codereview.rag.EmbeddingClient;
 import com.example.codereview.rag.EmbeddingJson;
 import com.example.codereview.rag.RagService;
 import com.example.codereview.rag.VectorIndexService;
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Value;
@@ -33,10 +31,13 @@ public class KnowledgeService {
     private final EmbeddingJson embeddingJson;
     private final VectorIndexService vectorIndexService;
     private final AiCallLogService aiCallLogService;
+    private final KnowledgeUploadValidator uploadValidator;
+    private final KnowledgeDocumentStateService documentState;
     private final int chunkSize;
     private final int overlap;
     private final boolean fullContext;
     private final TransactionTemplate reindexTransactions;
+    private final TransactionTemplate uploadTransactions;
 
     public KnowledgeService(
             ProjectService projectService,
@@ -47,6 +48,8 @@ public class KnowledgeService {
             EmbeddingJson embeddingJson,
             VectorIndexService vectorIndexService,
             AiCallLogService aiCallLogService,
+            KnowledgeUploadValidator uploadValidator,
+            KnowledgeDocumentStateService documentState,
             PlatformTransactionManager transactionManager,
             @Value("${app.rag.chunk-size}") int chunkSize,
             @Value("${app.rag.overlap}") int overlap,
@@ -60,27 +63,67 @@ public class KnowledgeService {
         this.embeddingJson = embeddingJson;
         this.vectorIndexService = vectorIndexService;
         this.aiCallLogService = aiCallLogService;
+        this.uploadValidator = uploadValidator;
+        this.documentState = documentState;
         this.chunkSize = chunkSize;
         this.overlap = overlap;
         this.fullContext = fullContext;
         this.reindexTransactions = new TransactionTemplate(transactionManager);
         this.reindexTransactions.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+        this.uploadTransactions = new TransactionTemplate(transactionManager);
+        this.uploadTransactions.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
     }
 
-    @Transactional
+    /**
+     * Deliberately not {@code @Transactional}.
+     *
+     * <p>The document row is created and committed first, then embedding and vector indexing run
+     * outside any transaction, then the outcome is recorded in its own transaction. Previously all
+     * three happened in one transaction that rethrew on failure, so marking the document FAILED was
+     * rolled back along with the document itself — a failed upload vanished without trace, and a
+     * slow embedding provider held a database connection for its whole duration.
+     */
     public DocumentResponse upload(Long projectId, Long userId, String docType, MultipartFile file) {
-        projectService.getRequired(projectId, userId);
-        String content = readText(file);
-        KnowledgeDocument document = new KnowledgeDocument(projectId, userId, docType, file.getOriginalFilename(), content);
-        documents.save(document);
+        KnowledgeDocument document = createPending(projectId, userId, docType, file);
         try {
+            // Read-only use of a committed entity: indexing never writes back through it, so there
+            // is no detached-entity dirty checking to worry about. Status changes go through
+            // documentState, which reloads by id inside its own transaction.
             index(document);
-            document.markIndexed();
+            documentState.markIndexed(document.getId());
         } catch (RuntimeException ex) {
-            document.markFailed();
+            documentState.markFailed(document.getId(), safeReason(ex));
             throw ex;
         }
-        return DocumentResponse.from(document);
+        return DocumentResponse.from(
+                documents.findById(document.getId()).orElse(document));
+    }
+
+    /**
+     * Runs in its own transaction via a template rather than {@code @Transactional}: this is called
+     * from {@link #upload} on the same bean, and self-invocation bypasses the Spring proxy, so the
+     * annotation would silently do nothing.
+     */
+    private KnowledgeDocument createPending(Long projectId, Long userId, String docType, MultipartFile file) {
+        return uploadTransactions.execute(status -> {
+            projectService.getRequired(projectId, userId);
+            String content = uploadValidator.readText(file);
+            String fileName = uploadValidator.sanitizeFileName(file.getOriginalFilename());
+            KnowledgeDocument document = new KnowledgeDocument(projectId, userId, docType, fileName, content);
+            documents.save(document);
+            return document;
+        });
+    }
+
+    /**
+     * Keeps provider URLs, credentials and stack details out of a column the API returns. The full
+     * exception is still available in the logs.
+     */
+    private String safeReason(RuntimeException ex) {
+        if (ex instanceof BusinessException business) {
+            return business.getMessage();
+        }
+        return "索引失败：" + ex.getClass().getSimpleName();
     }
 
     public List<DocumentResponse> list(Long projectId, Long userId) {
@@ -272,21 +315,6 @@ public class KnowledgeService {
             start = Math.max(0, end - safeOverlap);
         }
         return parts;
-    }
-
-    private String readText(MultipartFile file) {
-        if (file == null || file.isEmpty()) {
-            throw new BusinessException(400, "上传文件为空");
-        }
-        String filename = file.getOriginalFilename() == null ? "" : file.getOriginalFilename().toLowerCase();
-        if (!(filename.endsWith(".md") || filename.endsWith(".txt"))) {
-            throw new BusinessException(400, "第一版仅支持 Markdown 和 TXT 文档");
-        }
-        try {
-            return new String(file.getBytes(), StandardCharsets.UTF_8);
-        } catch (IOException ex) {
-            throw new BusinessException(400, "读取文件失败");
-        }
     }
 
     private long elapsedMs(long startNanos) {

@@ -95,6 +95,8 @@ class LangChain4jEmbeddingRagIntegrationTest {
                 embeddingJson,
                 new NoopVectorIndexService(),
                 calls,
+                new com.example.codereview.knowledge.KnowledgeUploadValidator(2_097_152, 400_000),
+                new com.example.codereview.knowledge.KnowledgeDocumentStateService(documents),
                 mock(PlatformTransactionManager.class),
                 400,
                 20,

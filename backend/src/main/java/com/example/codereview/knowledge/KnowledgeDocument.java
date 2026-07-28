@@ -29,6 +29,10 @@ public class KnowledgeDocument {
     @Column(nullable = false, length = 32)
     private String status;
 
+    /** Sanitised reason the last indexing attempt failed; null once indexing succeeds. */
+    @Column(columnDefinition = "text")
+    private String indexError;
+
     @Column(nullable = false)
     private Instant createdAt;
 
@@ -79,11 +83,25 @@ public class KnowledgeDocument {
 
     public void markIndexed() {
         this.status = "INDEXED";
+        this.indexError = null;
         this.updatedAt = Instant.now();
     }
 
     public void markFailed() {
+        markFailed(null);
+    }
+
+    public void markFailed(String reason) {
         this.status = "FAILED";
+        this.indexError = reason == null ? null : reason.substring(0, Math.min(reason.length(), 2_000));
         this.updatedAt = Instant.now();
+    }
+
+    public String getIndexError() {
+        return indexError;
+    }
+
+    public Instant getUpdatedAt() {
+        return updatedAt;
     }
 }

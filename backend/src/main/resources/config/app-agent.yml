@@ -74,6 +74,11 @@ app:
     max-files: ${REVIEW_MAX_FILES:40}
     max-retry: ${REVIEW_MAX_RETRY:3}
     max-prompt-chars: ${REVIEW_MAX_PROMPT_CHARS:48000}
+  knowledge:
+    # 上传边界。业务层按此上限流式读取，不再用无边界的 getBytes()；
+    # 同时在 spring.servlet.multipart 处设了容器级上限做第一道拦截。
+    max-file-bytes: ${KNOWLEDGE_MAX_FILE_BYTES:2097152}
+    max-characters: ${KNOWLEDGE_MAX_CHARACTERS:400000}
   rag:
     mode: ${RAG_MODE:memory}
     chunk-size: ${RAG_CHUNK_SIZE:800}
