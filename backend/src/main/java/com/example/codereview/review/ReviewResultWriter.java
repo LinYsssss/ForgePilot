@@ -1,5 +1,6 @@
 package com.example.codereview.review;
 
+import com.example.codereview.common.api.ErrorCode;
 import com.example.codereview.ai.AiReviewResult;
 import com.example.codereview.common.exception.BusinessException;
 import com.example.codereview.notify.Notifier;
@@ -36,7 +37,7 @@ public class ReviewResultWriter {
     @Transactional
     public void saveSuccess(Long taskId, AiReviewResult result) {
         ReviewTask task = tasks.findById(taskId)
-                .orElseThrow(() -> new BusinessException(6002, "审查任务不存在"));
+                .orElseThrow(() -> new BusinessException(ErrorCode.REVIEW_TASK_NOT_FOUND, "审查任务不存在"));
         if (task.isCanceled()) {
             return;
         }

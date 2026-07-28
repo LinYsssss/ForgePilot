@@ -1,5 +1,6 @@
 package com.example.codereview.ai.langchain4j;
 
+import com.example.codereview.common.api.ErrorCode;
 import com.example.codereview.ai.AiCallTransientException;
 import com.example.codereview.common.exception.BusinessException;
 import com.example.codereview.rag.EmbeddingClient;
@@ -54,10 +55,10 @@ public final class LangChain4jEmbeddingClient implements EmbeddingClient {
     @Override
     public EmbeddingResult embed(String text) {
         if (text == null || text.isBlank()) {
-            throw new BusinessException(6003, "Embedding input must not be empty");
+            throw new BusinessException(ErrorCode.AI_EMBEDDING_FAILED, "Embedding input must not be empty");
         }
         if (text.length() > maxInputChars) {
-            throw new BusinessException(6003, "Embedding input exceeds maximum size");
+            throw new BusinessException(ErrorCode.AI_EMBEDDING_FAILED, "Embedding input exceeds maximum size");
         }
         Observation observation = Observation.createNotStarted(
                         "reposage.embedding.provider",
@@ -79,12 +80,12 @@ public final class LangChain4jEmbeddingClient implements EmbeddingClient {
                 throw invalid("empty embedding");
             }
             if (expectedDimension > 0 && raw.length != expectedDimension) {
-                throw new BusinessException(6003, "Embedding dimension mismatch");
+                throw new BusinessException(ErrorCode.AI_EMBEDDING_FAILED, "Embedding dimension mismatch");
             }
             List<Double> vector = new ArrayList<>(raw.length);
             for (float value : raw) {
                 if (!Float.isFinite(value)) {
-                    throw new BusinessException(6003, "Embedding values must be finite");
+                    throw new BusinessException(ErrorCode.AI_EMBEDDING_FAILED, "Embedding values must be finite");
                 }
                 vector.add((double) value);
             }

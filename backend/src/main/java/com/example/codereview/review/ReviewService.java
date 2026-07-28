@@ -156,7 +156,7 @@ public class ReviewService {
     public ReviewTaskResponse taskDetail(Long projectId, Long userId, Long taskId) {
         repositoryService.getRequired(projectId, userId);
         ReviewTask task = tasks.findById(taskId)
-                .orElseThrow(() -> new BusinessException(6002, "审查任务不存在"));
+                .orElseThrow(() -> new BusinessException(ErrorCode.REVIEW_TASK_NOT_FOUND, "审查任务不存在"));
         if (!task.getProjectId().equals(projectId)) {
             throw new BusinessException(ErrorCode.PROJECT_FORBIDDEN, "无权访问该任务");
         }
@@ -168,7 +168,7 @@ public class ReviewService {
         repositoryService.getRequired(projectId, userId);
         ReviewTask task = requireTask(projectId, taskId);
         if (task.isTerminal()) {
-            throw new BusinessException(6003, "任务已结束，无法停止");
+            throw new BusinessException(ErrorCode.CONFLICT, "任务已结束，无法停止");
         }
         task.markCanceled();
         tasks.save(task);
@@ -208,7 +208,7 @@ public class ReviewService {
 
     private ReviewTask requireTask(Long projectId, Long taskId) {
         ReviewTask task = tasks.findById(taskId)
-                .orElseThrow(() -> new BusinessException(6002, "审查任务不存在"));
+                .orElseThrow(() -> new BusinessException(ErrorCode.REVIEW_TASK_NOT_FOUND, "审查任务不存在"));
         if (!task.getProjectId().equals(projectId)) {
             throw new BusinessException(ErrorCode.PROJECT_FORBIDDEN, "无权访问该任务");
         }
@@ -263,7 +263,7 @@ public class ReviewService {
         }
         List<CommitResponse> commits = repositoryService.commits(projectId, userId, 1);
         if (commits.isEmpty()) {
-            throw new BusinessException(6001, "仓库没有可审查的 Commit");
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "仓库没有可审查的 Commit");
         }
         return commits.get(0).commitId();
     }

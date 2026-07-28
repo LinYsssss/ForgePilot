@@ -1,5 +1,6 @@
 package com.example.codereview.ai;
 
+import com.example.codereview.common.api.ErrorCode;
 import com.example.codereview.common.exception.BusinessException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -89,14 +90,14 @@ public class OpenAiCompatibleReviewClient implements AiReviewClient {
             if (ex.getStatusCode().value() == 429) {
                 throw new AiCallTransientException("AI 调用被限流(429): " + describeFailure(ex), ex);
             }
-            throw new BusinessException(6004, "AI 调用失败: " + describeFailure(ex));
+            throw new BusinessException(ErrorCode.AI_CALL_FAILED, "AI 调用失败: " + describeFailure(ex));
         } catch (HttpServerErrorException ex) {
             throw new AiCallTransientException("AI 服务端错误(5xx): " + describeFailure(ex), ex);
         } catch (ResourceAccessException ex) {
             // Connect/read timeout or connection reset — transient, worth retrying.
             throw new AiCallTransientException("AI 调用网络异常: " + describeFailure(ex), ex);
         } catch (Exception ex) {
-            throw new BusinessException(6004, "AI 调用失败: " + describeFailure(ex));
+            throw new BusinessException(ErrorCode.AI_CALL_FAILED, "AI 调用失败: " + describeFailure(ex));
         }
     }
 
@@ -104,7 +105,7 @@ public class OpenAiCompatibleReviewClient implements AiReviewClient {
         try {
             return objectMapper.readTree(responseText);
         } catch (Exception ex) {
-            throw new BusinessException(6004, "AI 响应不是有效 JSON: " + abbreviate(responseText));
+            throw new BusinessException(ErrorCode.AI_RESPONSE_INVALID, "AI 响应不是有效 JSON: " + abbreviate(responseText));
         }
     }
 
@@ -155,7 +156,7 @@ public class OpenAiCompatibleReviewClient implements AiReviewClient {
     private String extractMessageContent(JsonNode root, String responseText) {
         String content = root.path("choices").path(0).path("message").path("content").asText();
         if (content == null || content.isBlank()) {
-            throw new BusinessException(6004, "AI 响应不符合 OpenAI Chat 格式: " + abbreviate(responseText));
+            throw new BusinessException(ErrorCode.AI_RESPONSE_INVALID, "AI 响应不符合 OpenAI Chat 格式: " + abbreviate(responseText));
         }
         return content;
     }
@@ -196,7 +197,7 @@ public class OpenAiCompatibleReviewClient implements AiReviewClient {
                     usage
             );
         } catch (Exception ex) {
-            throw new BusinessException(6005, "AI 输出解析失败: " + ex.getMessage());
+            throw new BusinessException(ErrorCode.AI_RESPONSE_INVALID, "AI 输出解析失败: " + ex.getMessage());
         }
     }
 
@@ -213,7 +214,7 @@ public class OpenAiCompatibleReviewClient implements AiReviewClient {
 
     private String extractJson(String content) {
         if (content == null || content.isBlank()) {
-            throw new BusinessException(6005, "AI 输出为空");
+            throw new BusinessException(ErrorCode.AI_RESPONSE_INVALID, "AI 输出为空");
         }
         String trimmed = content.trim();
         int firstBrace = trimmed.indexOf('{');

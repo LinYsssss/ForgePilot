@@ -34,7 +34,7 @@ public class PatchApprovalService {
     public PatchApproval decide(Long projectId, Long patchId, Long agentRunId, Long approverId,
                                 String currentHeadSha, PatchApprovalDecision decision, String comment) {
         if (rolloutPolicy != null && rolloutPolicy.shadow()) {
-            throw new BusinessException(503, "影子模式下补丁审批已停用");
+            throw new BusinessException(ErrorCode.SERVICE_UNAVAILABLE, "影子模式下补丁审批已停用");
         }
         projects.getRequired(projectId, approverId);
         PatchCandidate patch = patches.findById(patchId)

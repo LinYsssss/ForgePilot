@@ -1,5 +1,6 @@
 package com.example.codereview.rag;
 
+import com.example.codereview.common.api.ErrorCode;
 import com.example.codereview.common.exception.BusinessException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -71,7 +72,7 @@ public class OpenAiCompatibleEmbeddingClient implements EmbeddingClient {
                     values
             );
         } catch (Exception ex) {
-            throw new BusinessException(6003, "Embedding provider call failed");
+            throw new BusinessException(ErrorCode.AI_EMBEDDING_FAILED, "Embedding provider call failed");
         }
     }
 }
