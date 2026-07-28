@@ -87,6 +87,8 @@ app:
     enabled: ${RATE_LIMIT_ENABLED:true}
     limit: ${RATE_LIMIT_REQUESTS:120}
     window-seconds: ${RATE_LIMIT_WINDOW_SECONDS:60}
+    # 登录端点单独计数并收紧:通用额度对密码爆破而言过松
+    login-limit: ${RATE_LIMIT_LOGIN_REQUESTS:8}
   notify:
     # 报告链接前缀,填了会在通知里附「查看完整报告」
     base-url: ${NOTIFY_BASE_URL:}

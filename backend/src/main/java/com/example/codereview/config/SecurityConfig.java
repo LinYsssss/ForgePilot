@@ -27,7 +27,8 @@ public class SecurityConfig {
             @Value("${spring.h2.console.enabled:false}") boolean h2ConsoleEnabled,
             @Value("${app.ratelimit.enabled:true}") boolean rateLimitEnabled,
             @Value("${app.ratelimit.limit:120}") int rateLimit,
-            @Value("${app.ratelimit.window-seconds:60}") int rateLimitWindowSeconds
+            @Value("${app.ratelimit.window-seconds:60}") int rateLimitWindowSeconds,
+            @Value("${app.ratelimit.login-limit:8}") int loginRateLimit
     ) throws Exception {
         http
                 .csrf(AbstractHttpConfigurer::disable)
@@ -50,7 +51,7 @@ public class SecurityConfig {
                 })
                 .addFilterBefore(tokenFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterAfter(
-                        new RateLimitFilter(rateLimitEnabled, rateLimit, rateLimitWindowSeconds, objectMapper),
+                        new RateLimitFilter(rateLimitEnabled, rateLimit, rateLimitWindowSeconds, loginRateLimit, objectMapper),
                         TokenAuthenticationFilter.class
                 );
         if (h2ConsoleEnabled) {
