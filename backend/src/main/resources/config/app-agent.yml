@@ -1,0 +1,76 @@
+# Track A 独占配置：Agent 执行闭环与业务处理
+#
+# 归属见 docs/并行实施拆分方案.md 第二节。Track B 不得修改本文件。
+# 由 application.yml 的 spring.config.import 引入（非 optional，缺失即启动失败）。
+#
+# 注意：application-dev.yml / application-prod.yml 中的同名键优先级更高，
+# 仍可正常覆盖本文件的默认值。
+
+app:
+  agent:
+    queue:
+      max-retry: ${AGENT_QUEUE_MAX_RETRY:3}
+      retry-delay-ms: ${AGENT_QUEUE_RETRY_DELAY_MS:5000}
+    recovery:
+      enabled: ${AGENT_RECOVERY_ENABLED:true}
+      stale-threshold: ${AGENT_RECOVERY_STALE_THRESHOLD:5m}
+      batch-size: ${AGENT_RECOVERY_BATCH_SIZE:100}
+    budget:
+      max-elapsed: ${AGENT_MAX_ELAPSED:10m}
+      max-tool-calls: ${AGENT_MAX_TOOL_CALLS:20}
+      max-model-calls: ${AGENT_MAX_MODEL_CALLS:6}
+      max-input-tokens: ${AGENT_MAX_INPUT_TOKENS:60000}
+      max-output-tokens: ${AGENT_MAX_OUTPUT_TOKENS:12000}
+      max-estimated-cost: ${AGENT_MAX_ESTIMATED_COST:2.00}
+    tool:
+      max-input-bytes: ${AGENT_TOOL_MAX_INPUT_BYTES:16384}
+      max-output-bytes: ${AGENT_TOOL_MAX_OUTPUT_BYTES:65536}
+    plan:
+      default-tool-limit: ${AGENT_PLAN_DEFAULT_TOOL_LIMIT:3}
+      max-argument-bytes: ${AGENT_PLAN_MAX_ARGUMENT_BYTES:16384}
+    model:
+      max-output-bytes: ${AGENT_MODEL_MAX_OUTPUT_BYTES:65536}
+    outbox:
+      retry-delay: ${AGENT_OUTBOX_RETRY_DELAY:10s}
+      max-error-length: ${AGENT_OUTBOX_MAX_ERROR_LENGTH:2000}
+  notify:
+    # 报告链接前缀,填了会在通知里附「查看完整报告」
+    base-url: ${NOTIFY_BASE_URL:}
+    dingtalk:
+      enabled: ${DINGTALK_ENABLED:false}
+      webhook-url: ${DINGTALK_WEBHOOK_URL:}
+      # 机器人安全设置用「加签」时填密钥;用「自定义关键词」则改填 keyword
+      secret: ${DINGTALK_SECRET:}
+      keyword: ${DINGTALK_KEYWORD:}
+      # 低于该风险等级不通知:NONE < LOW < MEDIUM < HIGH
+      min-risk: ${DINGTALK_MIN_RISK:LOW}
+  review:
+    inline: ${REVIEW_INLINE:true}
+    max-diff-chars: ${REVIEW_MAX_DIFF_CHARS:20000}
+    max-total-diff-chars: ${REVIEW_MAX_TOTAL_DIFF_CHARS:200000}
+    max-files: ${REVIEW_MAX_FILES:40}
+    max-retry: ${REVIEW_MAX_RETRY:3}
+    max-prompt-chars: ${REVIEW_MAX_PROMPT_CHARS:48000}
+  rag:
+    mode: ${RAG_MODE:memory}
+    chunk-size: ${RAG_CHUNK_SIZE:800}
+    overlap: ${RAG_OVERLAP:100}
+    top-k: ${RAG_TOP_K:5}
+    full-context: ${RAG_FULL_CONTEXT:false}
+    max-context-chars: ${RAG_MAX_CONTEXT_CHARS:6000}
+  ai:
+    runtime: ${AI_RUNTIME:legacy}
+    provider: ${AI_PROVIDER:mock}
+    base-url: ${LLM_BASE_URL:}
+    api-key: ${LLM_API_KEY:}
+    chat-model: ${LLM_CHAT_MODEL:mock-reviewer}
+    temperature: ${AI_TEMPERATURE:0.0}
+    read-timeout-ms: ${AI_READ_TIMEOUT_MS:300000}
+    embedding-provider: ${EMBEDDING_PROVIDER:${AI_PROVIDER:mock}}
+    embedding-base-url: ${EMBEDDING_BASE_URL:${LLM_BASE_URL:}}
+    embedding-api-key: ${EMBEDDING_API_KEY:${LLM_API_KEY:}}
+    embedding-model: ${LLM_EMBEDDING_MODEL:mock-embedding}
+    embedding-version: ${EMBEDDING_VERSION:${LLM_EMBEDDING_MODEL:mock-embedding}}
+    embedding-dimensions: ${EMBEDDING_DIMENSIONS:0}
+    embedding-max-input-chars: ${EMBEDDING_MAX_INPUT_CHARS:32000}
+    embedding-read-timeout-ms: ${EMBEDDING_READ_TIMEOUT_MS:${AI_READ_TIMEOUT_MS:300000}}

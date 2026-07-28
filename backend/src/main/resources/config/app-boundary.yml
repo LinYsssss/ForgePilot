@@ -1,0 +1,46 @@
+# Track B 独占配置：安全基础设施与外部边界
+#
+# 归属见 docs/并行实施拆分方案.md 第二节。Track A 不得修改本文件。
+# 由 application.yml 的 spring.config.import 引入（非 optional，缺失即启动失败）。
+#
+# 注意：application-dev.yml / application-prod.yml 中的同名键优先级更高，
+# 仍可正常覆盖本文件的默认值（dev 覆盖 app.git.allow-local-path，
+# prod 覆盖 app.security.auth-cookie-secure）。
+
+app:
+  git:
+    allow-local-path: ${GIT_ALLOW_LOCAL_PATH:false}
+  ratelimit:
+    enabled: ${RATE_LIMIT_ENABLED:true}
+    limit: ${RATE_LIMIT_REQUESTS:120}
+    window-seconds: ${RATE_LIMIT_WINDOW_SECONDS:60}
+  security:
+    token-secret: ${JWT_SECRET:dev-secret-change-me}
+    token-ttl-seconds: ${TOKEN_TTL_SECONDS:86400}
+    token-encrypt-key: ${TOKEN_ENCRYPT_KEY:dev-token-encryption-key-change-me}
+    auth-cookie-name: ${AUTH_COOKIE_NAME:reposage_auth}
+    auth-cookie-secure: ${AUTH_COOKIE_SECURE:false}
+    auth-cookie-same-site: ${AUTH_COOKIE_SAME_SITE:Lax}
+    seed-admin:
+      username: ${SEED_ADMIN_USERNAME:}
+      password: ${SEED_ADMIN_PASSWORD:}
+      nickname: ${SEED_ADMIN_NICKNAME:管理员}
+      role: ${SEED_ADMIN_ROLE:ADMIN}
+    # 跨线契约 4（Phase 0 冻结）：SPA CSRF 开关位。
+    # Track B 可在自有分支置 true 做测试，但合入集成分支时必须回落 false；
+    # 由合流阶段统一打开并跑全量回归。提前打开会立即让 Track A 的
+    # MockMvc 非 GET 测试全部 403，被误判为 Track A 的缺陷。
+    csrf:
+      enabled: ${SECURITY_CSRF_ENABLED:false}
+  http:
+    connect-timeout-ms: ${HTTP_CONNECT_TIMEOUT_MS:10000}
+    read-timeout-ms: ${HTTP_READ_TIMEOUT_MS:60000}
+  model-service:
+    enabled: ${MODEL_SERVICE_ENABLED:false}
+    base-url: ${MODEL_SERVICE_URL:}
+  sandbox:
+    signing-secret: ${SANDBOX_SIGNING_SECRET:}
+    tool-image: ${SANDBOX_TOOL_IMAGE:}
+    tool-timeout-ms: ${SANDBOX_TOOL_TIMEOUT_MS:120000}
+  scm:
+    allow-insecure-localhost: ${SCM_ALLOW_INSECURE_LOCALHOST:false}
