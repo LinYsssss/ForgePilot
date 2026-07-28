@@ -31,6 +31,9 @@ public final class GitInputValidator {
         }
         String lower = trimmed.toLowerCase(Locale.ROOT);
         if (lower.startsWith("http://") || lower.startsWith("https://")) {
+            // 协议合法还不够:平台会真的去 clone 这个地址,必须挡住指向内网/云元数据的 SSRF。
+            // allowLocalPath 同时作为开发期放行本机地址的开关(生产为 false)。
+            OutboundUrlPolicy.requirePublicHttpUrl(trimmed, "仓库地址", allowLocalPath);
             return;
         }
         if (trimmed.contains("://")) {

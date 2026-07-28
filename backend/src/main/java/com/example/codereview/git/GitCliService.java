@@ -7,6 +7,7 @@ import com.example.codereview.repo.RepositoryDtos.CommitDiffResponse;
 import com.example.codereview.repo.RepositoryDtos.CommitResponse;
 import com.example.codereview.repo.RepositoryDtos.DiffFileResponse;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -23,6 +24,14 @@ import org.springframework.stereotype.Service;
 
 @Service
 public class GitCliService {
+
+    private static final long COMMAND_TIMEOUT_SECONDS = 60;
+    /** 抽干线程的收尾等待:进程已退出或被杀,剩余管道内容应当很快读完。 */
+    private static final long DRAIN_JOIN_MS = 5000;
+    /** 单次命令保留的输出上限,超出后继续读但丢弃,避免超大 diff 撑爆堆。 */
+    private static final int MAX_OUTPUT_CHARS = 4_000_000;
+    /** 进入异常消息的输出上限。 */
+    private static final int MAX_ERROR_CHARS = 2000;
 
     private final Path workRoot = Path.of(".work", "repos");
     private final ConcurrentMap<Long, Object> repositoryLocks = new ConcurrentHashMap<>();
@@ -257,6 +266,7 @@ public class GitCliService {
 
     private String run(Path directory, CodeRepositoryEntity repository, String... args) {
         Path askPassScript = null;
+        String token = null;
         try {
             ProcessBuilder builder = new ProcessBuilder(gitCommand(repository, args))
                     .directory(directory.toFile())
@@ -265,7 +275,7 @@ public class GitCliService {
                     ? "http:https"
                     : "http:https:file");
             builder.environment().put("GIT_TERMINAL_PROMPT", "0");
-            String token = cryptoService.decrypt(repository.getAccessTokenCiphertext());
+            token = cryptoService.decrypt(repository.getAccessTokenCiphertext());
             if (shouldUseToken(repository.getRepoUrl(), token)) {
                 AskPassConfig askPass = createAskPass();
                 askPassScript = askPass.scriptPath();
@@ -274,14 +284,18 @@ public class GitCliService {
                 builder.environment().put("REPOSAGE_GIT_PASSWORD", token);
             }
             Process process = builder.start();
-            boolean finished = process.waitFor(60, TimeUnit.SECONDS);
-            String output = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+            // 必须在 waitFor 之前就开始消费管道。git 写满管道缓冲区(Linux 约 64KB)后会阻塞在写,
+            // 而我们阻塞在 waitFor —— 双方互等,大仓库的 log/diff 必然死锁到超时被杀。
+            OutputDrain drain = OutputDrain.start(process.getInputStream());
+            boolean finished = process.waitFor(COMMAND_TIMEOUT_SECONDS, TimeUnit.SECONDS);
             if (!finished) {
                 process.destroyForcibly();
+                drain.await(DRAIN_JOIN_MS);
                 throw new BusinessException(6001, "Git 命令执行超时");
             }
+            String output = drain.await(DRAIN_JOIN_MS);
             if (process.exitValue() != 0) {
-                throw new BusinessException(6001, "Git 命令执行失败: " + output);
+                throw new BusinessException(6001, "Git 命令执行失败: " + sanitize(output, token, askPassScript));
             }
             return output;
         } catch (IOException ex) {
@@ -296,6 +310,73 @@ public class GitCliService {
                 } catch (IOException ignored) {
                     // Best-effort cleanup for ephemeral askpass helpers.
                 }
+            }
+        }
+    }
+
+    /**
+     * git 的失败输出可能回显带凭据的远端地址或 askpass 脚本路径,这些都会进到
+     * {@link BusinessException} 的 message 并最终出现在 API 响应与日志里,必须先脱敏。
+     */
+    static String sanitize(String output, String token, Path askPassScript) {
+        if (output == null || output.isBlank()) {
+            return "(无输出)";
+        }
+        String cleaned = output;
+        if (token != null && !token.isBlank()) {
+            cleaned = cleaned.replace(token, "***");
+        }
+        if (askPassScript != null) {
+            cleaned = cleaned.replace(askPassScript.toString(), "***");
+        }
+        // 形如 https://user:secret@host/... 的内联凭据
+        cleaned = cleaned.replaceAll("(?i)(https?://)[^/@\\s]*:[^/@\\s]*@", "$1***@");
+        cleaned = cleaned.trim();
+        return cleaned.length() <= MAX_ERROR_CHARS ? cleaned : cleaned.substring(0, MAX_ERROR_CHARS) + "…(已截断)";
+    }
+
+    /**
+     * 后台线程限量抽干子进程输出。限量是为了让一次异常巨大的 diff 不至于把堆吃光——
+     * 超过上限后继续读并丢弃,这样子进程不会因为没人读而卡住。
+     */
+    private static final class OutputDrain {
+
+        private final Thread thread;
+        private final StringBuilder buffer = new StringBuilder();
+        private volatile boolean truncated;
+
+        private OutputDrain(InputStream stream) {
+            this.thread = new Thread(() -> {
+                byte[] chunk = new byte[8192];
+                try (InputStream in = stream) {
+                    int read;
+                    while ((read = in.read(chunk)) != -1) {
+                        synchronized (buffer) {
+                            int room = MAX_OUTPUT_CHARS - buffer.length();
+                            if (room > 0) {
+                                buffer.append(new String(chunk, 0, Math.min(read, room), StandardCharsets.UTF_8));
+                            } else {
+                                truncated = true;
+                            }
+                        }
+                    }
+                } catch (IOException ignored) {
+                    // 进程被强杀时管道会断开,已读到的内容仍然可用。
+                }
+            }, "git-output-drain");
+            this.thread.setDaemon(true);
+        }
+
+        static OutputDrain start(InputStream stream) {
+            OutputDrain drain = new OutputDrain(stream);
+            drain.thread.start();
+            return drain;
+        }
+
+        String await(long millis) throws InterruptedException {
+            thread.join(millis);
+            synchronized (buffer) {
+                return truncated ? buffer + "\n…(输出过长已截断)" : buffer.toString();
             }
         }
     }
