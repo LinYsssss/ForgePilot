@@ -27,7 +27,9 @@ import jakarta.servlet.http.Cookie;
         "app.git.allow-local-path=false",
         "spring.jpa.hibernate.ddl-auto=create-drop",
         "spring.rabbitmq.listener.simple.auto-startup=false",
-        "management.health.rabbit.enabled=false"
+        "management.health.rabbit.enabled=false",
+        // 用例会反复 seedAndLogin,放开登录限流(生产默认 8 次/分钟)
+        "app.ratelimit.login-limit=1000"
 })
 @AutoConfigureMockMvc
 class AuthProjectIntegrationTest {
