@@ -43,8 +43,12 @@ public class ReviewController {
     }
 
     @GetMapping("/tasks")
-    public ApiResponse<List<ReviewTaskResponse>> tasks(@PathVariable Long projectId) {
-        return ApiResponse.ok(reviewService.listTasks(projectId, currentUserProvider.getRequired().userId()));
+    public ApiResponse<com.example.codereview.common.api.PageResponse<ReviewTaskResponse>> tasks(
+            @PathVariable Long projectId,
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer size) {
+        return ApiResponse.ok(reviewService.listTasks(
+                projectId, currentUserProvider.getRequired().userId(), page, size));
     }
 
     @GetMapping("/tasks/{taskId}")
@@ -64,8 +68,12 @@ public class ReviewController {
     }
 
     @GetMapping("/reports")
-    public ApiResponse<List<ReviewReportSummary>> reports(@PathVariable Long projectId) {
-        return ApiResponse.ok(reviewService.reports(projectId, currentUserProvider.getRequired().userId()));
+    public ApiResponse<com.example.codereview.common.api.PageResponse<ReviewReportSummary>> reports(
+            @PathVariable Long projectId,
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer size) {
+        return ApiResponse.ok(reviewService.reports(
+                projectId, currentUserProvider.getRequired().userId(), page, size));
     }
 
     @GetMapping("/reports/{reportId}")

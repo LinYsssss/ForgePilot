@@ -141,6 +141,17 @@ public class ReviewService {
                 .toList();
     }
 
+    /** Paginated listing; review tasks accumulate for the lifetime of a project. */
+    public com.example.codereview.common.api.PageResponse<ReviewTaskResponse> listTasks(
+            Long projectId, Long userId, Integer page, Integer size) {
+        repositoryService.getRequired(projectId, userId);
+        var pageRequest = org.springframework.data.domain.PageRequest.of(
+                com.example.codereview.common.api.PageResponse.sanitizePage(page),
+                com.example.codereview.common.api.PageResponse.sanitizeSize(size));
+        return com.example.codereview.common.api.PageResponse.from(
+                tasks.findByProjectIdOrderByCreatedAtDesc(projectId, pageRequest), ReviewTaskResponse::from);
+    }
+
     public ReviewTaskResponse taskDetail(Long projectId, Long userId, Long taskId) {
         repositoryService.getRequired(projectId, userId);
         ReviewTask task = tasks.findById(taskId)
@@ -209,6 +220,17 @@ public class ReviewService {
                 .stream()
                 .map(ReviewReportSummary::from)
                 .toList();
+    }
+
+    /** Paginated listing; reports accumulate one per completed review. */
+    public com.example.codereview.common.api.PageResponse<ReviewReportSummary> reports(
+            Long projectId, Long userId, Integer page, Integer size) {
+        repositoryService.getRequired(projectId, userId);
+        var pageRequest = org.springframework.data.domain.PageRequest.of(
+                com.example.codereview.common.api.PageResponse.sanitizePage(page),
+                com.example.codereview.common.api.PageResponse.sanitizeSize(size));
+        return com.example.codereview.common.api.PageResponse.from(
+                reports.findByProjectIdOrderByCreatedAtDesc(projectId, pageRequest), ReviewReportSummary::from);
     }
 
     public ReviewReportDetail reportDetail(Long projectId, Long userId, Long reportId) {

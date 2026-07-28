@@ -10,6 +10,10 @@ public interface ReviewTaskRepository extends JpaRepository<ReviewTask, Long> {
 
     List<ReviewTask> findByProjectIdOrderByCreatedAtDesc(Long projectId);
 
+    /** Paginated variant for the API; the unbounded one stays for internal callers. */
+    org.springframework.data.domain.Page<ReviewTask> findByProjectIdOrderByCreatedAtDesc(
+            Long projectId, org.springframework.data.domain.Pageable pageable);
+
     void deleteByProjectId(Long projectId);
 
     Optional<ReviewTask> findFirstByProjectIdAndRepositoryIdAndCommitIdAndBaseCommitIdAndBranchNameOrderByCreatedAtDesc(

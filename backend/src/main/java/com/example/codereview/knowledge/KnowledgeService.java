@@ -1,5 +1,6 @@
 package com.example.codereview.knowledge;
 
+import com.example.codereview.common.api.PageResponse;
 import com.example.codereview.common.exception.BusinessException;
 import com.example.codereview.ai.AiCallLogService;
 import com.example.codereview.knowledge.KnowledgeDtos.DocumentResponse;
@@ -13,6 +14,7 @@ import com.example.codereview.rag.VectorIndexService;
 import java.util.ArrayList;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionDefinition;
@@ -132,6 +134,17 @@ public class KnowledgeService {
                 .stream()
                 .map(DocumentResponse::from)
                 .toList();
+    }
+
+    /**
+     * Paginated listing. Documents accumulate for the lifetime of a project, so the unbounded
+     * variant is no longer what the API exposes.
+     */
+    public PageResponse<DocumentResponse> list(Long projectId, Long userId, Integer page, Integer size) {
+        projectService.getRequired(projectId, userId);
+        PageRequest pageRequest = PageRequest.of(PageResponse.sanitizePage(page), PageResponse.sanitizeSize(size));
+        return PageResponse.from(
+                documents.findByProjectIdOrderByCreatedAtDesc(projectId, pageRequest), DocumentResponse::from);
     }
 
     public SearchResponse search(Long projectId, Long userId, String query, Integer topK) {
