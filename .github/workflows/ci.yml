@@ -4,6 +4,10 @@ on:
   push:
   pull_request:
 
+# 默认只读:CI 不需要写仓库,最小权限可限制被攻陷的 action 能做什么
+permissions:
+  contents: read
+
 jobs:
   verify:
     runs-on: ubuntu-latest
@@ -19,7 +23,8 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          # 与 frontend/package.json 的 engines 和 frontend/Dockerfile 保持一致
+          node-version: "22"
           cache: npm
           cache-dependency-path: frontend/package-lock.json
 
@@ -27,9 +32,19 @@ jobs:
         working-directory: backend
         run: mvn -s .mvn/settings.xml verify
 
+      # 沙箱执行器是安全边界的一部分,其测试必须进合并门禁,
+      # 否则它的 37 个测试可以静默退化而 CI 依然全绿。
+      - name: Verify sandbox runner
+        working-directory: sandbox-runner
+        run: mvn -B verify
+
       - name: Install frontend dependencies
         working-directory: frontend
         run: npm ci
+
+      - name: Audit frontend dependencies
+        working-directory: frontend
+        run: npm audit --audit-level=high
 
       - name: Test frontend
         working-directory: frontend
