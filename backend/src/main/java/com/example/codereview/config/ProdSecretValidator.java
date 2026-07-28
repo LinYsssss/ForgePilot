@@ -1,6 +1,7 @@
 package com.example.codereview.config;
 
 import jakarta.annotation.PostConstruct;
+import java.util.Locale;
 import java.util.Set;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
@@ -11,6 +12,10 @@ import org.springframework.stereotype.Component;
 public class ProdSecretValidator {
 
     private static final int MIN_LENGTH = 16;
+    /** 种子管理员是平台唯一的初始 ADMIN,弱口令等于把最高权限挂在公网上。 */
+    private static final int MIN_SEED_PASSWORD_LENGTH = 12;
+    /** 会话 TTL 上限 7 天:令牌一旦泄露,窗口不应无限长。 */
+    private static final long MAX_TOKEN_TTL_SECONDS = 604800;
     private static final Set<String> FORBIDDEN = Set.of(
             "dev-secret-change-me",
             "dev-token-encryption-key-change-me",
@@ -20,25 +25,44 @@ public class ProdSecretValidator {
             "guest",
             "replace-with-your-mimo-key"
     );
+    /** 常见弱口令,长度达标也不能用。 */
+    private static final Set<String> WEAK_PASSWORDS = Set.of(
+            "administrator", "password1234", "admin123456", "123456789012", "qwerty123456"
+    );
 
     private final String tokenSecret;
     private final String tokenEncryptKey;
     private final String dbPassword;
     private final String rabbitPassword;
     private final String llmApiKey;
+    private final String sandboxSigningSecret;
+    private final String seedUsername;
+    private final String seedPassword;
+    private final boolean authCookieSecure;
+    private final long tokenTtlSeconds;
 
     public ProdSecretValidator(
             @Value("${app.security.token-secret}") String tokenSecret,
             @Value("${app.security.token-encrypt-key}") String tokenEncryptKey,
             @Value("${spring.datasource.password:}") String dbPassword,
             @Value("${spring.rabbitmq.password:}") String rabbitPassword,
-            @Value("${app.ai.api-key:}") String llmApiKey
+            @Value("${app.ai.api-key:}") String llmApiKey,
+            @Value("${app.sandbox.signing-secret:}") String sandboxSigningSecret,
+            @Value("${app.security.seed-admin.username:}") String seedUsername,
+            @Value("${app.security.seed-admin.password:}") String seedPassword,
+            @Value("${app.security.auth-cookie-secure:false}") boolean authCookieSecure,
+            @Value("${app.security.token-ttl-seconds:86400}") long tokenTtlSeconds
     ) {
         this.tokenSecret = tokenSecret;
         this.tokenEncryptKey = tokenEncryptKey;
         this.dbPassword = dbPassword;
         this.rabbitPassword = rabbitPassword;
         this.llmApiKey = llmApiKey;
+        this.sandboxSigningSecret = sandboxSigningSecret;
+        this.seedUsername = seedUsername;
+        this.seedPassword = seedPassword;
+        this.authCookieSecure = authCookieSecure;
+        this.tokenTtlSeconds = tokenTtlSeconds;
     }
 
     @PostConstruct
@@ -47,7 +71,49 @@ public class ProdSecretValidator {
         check("TOKEN_ENCRYPT_KEY (app.security.token-encrypt-key)", tokenEncryptKey);
         check("DB_PASSWORD (spring.datasource.password)", dbPassword);
         check("RABBITMQ_PASSWORD (spring.rabbitmq.password)", rabbitPassword);
+        check("SANDBOX_SIGNING_SECRET (app.sandbox.signing-secret)", sandboxSigningSecret);
         checkOptional("LLM_API_KEY (app.ai.api-key)", llmApiKey);
+        checkSeedAdmin();
+        checkCookieAndTtl();
+    }
+
+    /**
+     * 种子管理员只在账号不存在时创建,但配置一旦留在 .env 里就会在每次全新部署时生效,
+     * 因此弱口令必须在启动期拦下,而不是等到它已经建出一个公网可登录的 ADMIN。
+     */
+    private void checkSeedAdmin() {
+        if (seedUsername == null || seedUsername.isBlank()) {
+            return; // 未启用种子账号
+        }
+        String name = "SEED_ADMIN_PASSWORD (app.security.seed-admin.password)";
+        if (seedPassword == null || seedPassword.isBlank()) {
+            throw new IllegalStateException("生产环境配置了 SEED_ADMIN_USERNAME 就必须同时配置 " + name);
+        }
+        String trimmed = seedPassword.trim();
+        if (trimmed.length() < MIN_SEED_PASSWORD_LENGTH) {
+            throw new IllegalStateException("生产环境 " + name + " 太短，至少需要 "
+                    + MIN_SEED_PASSWORD_LENGTH + " 个字符（当前 " + trimmed.length() + "）");
+        }
+        if (FORBIDDEN.contains(trimmed) || WEAK_PASSWORDS.contains(trimmed.toLowerCase(Locale.ROOT))) {
+            throw new IllegalStateException("生产环境 " + name + " 是常见弱口令，请改成强随机值");
+        }
+        if (trimmed.equalsIgnoreCase(seedUsername.trim())) {
+            throw new IllegalStateException("生产环境 " + name + " 不能与用户名相同");
+        }
+    }
+
+    private void checkCookieAndTtl() {
+        if (!authCookieSecure) {
+            throw new IllegalStateException(
+                    "生产环境 AUTH_COOKIE_SECURE 必须为 true，否则认证 Cookie 会在明文 HTTP 上被回传");
+        }
+        if (tokenTtlSeconds <= 0) {
+            throw new IllegalStateException("生产环境 TOKEN_TTL_SECONDS 必须为正数");
+        }
+        if (tokenTtlSeconds > MAX_TOKEN_TTL_SECONDS) {
+            throw new IllegalStateException("生产环境 TOKEN_TTL_SECONDS 不得超过 "
+                    + MAX_TOKEN_TTL_SECONDS + " 秒（7 天），当前 " + tokenTtlSeconds);
+        }
     }
 
     private void check(String name, String value) {
