@@ -22,11 +22,23 @@ spring:
     port: ${RABBITMQ_PORT:5672}
     username: ${RABBITMQ_USERNAME:guest}
     password: ${RABBITMQ_PASSWORD:guest}
+    # Publisher confirms are what make the outbox SENT state trustworthy: without them the
+    # database records a delivery the broker may never have persisted or been able to route.
+    publisher-confirm-type: ${RABBITMQ_PUBLISHER_CONFIRM_TYPE:correlated}
+    publisher-returns: ${RABBITMQ_PUBLISHER_RETURNS:true}
+    template:
+      mandatory: ${RABBITMQ_TEMPLATE_MANDATORY:true}
     listener:
       simple:
         auto-startup: ${RABBITMQ_LISTENER_AUTO_STARTUP:true}
 
 app:
+  agent:
+    outbox:
+      scheduler:
+        # Track A 所有键（见 docs/并行实施拆分方案.md）。生产必须有调度器在跑，
+        # 否则 Agent 事件停在 PENDING，整条链路不会自动推进。
+        enabled: ${AGENT_OUTBOX_SCHEDULER_ENABLED:true}
   security:
     auth-cookie-secure: ${AUTH_COOKIE_SECURE:true}
   review:

@@ -33,6 +33,20 @@ app:
     outbox:
       retry-delay: ${AGENT_OUTBOX_RETRY_DELAY:10s}
       max-error-length: ${AGENT_OUTBOX_MAX_ERROR_LENGTH:2000}
+      # 认领租约。发布线程崩溃后，reaper 要等租约到期才会回收事件，
+      # 因此该值必须大于一次 Broker 往返（含 confirm 等待）的最坏耗时。
+      lease-duration: ${AGENT_OUTBOX_LEASE_DURATION:60s}
+      confirm-timeout: ${AGENT_OUTBOX_CONFIRM_TIMEOUT:10s}
+      # 超过该次数转 FAILED 终态，不再重发，需人工介入。
+      max-attempts: ${AGENT_OUTBOX_MAX_ATTEMPTS:8}
+      batch-size: ${AGENT_OUTBOX_BATCH_SIZE:50}
+      fixed-delay-ms: ${AGENT_OUTBOX_FIXED_DELAY_MS:1000}
+      initial-delay-ms: ${AGENT_OUTBOX_INITIAL_DELAY_MS:5000}
+      scheduler:
+        # 默认关闭：测试上下文一旦后台发布就会与断言竞态，而且没有 Broker 时
+        # 每秒一次的连接失败会淹没日志。prod profile 显式打开；本地演示用
+        # AGENT_OUTBOX_SCHEDULER_ENABLED=true 打开。
+        enabled: ${AGENT_OUTBOX_SCHEDULER_ENABLED:false}
   notify:
     # 报告链接前缀,填了会在通知里附「查看完整报告」
     base-url: ${NOTIFY_BASE_URL:}

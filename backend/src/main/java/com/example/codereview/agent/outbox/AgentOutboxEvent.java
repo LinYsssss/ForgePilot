@@ -61,7 +61,20 @@ public class AgentOutboxEvent {
 
     private Instant claimedAt;
 
+    /**
+     * Identifies the worker that currently holds this event. Every write-back is conditional on it,
+     * so a worker whose lease expired cannot overwrite the result of whoever reclaimed the event.
+     */
+    @Column(length = 64)
+    private String claimToken;
+
+    /** When the current claim stops being valid and the reaper may requeue the event. */
+    private Instant leaseExpiresAt;
+
     private Instant sentAt;
+
+    /** Set when retries were exhausted; the event is terminal from then on. */
+    private Instant failedAt;
 
     @Column(columnDefinition = "text")
     private String lastError;
@@ -105,44 +118,15 @@ public class AgentOutboxEvent {
         return new AgentOutboxEvent(eventKey, agentRunId, eventType, payload, traceId, now);
     }
 
-    public void claim(Instant now) {
-        if (status != AgentOutboxStatus.PENDING) {
-            throw new IllegalStateException("Only pending outbox events can be claimed");
-        }
-        status = AgentOutboxStatus.PROCESSING;
-        claimedAt = now;
-        updatedAt = now;
-    }
-
-    public void markSent(Instant now) {
-        status = AgentOutboxStatus.SENT;
-        sentAt = now;
-        claimedAt = null;
-        lastError = null;
-        updatedAt = now;
-    }
-
-    public void markFailed(Instant now, Duration retryDelay, String error, int maxErrorLength) {
-        status = AgentOutboxStatus.PENDING;
-        attemptCount++;
-        nextAttemptAt = now.plus(retryDelay);
-        claimedAt = null;
-        lastError = truncate(error, maxErrorLength);
-        updatedAt = now;
-    }
+    // State transitions deliberately live in AgentOutboxRepository as conditional bulk updates
+    // rather than as entity mutators: every one of them has to be a compare-and-set on
+    // (id, claim_token, status), and a load-mutate-save round trip cannot express that.
 
     private static String requireText(String value, String name) {
         if (value == null || value.isBlank()) {
             throw new IllegalArgumentException(name + " must not be blank");
         }
         return value;
-    }
-
-    private static String truncate(String value, int maxLength) {
-        if (value == null || maxLength <= 0) {
-            return null;
-        }
-        return value.substring(0, Math.min(value.length(), maxLength));
     }
 
     public Long getId() {
@@ -185,8 +169,20 @@ public class AgentOutboxEvent {
         return claimedAt;
     }
 
+    public String getClaimToken() {
+        return claimToken;
+    }
+
+    public Instant getLeaseExpiresAt() {
+        return leaseExpiresAt;
+    }
+
     public Instant getSentAt() {
         return sentAt;
+    }
+
+    public Instant getFailedAt() {
+        return failedAt;
     }
 
     public String getLastError() {
