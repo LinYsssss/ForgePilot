@@ -192,7 +192,7 @@ git commit -m "chore(demo): add a verification entry point for the demo reposito
 
 **Interfaces:**
 - Consumes: `scripts/verify-demo-repos.sh`（Task 1）
-- Produces: `OrderMapper` 具备 `selectByActivity(Long): List<Order>`、`updateStatus(Long, String): void`、`selectById(Long): Order`、`updatePaidAmount(Long, long): void`、`selectBySql(String): List<Order>`；`Order` 具备 `getUserId(): Long`、`getAmount(): long`、`getPaidAmount(): long`、`getReceiverPhone(): String`、`getReceiverAddress(): String`、`getShippedAt(): String` 及对应 setter。Task 5 的 patch 依赖这些签名。
+- Produces: `OrderMapper` 具备 `selectByActivity(Long): List<Order>`、`updateStatus(Long, String): void`、`selectById(Long): Order`、`updatePaidAmount(Long, long): void`、`selectBySql(String): List<Order>`；`Order` 具备 `getUserId(): Long`、`getAmount(): long`、`getPaidAmount(): long`、`getReceiverPhone(): String`、`getReceiverAddress(): String`、`getShippedAt(): String`，以及三个 setter `setStatus(String)`、`setPaidAmount(long)`、`setShippedAt(String)`。其余字段只读，没有 setter 也没有构造器——Task 5 的 patch 只调用 getter 与 `setStatus`，不要去找不存在的写入口。
 
 字段名严格对齐 `demo-repos/mall-order-service/docs/db-schema.md` 的 `orders` 表。`getAmount()` 返回 `long`（文档规定金额为 `bigint` 存「分」）——这正是 M4「金额计算用了 double」能成立的前提。
 
