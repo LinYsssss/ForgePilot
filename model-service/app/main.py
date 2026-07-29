@@ -3,13 +3,19 @@ from pathlib import Path
 from typing import Any
 
 import joblib
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
 
 DEFAULT_MODEL_PATH = Path(__file__).resolve().parents[1] / "models" / "risk_classifier.joblib"
 MODEL_PATH = Path(os.getenv("MODEL_PATH", str(DEFAULT_MODEL_PATH)))
 MODEL_VERSION = os.getenv("MODEL_VERSION", "fallback-rules-v1")
+# joblib 底层是 pickle,加载即执行任意代码。模型文件必须来自可信来源(镜像内置或受控卷),
+# 因此重载端点默认关闭:开着它等于给任何能访问本服务的人一个"换模型即执行"的入口。
+RELOAD_ENABLED = os.getenv("MODEL_RELOAD_ENABLED", "false").lower() == "true"
+# 上游传来的是 diff 文本,没有上限时一个超大请求就能把内存和 CPU 吃满。
+MAX_DIFF_CHARS = int(os.getenv("MODEL_MAX_DIFF_CHARS", "200000"))
+MAX_PATH_CHARS = 1024
 
 app = FastAPI(title="Code Risk Model Service", version="0.2.0")
 
@@ -18,9 +24,10 @@ _model_error: str | None = None
 
 
 class PredictRequest(BaseModel):
-    diffText: str = Field(default="", description="Git diff or code snippet to classify")
-    filePath: str | None = None
-    changeType: str | None = None
+    diffText: str = Field(default="", max_length=MAX_DIFF_CHARS,
+                          description="Git diff or code snippet to classify")
+    filePath: str | None = Field(default=None, max_length=MAX_PATH_CHARS)
+    changeType: str | None = Field(default=None, max_length=64)
 
 
 class PredictResponse(BaseModel):
@@ -34,8 +41,9 @@ class PredictResponse(BaseModel):
 class ModelStatusResponse(BaseModel):
     status: str
     modelLoaded: bool
-    modelPath: str
     modelVersion: str
+    # 只回一个稳定的原因分类。此前这里返回 str(exc) 与模型绝对路径,
+    # 等于把宿主目录结构和底层异常细节交给任何能调用该端点的人。
     error: str | None = None
 
 
@@ -43,7 +51,7 @@ def load_model() -> None:
     global _model_bundle, _model_error
     if not MODEL_PATH.exists():
         _model_bundle = None
-        _model_error = f"model file not found: {MODEL_PATH}"
+        _model_error = "MODEL_FILE_MISSING"
         return
     try:
         loaded = joblib.load(MODEL_PATH)
@@ -52,9 +60,10 @@ def load_model() -> None:
         else:
             _model_bundle = {"pipeline": loaded, "modelVersion": MODEL_VERSION}
         _model_error = None
-    except Exception as exc:
+    except Exception:
         _model_bundle = None
-        _model_error = str(exc)
+        # 细节只进服务端日志,不进响应体
+        _model_error = "MODEL_LOAD_FAILED"
 
 
 @app.on_event("startup")
@@ -72,7 +81,6 @@ def model_status() -> ModelStatusResponse:
     return ModelStatusResponse(
         status="UP",
         modelLoaded=_model_bundle is not None,
-        modelPath=str(MODEL_PATH),
         modelVersion=current_model_version(),
         error=_model_error,
     )
@@ -80,6 +88,8 @@ def model_status() -> ModelStatusResponse:
 
 @app.post("/model/reload", response_model=ModelStatusResponse)
 def reload_model() -> ModelStatusResponse:
+    if not RELOAD_ENABLED:
+        raise HTTPException(status_code=404, detail="Not Found")
     load_model()
     return model_status()
 

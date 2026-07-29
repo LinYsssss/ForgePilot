@@ -92,8 +92,10 @@ services:
     environment:
       MODEL_PATH: /app/models/risk_classifier.joblib
       MODEL_VERSION: docker-demo-v1
-    ports:
-      - "127.0.0.1:8000:8000"
+    # 不发布宿主端口:只有 backend 需要访问它,compose 网络内以服务名直连即可。
+    # 发布出去徒增暴露面 —— 该服务没有任何认证。
+    expose:
+      - "8000"
 
   frontend:
     build:

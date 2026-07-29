@@ -54,18 +54,8 @@ jobs:
         working-directory: frontend
         run: npm run build
 
-      - name: Check model service
+      - name: Test model service
         working-directory: model-service
         run: |
           python -m pip install -r requirements.txt
-          python - <<'PY'
-          from app.main import PredictRequest, load_model, model_status, predict
-          load_model()
-          status = model_status().model_dump()
-          result = predict(PredictRequest(
-              filePath="AdminOrderController.java",
-              diffText='+@PostMapping("/admin/orders/{id}/force-ship")'
-          )).model_dump()
-          assert status["modelLoaded"], status
-          assert result["source"] == "trained-model", result
-          PY
+          python -m pytest tests/ -q
