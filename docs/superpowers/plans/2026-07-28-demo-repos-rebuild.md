@@ -490,7 +490,43 @@ for r in mall-order-service payment-settlement-service tenant-user-center; do
 done
 ```
 
-- [ ] **Step 4: 验证仍全绿**
+- [ ] **Step 4: 顺手修三处一致性问题**
+
+这三处由 Task 3 的审查发现，都属计划自身的不精确，在此一并修正。
+
+**(a) 让验证脚本不再产生 `__pycache__`**
+
+`scripts/verify-demo-repos.sh` 里的 `python -m compileall` 每次运行都会在 `demo-repos/tenant-user-center/src/app/` 下重新生成 `__pycache__/`，持续弄脏工作区。Task 6 的确定性重建要求工作区无副产物，所以从源头不产生优于事后忽略。
+
+把该行改为：
+
+```bash
+if PYTHONDONTWRITEBYTECODE=1 python -m compileall -q "$DEMO/tenant-user-center/src" >/dev/null 2>&1; then
+```
+
+改完后删掉已有的残留：
+
+```bash
+rm -rf demo-repos/tenant-user-center/src/app/__pycache__
+```
+
+**(b) 两个 pom 真正对齐**
+
+`demo-repos/payment-settlement-service/pom.xml` 比 `demo-repos/mall-order-service/pom.xml` 多一行编码声明。给 mall 的 pom 在 `</properties>` 之前补上同一行：
+
+```xml
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+```
+
+**(c) pyproject 补上实际用到的依赖**
+
+`demo-repos/tenant-user-center/src/app/auth.py` 导入了 `bcrypt`，但 `pyproject.toml` 只声明了 fastapi 与 pyjwt。在 `dependencies` 列表末尾补一行：
+
+```toml
+    "bcrypt>=4.1",
+```
+
+- [ ] **Step 5: 验证仍全绿**
 
 ```bash
 bash scripts/verify-demo-repos.sh
@@ -499,10 +535,10 @@ echo "EXIT=$?"
 
 预期：`EXIT=0`。
 
-- [ ] **Step 5: 提交**
+- [ ] **Step 6: 提交**
 
 ```bash
-git add .gitattributes demo-repos/*/.gitattributes
+git add .gitattributes demo-repos/*/.gitattributes scripts/verify-demo-repos.sh demo-repos/mall-order-service/pom.xml demo-repos/tenant-user-center/pyproject.toml
 git commit -m "chore(demo): pin line endings so rebuilt commit hashes stay stable"
 ```
 
