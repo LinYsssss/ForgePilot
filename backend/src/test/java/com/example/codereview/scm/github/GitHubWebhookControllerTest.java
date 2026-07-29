@@ -77,8 +77,8 @@ class GitHubWebhookControllerTest {
         byte[] body = fixture("opened.json");
         mockMvc.perform(signed(body, "sha256=deadbeef", "d-bad"))
                 .andExpect(status().isUnauthorized());
-        assertThat(deliveries.findByProviderAndDeliveryId(ScmProviderType.GITHUB, "d-bad"))
-                .get().extracting(WebhookDelivery::getStatus).isEqualTo(WebhookDeliveryStatus.REJECTED);
+        // 验签失败的请求不再落库:端点公开可达,持久化未验签流量等于开放一张可被任意灌入的审计表
+        assertThat(deliveries.findByProviderAndDeliveryId(ScmProviderType.GITHUB, "d-bad")).isEmpty();
     }
 
     @Test
@@ -132,6 +132,44 @@ class GitHubWebhookControllerTest {
 
         assertThat(agentRuns.count()).isEqualTo(1);
         assertThat(firstId).contains("PROCESSED");
+    }
+
+    @Test
+    void unverifiedTrafficLeavesNoAuditRecordAndLeaksNoRunId() throws Exception {
+        // 先制造一条已处理的投递,拿到真实 runId
+        byte[] opened = fixture("opened.json");
+        mockMvc.perform(validSigned(opened, "delivery-leak-probe"))
+                .andExpect(status().isAccepted());
+        long recorded = deliveries.count();
+        assertThat(recorded).isEqualTo(1);
+
+        // 错误签名:不得落库,也不得回显任何 runId
+        mockMvc.perform(signed(opened, "sha256=deadbeef", "delivery-leak-probe"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.data").doesNotExist());
+
+        // 未知安装:同样不落库(端点公开可达,否则任何人都能灌审计表)
+        mockMvc.perform(validSigned(fixture("opened_unknown_installation.json"), "delivery-unknown-1"))
+                .andExpect(status().isAccepted())
+                .andExpect(jsonPath("$.data.outcome").value("NO_INSTALLATION"))
+                .andExpect(jsonPath("$.data.agentRunId").doesNotExist());
+
+        assertThat(deliveries.count())
+                .as("未验签流量不应新增投递记录")
+                .isEqualTo(recorded);
+    }
+
+    @Test
+    void payloadPreviewIsNotPersistedByDefault() throws Exception {
+        mockMvc.perform(validSigned(fixture("opened.json"), "delivery-preview-1"))
+                .andExpect(status().isAccepted());
+
+        WebhookDelivery stored = deliveries.findByProviderAndDeliveryId(
+                ScmProviderType.GITHUB, "delivery-preview-1").orElseThrow();
+        assertThat(stored.getPayloadPreview())
+                .as("默认不保存报文正文,只留哈希与元数据")
+                .isNull();
+        assertThat(stored.getPayloadHash()).isNotBlank();
     }
 
     private MockHttpServletRequestBuilder validSigned(byte[] body, String deliveryId) {

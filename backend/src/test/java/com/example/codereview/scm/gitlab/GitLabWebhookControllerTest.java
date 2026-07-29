@@ -75,8 +75,8 @@ class GitLabWebhookControllerTest {
     void rejectsInvalidToken() throws Exception {
         mockMvc.perform(request(fixture("mr_open.json"), "wrong-token", "u-bad"))
                 .andExpect(status().isUnauthorized());
-        assertThat(deliveries.findByProviderAndDeliveryId(ScmProviderType.GITLAB, "u-bad"))
-                .get().extracting(WebhookDelivery::getStatus).isEqualTo(WebhookDeliveryStatus.REJECTED);
+        // 令牌校验失败的请求不再落库(理由同 GitHub 侧)
+        assertThat(deliveries.findByProviderAndDeliveryId(ScmProviderType.GITLAB, "u-bad")).isEmpty();
     }
 
     @Test

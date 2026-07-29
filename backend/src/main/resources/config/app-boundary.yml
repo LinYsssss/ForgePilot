@@ -51,3 +51,6 @@ app:
     tool-timeout-ms: ${SANDBOX_TOOL_TIMEOUT_MS:120000}
   scm:
     allow-insecure-localhost: ${SCM_ALLOW_INSECURE_LOCALHOST:false}
+    webhook:
+      # 报文可能带分支名、提交信息等仓库内容,默认不入库;仅供本地排障时临时开启。
+      store-payload-preview: ${SCM_WEBHOOK_STORE_PAYLOAD_PREVIEW:false}

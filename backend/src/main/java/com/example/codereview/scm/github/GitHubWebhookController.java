@@ -10,7 +10,7 @@ import com.example.codereview.scm.ScmInstallationRepository;
 import com.example.codereview.scm.ScmProviderType;
 import com.example.codereview.scm.WebhookAgentRunService;
 import com.example.codereview.scm.WebhookDelivery;
-import com.example.codereview.scm.WebhookDeliveryRepository;
+import com.example.codereview.scm.WebhookDeliveryRecorder;
 import com.example.codereview.scm.WebhookDeliveryStatus;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -51,18 +51,18 @@ public class GitHubWebhookController {
 
     private final GitHubScmProvider provider;
     private final ScmInstallationRepository installations;
-    private final WebhookDeliveryRepository deliveries;
+    private final WebhookDeliveryRecorder recorder;
     private final WebhookAgentRunService agentRunService;
     private final CryptoService cryptoService;
 
     public GitHubWebhookController(GitHubScmProvider provider,
                                    ScmInstallationRepository installations,
-                                   WebhookDeliveryRepository deliveries,
+                                   WebhookDeliveryRecorder recorder,
                                    WebhookAgentRunService agentRunService,
                                    CryptoService cryptoService) {
         this.provider = provider;
         this.installations = installations;
-        this.deliveries = deliveries;
+        this.recorder = recorder;
         this.agentRunService = agentRunService;
         this.cryptoService = cryptoService;
     }
@@ -84,67 +84,52 @@ public class GitHubWebhookController {
             throw new BusinessException(400, "缺少 X-GitHub-Delivery");
         }
 
-        // Idempotency: a delivery we have already seen returns its run, no reprocessing.
-        Optional<WebhookDelivery> prior = deliveries.findByProviderAndDeliveryId(ScmProviderType.GITHUB, deliveryId);
-        if (prior.isPresent()) {
-            return accepted(new WebhookAck(deliveryId, prior.get().getAgentRunId(), "DUPLICATE"));
-        }
-
-        WebhookDelivery delivery = newDelivery(deliveryId, raw, event);
-
         // Resolve identity from the payload, then select the secret from the installation (never the payload).
         String installationRef = provider.resolveInstallationRef(raw, headers);
         ScmInstallation installation = installationRef == null ? null
                 : installations.findByProviderAndExternalInstallationIdAndActiveTrue(
                         ScmProviderType.GITHUB, installationRef).orElse(null);
         if (installation == null) {
-            delivery.setStatus(WebhookDeliveryStatus.REJECTED);
-            deliveries.save(delivery);
+            // 未验签流量不落库:端点公开可达,照单全收等于把审计表交给任何人灌。
             log.info("GitHub webhook: 未找到安装 ref={}", installationRef);
             return accepted(new WebhookAck(deliveryId, null, "NO_INSTALLATION"));
         }
-        delivery.setInstallationId(installation.getId());
 
         // Verify the signature over the exact raw bytes, before parsing.
         String secret = cryptoService.decrypt(installation.getEncryptedWebhookSecret());
         if (!provider.verifySignature(raw, headers, secret)) {
-            delivery.setStatus(WebhookDeliveryStatus.REJECTED);
-            deliveries.save(delivery);
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(ApiResponse.error(ErrorCode.WEBHOOK_SIGNATURE_INVALID, "Webhook 签名校验失败"));
         }
-        delivery.setStatus(WebhookDeliveryStatus.VERIFIED);
+
+        // 验签通过后才登记,并用唯一键做原子幂等(而非先查后写)。
+        WebhookDeliveryRecorder.Recorded recorded = recorder.recordVerified(
+                ScmProviderType.GITHUB, deliveryId, event, sha256Hex(raw), installation.getId(),
+                new String(raw, StandardCharsets.UTF_8));
+        if (!recorded.created()) {
+            return accepted(new WebhookAck(deliveryId, recorded.delivery().getAgentRunId(), "DUPLICATE"));
+        }
+        WebhookDelivery delivery = recorded.delivery();
 
         Optional<NormalizedPullRequestEvent> normalized = provider.normalize(raw, headers);
         if (normalized.isEmpty()) {
-            deliveries.save(delivery);
+            recorder.save(delivery);
             return accepted(new WebhookAck(deliveryId, null, "IGNORED_ACTION"));
         }
         NormalizedPullRequestEvent prEvent = normalized.get();
         delivery.setAction(prEvent.action());
 
         if (installation.getProjectId() == null || installation.getRepositoryId() == null) {
-            deliveries.save(delivery);
+            recorder.save(delivery);
             return accepted(new WebhookAck(deliveryId, null, "INSTALLATION_NOT_BOUND"));
         }
 
         WebhookAgentRunService.StartResult result = agentRunService.startFromEvent(prEvent, installation);
         delivery.setStatus(WebhookDeliveryStatus.PROCESSED);
         delivery.setAgentRunId(result.run().getId());
-        deliveries.save(delivery);
+        recorder.save(delivery);
         return accepted(new WebhookAck(deliveryId, result.run().getId(),
                 result.created() ? "PROCESSED" : "DUPLICATE"));
-    }
-
-    private WebhookDelivery newDelivery(String deliveryId, byte[] raw, String event) {
-        WebhookDelivery delivery = new WebhookDelivery();
-        delivery.setProvider(ScmProviderType.GITHUB);
-        delivery.setDeliveryId(deliveryId);
-        delivery.setEventType(event);
-        delivery.setStatus(WebhookDeliveryStatus.RECEIVED);
-        delivery.setPayloadHash(sha256Hex(raw));
-        delivery.setPayloadPreview(new String(raw, StandardCharsets.UTF_8));
-        return delivery;
     }
 
     private static ResponseEntity<ApiResponse<WebhookAck>> accepted(WebhookAck ack) {
