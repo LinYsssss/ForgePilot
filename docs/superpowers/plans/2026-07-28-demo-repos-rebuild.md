@@ -466,7 +466,8 @@ git ls-files --eol demo-repos/mall-order-service/ | head -3
 
 ```gitattributes
 # 演示仓库的文件参与 SHA 确定性重建，checkout 必须始终产出 LF
-demo-repos/** text eol=lf
+# text=auto 会自动判别二进制，不会损坏日后可能加入的图片等素材
+demo-repos/** text=auto eol=lf
 ```
 
 - [ ] **Step 3: 每个演示仓库各加一个 .gitattributes**
