@@ -45,7 +45,10 @@ public class CryptoService {
             return null;
         }
         if (!cipherText.startsWith(PREFIX + ":")) {
-            return cipherText;
+            // 此前这里把非 v1 的值原样返回,等于"看起来解密成功了"。后果是:数据库里一旦
+            // 出现明文凭据(历史数据、写入 bug、或被人直接改库),系统会照常拿去用,
+            // 而没有任何信号表明这条记录根本没被加密过。改为失败关闭。
+            throw new IllegalStateException("凭据不是 v1 加密格式，拒绝使用（可能是未加密的历史数据）");
         }
         try {
             String[] parts = cipherText.split(":", 3);

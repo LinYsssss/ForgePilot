@@ -1,6 +1,7 @@
 package com.example.codereview.config;
 
 import com.example.codereview.common.security.TokenAuthenticationFilter;
+import com.example.codereview.common.web.ClientIpResolver;
 import com.example.codereview.common.web.RateLimitFilter;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Value;
@@ -28,7 +29,8 @@ public class SecurityConfig {
             @Value("${app.ratelimit.enabled:true}") boolean rateLimitEnabled,
             @Value("${app.ratelimit.limit:120}") int rateLimit,
             @Value("${app.ratelimit.window-seconds:60}") int rateLimitWindowSeconds,
-            @Value("${app.ratelimit.login-limit:8}") int loginRateLimit
+            @Value("${app.ratelimit.login-limit:8}") int loginRateLimit,
+            @Value("${app.security.trusted-proxies:}") String trustedProxies
     ) throws Exception {
         http
                 .csrf(AbstractHttpConfigurer::disable)
@@ -51,7 +53,8 @@ public class SecurityConfig {
                 })
                 .addFilterBefore(tokenFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterAfter(
-                        new RateLimitFilter(rateLimitEnabled, rateLimit, rateLimitWindowSeconds, loginRateLimit, objectMapper),
+                        new RateLimitFilter(rateLimitEnabled, rateLimit, rateLimitWindowSeconds, loginRateLimit,
+                                objectMapper, new ClientIpResolver(trustedProxies)),
                         TokenAuthenticationFilter.class
                 );
         if (h2ConsoleEnabled) {

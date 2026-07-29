@@ -31,18 +31,25 @@ public class RateLimitFilter extends OncePerRequestFilter {
     private final int loginLimit;
     private final long windowMs;
     private final ObjectMapper objectMapper;
+    private final ClientIpResolver clientIpResolver;
     private final ConcurrentHashMap<String, Window> windows = new ConcurrentHashMap<>();
 
     public RateLimitFilter(boolean enabled, int limit, int windowSeconds, ObjectMapper objectMapper) {
-        this(enabled, limit, windowSeconds, 8, objectMapper);
+        this(enabled, limit, windowSeconds, 8, objectMapper, new ClientIpResolver(""));
     }
 
     public RateLimitFilter(boolean enabled, int limit, int windowSeconds, int loginLimit, ObjectMapper objectMapper) {
+        this(enabled, limit, windowSeconds, loginLimit, objectMapper, new ClientIpResolver(""));
+    }
+
+    public RateLimitFilter(boolean enabled, int limit, int windowSeconds, int loginLimit,
+                           ObjectMapper objectMapper, ClientIpResolver clientIpResolver) {
         this.enabled = enabled;
         this.limit = limit;
         this.loginLimit = loginLimit;
         this.windowMs = Math.max(1, windowSeconds) * 1000L;
         this.objectMapper = objectMapper;
+        this.clientIpResolver = clientIpResolver;
     }
 
     @Override
@@ -92,11 +99,8 @@ public class RateLimitFilter extends OncePerRequestFilter {
     }
 
     private String clientIp(HttpServletRequest request) {
-        String forwarded = request.getHeader("X-Forwarded-For");
-        if (forwarded != null && !forwarded.isBlank()) {
-            return forwarded.split(",")[0].trim();
-        }
-        return request.getRemoteAddr();
+        // 只有当直连对端是受信代理时才采信 X-Forwarded-For,否则任何人都能伪造该头换桶。
+        return clientIpResolver.resolve(request);
     }
 
     private static final class Window {

@@ -17,6 +17,10 @@ app:
     # 登录端点单独计数并收紧:通用额度对密码爆破而言过松
     login-limit: ${RATE_LIMIT_LOGIN_REQUESTS:8}
   security:
+    # 受信代理网段:只有直连对端落在这里时,才采信它发来的 X-Forwarded-For。
+    # 默认覆盖本机与 Docker/内网网段(生产部署里 nginx 与后端同处 compose 网络)。
+    # 若源站直接暴露给公网负载均衡,应改成该 LB 的实际网段。
+    trusted-proxies: ${TRUSTED_PROXIES:127.0.0.1,::1,172.16.0.0/12,10.0.0.0/8,192.168.0.0/16}
     token-secret: ${JWT_SECRET:dev-secret-change-me}
     token-ttl-seconds: ${TOKEN_TTL_SECONDS:86400}
     token-encrypt-key: ${TOKEN_ENCRYPT_KEY:dev-token-encryption-key-change-me}

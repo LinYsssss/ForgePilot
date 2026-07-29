@@ -42,11 +42,26 @@ class RateLimitFilterTest {
 
     @Test
     void limitsAreTrackedPerClientIp() throws Exception {
-        RateLimitFilter filter = new RateLimitFilter(true, 120, 60, 3, objectMapper);
+        // MockHttpServletRequest 的 remoteAddr 是 127.0.0.1;把它列为受信代理,
+        // X-Forwarded-For 才会被采信,从而模拟"经 nginx 转发的不同客户端"。
+        RateLimitFilter filter = new RateLimitFilter(true, 120, 60, 3, objectMapper,
+                new ClientIpResolver("127.0.0.1"));
 
         assertThat(passes(filter, "/api/auth/login", "198.51.100.1", 5)).isEqualTo(3);
         // 另一个 IP 有自己的额度,不被前一个连累
         assertThat(passes(filter, "/api/auth/login", "198.51.100.2", 5)).isEqualTo(3);
+    }
+
+    @Test
+    void spoofedForwardedHeaderFromUntrustedPeerCannotEscapeTheLimit() throws Exception {
+        // 不配受信代理:客户端每次换一个假 X-Forwarded-For 也必须落在同一个桶里
+        RateLimitFilter filter = new RateLimitFilter(true, 120, 60, 3, objectMapper);
+
+        int passed = 0;
+        for (int i = 0; i < 10; i++) {
+            passed += passes(filter, "/api/auth/login", "203.0.113." + i, 1);
+        }
+        assertThat(passed).isEqualTo(3);
     }
 
     @Test
