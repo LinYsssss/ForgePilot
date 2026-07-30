@@ -46,10 +46,21 @@ check_build_descriptor payment-settlement-service pom.xml
 check_build_descriptor tenant-user-center pyproject.toml
 check_build_descriptor tenant-user-center package.json
 
-if python -m compileall -q "$DEMO/tenant-user-center/src" >/dev/null 2>&1; then
-  pass "tenant-user-center: python compileall"
+# 语法检查走内存编译：compileall 会在源码树里写下 __pycache__，而
+# PYTHONDONTWRITEBYTECODE 对它无效（compileall 直接调用 py_compile，
+# 不经过 import 系统）。Task 6 的确定性重建要求工作区无副产物，
+# 故改用不落盘的 compile()；无源码文件时同样判失败。
+PY_SYNTAX_CHECK='import pathlib, sys
+paths = sorted(pathlib.Path(sys.argv[1]).rglob("*.py"))
+if not paths:
+    sys.exit("no python sources found")
+for p in paths:
+    compile(p.read_bytes(), str(p), "exec")'
+
+if python -c "$PY_SYNTAX_CHECK" "$DEMO/tenant-user-center/src" >/dev/null 2>&1; then
+  pass "tenant-user-center: python syntax"
 else
-  fail "tenant-user-center: python compileall"
+  fail "tenant-user-center: python syntax"
 fi
 
 for js in "$DEMO"/tenant-user-center/web/*.js; do

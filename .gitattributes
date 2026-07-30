@@ -1,0 +1,7 @@
+# 演示仓库的文件参与 SHA 确定性重建，checkout 必须始终产出 LF
+# text=auto 会自动判别二进制，不会损坏日后可能加入的图片等素材
+demo-repos/** text=auto eol=lf
+
+# 本机 core.autocrlf=true。若 shell 脚本被检出为 CRLF，msys bash 会在
+# `set -uo pipefail\r` 直接报错，而这些脚本是后续任务的验收入口。
+*.sh text eol=lf
