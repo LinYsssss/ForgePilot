@@ -57,11 +57,14 @@ if not paths:
 for p in paths:
     compile(p.read_bytes(), str(p), "exec")'
 
-if python -c "$PY_SYNTAX_CHECK" "$DEMO/tenant-user-center/src" >/dev/null 2>&1; then
+py_log="$(mktemp)"
+if python -c "$PY_SYNTAX_CHECK" "$DEMO/tenant-user-center/src" >"$py_log" 2>&1; then
   pass "tenant-user-center: python syntax"
 else
   fail "tenant-user-center: python syntax"
+  head -20 "$py_log" >&2
 fi
+rm -f "$py_log"
 
 for js in "$DEMO"/tenant-user-center/web/*.js; do
   [ -e "$js" ] || continue
