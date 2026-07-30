@@ -1,5 +1,6 @@
 package com.example.codereview.scm;
 
+import com.example.codereview.git.OutboundUrlPolicy;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.net.URI;
 import java.net.URLEncoder;
@@ -16,7 +17,12 @@ public final class ScmHttpSupport {
     private final boolean allowInsecureLocalhost;
 
     public ScmHttpSupport(ObjectMapper mapper, boolean allowInsecureLocalhost) {
-        this.client = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build();
+        this.client = HttpClient.newBuilder()
+                .connectTimeout(Duration.ofSeconds(10))
+                // 显式拒绝跟随重定向:否则一个可信主机可以把我们重定向到内网,
+                // 绕过下面对基地址做的全部校验。(这也是 Java 的默认值,写出来是为了防止被改。)
+                .followRedirects(HttpClient.Redirect.NEVER)
+                .build();
         this.mapper = mapper;
         this.allowInsecureLocalhost = allowInsecureLocalhost;
     }
@@ -50,6 +56,13 @@ public final class ScmHttpSupport {
         }
         if (base.getHost() == null || base.getUserInfo() != null || base.getQuery() != null || base.getFragment() != null) {
             throw new SecurityException("SCM API base is invalid");
+        }
+        // 仅有 HTTPS 是不够的:https://10.0.0.5/ 或内网域名同样合法。回写地址来自安装记录,
+        // 一旦被写成内网地址,平台就会带着凭据去打自己的内网。复用与仓库地址相同的出站策略。
+        try {
+            OutboundUrlPolicy.requirePublicHttpUrl(baseUrl, "SCM API 地址", allowInsecureLocalhost);
+        } catch (RuntimeException rejected) {
+            throw new SecurityException("SCM API base is not an allowed outbound target", rejected);
         }
         return URI.create(baseUrl.replaceAll("/+$", "") + path);
     }

@@ -47,7 +47,7 @@ public final class OutboundUrlPolicy {
         }
         // 去掉 IPv6 字面量的方括号再解析
         String bare = host.startsWith("[") && host.endsWith("]") ? host.substring(1, host.length() - 1) : host;
-        if (isBlockedHostname(bare)) {
+        if (isBlockedHostname(bare, allowLoopback)) {
             throw new BusinessException(400, field + "指向内网或保留地址，已拒绝");
         }
         if (isAmbiguousNumericHost(bare)) {
@@ -69,12 +69,19 @@ public final class OutboundUrlPolicy {
         }
     }
 
-    /** 不依赖 DNS 的主机名黑名单:即使解析不到也要拒绝。 */
-    static boolean isBlockedHostname(String host) {
+    /**
+     * 不依赖 DNS 的主机名黑名单:即使解析不到也要拒绝。
+     *
+     * <p>{@code localhost} 按 RFC 6761 永远指向本机,因此与字面量 {@code 127.0.0.1} 同等对待、
+     * 一并交给 {@code allowLoopback} 决定;否则「放行本机」在 IP 写法下生效、在名字写法下失效,
+     * 联调环境只能写 IP。{@code .local}/{@code .internal} 与云元数据域名不属于本机,任何模式下都拒绝。
+     */
+    static boolean isBlockedHostname(String host, boolean allowLoopback) {
         String lower = host.toLowerCase(Locale.ROOT);
-        return lower.equals("localhost")
-                || lower.endsWith(".localhost")
-                || lower.endsWith(".local")
+        if (lower.equals("localhost") || lower.endsWith(".localhost")) {
+            return !allowLoopback;
+        }
+        return lower.endsWith(".local")
                 || lower.equals("metadata.google.internal")   // GCP 元数据
                 || lower.endsWith(".internal");
     }

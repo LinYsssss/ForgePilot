@@ -3,6 +3,8 @@ package com.example.codereview.config;
 import jakarta.annotation.PostConstruct;
 import java.util.Locale;
 import java.util.Set;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
@@ -10,6 +12,8 @@ import org.springframework.stereotype.Component;
 @Component
 @Profile("prod")
 public class ProdSecretValidator {
+
+    private static final Logger log = LoggerFactory.getLogger(ProdSecretValidator.class);
 
     private static final int MIN_LENGTH = 16;
     /** 种子管理员是平台唯一的初始 ADMIN,弱口令等于把最高权限挂在公网上。 */
@@ -40,6 +44,8 @@ public class ProdSecretValidator {
     private final String seedPassword;
     private final boolean authCookieSecure;
     private final long tokenTtlSeconds;
+    private final boolean gitAllowLocalPath;
+    private final boolean scmAllowInsecureLocalhost;
 
     public ProdSecretValidator(
             @Value("${app.security.token-secret}") String tokenSecret,
@@ -51,7 +57,9 @@ public class ProdSecretValidator {
             @Value("${app.security.seed-admin.username:}") String seedUsername,
             @Value("${app.security.seed-admin.password:}") String seedPassword,
             @Value("${app.security.auth-cookie-secure:false}") boolean authCookieSecure,
-            @Value("${app.security.token-ttl-seconds:86400}") long tokenTtlSeconds
+            @Value("${app.security.token-ttl-seconds:86400}") long tokenTtlSeconds,
+            @Value("${app.git.allow-local-path:false}") boolean gitAllowLocalPath,
+            @Value("${app.scm.allow-insecure-localhost:false}") boolean scmAllowInsecureLocalhost
     ) {
         this.tokenSecret = tokenSecret;
         this.tokenEncryptKey = tokenEncryptKey;
@@ -63,6 +71,8 @@ public class ProdSecretValidator {
         this.seedPassword = seedPassword;
         this.authCookieSecure = authCookieSecure;
         this.tokenTtlSeconds = tokenTtlSeconds;
+        this.gitAllowLocalPath = gitAllowLocalPath;
+        this.scmAllowInsecureLocalhost = scmAllowInsecureLocalhost;
     }
 
     @PostConstruct
@@ -75,6 +85,31 @@ public class ProdSecretValidator {
         checkOptional("LLM_API_KEY (app.ai.api-key)", llmApiKey);
         checkSeedAdmin();
         checkCookieAndTtl();
+        checkOutboundLoopbackSwitches();
+    }
+
+    /**
+     * 这两个开关都属于联调用途,生产环境的处置不同:
+     *
+     * <ul>
+     *   <li>{@code app.scm.allow-insecure-localhost} 会让回写地址允许明文 HTTP 且指向本机,
+     *       没有任何正当的生产用途,直接启动失败;</li>
+     *   <li>{@code app.git.allow-local-path} 放行的是**文件系统路径**形式的演示仓库,
+     *       单机演示确实会用到,因此不阻断启动,但必须在日志里留痕——它允许把服务器上
+     *       任意 git 仓库绑成项目。(其回环 HTTP 出站的那一半能力已在 GitInputValidator 里
+     *       与本开关解耦,任何模式下都不放行。)</li>
+     * </ul>
+     */
+    private void checkOutboundLoopbackSwitches() {
+        if (scmAllowInsecureLocalhost) {
+            throw new IllegalStateException(
+                    "生产环境 SCM_ALLOW_INSECURE_LOCALHOST (app.scm.allow-insecure-localhost) 必须为 false，"
+                            + "否则回写地址可指向本机且允许明文 HTTP");
+        }
+        if (gitAllowLocalPath) {
+            log.warn("生产环境开启了 GIT_ALLOW_LOCAL_PATH (app.git.allow-local-path)："
+                    + "本机文件系统上的任意 git 仓库都可被绑定为项目，仅应在单机演示时临时开启");
+        }
     }
 
     /**

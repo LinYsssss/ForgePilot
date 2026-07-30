@@ -81,6 +81,14 @@ class OutboundUrlPolicyTest {
         assertRejected("http://127.0.0.1/x");
         assertThatCode(() -> OutboundUrlPolicy.requirePublicHttpUrl("http://127.0.0.1/x", "仓库地址", true))
                 .doesNotThrowAnyException();
+        // localhost 与 127.0.0.1 是同一件事,放行本机时两种写法必须一致(否则联调只能写 IP)
+        assertThatCode(() -> OutboundUrlPolicy.requirePublicHttpUrl("http://localhost:8080/x", "仓库地址", true))
+                .doesNotThrowAnyException();
+        // 但「放行本机」不含内网域名后缀
+        assertThatThrownBy(() -> OutboundUrlPolicy.requirePublicHttpUrl("http://svc.internal/x", "仓库地址", true))
+                .isInstanceOf(BusinessException.class);
+        assertThatThrownBy(() -> OutboundUrlPolicy.requirePublicHttpUrl("http://printer.local/x", "仓库地址", true))
+                .isInstanceOf(BusinessException.class);
     }
 
     @Test

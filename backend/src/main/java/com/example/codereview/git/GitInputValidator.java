@@ -32,8 +32,10 @@ public final class GitInputValidator {
         String lower = trimmed.toLowerCase(Locale.ROOT);
         if (lower.startsWith("http://") || lower.startsWith("https://")) {
             // 协议合法还不够:平台会真的去 clone 这个地址,必须挡住指向内网/云元数据的 SSRF。
-            // allowLocalPath 同时作为开发期放行本机地址的开关(生产为 false)。
-            OutboundUrlPolicy.requirePublicHttpUrl(trimmed, "仓库地址", allowLocalPath);
+            // 这里固定不放行本机:allowLocalPath 要放行的是**文件系统路径**形式的演示仓库
+            // (如 /app/demo-repos/xxx),而不是 http://127.0.0.1:8080 这类回环出站目标;
+            // 两者共用一个开关会让演示开关顺带打开一条 SSRF 通道。
+            OutboundUrlPolicy.requirePublicHttpUrl(trimmed, "仓库地址", false);
             return;
         }
         if (trimmed.contains("://")) {

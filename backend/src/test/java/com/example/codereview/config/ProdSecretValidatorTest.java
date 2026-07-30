@@ -16,7 +16,7 @@ class ProdSecretValidatorTest {
     private ProdSecretValidator validator(String sandboxSecret, String seedUser, String seedPassword,
                                           boolean cookieSecure, long ttlSeconds) {
         return new ProdSecretValidator(STRONG, STRONG, STRONG, STRONG, "",
-                sandboxSecret, seedUser, seedPassword, cookieSecure, ttlSeconds);
+                sandboxSecret, seedUser, seedPassword, cookieSecure, ttlSeconds, false, false);
     }
 
     private ProdSecretValidator valid() {
@@ -31,17 +31,17 @@ class ProdSecretValidatorTest {
     @Test
     void rejectsPlaceholderAndShortCoreSecrets() {
         assertThatThrownBy(() -> new ProdSecretValidator("dev-secret-change-me", STRONG, STRONG, STRONG, "",
-                STRONG, "", "", true, 86400).validate())
+                STRONG, "", "", true, 86400, false, false).validate())
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("JWT_SECRET");
 
         assertThatThrownBy(() -> new ProdSecretValidator(STRONG, "short", STRONG, STRONG, "",
-                STRONG, "", "", true, 86400).validate())
+                STRONG, "", "", true, 86400, false, false).validate())
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("TOKEN_ENCRYPT_KEY");
 
         assertThatThrownBy(() -> new ProdSecretValidator(STRONG, STRONG, "guest", STRONG, "",
-                STRONG, "", "", true, 86400).validate())
+                STRONG, "", "", true, 86400, false, false).validate())
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("DB_PASSWORD");
     }
@@ -94,5 +94,21 @@ class ProdSecretValidatorTest {
         assertThatThrownBy(() -> validator(STRONG, "", "", true, 604801).validate())
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("7 天");
+    }
+
+    /**
+     * SCM 联调开关放行「明文 HTTP + 本机」回写地址,留在生产就是一条带凭据的 SSRF 通道,必须启动失败。
+     * 演示用的 GIT_ALLOW_LOCAL_PATH 只记警告不阻断启动(单机演示确实要用),因此仍应启动成功。
+     */
+    @Test
+    void rejectsInsecureScmLocalhostButToleratesLocalDemoRepoSwitch() {
+        assertThatThrownBy(() -> new ProdSecretValidator(STRONG, STRONG, STRONG, STRONG, "",
+                STRONG, "", "", true, 86400, false, true).validate())
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("SCM_ALLOW_INSECURE_LOCALHOST");
+
+        assertThatCode(() -> new ProdSecretValidator(STRONG, STRONG, STRONG, STRONG, "",
+                STRONG, "", "", true, 86400, true, false).validate())
+                .doesNotThrowAnyException();
     }
 }
