@@ -2,6 +2,8 @@ package com.example.codereview.scm;
 
 import com.example.codereview.common.exception.BusinessException;
 import com.example.codereview.common.security.CryptoService;
+import com.example.codereview.common.security.SecurityAuditLogger;
+import com.example.codereview.common.security.SecurityAuditLogger.Outcome;
 import com.example.codereview.project.ProjectRepository;
 import com.example.codereview.repo.CodeRepositoryJpaRepository;
 import com.example.codereview.scm.ScmInstallationDtos.InstallationResponse;
@@ -26,15 +28,18 @@ public class ScmInstallationAdminService {
     private final ProjectRepository projects;
     private final CodeRepositoryJpaRepository repositories;
     private final CryptoService cryptoService;
+    private final SecurityAuditLogger audit;
 
     public ScmInstallationAdminService(ScmInstallationRepository installations,
                                        ProjectRepository projects,
                                        CodeRepositoryJpaRepository repositories,
-                                       CryptoService cryptoService) {
+                                       CryptoService cryptoService,
+                                       SecurityAuditLogger audit) {
         this.installations = installations;
         this.projects = projects;
         this.repositories = repositories;
         this.cryptoService = cryptoService;
+        this.audit = audit;
     }
 
     @Transactional
@@ -67,12 +72,17 @@ public class ScmInstallationAdminService {
         entity.setProjectId(request.projectId());
         entity.setRepositoryId(repositoryId);
         entity.setEncryptedWebhookSecret(cryptoService.encrypt(request.webhookSecret()));
-        if (request.credential() != null && !request.credential().isBlank()) {
+        boolean credentialRotated = request.credential() != null && !request.credential().isBlank();
+        if (credentialRotated) {
             // 回写 PR(评论/状态)才需要 credential;留空表示保持原值(仅审、不回写时可始终不填)。
             entity.setEncryptedCredential(cryptoService.encrypt(request.credential()));
         }
         entity.setActive(true);
-        return InstallationResponse.from(installations.save(entity));
+        ScmInstallation saved = installations.save(entity);
+        // 审计只记「哪条安装的密钥被换过」,密钥与凭据本身永远不出现在日志里。
+        audit.record("SCM_INSTALLATION_UPSERT", Outcome.SUCCESS, "scmInstallation", String.valueOf(saved.getId()),
+                credentialRotated ? "SECRET_AND_CREDENTIAL_ROTATED" : "SECRET_ROTATED");
+        return InstallationResponse.from(saved);
     }
 
     @Transactional(readOnly = true)
@@ -86,6 +96,7 @@ public class ScmInstallationAdminService {
                 .orElseThrow(() -> new BusinessException(404, "SCM 安装不存在"));
         entity.setActive(false);
         installations.save(entity);
+        audit.success("SCM_INSTALLATION_DEACTIVATE", "scmInstallation", String.valueOf(installationId));
     }
 
     private static String blankToNull(String value) {

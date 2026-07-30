@@ -3,6 +3,8 @@ package com.example.codereview.scm.gitlab;
 import com.example.codereview.common.api.ApiResponse;
 import com.example.codereview.common.api.ErrorCode;
 import com.example.codereview.common.security.CryptoService;
+import com.example.codereview.common.security.SecurityAuditLogger;
+import com.example.codereview.common.security.SecurityAuditLogger.Outcome;
 import com.example.codereview.scm.NormalizedPullRequestEvent;
 import com.example.codereview.scm.ScmInstallation;
 import com.example.codereview.scm.ScmInstallationRepository;
@@ -53,17 +55,20 @@ public class GitLabWebhookController {
     private final WebhookDeliveryRecorder recorder;
     private final WebhookAgentRunService agentRunService;
     private final CryptoService cryptoService;
+    private final SecurityAuditLogger audit;
 
     public GitLabWebhookController(GitLabScmProvider provider,
                                    ScmInstallationRepository installations,
                                    WebhookDeliveryRecorder recorder,
                                    WebhookAgentRunService agentRunService,
-                                   CryptoService cryptoService) {
+                                   CryptoService cryptoService,
+                                   SecurityAuditLogger audit) {
         this.provider = provider;
         this.installations = installations;
         this.recorder = recorder;
         this.agentRunService = agentRunService;
         this.cryptoService = cryptoService;
+        this.audit = audit;
     }
 
     @PostMapping(consumes = MediaType.ALL_VALUE)
@@ -86,11 +91,15 @@ public class GitLabWebhookController {
         if (installation == null) {
             // 未验签流量不落库:端点公开可达,照单全收等于把审计表交给任何人灌。
             log.info("GitLab webhook: 未找到安装 ref={}", installationRef);
+            audit.recordFor(null, null, "WEBHOOK_VERIFY", Outcome.DENIED,
+                    "scmInstallationRef", installationRef, "UNKNOWN_INSTALLATION");
             return accepted(new WebhookAck(deliveryId, null, "NO_INSTALLATION"));
         }
 
         String secret = cryptoService.decrypt(installation.getEncryptedWebhookSecret());
         if (!provider.verifySignature(raw, headers, secret)) {
+            audit.recordFor(null, null, "WEBHOOK_VERIFY", Outcome.DENIED,
+                    "scmInstallation", String.valueOf(installation.getId()), "TOKEN_INVALID");
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(ApiResponse.error(ErrorCode.WEBHOOK_SIGNATURE_INVALID, "Webhook 令牌校验失败"));
         }

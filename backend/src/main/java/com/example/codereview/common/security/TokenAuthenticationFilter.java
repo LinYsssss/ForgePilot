@@ -39,12 +39,15 @@ public class TokenAuthenticationFilter extends OncePerRequestFilter {
             ParsedToken parsedToken = tokenService.parseClaims(token);
             UserAccount user = resolveActiveUser(parsedToken);
             if (parsedToken != null && user != null) {
+                CurrentUser currentUser = parsedToken.toCurrentUser();
                 UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
-                        parsedToken.toCurrentUser(),
+                        currentUser,
                         null,
                         List.of(new SimpleGrantedAuthority("ROLE_" + user.getRole()))
                 );
                 SecurityContextHolder.getContext().setAuthentication(authentication);
+                // 请求结束后安全上下文已被清理,审计过滤器只能从请求属性上取回 actor。
+                request.setAttribute(SecurityAuditLogger.ACTOR_ATTRIBUTE, currentUser);
             }
         }
         filterChain.doFilter(request, response);

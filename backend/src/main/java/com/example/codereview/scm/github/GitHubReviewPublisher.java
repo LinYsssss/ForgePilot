@@ -1,5 +1,7 @@
 package com.example.codereview.scm.github;
 
+import com.example.codereview.common.security.SecurityAuditLogger;
+import com.example.codereview.common.security.SecurityAuditLogger.Outcome;
 import com.example.codereview.scm.ReviewPublication;
 import com.example.codereview.scm.ReviewPublicationRenderer;
 import com.example.codereview.scm.ScmHttpSupport;
@@ -17,9 +19,12 @@ import org.springframework.stereotype.Component;
 public final class GitHubReviewPublisher implements ScmReviewPublisher {
 
     private final ScmHttpSupport http;
+    private final SecurityAuditLogger audit;
 
-    public GitHubReviewPublisher(ObjectMapper mapper, @Value("${app.scm.allow-insecure-localhost:false}") boolean local) {
+    public GitHubReviewPublisher(ObjectMapper mapper, @Value("${app.scm.allow-insecure-localhost:false}") boolean local,
+                                  SecurityAuditLogger audit) {
         this.http = new ScmHttpSupport(mapper, local);
+        this.audit = audit;
     }
 
     @Override
@@ -46,6 +51,10 @@ public final class GitHubReviewPublisher implements ScmReviewPublisher {
                 context.apiBaseUrl(), "/repos/" + repository + "/issues/" + context.pullRequestNumber() + "/comments",
                 "Authorization", auth, Map.of("body", markdown));
         boolean success = check / 100 == 2 && comment / 100 == 2;
+        // 回写是带凭据、对外可见的动作,成败都要留痕;只记目标与状态码,不记正文。
+        audit.recordFor(null, "scm-publisher", "SCM_PUBLISH", success ? Outcome.SUCCESS : Outcome.FAILURE,
+                "pullRequest", repository + "#" + context.pullRequestNumber(),
+                success ? null : "HTTP_" + check + "_" + comment);
         return new ScmPublicationResult(success, List.of(check, comment), success ? "published" : "provider rejected publication");
     }
 

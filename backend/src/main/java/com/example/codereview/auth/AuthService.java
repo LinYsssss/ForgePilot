@@ -5,6 +5,8 @@ import com.example.codereview.auth.AuthDtos.LoginRequest;
 import com.example.codereview.auth.AuthDtos.LoginResult;
 import com.example.codereview.auth.AuthDtos.MeResponse;
 import com.example.codereview.common.exception.BusinessException;
+import com.example.codereview.common.security.SecurityAuditLogger;
+import com.example.codereview.common.security.SecurityAuditLogger.Outcome;
 import java.util.Optional;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -24,13 +26,15 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final TokenService tokenService;
     private final LoginAttemptGuard loginAttemptGuard;
+    private final SecurityAuditLogger audit;
 
     public AuthService(UserAccountRepository users, PasswordEncoder passwordEncoder, TokenService tokenService,
-                       LoginAttemptGuard loginAttemptGuard) {
+                       LoginAttemptGuard loginAttemptGuard, SecurityAuditLogger audit) {
         this.users = users;
         this.passwordEncoder = passwordEncoder;
         this.tokenService = tokenService;
         this.loginAttemptGuard = loginAttemptGuard;
+        this.audit = audit;
     }
 
     @Transactional
@@ -49,7 +53,12 @@ public class AuthService {
 
     public LoginResult login(LoginRequest request) {
         String username = request.username() == null ? "" : request.username().trim();
-        loginAttemptGuard.assertNotLocked(username);
+        try {
+            loginAttemptGuard.assertNotLocked(username);
+        } catch (BusinessException locked) {
+            auditUnidentifiedLogin(username, Outcome.DENIED, "LOCKED_OUT");
+            throw locked;
+        }
 
         Optional<UserAccount> found = users.findByUsername(username);
         if (found.isEmpty()) {
@@ -57,17 +66,22 @@ public class AuthService {
             // 哈希计算,响应耗时的差异足以让攻击者枚举出哪些用户名有效。
             passwordEncoder.matches(request.password(), DUMMY_HASH);
             loginAttemptGuard.recordFailure(username);
+            // 审计里区分「无此用户」与「口令错误」是有意的:响应对外统一,日志对内要能定位。
+            auditUnidentifiedLogin(username, Outcome.FAILURE, "UNKNOWN_USER");
             throw new BusinessException(400, "用户名或密码错误");
         }
         UserAccount user = found.get();
         if (!passwordEncoder.matches(request.password(), user.getPasswordHash())) {
             loginAttemptGuard.recordFailure(username);
+            audit.recordFor(user.getId(), username, "LOGIN", Outcome.FAILURE, "user", username, "BAD_CREDENTIALS");
             throw new BusinessException(400, "用户名或密码错误");
         }
         if (!user.isEnabled()) {
+            audit.recordFor(user.getId(), username, "LOGIN", Outcome.DENIED, "user", username, "ACCOUNT_DISABLED");
             throw new BusinessException(403, "账号已被禁用");
         }
         loginAttemptGuard.recordSuccess(username);
+        audit.recordFor(user.getId(), username, "LOGIN", Outcome.SUCCESS, "user", username, null);
         return new LoginResult(tokenService.issue(user), toAuthResponse(user));
     }
 
@@ -82,6 +96,12 @@ public class AuthService {
         UserAccount user = users.findById(userId)
                 .orElseThrow(() -> new BusinessException(404, "用户不存在"));
         user.bumpSessionVersion();
+        audit.recordFor(user.getId(), user.getUsername(), "LOGOUT", Outcome.SUCCESS, "user", user.getUsername(), null);
+    }
+
+    /** 尚未确定用户身份的分支:只有请求方提交的用户名可记,actorId 留空。 */
+    private void auditUnidentifiedLogin(String username, Outcome outcome, String reason) {
+        audit.recordFor(null, username, "LOGIN", outcome, "user", username, reason);
     }
 
     private AuthResponse toAuthResponse(UserAccount user) {

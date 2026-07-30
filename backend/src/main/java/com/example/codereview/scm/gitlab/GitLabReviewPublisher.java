@@ -1,5 +1,7 @@
 package com.example.codereview.scm.gitlab;
 
+import com.example.codereview.common.security.SecurityAuditLogger;
+import com.example.codereview.common.security.SecurityAuditLogger.Outcome;
 import com.example.codereview.scm.ReviewPublication;
 import com.example.codereview.scm.ReviewPublicationRenderer;
 import com.example.codereview.scm.ScmHttpSupport;
@@ -17,9 +19,12 @@ import org.springframework.stereotype.Component;
 public final class GitLabReviewPublisher implements ScmReviewPublisher {
 
     private final ScmHttpSupport http;
+    private final SecurityAuditLogger audit;
 
-    public GitLabReviewPublisher(ObjectMapper mapper, @Value("${app.scm.allow-insecure-localhost:false}") boolean local) {
+    public GitLabReviewPublisher(ObjectMapper mapper, @Value("${app.scm.allow-insecure-localhost:false}") boolean local,
+                                  SecurityAuditLogger audit) {
         this.http = new ScmHttpSupport(mapper, local);
+        this.audit = audit;
     }
 
     @Override
@@ -45,6 +50,10 @@ public final class GitLabReviewPublisher implements ScmReviewPublisher {
                         + context.pullRequestNumber() + "/notes",
                 "PRIVATE-TOKEN", context.credential(), Map.of("body", markdown));
         boolean success = status / 100 == 2 && note / 100 == 2;
+        // 回写是带凭据、对外可见的动作,成败都要留痕;只记目标与状态码,不记正文。
+        audit.recordFor(null, "scm-publisher", "SCM_PUBLISH", success ? Outcome.SUCCESS : Outcome.FAILURE,
+                "mergeRequest", context.repositoryFullName() + "!" + context.pullRequestNumber(),
+                success ? null : "HTTP_" + status + "_" + note);
         return new ScmPublicationResult(success, List.of(status, note), success ? "published" : "provider rejected publication");
     }
 

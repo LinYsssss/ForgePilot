@@ -8,6 +8,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.example.codereview.common.security.SecurityAuditLogger;
 import com.example.codereview.scm.ReviewPublication;
 import com.example.codereview.scm.ScmProviderType;
 import com.example.codereview.scm.ScmPublicationContext;
@@ -30,7 +31,7 @@ class GitLabReviewPublisherTest {
     void startServer() {
         server = new WireMockServer(WireMockConfiguration.wireMockConfig().dynamicPort());
         server.start();
-        publisher = new GitLabReviewPublisher(new ObjectMapper(), true);
+        publisher = new GitLabReviewPublisher(new ObjectMapper(), true, new SecurityAuditLogger("test-audit-salt"));
     }
 
     @AfterEach

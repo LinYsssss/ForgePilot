@@ -11,6 +11,7 @@ import static org.mockito.Mockito.when;
 
 import com.example.codereview.common.exception.BusinessException;
 import com.example.codereview.common.security.CryptoService;
+import com.example.codereview.common.security.SecurityAuditLogger;
 import com.example.codereview.project.ProjectRepository;
 import com.example.codereview.repo.CodeRepositoryEntity;
 import com.example.codereview.repo.CodeRepositoryJpaRepository;
@@ -32,7 +33,8 @@ class ScmInstallationAdminServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new ScmInstallationAdminService(installations, projects, repositories, cryptoService);
+        service = new ScmInstallationAdminService(installations, projects, repositories, cryptoService,
+                new SecurityAuditLogger("test-audit-salt"));
         when(projects.existsById(PROJECT_ID)).thenReturn(true);
         when(cryptoService.encrypt(anyString())).thenAnswer(inv -> "enc(" + inv.getArgument(0) + ")");
         when(installations.save(any(ScmInstallation.class))).thenAnswer(inv -> inv.getArgument(0));
