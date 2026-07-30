@@ -479,14 +479,16 @@ demo-repos/** text=auto eol=lf
 三个文件内容完全相同：
 
 ```gitattributes
-* -text
+* text=auto eol=lf
 ```
 
-`-text` 表示 git 永不做行尾转换，blob 即文件字节。配合上一步保证的 LF，跨平台哈希一致。
+`text=auto` 让 git 自动判别文本与二进制，`eol=lf` 让文本在 **check-in 与 checkout 两个方向**都归一为 LF。
+
+不要用 `* -text`。`-text` 只保 checkout：若有人把某个文件写成 CRLF 再提交，blob 哈希会变，而 `-text` 同时抑制了 git 的 CRLF 警告，这种漂移是**静默的**——恰好会击穿 Task 6 的 SHA 确定性。
 
 ```bash
 for r in mall-order-service payment-settlement-service tenant-user-center; do
-  printf '* -text\n' > "demo-repos/$r/.gitattributes"
+  printf '* text=auto eol=lf\n' > "demo-repos/$r/.gitattributes"
 done
 ```
 
@@ -537,6 +539,21 @@ rm -rf demo-repos/tenant-user-center/src/app/__pycache__
 
 ```toml
     "bcrypt>=4.1",
+```
+
+**(d) Python 检查失败时输出诊断**
+
+同一脚本的 `check_java` 失败时会 `head -20 "$out/log" >&2`，Python 这条却把 SyntaxError 的位置信息全吞了，诊断能力不对称。Task 6 重建失败时会用得上。把 (a) 的调用改为先捕获输出、失败时打印：
+
+```bash
+py_log="$(mktemp)"
+if python -c "$PY_SYNTAX_CHECK" "$DEMO/tenant-user-center/src" >"$py_log" 2>&1; then
+  pass "tenant-user-center: python syntax"
+else
+  fail "tenant-user-center: python syntax"
+  head -20 "$py_log" >&2
+fi
+rm -f "$py_log"
 ```
 
 - [ ] **Step 5: 验证仍全绿**
