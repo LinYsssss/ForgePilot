@@ -9,7 +9,7 @@
       <p class="auth-sub">AI 代码仓库智能审查平台</p>
       <div class="grid">
         <label class="field">用户名
-          <input v-model="auth.username" placeholder="ysainlin" autocomplete="username" @keyup.enter="login" />
+          <input v-model="auth.username" placeholder="请输入用户名" autocomplete="username" @keyup.enter="login" />
         </label>
         <label class="field">密码
           <input v-model="auth.password" type="password" placeholder="至少 6 位" autocomplete="current-password" @keyup.enter="login" />
@@ -684,7 +684,8 @@ import { fmtDate, fmtTime, shortCommit } from './utils/format'
 import { useTheme } from './composables/useTheme'
 import { useToast } from './composables/useToast'
 import { useSession } from './composables/useSession'
-import { API_BASE, api, apiDownload } from './api/client'
+import { API_BASE, ApiError, api, apiDownload, initCsrf, setUnauthorizedHandler } from './api/client'
+import { unwrapPage } from './api/page'
 import AgentReviewWorkspace from './components/agent/AgentReviewWorkspace.vue'
 import DashboardViz from './components/DashboardViz.vue'
 import DashboardStats from './components/DashboardStats.vue'
@@ -737,7 +738,7 @@ const fbDraft = reactive({})
 const busy = reactive({})
 const { toast, toastMsg } = useToast()
 
-const auth = reactive({ username: 'ysainlin', password: '' })
+const auth = reactive({ username: '', password: '' })
 const projectForm = reactive({ projectId: null, name: '', description: '', defaultBranch: 'main' })
 const repoForm = reactive({ repoUrl: '', provider: 'GITHUB', defaultBranch: 'main', accessToken: '' })
 const reviewForm = reactive({ commitId: '', baseCommitId: '', branch: '' })
@@ -811,13 +812,20 @@ async function run(action, key) {
   try {
     await action()
   } catch (error) {
-    const msg = error?.message || '操作失败'
-    toastMsg(msg, 'error')
-    if (msg.includes('未登录') || msg.includes('401')) await logout(false)
+    // 401 由全局 setUnauthorizedHandler 统一失效会话并提示,这里不再逐调用弹错。
+    if (error instanceof ApiError && error.status === 401) return
+    toastMsg(error?.message || '操作失败', 'error')
   } finally {
     if (key) busy[key] = false
   }
 }
+
+// 会话失效只处理一次:并发请求同时 401 时,第一个把 authenticated 置 false,其余直接短路。
+setUnauthorizedHandler(() => {
+  if (!authenticated.value) return
+  logout(false)
+  toastMsg('登录已过期，请重新登录', 'error')
+})
 
 /* ---------- auth ---------- */
 async function login() {
@@ -1171,7 +1179,7 @@ async function uploadDocument() {
   } finally { busy.upload = false }
 }
 async function loadDocuments() {
-  documents.value = await api(`/projects/${activeProject.value.projectId}/knowledge/documents`)
+  documents.value = unwrapPage(await api(`/projects/${activeProject.value.projectId}/knowledge/documents?size=100`))
   const ids = new Set(documents.value.map(d => d.documentId))
   reviewDocs.value = new Set([...reviewDocs.value].filter(id => ids.has(id)))
   prDocs.value = new Set([...prDocs.value].filter(id => ids.has(id)))
@@ -1199,6 +1207,10 @@ function resetReviewState() {
   commits.value = []; selectedCommit.value = null; diffFiles.value = []
   tasks.value = []; reports.value = []; activeTask.value = null; reportDetail.value = null; mqLogs.value = []
   pullRequests.value = []; activePullRequest.value = null; prActions.value = []; actionReportDetail.value = null; actionIssueIds.value = new Set()
+  // Agent 工作台跟随项目/会话生命周期:关 SSE、停轮询、清跨项目状态,退出登录后不留半开连接。
+  stopAgentPolling()
+  agentRuns.value = []; agentRunId.value = null; agentHeadSha.value = ''; agentRunFilter.value = 'ALL'
+  agentTimeline.value = []; agentFindings.value = []; agentPatch.value = null; agentRunDetail.value = null
   Object.assign(repoForm, { repoUrl: '', provider: 'GITHUB', defaultBranch: activeProject.value?.defaultBranch || 'main', accessToken: '', _bound: false, _tokenConfigured: false })
   chosenDocsReset()
   resetPullRequestForm()
@@ -1220,8 +1232,8 @@ function chosenDocsReset() { reviewDocs.value = new Set(); prDocs.value = new Se
 async function loadReviews() {
   busy.reviews = true
   try {
-    tasks.value = await api(`/projects/${activeProject.value.projectId}/reviews/tasks`)
-    reports.value = await api(`/projects/${activeProject.value.projectId}/reviews/reports`)
+    tasks.value = unwrapPage(await api(`/projects/${activeProject.value.projectId}/reviews/tasks?size=100`))
+    reports.value = unwrapPage(await api(`/projects/${activeProject.value.projectId}/reviews/reports?size=100`))
     if (activeTask.value) activeTask.value = tasks.value.find(t => t.taskId === activeTask.value.taskId) || null
   } finally { busy.reviews = false }
 }
@@ -1230,7 +1242,7 @@ async function openReport(reportId) {
   reportDetail.value = await api(`/projects/${activeProject.value.projectId}/reviews/reports/${reportId}`)
   tab.value = 'reviews'
 }
-async function loadMqLogs(taskId) { mqLogs.value = await api(`/mq/logs?taskId=${taskId}`) }
+async function loadMqLogs(taskId) { mqLogs.value = unwrapPage(await api(`/mq/logs?taskId=${taskId}&size=100`)) }
 
 async function cancelTask(t) {
   await api(`/projects/${activeProject.value.projectId}/reviews/tasks/${t.taskId}/cancel`, { method: 'POST' })
@@ -1512,6 +1524,8 @@ function focusEvidenceAnchor() {
 }
 onMounted(async () => {
   window.addEventListener('hashchange', focusEvidenceAnchor)
+  // 先做 CSRF 引导:拿到开关状态与 Cookie 名,之后的写请求才知道要不要带 X-XSRF-TOKEN。
+  await initCsrf()
   try {
     await loadMe()
     authenticated.value = !!me.userId
