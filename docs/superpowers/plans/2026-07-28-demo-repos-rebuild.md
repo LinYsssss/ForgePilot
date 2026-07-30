@@ -498,11 +498,24 @@ done
 
 `scripts/verify-demo-repos.sh` 里的 `python -m compileall` 每次运行都会在 `demo-repos/tenant-user-center/src/app/` 下重新生成 `__pycache__/`，持续弄脏工作区。Task 6 的确定性重建要求工作区无副产物，所以从源头不产生优于事后忽略。
 
-把该行改为：
+**注意：`PYTHONDONTWRITEBYTECODE=1` 对 `compileall` 无效**（已实测）。该变量只设 `sys.dont_write_bytecode` 约束 import 系统，而 `compileall` 直接调用 `py_compile.compile()` 写盘，不查这个标志。必须改用不落盘的内存编译：
 
 ```bash
-if PYTHONDONTWRITEBYTECODE=1 python -m compileall -q "$DEMO/tenant-user-center/src" >/dev/null 2>&1; then
+PY_SYNTAX_CHECK='import pathlib, sys
+paths = sorted(pathlib.Path(sys.argv[1]).rglob("*.py"))
+if not paths:
+    sys.exit("no python sources found")
+for p in paths:
+    compile(p.read_bytes(), str(p), "exec")'
+
+if python -c "$PY_SYNTAX_CHECK" "$DEMO/tenant-user-center/src" >/dev/null 2>&1; then
+  pass "tenant-user-center: python syntax"
+else
+  fail "tenant-user-center: python syntax"
+fi
 ```
+
+检查项标签随之由 `python compileall` 变为 `python syntax`。顺带补上了原脚本缺失的「无源码文件时判失败」护栏。
 
 改完后删掉已有的残留：
 
