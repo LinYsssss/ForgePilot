@@ -69,7 +69,8 @@ public class SecurityConfig {
                     .csrfTokenRequestHandler(new SpaCsrfTokenRequestHandler())
                     .ignoringRequestMatchers("/api/webhooks/**"));
         } else {
-            // 默认关闭:开关是 docs/并行实施拆分方案.md 冻结的跨线契约,由合流阶段统一打开。
+            // 关闭路径:部署侧经 SECURITY_CSRF_ENABLED=false 显式回退,或测试经
+            // surefire 统一置 false(存量测试不带 token,见 backend/pom.xml)。
             http.csrf(AbstractHttpConfigurer::disable);
         }
         if (h2ConsoleEnabled) {

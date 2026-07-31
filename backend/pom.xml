@@ -177,6 +177,22 @@
                 </configuration>
             </plugin>
             <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <systemPropertyVariables>
+                        <!-- 合流后 CSRF 部署默认开(app-boundary.yml),存量测试不带 token,
+                             这里统一回落 false;CsrfProtectionTest 用内联属性(优先级更高)
+                             单独验证开启后的行为。系统属性优先级高于配置文件,低于内联测试属性。 -->
+                        <app.security.csrf.enabled>false</app.security.csrf.enabled>
+                        <!-- 合流修复:Track B 把登录限流默认收紧到 8 次/IP(app-boundary.yml),
+                             多个测试类共享同一缓存上下文时会互相耗光预算导致偶发 429。
+                             限流行为本身由 RateLimitFilterTest 直接构造对象验证,不受此影响。 -->
+                        <app.ratelimit.login-limit>1000</app.ratelimit.login-limit>
+                    </systemPropertyVariables>
+                </configuration>
+            </plugin>
+            <plugin>
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
                 <version>0.8.12</version>

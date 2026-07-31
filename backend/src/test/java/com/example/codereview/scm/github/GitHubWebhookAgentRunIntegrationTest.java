@@ -34,7 +34,9 @@ import org.testcontainers.junit.jupiter.Testcontainers;
         "app.security.token-secret=test-secret-at-least-32-characters",
         "app.security.token-encrypt-key=test-encryption-key-at-least-32",
         "spring.rabbitmq.listener.simple.auto-startup=false",
-        "management.health.rabbit.enabled=false"
+        "management.health.rabbit.enabled=false",
+        // 合流修复:prod profile 下 ProdSecretValidator 要求签名密钥非空且 ≥16 字符。
+        "app.sandbox.signing-secret=it-only-signing-secret-not-prod"
 })
 @AutoConfigureMockMvc
 @Testcontainers(disabledWithoutDocker = true)

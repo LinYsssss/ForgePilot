@@ -38,11 +38,12 @@ app:
       nickname: ${SEED_ADMIN_NICKNAME:管理员}
       role: ${SEED_ADMIN_ROLE:ADMIN}
     # 跨线契约 4（Phase 0 冻结）：SPA CSRF 开关位。
-    # Track B 可在自有分支置 true 做测试，但合入集成分支时必须回落 false；
-    # 由合流阶段统一打开并跑全量回归。提前打开会立即让 Track A 的
-    # MockMvc 非 GET 测试全部 403，被误判为 Track A 的缺陷。
+    # 合流阶段（integration/track-ab）已按契约统一打开：部署默认启用，
+    # SECURITY_CSRF_ENABLED=false 是显式回退口。存量测试不带 CSRF token，
+    # 由 backend/pom.xml 的 surefire systemPropertyVariables 统一置 false；
+    # CsrfProtectionTest 用内联属性（优先级更高）单独验证打开后的行为。
     csrf:
-      enabled: ${SECURITY_CSRF_ENABLED:false}
+      enabled: ${SECURITY_CSRF_ENABLED:true}
   http:
     connect-timeout-ms: ${HTTP_CONNECT_TIMEOUT_MS:10000}
     read-timeout-ms: ${HTTP_READ_TIMEOUT_MS:60000}
