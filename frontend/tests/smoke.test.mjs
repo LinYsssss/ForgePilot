@@ -93,12 +93,15 @@ test('no hardcoded demo account and no token in web storage', async () => {
 test('session loss is handled once, centrally', async () => {
   const app = await readFile(new URL('../src/App.vue', import.meta.url), 'utf8')
   const client = await readFile(new URL('../src/api/client.js', import.meta.url), 'utf8')
+  // run() 的 401 短路已抽到共享 useBusy composable,所有视图共用同一处。
+  const busyRunner = await readFile(new URL('../src/composables/useBusy.js', import.meta.url), 'utf8')
   assert.match(client, /setUnauthorizedHandler/)
   assert.match(client, /status === 401/)
   assert.match(app, /setUnauthorizedHandler\(/)
-  assert.match(app, /error instanceof ApiError && error\.status === 401/)
+  assert.match(busyRunner, /error instanceof ApiError && error\.status === 401/)
   // 旧实现靠中文提示串嗅探 401,禁止回潮
   assert.doesNotMatch(app, /msg\.includes\('401'\)/)
+  assert.doesNotMatch(busyRunner, /msg\.includes\('401'\)/)
 })
 
 test('csrf tokens are bootstrapped, read from the cookie, and never cached', async () => {

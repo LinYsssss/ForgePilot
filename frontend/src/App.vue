@@ -682,10 +682,13 @@
 import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { fmtDate, fmtTime, shortCommit } from './utils/format'
+import { statusLabel, prStateLabel, actionLabel, actionStateClass, mqStatusClass, fbLabel, fbBadge, confClass, confText, relativeDay, diffLines } from './utils/labels'
+import { useBusy } from './composables/useBusy'
+import { useConfirm } from './composables/useConfirm'
 import { useTheme } from './composables/useTheme'
 import { useToast } from './composables/useToast'
 import { useSession } from './composables/useSession'
-import { API_BASE, ApiError, api, apiDownload, initCsrf, setUnauthorizedHandler } from './api/client'
+import { API_BASE, api, apiDownload, initCsrf, setUnauthorizedHandler } from './api/client'
 import { unwrapPage } from './api/page'
 import AgentReviewWorkspace from './components/agent/AgentReviewWorkspace.vue'
 import DashboardViz from './components/DashboardViz.vue'
@@ -728,7 +731,6 @@ const searchMatches = ref([])
 const searched = ref(false)
 const searchQuery = ref('发货前是否需要校验支付状态')
 const docType = ref('BUSINESS_FLOW')
-const confirmModal = ref(null)
 const agentRunId = ref(null)
 const agentRuns = ref([])
 const agentRunFilter = ref('ALL')
@@ -743,7 +745,8 @@ const openFeedback = reactive({})
 const feedbackMap = reactive({})
 const fbDraft = reactive({})
 
-const busy = reactive({})
+const { busy, run } = useBusy()
+const { confirmModal, confirmAction } = useConfirm()
 const { toast, toastMsg } = useToast()
 
 const auth = reactive({ username: '', password: '' })
@@ -793,8 +796,6 @@ const sortedIssues = computed(() => {
   if (!reportDetail.value) return []
   return [...reportDetail.value.issues].sort((a, b) => (SEV_ORDER[a.severity] ?? 9) - (SEV_ORDER[b.severity] ?? 9))
 })
-function confClass(c) { return c >= 0.75 ? 'c-high' : c >= 0.5 ? 'c-mid' : 'c-low' }
-function confText(c) { return c >= 0.75 ? '高置信' : c >= 0.5 ? '中等' : '较低' }
 
 const groupedAiLogs = computed(() => {
   const byDate = new Map()
@@ -815,18 +816,7 @@ const groupedAiLogs = computed(() => {
   })
 })
 
-async function run(action, key) {
-  if (key) busy[key] = true
-  try {
-    await action()
-  } catch (error) {
-    // 401 由全局 setUnauthorizedHandler 统一失效会话并提示,这里不再逐调用弹错。
-    if (error instanceof ApiError && error.status === 401) return
-    toastMsg(error?.message || '操作失败', 'error')
-  } finally {
-    if (key) busy[key] = false
-  }
-}
+
 
 // 会话失效只处理一次:并发请求同时 401 时,第一个把 authenticated 置 false,其余直接短路。
 setUnauthorizedHandler(() => {
@@ -1297,15 +1287,6 @@ function askDeleteReport(r) {
     },
   }
 }
-async function confirmAction() {
-  if (!confirmModal.value) return
-  busy.confirm = true
-  try {
-    await confirmModal.value.onConfirm()
-    confirmModal.value = null
-  } finally { busy.confirm = false }
-}
-
 /* ---------- polling for running tasks ---------- */
 function maybeStartPolling() {
   const running = tasks.value.some(t => t.status === 'PENDING' || t.status === 'RUNNING')
@@ -1494,32 +1475,6 @@ async function openTaskAiLogs(taskId) { await loadAiLogs(taskId); tab.value = 'a
 function toggleDate(date) { collapsedDates[date] = !collapsedDates[date] }
 
 /* ---------- helpers ---------- */
-function relativeDay(dateStr) {
-  const today = fmtDate(new Date().toISOString())
-  const y = new Date(); y.setDate(y.getDate() - 1)
-  const yesterday = fmtDate(y.toISOString())
-  if (dateStr === today) return '今天'
-  if (dateStr === yesterday) return '昨天'
-  return ''
-}
-function statusLabel(s) { return { PENDING: '等待中', RUNNING: '运行中', SUCCESS: '成功', FAILED: '失败', DEAD: '已死信', CANCELED: '已停止' }[s] || s }
-function prStateLabel(s) { return { PENDING: '待审查', PASSED: '已通过', CHANGES_REQUESTED: '已打回', WAIVED: '已豁免' }[s] || s }
-function actionLabel(s) { return { APPROVE: '通过', REQUEST_CHANGES: '打回', WAIVE: '豁免', COMMENT: '评论' }[s] || s }
-function actionStateClass(s) { return { APPROVE: 'SUCCESS', REQUEST_CHANGES: 'FAILED', WAIVE: 'PENDING', COMMENT: 'CONSUMED' }[s] || s }
-function mqStatusClass(s) { return s === 'CONSUMED' || s === 'PUBLISHED' ? 'SUCCESS' : (s === 'DEAD' ? 'DEAD' : 'FAILED') }
-function fbLabel(t) { return { TRUE_POSITIVE: '真实问题', FALSE_POSITIVE: '误报', NEED_DISCUSSION: '需讨论' }[t] || t }
-function fbBadge(t) { return { TRUE_POSITIVE: 'risk-LOW', FALSE_POSITIVE: 'risk-HIGH', NEED_DISCUSSION: 'risk-MEDIUM' }[t] || 'risk-NONE' }
-function diffLines(diff) {
-  if (!diff) return []
-  return diff.split(/\r?\n/).map(text => {
-    let cls = ''
-    if (text.startsWith('@@')) cls = 'hunk'
-    else if (text.startsWith('+++') || text.startsWith('---') || text.startsWith('diff ') || text.startsWith('index ')) cls = 'meta'
-    else if (text.startsWith('+')) cls = 'add'
-    else if (text.startsWith('-')) cls = 'del'
-    return { text: text || ' ', cls }
-  })
-}
 
 // 证据定位:旧 "#agent-evidence=path:line" 外链由 router 重定向为 /agent?evidence=...,
 // 这里以路由 query 为唯一事实源;元素可能在工作台数据加载后才出现,故加载完成处也会补调一次。
