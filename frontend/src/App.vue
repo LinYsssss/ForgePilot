@@ -1,96 +1,7 @@
 <template>
-  <!-- ===================== AUTH ===================== -->
-  <div v-if="!authenticated" class="auth-wrap">
-    <div class="auth-card">
-      <div class="brand">
-        <div class="brand-logo">R</div>
-        <div><h1>RepoSage</h1></div>
-      </div>
-      <p class="auth-sub">AI 代码仓库智能审查平台</p>
-      <div class="grid">
-        <label class="field">用户名
-          <input v-model="auth.username" placeholder="请输入用户名" autocomplete="username" @keyup.enter="login" />
-        </label>
-        <label class="field">密码
-          <input v-model="auth.password" type="password" placeholder="至少 6 位" autocomplete="current-password" @keyup.enter="login" />
-        </label>
-      </div>
-      <div class="actions">
-        <button @click="login" :disabled="busy.auth">
-          <span v-if="busy.auth" class="spinner"></span>登录
-        </button>
-      </div>
-      <p class="hint">账号由管理员分配，如需账号请联系管理员。</p>
-    </div>
-    <transition name="t"><div v-if="toast.text" class="toast" :class="toast.type" role="status">{{ toast.text }}</div></transition>
-  </div>
+  <LoginView v-if="!authenticated" @authenticated="afterLogin" />
 
-  <!-- ===================== APP ===================== -->
-  <main v-else class="app-shell">
-    <aside class="sidebar">
-      <div class="brand">
-        <div class="brand-logo">R</div>
-        <div>
-          <h1>RepoSage</h1>
-          <div class="tagline">Java · MQ · RAG · AI</div>
-        </div>
-      </div>
-
-      <nav aria-label="主导航">
-        <button :class="{ active: tab === 'dashboard' }" @click="tab = 'dashboard'">
-          <span class="nav-ico" aria-hidden="true">▦</span> 概览
-        </button>
-        <button :class="{ active: tab === 'projects' }" @click="tab = 'projects'">
-          <span class="nav-ico" aria-hidden="true">▤</span> 项目
-        </button>
-        <button :class="{ active: tab === 'repository' }" @click="goTab('repository')" :disabled="!activeProject">
-          <span class="nav-ico" aria-hidden="true">⎇</span> 仓库
-        </button>
-        <button :class="{ active: tab === 'pullRequests' }" @click="goTab('pullRequests')" :disabled="!activeProject">
-          <span class="nav-ico" aria-hidden="true">⑂</span> PR 工作流
-        </button>
-        <button :class="{ active: tab === 'knowledge' }" @click="goTab('knowledge')" :disabled="!activeProject">
-          <span class="nav-ico" aria-hidden="true">▣</span> 知识库
-        </button>
-        <button :class="{ active: tab === 'reviews' }" @click="goTab('reviews')" :disabled="!activeProject">
-          <span class="nav-ico" aria-hidden="true">✓</span> 审查
-        </button>
-        <button :class="{ active: tab === 'agent' }" @click="openAgentWorkspace" :disabled="!activeProject">
-          <span class="nav-ico" aria-hidden="true">◆</span> Agent 审批
-        </button>
-        <button :class="{ active: tab === 'aiLogs' }" @click="openProjectAiLogs" :disabled="!activeProject">
-          <span class="nav-ico" aria-hidden="true">◷</span> AI 日志
-        </button>
-      </nav>
-
-      <div class="sidebar-foot">
-        <div class="user-chip">
-          <div class="avatar">{{ (me.nickname || me.username || 'U').slice(0,1).toUpperCase() }}</div>
-          <div>
-            <div class="uname">{{ me.nickname || me.username }}</div>
-            <div class="tagline">{{ me.role }}</div>
-          </div>
-        </div>
-        <button class="ghost" @click="logout">退出登录</button>
-      </div>
-    </aside>
-
-    <section class="content">
-      <header class="topbar">
-        <div class="crumb">
-          <strong>{{ tabTitle }}</strong>
-          <span v-if="activeProject" class="muted">/ {{ activeProject.name }} · 默认分支 <span class="mono">{{ activeProject.defaultBranch }}</span></span>
-        </div>
-        <div class="topbar-actions">
-          <button class="theme-toggle" :title="theme === 'dark' ? '切换到浅色模式' : '切换到深色模式'" :aria-label="theme === 'dark' ? '切换到浅色模式' : '切换到深色模式'" @click="toggleTheme">
-            {{ theme === 'dark' ? '☀' : '☾' }}
-          </button>
-          <button class="secondary" @click="run(refreshAll)" :disabled="busy.refresh">
-            <span v-if="busy.refresh" class="spinner dark"></span>刷新
-          </button>
-        </div>
-      </header>
-
+  <AppShell v-else @navigate="onNavigate" @refresh="run(refreshAll)" @logout="logout">
       <!-- ============ DASHBOARD ============ -->
       <template v-if="tab === 'dashboard'">
         <DashboardStats :project-count="projects.length" :task-count="tasks.length" :report-count="reports.length" :high-risk="highRiskCount" />
@@ -656,26 +567,7 @@
           <p v-if="selectedAiLog.errorMessage" class="badge plain risk-HIGH" style="display:block;padding:10px;margin-top:10px">{{ selectedAiLog.errorMessage }}</p>
         </div>
       </template>
-    </section>
-
-    <!-- confirm modal -->
-    <transition name="t">
-      <div v-if="confirmModal" class="modal-backdrop" @click.self="confirmModal = null" @keyup.esc="confirmModal = null">
-        <div class="modal" role="dialog" aria-modal="true">
-          <h3>{{ confirmModal.title }}</h3>
-          <p>{{ confirmModal.body }}</p>
-          <div class="actions">
-            <button class="secondary" @click="confirmModal = null">取消</button>
-            <button class="danger solid" @click="run(confirmAction)" :disabled="busy.confirm">
-              <span v-if="busy.confirm" class="spinner"></span>{{ confirmModal.confirmLabel || '确认删除' }}
-            </button>
-          </div>
-        </div>
-      </div>
-    </transition>
-
-    <transition name="t"><div v-if="toast.text" class="toast" :class="toast.type" role="status">{{ toast.text }}</div></transition>
-  </main>
+  </AppShell>
 </template>
 
 <script setup>
@@ -685,12 +577,13 @@ import { fmtDate, fmtTime, shortCommit } from './utils/format'
 import { statusLabel, prStateLabel, actionLabel, actionStateClass, mqStatusClass, fbLabel, fbBadge, confClass, confText, relativeDay, diffLines } from './utils/labels'
 import { useBusy } from './composables/useBusy'
 import { useConfirm } from './composables/useConfirm'
-import { useTheme } from './composables/useTheme'
 import { useToast } from './composables/useToast'
 import { useSession } from './composables/useSession'
 import { API_BASE, api, apiDownload, initCsrf, setUnauthorizedHandler } from './api/client'
 import { unwrapPage } from './api/page'
 import AgentReviewWorkspace from './components/agent/AgentReviewWorkspace.vue'
+import AppShell from './components/AppShell.vue'
+import LoginView from './views/LoginView.vue'
 import DashboardViz from './components/DashboardViz.vue'
 import DashboardStats from './components/DashboardStats.vue'
 import ReportSummary from './components/ReportSummary.vue'
@@ -699,14 +592,12 @@ import KnowledgeDocPicker from './components/KnowledgeDocPicker.vue'
 const { authenticated, me, projects, activeProject } = useSession()
 const route = useRoute()
 const router = useRouter()
-// 过渡态桥接:tab 的唯一事实源改为路由,原有的 `tab === 'x'` 读与 `tab = 'x'` 写
-// 全部保持可用;T3~T8 拆出视图组件后,读侧会被 <router-view> 取代。
+// 过渡态桥接:tab 的唯一事实源是路由,原有的 `tab === 'x'` 读与 `tab.value = 'x'` 写
+// 全部保持可用;T4~T8 拆出视图组件后,读侧会被 <router-view> 取代。
 const tab = computed({
   get: () => (typeof route.name === 'string' ? route.name : 'dashboard'),
   set: name => { router.push({ name }) },
 })
-
-const { theme, toggleTheme } = useTheme()
 
 const commits = ref([])
 const selectedCommit = ref(null)
@@ -746,10 +637,9 @@ const feedbackMap = reactive({})
 const fbDraft = reactive({})
 
 const { busy, run } = useBusy()
-const { confirmModal, confirmAction } = useConfirm()
-const { toast, toastMsg } = useToast()
+const { confirmModal } = useConfirm()
+const { toastMsg } = useToast()
 
-const auth = reactive({ username: '', password: '' })
 const projectForm = reactive({ projectId: null, name: '', description: '', defaultBranch: 'main' })
 const repoForm = reactive({ repoUrl: '', provider: 'GITHUB', defaultBranch: 'main', accessToken: '' })
 const reviewForm = reactive({ commitId: '', baseCommitId: '', branch: '' })
@@ -767,8 +657,13 @@ let agentEventAt = 0         // 最近一次收到 SSE 事件的时间戳,用于
 let agentEventDebounce = null
 const pollingActive = ref(false)
 
-const tabTitles = { dashboard: '概览', projects: '项目管理', repository: '仓库配置', pullRequests: 'PR 工作流', knowledge: 'RAG 知识库', reviews: '代码审查', agent: 'Agent 审批', aiLogs: 'AI 调用日志' }
-const tabTitle = computed(() => tabTitles[tab.value] || 'RepoSage')
+// 侧边导航统一入口:agent / aiLogs 各有装载动作,其余按需刷新或直切。
+function onNavigate(name) {
+  if (name === 'agent') return openAgentWorkspace()
+  if (name === 'aiLogs') return openProjectAiLogs()
+  if (name === 'dashboard' || name === 'projects') { tab.value = name; return }
+  goTab(name)
+}
 const repoBound = computed(() => commits.value.length > 0 || repoForm._bound)
 const needsToken = computed(() => /^https?:\/\//i.test(repoForm.repoUrl.trim()))
 const highRiskCount = computed(() => reports.value.filter(r => r.overallRisk === 'HIGH').length)
@@ -826,16 +721,7 @@ setUnauthorizedHandler(() => {
 })
 
 /* ---------- auth ---------- */
-async function login() {
-  busy.auth = true
-  try {
-    await api('/auth/login', { method: 'POST', body: JSON.stringify(auth) })
-    authenticated.value = true
-    await afterLogin()
-  } catch (error) {
-    toastMsg(error?.message || '登录失败', 'error')
-  } finally { busy.auth = false }
-}
+// 登录表单与请求在 views/LoginView.vue;成功后经 @authenticated 进入这里。
 async function afterLogin() {
   await loadMe()
   await refreshAll()
