@@ -82,4 +82,23 @@ else
   pass "mall-order-service: no duplicate package"
 fi
 
+echo "--- SHA 确定性 ---"
+if [ -f "$ROOT_DIR/scripts/demo-repos-expected-sha.txt" ]; then
+  while read -r repo ref sha; do
+    [ -z "${repo:-}" ] && continue
+    if [ ! -d "$DEMO/$repo/.git" ]; then
+      fail "$repo: not initialized, run scripts/init-demo-repos.sh"
+      continue
+    fi
+    actual="$(git -C "$DEMO/$repo" rev-parse "$ref" 2>/dev/null || echo missing)"
+    if [ "$actual" = "$sha" ]; then
+      pass "$repo $ref"
+    else
+      fail "$repo $ref expected $sha but got $actual"
+    fi
+  done < "$ROOT_DIR/scripts/demo-repos-expected-sha.txt"
+else
+  fail "scripts/demo-repos-expected-sha.txt missing"
+fi
+
 exit "$FAILED"
