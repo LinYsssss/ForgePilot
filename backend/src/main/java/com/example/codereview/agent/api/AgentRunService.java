@@ -1,5 +1,6 @@
 package com.example.codereview.agent.api;
 
+import com.example.codereview.common.api.ErrorCode;
 import com.example.codereview.agent.api.AgentRunDtos.AgentRunDetail;
 import com.example.codereview.agent.api.AgentRunDtos.AgentRunTimeline;
 import com.example.codereview.agent.api.AgentRunDtos.AgentStepView;
@@ -82,7 +83,7 @@ public class AgentRunService {
             if (run.getStatus() == AgentRunStatus.CANCELED) {
                 return toDetail(run);
             }
-            throw new BusinessException(409, "运行已结束，无法取消");
+            throw new BusinessException(ErrorCode.AGENT_RUN_CONFLICT, "运行已结束，无法取消");
         }
         int stepSequence = run.getCurrentStepSequence();
         cancelActiveStep(run.getId(), stepSequence);
@@ -106,15 +107,15 @@ public class AgentRunService {
     public AgentRunDetail retry(Long runId, Long userId) {
         AgentRun run = requireOwnedRun(runId, userId);
         if (run.getStatus() != AgentRunStatus.FAILED && run.getStatus() != AgentRunStatus.TIMED_OUT) {
-            throw new BusinessException(409, "只有失败或超时的运行可以重试");
+            throw new BusinessException(ErrorCode.AGENT_RUN_CONFLICT, "只有失败或超时的运行可以重试");
         }
         int stepSequence = run.getCurrentStepSequence();
         AgentStep step = Optional.of(stepSequence)
                 .filter(sequence -> sequence > 0)
                 .flatMap(sequence -> steps.findForUpdate(run.getId(), sequence))
-                .orElseThrow(() -> new BusinessException(409, "没有可重试的步骤"));
+                .orElseThrow(() -> new BusinessException(ErrorCode.AGENT_RUN_CONFLICT, "没有可重试的步骤"));
         if (step.isSucceeded()) {
-            throw new BusinessException(409, "该步骤已成功，无需重试");
+            throw new BusinessException(ErrorCode.AGENT_RUN_CONFLICT, "该步骤已成功，无需重试");
         }
         run.reopenForRetry();
         publisher.republishForRetry(step);
@@ -132,7 +133,7 @@ public class AgentRunService {
 
     private AgentRun requireOwnedRun(Long runId, Long userId) {
         AgentRun run = runs.findById(runId)
-                .orElseThrow(() -> new BusinessException(404, "Agent 运行不存在"));
+                .orElseThrow(() -> new BusinessException(ErrorCode.AGENT_RUN_NOT_FOUND, "Agent 运行不存在"));
         projects.getRequired(run.getProjectId(), userId);
         return run;
     }

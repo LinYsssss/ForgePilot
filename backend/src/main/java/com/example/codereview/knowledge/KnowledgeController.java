@@ -41,8 +41,12 @@ public class KnowledgeController {
     }
 
     @GetMapping("/documents")
-    public ApiResponse<List<DocumentResponse>> list(@PathVariable Long projectId) {
-        return ApiResponse.ok(knowledgeService.list(projectId, currentUserProvider.getRequired().userId()));
+    public ApiResponse<com.example.codereview.common.api.PageResponse<DocumentResponse>> list(
+            @PathVariable Long projectId,
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer size) {
+        return ApiResponse.ok(knowledgeService.list(
+                projectId, currentUserProvider.getRequired().userId(), page, size));
     }
 
     @DeleteMapping("/documents/{documentId}")

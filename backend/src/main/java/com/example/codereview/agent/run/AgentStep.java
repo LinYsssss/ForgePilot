@@ -56,6 +56,22 @@ public class AgentStep {
     private Instant startedAt;
     private Instant finishedAt;
 
+    /**
+     * Identifies the worker currently executing this step. Execution happens outside any
+     * transaction, so by the time a worker reports its result the step may already have been
+     * reclaimed; completion is gated on this token so a late result is dropped rather than
+     * overwriting the newer attempt.
+     */
+    @Column(length = 64)
+    private String executionToken;
+
+    /** Diagnostic only: which process held the lease when it expired. */
+    @Column(length = 120)
+    private String workerId;
+
+    /** Renewed by a heartbeat while the step runs; the watchdog only reclaims once it lapses. */
+    private Instant leaseExpiresAt;
+
     @Column(nullable = false, updatable = false)
     private Instant createdAt;
 
@@ -119,6 +135,28 @@ public class AgentStep {
         this.errorMessage = null;
         this.finishedAt = Instant.now();
         this.updatedAt = this.finishedAt;
+    }
+
+    /** Takes the execution lease for {@code token}, held by {@code workerId} until {@code expiry}. */
+    public void leaseTo(String token, String workerId, Instant expiry) {
+        this.executionToken = token;
+        this.workerId = workerId;
+        this.leaseExpiresAt = expiry;
+        this.updatedAt = Instant.now();
+    }
+
+    /**
+     * Whether {@code token} is still the rightful holder. A worker whose lease was reclaimed while
+     * it was busy will fail this check, which is how its stale result gets discarded.
+     */
+    public boolean holdsLease(String token) {
+        return token != null && token.equals(executionToken);
+    }
+
+    public void releaseLease() {
+        this.executionToken = null;
+        this.workerId = null;
+        this.leaseExpiresAt = null;
     }
 
     public void fail(String errorMessage) {
@@ -197,6 +235,18 @@ public class AgentStep {
 
     public Instant getFinishedAt() {
         return finishedAt;
+    }
+
+    public String getExecutionToken() {
+        return executionToken;
+    }
+
+    public String getWorkerId() {
+        return workerId;
+    }
+
+    public Instant getLeaseExpiresAt() {
+        return leaseExpiresAt;
     }
 
     public Instant getCreatedAt() {

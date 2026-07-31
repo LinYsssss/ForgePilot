@@ -4,192 +4,82 @@ import com.example.codereview.agent.error.AgentFailureType;
 import com.example.codereview.agent.observability.AgentMetrics;
 import com.example.codereview.agent.orchestration.AgentStepExecutionContext;
 import com.example.codereview.agent.orchestration.AgentStepResult;
-import com.example.codereview.agent.run.AgentRun;
-import com.example.codereview.agent.run.AgentRunRepository;
-import com.example.codereview.agent.run.AgentRunStatus;
-import com.example.codereview.agent.run.AgentStateMachine;
-import com.example.codereview.agent.run.AgentStep;
-import com.example.codereview.agent.run.AgentStepRepository;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import java.nio.charset.StandardCharsets;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
+/**
+ * Runs one Agent step in three separate phases.
+ *
+ * <p>This class deliberately carries no {@code @Transactional} annotation. It used to have one on
+ * {@code execute}, which meant a pessimistic row lock and a database connection were held for the
+ * entire duration of the step — Git clones, model calls, sandbox runs and SCM write-backs
+ * included. Under load that exhausted the connection pool, and any failure rolled back work that
+ * had already had external side effects.
+ *
+ * <pre>
+ *   claim      short transaction, takes the execution lease
+ *   execute    no transaction at all, lease renewed by heartbeat
+ *   complete   short transaction, compare-and-set on the lease token
+ * </pre>
+ */
 @Service
 public class AgentStepExecutionService {
 
-    private final AgentRunRepository runs;
-    private final AgentStepRepository steps;
-    private final AgentStateMachine stateMachine;
+    private final AgentStepClaimService claimService;
+    private final AgentStepCompletionService completionService;
+    private final AgentStepLeaseHeartbeat heartbeat;
     private final AgentStepHandler handler;
-    private final AgentStepPublisher publisher;
     private final AgentMetrics metrics;
-    private final ObjectMapper objectMapper;
-    private final int maxRetry;
 
     public AgentStepExecutionService(
-            AgentRunRepository runs,
-            AgentStepRepository steps,
-            AgentStateMachine stateMachine,
+            AgentStepClaimService claimService,
+            AgentStepCompletionService completionService,
+            AgentStepLeaseHeartbeat heartbeat,
             AgentStepHandler handler,
-            AgentStepPublisher publisher,
-            AgentMetrics metrics,
-            ObjectMapper objectMapper,
-            @Value("${app.agent.queue.max-retry:3}") int maxRetry
+            AgentMetrics metrics
     ) {
-        this.runs = runs;
-        this.steps = steps;
-        this.stateMachine = stateMachine;
+        this.claimService = claimService;
+        this.completionService = completionService;
+        this.heartbeat = heartbeat;
         this.handler = handler;
-        this.publisher = publisher;
         this.metrics = metrics;
-        this.objectMapper = objectMapper;
-        this.maxRetry = maxRetry;
     }
 
-    @Transactional
     public ExecutionOutcome execute(AgentStepMessage message) {
-        AgentRun run = runs.findById(message.agentRunId())
-                .orElseThrow(() -> new IllegalArgumentException(
-                        "Agent run not found: " + message.agentRunId()
-                ));
-        AgentStep step = steps.findForUpdate(message.agentRunId(), message.sequenceNo())
-                .orElseThrow(() -> new IllegalArgumentException(
-                        "Agent step not found: " + message.identity()
-                ));
+        AgentStepClaim claim = claimService.claim(message);
+        if (!claim.isClaimed()) {
+            return claim.rejection();
+        }
 
+        AgentStepExecutionContext context = claim.context();
         long startedNanos = System.nanoTime();
-        ExecutionOutcome outcome = runLoadedStep(run, step, message);
-        metrics.recordStep(step.getStepType(), outcome.name(), (System.nanoTime() - startedNanos) / 1_000_000);
+        ExecutionOutcome outcome = runClaimed(claim, context, message);
+        metrics.recordStep(context.stepType(), outcome.name(), (System.nanoTime() - startedNanos) / 1_000_000);
         return outcome;
     }
 
-    private ExecutionOutcome runLoadedStep(AgentRun run, AgentStep step, AgentStepMessage message) {
-        if (step.isSucceeded()) {
-            return ExecutionOutcome.DUPLICATE_IGNORED;
-        }
-        if (!step.acceptsAttempt(message.attempt())) {
-            return ExecutionOutcome.STALE_OR_ACTIVE_IGNORED;
-        }
-
-        activateRetryRun(run, step);
-        step.start(message.attempt());
-        steps.saveAndFlush(step);
-
+    private ExecutionOutcome runClaimed(
+            AgentStepClaim claim, AgentStepExecutionContext context, AgentStepMessage message) {
         try {
-            if (run.isCancellationRequested()) {
+            if (context.cancellationRequested()) {
                 throw new AgentStepExecutionException(
-                        AgentFailureType.CANCELED,
-                        "Agent run cancellation requested before step execution"
-                );
+                        AgentFailureType.CANCELED, "Agent run cancellation requested before step execution");
             }
-            AgentStepResult result = handler.execute(context(run, step, message));
-            String output = serialize(result);
-            step.succeed(output);
-            steps.save(step);
-            if (result.disposition() == AgentStepResult.Disposition.ADVANCE) {
-                if (result.nextState() == null) {
-                    throw new AgentStepExecutionException(
-                            AgentFailureType.INTERNAL_ERROR,
-                            "Advancing Agent step result requires nextState"
-                    );
-                }
-                publisher.schedule(
-                        run.getId(),
-                        step.getSequenceNo() + 1,
-                        result.nextState(),
-                        message.traceId()
-                );
-            }
-            return ExecutionOutcome.SUCCEEDED;
+            // No transaction is open here. Whatever the handler does — network, subprocess, model
+            // call — it does without holding a row lock.
+            AgentStepResult result =
+                    heartbeat.runWithRenewal(claim.stepId(), claim.executionToken(), () -> handler.execute(context));
+            return completionService.complete(context, claim.executionToken(), message, result);
         } catch (AgentStepExecutionException exception) {
-            return handleFailure(run, step, message, exception.getFailureType(), exception.getMessage());
+            return completionService.fail(
+                    context, claim.executionToken(), message, exception.getFailureType(), exception.getMessage());
         } catch (RuntimeException exception) {
-            return handleFailure(
-                    run, step, message, AgentFailureType.INTERNAL_ERROR, failureMessage(exception)
-            );
-        }
-    }
-
-    private AgentStepExecutionContext context(
-            AgentRun run,
-            AgentStep step,
-            AgentStepMessage message
-    ) {
-        return new AgentStepExecutionContext(
-                run.getId(),
-                step.getId(),
-                run.getProjectId(),
-                run.getRepositoryId(),
-                run.getPullRequestId(),
-                run.getHeadSha(),
-                step.getStepType(),
-                step.getSequenceNo(),
-                message.attempt(),
-                message.traceId(),
-                run.isCancellationRequested()
-        );
-    }
-
-    private String serialize(AgentStepResult result) {
-        try {
-            String json = objectMapper.writeValueAsString(result);
-            if (json.getBytes(StandardCharsets.UTF_8).length > 8_000) {
-                throw new AgentStepExecutionException(
-                        AgentFailureType.INTERNAL_ERROR,
-                        "Agent step executor output exceeds 8000 bytes"
-                );
-            }
-            return json;
-        } catch (JsonProcessingException ex) {
-            throw new AgentStepExecutionException(
+            return completionService.fail(
+                    context,
+                    claim.executionToken(),
+                    message,
                     AgentFailureType.INTERNAL_ERROR,
-                    "Agent step executor output is not JSON serializable",
-                    ex
-            );
+                    failureMessage(exception));
         }
-    }
-
-    private void activateRetryRun(AgentRun run, AgentStep step) {
-        if (run.getStatus() != AgentRunStatus.RETRY_WAIT) {
-            if (run.getStatus() != step.getStepType()) {
-                throw new IllegalStateException(
-                        "Agent run status " + run.getStatus() + " does not match step " + step.getStepType()
-                );
-            }
-            return;
-        }
-        stateMachine.requireTransition(run.getStatus(), step.getStepType());
-        run.advanceTo(step.getStepType(), step.getSequenceNo());
-    }
-
-    private ExecutionOutcome handleFailure(
-            AgentRun run,
-            AgentStep step,
-            AgentStepMessage message,
-            AgentFailureType failureType,
-            String reason
-    ) {
-        step.fail(reason);
-        steps.save(step);
-
-        if ((failureType == AgentFailureType.RETRYABLE_INFRASTRUCTURE
-                || failureType == AgentFailureType.RETRYABLE_PROVIDER_ERROR)
-                && message.attempt() < maxRetry) {
-            publisher.scheduleRetry(message);
-            return ExecutionOutcome.RETRY_SCHEDULED;
-        }
-
-        AgentRunStatus terminal = failureType == AgentFailureType.CANCELED
-                ? AgentRunStatus.CANCELED
-                : AgentRunStatus.FAILED;
-        if (run.getStatus() != terminal) {
-            stateMachine.requireTransition(run.getStatus(), terminal);
-            run.advanceTo(terminal, step.getSequenceNo());
-        }
-        return ExecutionOutcome.FAILED;
     }
 
     private String failureMessage(RuntimeException exception) {
@@ -202,6 +92,8 @@ public class AgentStepExecutionService {
         RETRY_SCHEDULED,
         FAILED,
         DUPLICATE_IGNORED,
-        STALE_OR_ACTIVE_IGNORED
+        STALE_OR_ACTIVE_IGNORED,
+        /** The lease was reclaimed mid-flight; this worker's result was discarded. */
+        LEASE_LOST
     }
 }

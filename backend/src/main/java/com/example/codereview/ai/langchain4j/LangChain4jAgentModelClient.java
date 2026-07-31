@@ -1,5 +1,6 @@
 package com.example.codereview.ai.langchain4j;
 
+import com.example.codereview.common.api.ErrorCode;
 import com.example.codereview.agent.model.AgentModelClient;
 import com.example.codereview.agent.model.PromptEnvelope;
 import com.example.codereview.ai.AiCallTransientException;
@@ -107,7 +108,7 @@ public final class LangChain4jAgentModelClient implements AgentModelClient {
             if (response == null || response.aiMessage() == null
                     || response.aiMessage().text() == null
                     || response.aiMessage().text().isBlank()) {
-                throw new BusinessException(6004, "LangChain4j provider returned an invalid response");
+                throw new BusinessException(ErrorCode.AI_RESPONSE_INVALID, "LangChain4j provider returned an invalid response");
             }
             TokenUsage usage = response.tokenUsage();
             long inputTokens = usage == null || usage.inputTokenCount() == null

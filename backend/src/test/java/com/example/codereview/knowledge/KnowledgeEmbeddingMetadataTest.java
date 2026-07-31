@@ -48,6 +48,8 @@ class KnowledgeEmbeddingMetadataTest {
         when(json.write(List.of(0.1, 0.2, 0.3))).thenReturn("[0.1,0.2,0.3]");
         KnowledgeService service = new KnowledgeService(
                 projects, documents, chunks, rag, embeddings, json, vectors, calls,
+                new KnowledgeUploadValidator(2_097_152, 400_000),
+                new KnowledgeDocumentStateService(documents),
                 transactionManager(), 400, 20, false
         );
 
@@ -104,6 +106,8 @@ class KnowledgeEmbeddingMetadataTest {
         }).when(chunks).deleteByDocumentId(10L);
         KnowledgeService service = new KnowledgeService(
                 projects, documents, chunks, rag, embeddings, json, vectors, calls,
+                new KnowledgeUploadValidator(2_097_152, 400_000),
+                new KnowledgeDocumentStateService(documents),
                 transactionManager(), 400, 20, false
         );
 
@@ -130,6 +134,8 @@ class KnowledgeEmbeddingMetadataTest {
         KnowledgeService service = new KnowledgeService(
                 projects, documents, chunks, mock(RagService.class), mock(EmbeddingClient.class),
                 mock(EmbeddingJson.class), vectors, mock(AiCallLogService.class),
+                new KnowledgeUploadValidator(2_097_152, 400_000),
+                new KnowledgeDocumentStateService(documents),
                 transactionManager(), 400, 20, false
         );
 
@@ -195,7 +201,7 @@ class KnowledgeEmbeddingMetadataTest {
         }).when(chunks).deleteByDocumentId(11L);
         KnowledgeService service = new KnowledgeService(
                 projects, documents, chunks, mock(RagService.class), embeddings, json, vectors,
-                mock(AiCallLogService.class), transactionManager(), 400, 20, false
+                mock(AiCallLogService.class), new KnowledgeUploadValidator(2_097_152, 400_000), new KnowledgeDocumentStateService(documents), transactionManager(), 400, 20, false
         );
 
         KnowledgeDtos.ReindexResponse first = service.reindex(7L, 9L);

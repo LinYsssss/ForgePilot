@@ -1,5 +1,6 @@
 package com.example.codereview.pullrequest;
 
+import com.example.codereview.common.api.ErrorCode;
 import com.example.codereview.common.exception.BusinessException;
 import com.example.codereview.git.GitInputValidator;
 import com.example.codereview.project.ProjectService;
@@ -136,9 +137,9 @@ public class PullRequestService {
     public PullRequestEntity requirePullRequest(Long projectId, Long userId, Long pullRequestId) {
         projectService.getRequired(projectId, userId);
         PullRequestEntity pullRequest = pullRequests.findById(pullRequestId)
-                .orElseThrow(() -> new BusinessException(404, "PR 不存在"));
+                .orElseThrow(() -> new BusinessException(ErrorCode.PULL_REQUEST_NOT_FOUND, "PR 不存在"));
         if (!pullRequest.getProjectId().equals(projectId)) {
-            throw new BusinessException(403, "无权访问该 PR");
+            throw new BusinessException(ErrorCode.PROJECT_FORBIDDEN, "无权访问该 PR");
         }
         return pullRequest;
     }
@@ -158,9 +159,9 @@ public class PullRequestService {
             return;
         }
         ReviewReport report = reports.findById(reportId)
-                .orElseThrow(() -> new BusinessException(404, "审查报告不存在"));
+                .orElseThrow(() -> new BusinessException(ErrorCode.REVIEW_REPORT_NOT_FOUND, "审查报告不存在"));
         if (!report.getProjectId().equals(projectId)) {
-            throw new BusinessException(403, "审查报告不属于当前项目");
+            throw new BusinessException(ErrorCode.PROJECT_FORBIDDEN, "审查报告不属于当前项目");
         }
         if (selectedIssueIds == null || selectedIssueIds.isEmpty()) {
             return;

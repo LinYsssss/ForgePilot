@@ -1,5 +1,6 @@
 package com.example.codereview.agent.compat;
 
+import com.example.codereview.common.api.ErrorCode;
 import com.example.codereview.agent.run.AgentRun;
 import com.example.codereview.agent.run.AgentRunRepository;
 import com.example.codereview.agent.run.AgentRunStatus;
@@ -41,9 +42,9 @@ public class LegacyReviewProjectionService {
         }
 
         AgentRun run = runs.findById(agentRunId)
-                .orElseThrow(() -> new BusinessException(404, "Agent 运行不存在"));
+                .orElseThrow(() -> new BusinessException(ErrorCode.AGENT_RUN_NOT_FOUND, "Agent 运行不存在"));
         if (run.getStatus() != AgentRunStatus.COMPLETED) {
-            throw new BusinessException(409, "仅已完成的 Agent 运行可投影为审查报告");
+            throw new BusinessException(ErrorCode.AGENT_RUN_CONFLICT, "仅已完成的 Agent 运行可投影为审查报告");
         }
 
         ReviewReport report = ReviewReport.forAgentRun(

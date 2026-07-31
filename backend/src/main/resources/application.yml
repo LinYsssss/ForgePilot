@@ -3,6 +3,13 @@ spring:
     name: reposage
   profiles:
     active: ${APP_ENV:dev}
+  # 容器级上传上限，业务层还会再校验一次（见 app.knowledge.*）。
+  # 不配的话 Spring Boot 默认 1MB/10MB，与业务上限不一致，容易出现
+  # "业务允许 2MB 但容器先拒了" 的费解错误。
+  servlet:
+    multipart:
+      max-file-size: ${MULTIPART_MAX_FILE_SIZE:4MB}
+      max-request-size: ${MULTIPART_MAX_REQUEST_SIZE:8MB}
   # app.* 按所有权拆分到两个文件，供并行开发时互不冲突地修改。
   # 见 docs/并行实施拆分方案.md。刻意不使用 optional:——文件缺失时
   # 必须启动失败，而不是静默丢掉整块安全配置。

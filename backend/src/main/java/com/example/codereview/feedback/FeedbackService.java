@@ -1,5 +1,6 @@
 package com.example.codereview.feedback;
 
+import com.example.codereview.common.api.ErrorCode;
 import com.example.codereview.auth.UserAccount;
 import com.example.codereview.auth.UserAccountRepository;
 import com.example.codereview.common.exception.BusinessException;
@@ -58,7 +59,7 @@ public class FeedbackService {
     public void delete(Long issueId, Long userId) {
         requireAccessibleIssue(issueId, userId);
         Feedback feedback = feedbackRepository.findByIssueIdAndUserId(issueId, userId)
-                .orElseThrow(() -> new BusinessException(404, "你还没有提交过反馈"));
+                .orElseThrow(() -> new BusinessException(ErrorCode.FEEDBACK_NOT_FOUND, "你还没有提交过反馈"));
         feedbackRepository.delete(feedback);
     }
 
@@ -86,9 +87,9 @@ public class FeedbackService {
 
     private void requireAccessibleIssue(Long issueId, Long userId) {
         ReviewIssue issue = issues.findById(issueId)
-                .orElseThrow(() -> new BusinessException(404, "审查问题不存在"));
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "审查问题不存在"));
         ReviewReport report = reports.findById(issue.getReportId())
-                .orElseThrow(() -> new BusinessException(404, "审查报告不存在"));
+                .orElseThrow(() -> new BusinessException(ErrorCode.REVIEW_REPORT_NOT_FOUND, "审查报告不存在"));
         projectService.getRequired(report.getProjectId(), userId);
     }
 }

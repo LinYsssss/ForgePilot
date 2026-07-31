@@ -1,5 +1,6 @@
 package com.example.codereview.review;
 
+import com.example.codereview.common.api.ErrorCode;
 import com.example.codereview.common.exception.BusinessException;
 import com.example.codereview.ai.AiCallLogRepository;
 import com.example.codereview.feedback.FeedbackRepository;
@@ -141,12 +142,23 @@ public class ReviewService {
                 .toList();
     }
 
+    /** Paginated listing; review tasks accumulate for the lifetime of a project. */
+    public com.example.codereview.common.api.PageResponse<ReviewTaskResponse> listTasks(
+            Long projectId, Long userId, Integer page, Integer size) {
+        repositoryService.getRequired(projectId, userId);
+        var pageRequest = org.springframework.data.domain.PageRequest.of(
+                com.example.codereview.common.api.PageResponse.sanitizePage(page),
+                com.example.codereview.common.api.PageResponse.sanitizeSize(size));
+        return com.example.codereview.common.api.PageResponse.from(
+                tasks.findByProjectIdOrderByCreatedAtDesc(projectId, pageRequest), ReviewTaskResponse::from);
+    }
+
     public ReviewTaskResponse taskDetail(Long projectId, Long userId, Long taskId) {
         repositoryService.getRequired(projectId, userId);
         ReviewTask task = tasks.findById(taskId)
-                .orElseThrow(() -> new BusinessException(6002, "审查任务不存在"));
+                .orElseThrow(() -> new BusinessException(ErrorCode.REVIEW_TASK_NOT_FOUND, "审查任务不存在"));
         if (!task.getProjectId().equals(projectId)) {
-            throw new BusinessException(403, "无权访问该任务");
+            throw new BusinessException(ErrorCode.PROJECT_FORBIDDEN, "无权访问该任务");
         }
         return ReviewTaskResponse.from(task);
     }
@@ -156,7 +168,7 @@ public class ReviewService {
         repositoryService.getRequired(projectId, userId);
         ReviewTask task = requireTask(projectId, taskId);
         if (task.isTerminal()) {
-            throw new BusinessException(6003, "任务已结束，无法停止");
+            throw new BusinessException(ErrorCode.CONFLICT, "任务已结束，无法停止");
         }
         task.markCanceled();
         tasks.save(task);
@@ -177,9 +189,9 @@ public class ReviewService {
     public void deleteReport(Long projectId, Long userId, Long reportId) {
         repositoryService.getRequired(projectId, userId);
         ReviewReport report = reports.findById(reportId)
-                .orElseThrow(() -> new BusinessException(404, "审查报告不存在"));
+                .orElseThrow(() -> new BusinessException(ErrorCode.REVIEW_REPORT_NOT_FOUND, "审查报告不存在"));
         if (!report.getProjectId().equals(projectId)) {
-            throw new BusinessException(403, "无权访问该报告");
+            throw new BusinessException(ErrorCode.PROJECT_FORBIDDEN, "无权访问该报告");
         }
         purgeReport(report);
     }
@@ -196,9 +208,9 @@ public class ReviewService {
 
     private ReviewTask requireTask(Long projectId, Long taskId) {
         ReviewTask task = tasks.findById(taskId)
-                .orElseThrow(() -> new BusinessException(6002, "审查任务不存在"));
+                .orElseThrow(() -> new BusinessException(ErrorCode.REVIEW_TASK_NOT_FOUND, "审查任务不存在"));
         if (!task.getProjectId().equals(projectId)) {
-            throw new BusinessException(403, "无权访问该任务");
+            throw new BusinessException(ErrorCode.PROJECT_FORBIDDEN, "无权访问该任务");
         }
         return task;
     }
@@ -211,12 +223,23 @@ public class ReviewService {
                 .toList();
     }
 
+    /** Paginated listing; reports accumulate one per completed review. */
+    public com.example.codereview.common.api.PageResponse<ReviewReportSummary> reports(
+            Long projectId, Long userId, Integer page, Integer size) {
+        repositoryService.getRequired(projectId, userId);
+        var pageRequest = org.springframework.data.domain.PageRequest.of(
+                com.example.codereview.common.api.PageResponse.sanitizePage(page),
+                com.example.codereview.common.api.PageResponse.sanitizeSize(size));
+        return com.example.codereview.common.api.PageResponse.from(
+                reports.findByProjectIdOrderByCreatedAtDesc(projectId, pageRequest), ReviewReportSummary::from);
+    }
+
     public ReviewReportDetail reportDetail(Long projectId, Long userId, Long reportId) {
         repositoryService.getRequired(projectId, userId);
         ReviewReport report = reports.findById(reportId)
-                .orElseThrow(() -> new BusinessException(404, "审查报告不存在"));
+                .orElseThrow(() -> new BusinessException(ErrorCode.REVIEW_REPORT_NOT_FOUND, "审查报告不存在"));
         if (!report.getProjectId().equals(projectId)) {
-            throw new BusinessException(403, "无权访问该报告");
+            throw new BusinessException(ErrorCode.PROJECT_FORBIDDEN, "无权访问该报告");
         }
         List<ReviewIssueResponse> issueResponses = issues.findByReportId(report.getId())
                 .stream()
@@ -240,7 +263,7 @@ public class ReviewService {
         }
         List<CommitResponse> commits = repositoryService.commits(projectId, userId, 1);
         if (commits.isEmpty()) {
-            throw new BusinessException(6001, "仓库没有可审查的 Commit");
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "仓库没有可审查的 Commit");
         }
         return commits.get(0).commitId();
     }
@@ -250,9 +273,9 @@ public class ReviewService {
             return null;
         }
         PullRequestEntity pullRequest = pullRequests.findById(pullRequestId)
-                .orElseThrow(() -> new BusinessException(404, "PR 不存在"));
+                .orElseThrow(() -> new BusinessException(ErrorCode.PULL_REQUEST_NOT_FOUND, "PR 不存在"));
         if (!pullRequest.getProjectId().equals(projectId)) {
-            throw new BusinessException(403, "PR 不属于当前项目");
+            throw new BusinessException(ErrorCode.PROJECT_FORBIDDEN, "PR 不属于当前项目");
         }
         return pullRequest;
     }

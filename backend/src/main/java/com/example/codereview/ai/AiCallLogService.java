@@ -1,5 +1,6 @@
 package com.example.codereview.ai;
 
+import com.example.codereview.common.api.ErrorCode;
 import com.example.codereview.ai.AiCallLogDtos.AiCallLogResponse;
 import com.example.codereview.common.exception.BusinessException;
 import com.example.codereview.project.ProjectService;
@@ -84,7 +85,7 @@ public class AiCallLogService {
         PageRequest page = PageRequest.of(0, safeLimit);
         if (taskId != null) {
             ReviewTask task = tasks.findById(taskId)
-                    .orElseThrow(() -> new BusinessException(6002, "审查任务不存在"));
+                    .orElseThrow(() -> new BusinessException(ErrorCode.REVIEW_TASK_NOT_FOUND, "审查任务不存在"));
             projectService.getRequired(task.getProjectId(), userId);
             if (projectId != null && !projectId.equals(task.getProjectId())) {
                 throw new BusinessException(400, "任务不属于指定项目");

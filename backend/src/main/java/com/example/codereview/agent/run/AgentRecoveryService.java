@@ -15,6 +15,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionDefinition;
@@ -97,12 +98,41 @@ public class AgentRecoveryService {
         }
     }
 
+    /**
+     * Recovery cannot only run at startup: a step whose worker dies while the process stays up
+     * would otherwise sit RUNNING until the next restart. Now that steps renew a lease while they
+     * execute, an unrenewed lease is a genuine liveness signal rather than a guess based on how
+     * long the row has been untouched.
+     *
+     * <p>Only active when {@code app.agent.scheduling.enabled} is on, which is what registers the
+     * scheduling infrastructure.
+     */
+    @Scheduled(
+            fixedDelayString = "${app.agent.recovery.interval-ms:60000}",
+            initialDelayString = "${app.agent.recovery.initial-delay-ms:60000}")
+    public void recoverPeriodically() {
+        if (!enabled) {
+            return;
+        }
+        try {
+            int recovered = recoverStaleRuns();
+            if (recovered > 0) {
+                log.warn("Watchdog recovered {} stalled Agent step(s)", recovered);
+            }
+        } catch (RuntimeException ex) {
+            // Losing the watchdog to one transient error would reintroduce exactly the stuck-run
+            // problem it exists to prevent.
+            log.warn("Agent step recovery pass failed; will retry on the next tick", ex);
+        }
+    }
+
     public int recoverStaleRuns() {
         Instant now = clock.instant();
         Instant cutoff = now.minus(staleThreshold);
         List<Long> candidates = steps.findStaleRunningIds(
                 AgentStepStatus.RUNNING,
                 cutoff,
+                now,
                 RECOVERABLE_STATUSES,
                 PageRequest.of(0, batchSize)
         );
