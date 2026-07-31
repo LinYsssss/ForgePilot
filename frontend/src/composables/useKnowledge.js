@@ -1,9 +1,9 @@
 import { ref } from 'vue'
-import { api } from '../api/client'
-import { unwrapPage } from '../api/page'
-import { useBusy } from './useBusy'
-import { useSession } from './useSession'
-import { useToast } from './useToast'
+import { api } from '../api/client.js'
+import { unwrapPage } from '../api/page.js'
+import { useBusy } from './useBusy.js'
+import { useSession } from './useSession.js'
+import { useToast } from './useToast.js'
 
 // 知识库(单例):文档列表、上传、检索,以及"参与审查的文档"选择集。
 // reviewDocs / prDocs 分属审查页与 PR 页,两处独立持有互不污染;

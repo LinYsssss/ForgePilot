@@ -61,8 +61,8 @@
 </template>
 
 <script setup>
-import { useBusy } from '../composables/useBusy'
-import { useKnowledge } from '../composables/useKnowledge'
+import { useBusy } from '../composables/useBusy.js'
+import { useKnowledge } from '../composables/useKnowledge.js'
 
 const { busy, run } = useBusy()
 const { documents, docType, searchQuery, searchMatches, searched, onFileChange, uploadDocument, reindexKnowledge, deleteDocument, searchKnowledge } = useKnowledge()

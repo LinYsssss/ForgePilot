@@ -1,8 +1,8 @@
 import { computed, reactive, ref } from 'vue'
-import { api } from '../api/client'
-import { fmtDate } from '../utils/format'
-import { relativeDay } from '../utils/labels'
-import { useSession } from './useSession'
+import { api } from '../api/client.js'
+import { fmtDate } from '../utils/format.js'
+import { relativeDay } from '../utils/labels.js'
+import { useSession } from './useSession.js'
 
 // AI 调用日志(单例):项目/任务两个维度,按日期→任务分组展示。
 const { activeProject } = useSession()

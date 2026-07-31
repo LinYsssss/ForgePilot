@@ -8,15 +8,15 @@
 
 <script setup>
 import { onMounted, onUnmounted } from 'vue'
-import { initCsrf, setUnauthorizedHandler } from './api/client'
+import { initCsrf, setUnauthorizedHandler } from './api/client.js'
 import AppShell from './components/AppShell.vue'
 import LoginView from './views/LoginView.vue'
-import { useSession } from './composables/useSession'
-import { useBusy } from './composables/useBusy'
-import { useToast } from './composables/useToast'
-import { useReviews } from './composables/useReviews'
-import { useAgentWorkspace } from './composables/useAgentWorkspace'
-import { useWorkspace } from './composables/useWorkspace'
+import { useSession } from './composables/useSession.js'
+import { useBusy } from './composables/useBusy.js'
+import { useToast } from './composables/useToast.js'
+import { useReviews } from './composables/useReviews.js'
+import { useAgentWorkspace } from './composables/useAgentWorkspace.js'
+import { useWorkspace } from './composables/useWorkspace.js'
 
 // App.vue 只负责登录态分流与全局生命周期;
 // 领域状态在 composables/,页面在 views/,跨域动作在 useWorkspace。

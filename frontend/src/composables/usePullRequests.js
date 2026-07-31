@@ -1,11 +1,11 @@
 import { computed, reactive, ref } from 'vue'
-import { api } from '../api/client'
-import { shortCommit } from '../utils/format'
-import { useBusy } from './useBusy'
-import { useKnowledge } from './useKnowledge'
-import { useReviews } from './useReviews'
-import { useSession } from './useSession'
-import { useToast } from './useToast'
+import { api } from '../api/client.js'
+import { shortCommit } from '../utils/format.js'
+import { useBusy } from './useBusy.js'
+import { useKnowledge } from './useKnowledge.js'
+import { useReviews } from './useReviews.js'
+import { useSession } from './useSession.js'
+import { useToast } from './useToast.js'
 
 // Pull Request 工作流(单例):登记/更新/选择、PR 审查触发与管理员动作。
 // 依赖方向:pullRequests → reviews/knowledge(单向,不回引)。

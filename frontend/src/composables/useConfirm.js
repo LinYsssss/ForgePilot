@@ -1,5 +1,5 @@
 import { ref } from 'vue'
-import { useBusy } from './useBusy'
+import { useBusy } from './useBusy.js'
 
 // 确认模态(单例):{ title, body, confirmLabel?, onConfirm }。
 const confirmModal = ref(null)

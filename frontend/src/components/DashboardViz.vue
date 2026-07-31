@@ -42,7 +42,7 @@
 // 概览仪表盘可视化(风险分布环形 + 审查活动柱)。纯展示:只吃 reports prop,无副作用。
 // 样式沿用全局 styles.css 的类(.viz-row/.donut/.cols…),故无需 scoped style。
 import { computed, reactive } from 'vue'
-import { fmtTime } from '../utils/format'
+import { fmtTime } from '../utils/format.js'
 
 const props = defineProps({ reports: { type: Array, default: () => [] } })
 

@@ -139,15 +139,15 @@
 
 <script setup>
 import KnowledgeDocPicker from '../components/KnowledgeDocPicker.vue'
-import { fmtTime, shortCommit } from '../utils/format'
-import { prStateLabel, actionLabel, actionStateClass } from '../utils/labels'
-import { useBusy } from '../composables/useBusy'
-import { useSession } from '../composables/useSession'
-import { useRepository } from '../composables/useRepository'
-import { useReviews } from '../composables/useReviews'
-import { useKnowledge } from '../composables/useKnowledge'
-import { usePullRequests } from '../composables/usePullRequests'
-import { useWorkspace } from '../composables/useWorkspace'
+import { fmtTime, shortCommit } from '../utils/format.js'
+import { prStateLabel, actionLabel, actionStateClass } from '../utils/labels.js'
+import { useBusy } from '../composables/useBusy.js'
+import { useSession } from '../composables/useSession.js'
+import { useRepository } from '../composables/useRepository.js'
+import { useReviews } from '../composables/useReviews.js'
+import { useKnowledge } from '../composables/useKnowledge.js'
+import { usePullRequests } from '../composables/usePullRequests.js'
+import { useWorkspace } from '../composables/useWorkspace.js'
 
 const { busy, run } = useBusy()
 const { activeProject } = useSession()

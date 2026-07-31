@@ -1,9 +1,9 @@
 import { reactive } from 'vue'
-import { api } from '../api/client'
-import { useBusy } from './useBusy'
-import { useConfirm } from './useConfirm'
-import { useSession } from './useSession'
-import { useToast } from './useToast'
+import { api } from '../api/client.js'
+import { useBusy } from './useBusy.js'
+import { useConfirm } from './useConfirm.js'
+import { useSession } from './useSession.js'
+import { useToast } from './useToast.js'
 
 // 项目 CRUD(单例)。选中项目后的跨域清理与跳转在 useWorkspace.selectProject。
 const { projects, activeProject } = useSession()

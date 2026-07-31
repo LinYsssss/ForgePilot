@@ -71,11 +71,11 @@
 </template>
 
 <script setup>
-import { shortCommit } from '../utils/format'
-import { diffLines } from '../utils/labels'
-import { useBusy } from '../composables/useBusy'
-import { useRepository } from '../composables/useRepository'
-import { useWorkspace } from '../composables/useWorkspace'
+import { shortCommit } from '../utils/format.js'
+import { diffLines } from '../utils/labels.js'
+import { useBusy } from '../composables/useBusy.js'
+import { useRepository } from '../composables/useRepository.js'
+import { useWorkspace } from '../composables/useWorkspace.js'
 
 const { busy, run } = useBusy()
 const { repoForm, commits, selectedCommit, diffFiles, repoBound, needsToken, useDemoRepository, bindRepository, unbindRepository, loadCommits } = useRepository()

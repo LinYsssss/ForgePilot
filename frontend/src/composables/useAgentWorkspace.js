@@ -1,10 +1,10 @@
 import { computed, nextTick, ref, watch } from 'vue'
-import { API_BASE, api } from '../api/client'
-import { router } from '../router'
-import { useBusy } from './useBusy'
-import { useConfirm } from './useConfirm'
-import { useSession } from './useSession'
-import { useToast } from './useToast'
+import { API_BASE, api } from '../api/client.js'
+import { nav } from '../nav.js'
+import { useBusy } from './useBusy.js'
+import { useConfirm } from './useConfirm.js'
+import { useSession } from './useSession.js'
+import { useToast } from './useToast.js'
 
 // Agent 工作台(单例):Run 列表/筛选、Timeline/Finding/Patch 装载、
 // SSE 实时推送 + 轮询兜底(15s 退避)、取消/重试,以及证据锚点定位。
@@ -47,12 +47,12 @@ const agentRunCounts = computed(() => ({
   done: agentRuns.value.filter(item => ['SUCCEEDED', 'COMPLETED', 'CANCELED'].includes(item.status)).length,
 }))
 
-function onAgentPage() { return router.currentRoute.value.name === 'agent' }
+function onAgentPage() { return nav.name() === 'agent' }
 
 // 证据定位:外链 /agent?evidence=path:line 进入时,内容可能尚未渲染,
 // 装载完成处会补调一次;query 变化(点击 citation)时也触发。
 function focusEvidenceAnchor() {
-  const location = router.currentRoute.value.query.evidence
+  const location = nav.query().evidence
   if (typeof location !== 'string' || !location) return
   const separator = location.lastIndexOf(':')
   const path = separator > 0 ? location.slice(0, separator) : location
@@ -62,7 +62,7 @@ function focusEvidenceAnchor() {
   target.classList.add('evidence-focus')
   setTimeout(() => target.classList.remove('evidence-focus'), 1800)
 }
-watch(() => router.currentRoute.value.query.evidence, () => nextTick(focusEvidenceAnchor))
+watch(() => nav.query().evidence, () => nextTick(focusEvidenceAnchor))
 
 async function loadAgentWorkspace() {
   if (!activeProject.value || !agentRunId.value) return

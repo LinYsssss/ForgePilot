@@ -1,12 +1,12 @@
 import { computed, reactive, ref } from 'vue'
-import { api, apiDownload } from '../api/client'
-import { unwrapPage } from '../api/page'
-import { useBusy } from './useBusy'
-import { useConfirm } from './useConfirm'
-import { useKnowledge } from './useKnowledge'
-import { useRepository } from './useRepository'
-import { useSession } from './useSession'
-import { useToast } from './useToast'
+import { api, apiDownload } from '../api/client.js'
+import { unwrapPage } from '../api/page.js'
+import { useBusy } from './useBusy.js'
+import { useConfirm } from './useConfirm.js'
+import { useKnowledge } from './useKnowledge.js'
+import { useRepository } from './useRepository.js'
+import { useSession } from './useSession.js'
+import { useToast } from './useToast.js'
 
 // 审查任务与报告(单例):创建/列表/详情/MQ 日志/导出/删除 + 运行中任务的完成轮询。
 // 轮询完成后的"打开最新报告并跳转"由 useWorkspace 通过 setCompletionHandler 注入,

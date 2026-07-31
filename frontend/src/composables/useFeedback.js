@@ -1,6 +1,6 @@
 import { reactive } from 'vue'
-import { api } from '../api/client'
-import { useToast } from './useToast'
+import { api } from '../api/client.js'
+import { useToast } from './useToast.js'
 
 // 问题反馈(单例):一人一票的 upsert 语义 + 展开态与草稿。
 const { toastMsg } = useToast()

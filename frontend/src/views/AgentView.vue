@@ -32,11 +32,11 @@
 
 <script setup>
 import AgentReviewWorkspace from '../components/agent/AgentReviewWorkspace.vue'
-import { shortCommit } from '../utils/format'
-import { statusLabel } from '../utils/labels'
-import { useBusy } from '../composables/useBusy'
-import { useSession } from '../composables/useSession'
-import { useAgentWorkspace } from '../composables/useAgentWorkspace'
+import { shortCommit } from '../utils/format.js'
+import { statusLabel } from '../utils/labels.js'
+import { useBusy } from '../composables/useBusy.js'
+import { useSession } from '../composables/useSession.js'
+import { useAgentWorkspace } from '../composables/useAgentWorkspace.js'
 
 const { busy, run } = useBusy()
 const { activeProject } = useSession()

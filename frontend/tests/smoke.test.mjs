@@ -40,7 +40,7 @@ test('agent workspace keeps run filtering, live refresh, and citation navigation
   assert.match(agent, /startAgentPolling/)
   // 旧 "#agent-evidence=" 外链由路由层转成 /agent?evidence=,定位逻辑读 route query。
   assert.match(routerSource, /agent-evidence=/)
-  assert.match(agent, /query\.evidence/)
+  assert.match(agent, /query\(\)\.evidence/)
   assert.match(agent, /\/cancel/)
   assert.match(agent, /\/retry/)
   assert.match(findings, /data-evidence-path/)

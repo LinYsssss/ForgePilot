@@ -1,4 +1,4 @@
-import { fmtDate } from './format'
+import { fmtDate } from './format.js'
 
 // 状态/枚举 → 中文标签与样式类的纯函数映射。从 App.vue 抽出,供各视图共用。
 export function statusLabel(s) { return { PENDING: '等待中', RUNNING: '运行中', SUCCESS: '成功', FAILED: '失败', DEAD: '已死信', CANCELED: '已停止' }[s] || s }

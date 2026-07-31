@@ -136,15 +136,15 @@
 <script setup>
 import KnowledgeDocPicker from '../components/KnowledgeDocPicker.vue'
 import ReportSummary from '../components/ReportSummary.vue'
-import { fmtTime, shortCommit } from '../utils/format'
-import { statusLabel, mqStatusClass, fbLabel, fbBadge, confClass, confText } from '../utils/labels'
-import { useBusy } from '../composables/useBusy'
-import { useSession } from '../composables/useSession'
-import { useRepository } from '../composables/useRepository'
-import { useKnowledge } from '../composables/useKnowledge'
-import { useReviews } from '../composables/useReviews'
-import { useFeedback } from '../composables/useFeedback'
-import { useWorkspace } from '../composables/useWorkspace'
+import { fmtTime, shortCommit } from '../utils/format.js'
+import { statusLabel, mqStatusClass, fbLabel, fbBadge, confClass, confText } from '../utils/labels.js'
+import { useBusy } from '../composables/useBusy.js'
+import { useSession } from '../composables/useSession.js'
+import { useRepository } from '../composables/useRepository.js'
+import { useKnowledge } from '../composables/useKnowledge.js'
+import { useReviews } from '../composables/useReviews.js'
+import { useFeedback } from '../composables/useFeedback.js'
+import { useWorkspace } from '../composables/useWorkspace.js'
 
 const { busy, run } = useBusy()
 const { activeProject } = useSession()

@@ -24,10 +24,10 @@
 <script setup>
 import DashboardStats from '../components/DashboardStats.vue'
 import DashboardViz from '../components/DashboardViz.vue'
-import { fmtTime, shortCommit } from '../utils/format'
-import { useSession } from '../composables/useSession'
-import { useReviews } from '../composables/useReviews'
-import { useWorkspace } from '../composables/useWorkspace'
+import { fmtTime, shortCommit } from '../utils/format.js'
+import { useSession } from '../composables/useSession.js'
+import { useReviews } from '../composables/useReviews.js'
+import { useWorkspace } from '../composables/useWorkspace.js'
 
 const { projects, activeProject } = useSession()
 const { tasks, reports, highRiskCount } = useReviews()

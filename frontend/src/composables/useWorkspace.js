@@ -1,15 +1,15 @@
-import { api } from '../api/client'
-import { router } from '../router'
-import { useAgentWorkspace } from './useAgentWorkspace'
-import { useAiLogs } from './useAiLogs'
-import { useBusy } from './useBusy'
-import { useKnowledge } from './useKnowledge'
-import { useProjects } from './useProjects'
-import { usePullRequests } from './usePullRequests'
-import { useRepository } from './useRepository'
-import { useReviews } from './useReviews'
-import { useSession } from './useSession'
-import { useToast } from './useToast'
+import { api } from '../api/client.js'
+import { nav } from '../nav.js'
+import { useAgentWorkspace } from './useAgentWorkspace.js'
+import { useAiLogs } from './useAiLogs.js'
+import { useBusy } from './useBusy.js'
+import { useKnowledge } from './useKnowledge.js'
+import { useProjects } from './useProjects.js'
+import { usePullRequests } from './usePullRequests.js'
+import { useRepository } from './useRepository.js'
+import { useReviews } from './useReviews.js'
+import { useSession } from './useSession.js'
+import { useToast } from './useToast.js'
 
 // 跨域编排(单例):凡是"涉及两个以上领域"或"要跳转路由"的动作都在这里,
 // 领域 composable 之间不互相调用(仅允许既有单向依赖),依赖方向始终 workspace → 域。
@@ -24,7 +24,7 @@ const knowledge = useKnowledge()
 const agent = useAgentWorkspace()
 const aiLogs = useAiLogs()
 
-function goto(name) { router.push({ name }) }
+function goto(name) { nav.push({ name }) }
 
 /* ---------- 会话 ---------- */
 async function loadMe() {

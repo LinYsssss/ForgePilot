@@ -1,8 +1,9 @@
-import { ApiError } from './apiError'
+import { ApiError } from './apiError.js'
 
 export { ApiError }
 
-export const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api'
+// import.meta.env 是 Vite 注入的;可选链让本模块在 node(行为测试)下也能加载。
+export const API_BASE = import.meta.env?.VITE_API_BASE_URL || '/api'
 
 /**
  * CSRF 状态:启动时经 GET /auth/csrf 引导。开关关闭(默认)时保持 enabled=false,

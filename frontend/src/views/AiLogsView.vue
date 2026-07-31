@@ -52,10 +52,10 @@
 </template>
 
 <script setup>
-import { fmtTime } from '../utils/format'
-import { useBusy } from '../composables/useBusy'
-import { useAiLogs } from '../composables/useAiLogs'
-import { useWorkspace } from '../composables/useWorkspace'
+import { fmtTime } from '../utils/format.js'
+import { useBusy } from '../composables/useBusy.js'
+import { useAiLogs } from '../composables/useAiLogs.js'
+import { useWorkspace } from '../composables/useWorkspace.js'
 
 const { busy, run } = useBusy()
 const { aiLogs, aiLogScope, selectedAiLog, collapsedDates, groupedAiLogs, toggleDate } = useAiLogs()

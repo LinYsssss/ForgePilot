@@ -41,11 +41,11 @@
 </template>
 
 <script setup>
-import { fmtDate } from '../utils/format'
-import { useBusy } from '../composables/useBusy'
-import { useSession } from '../composables/useSession'
-import { useProjects } from '../composables/useProjects'
-import { useWorkspace } from '../composables/useWorkspace'
+import { fmtDate } from '../utils/format.js'
+import { useBusy } from '../composables/useBusy.js'
+import { useSession } from '../composables/useSession.js'
+import { useProjects } from '../composables/useProjects.js'
+import { useWorkspace } from '../composables/useWorkspace.js'
 
 const { busy, run } = useBusy()
 const { projects, activeProject } = useSession()

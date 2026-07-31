@@ -1,4 +1,5 @@
 import { createRouter, createWebHashHistory } from 'vue-router'
+import { registerNav } from './nav.js'
 import DashboardView from './views/DashboardView.vue'
 import ProjectsView from './views/ProjectsView.vue'
 import RepositoryView from './views/RepositoryView.vue'
@@ -29,4 +30,10 @@ export const router = createRouter({
     },
     { path: '/:pathMatch(.*)*', redirect: '/dashboard' },
   ],
+})
+
+registerNav({
+  name: () => (typeof router.currentRoute.value.name === 'string' ? router.currentRoute.value.name : 'dashboard'),
+  query: () => router.currentRoute.value.query,
+  push: to => router.push(to),
 })

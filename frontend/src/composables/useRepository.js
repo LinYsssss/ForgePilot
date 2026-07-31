@@ -1,8 +1,8 @@
 import { computed, reactive, ref } from 'vue'
-import { api } from '../api/client'
-import { useBusy } from './useBusy'
-import { useSession } from './useSession'
-import { useToast } from './useToast'
+import { api } from '../api/client.js'
+import { useBusy } from './useBusy.js'
+import { useSession } from './useSession.js'
+import { useToast } from './useToast.js'
 
 // 仓库绑定与提交浏览(单例)。selectCommit 对审查表单的预填由 useWorkspace 编排。
 const { activeProject } = useSession()
@@ -13,7 +13,7 @@ const repoForm = reactive({ repoUrl: '', provider: 'GITHUB', defaultBranch: 'mai
 const commits = ref([])
 const selectedCommit = ref(null)
 const diffFiles = ref([])
-const demoRepoPath = import.meta.env.VITE_DEMO_REPO_PATH || 'F:\\202605New\\demo-repos\\mall-order-service'
+const demoRepoPath = import.meta.env?.VITE_DEMO_REPO_PATH || 'F:\\202605New\\demo-repos\\mall-order-service'
 
 const repoBound = computed(() => commits.value.length > 0 || repoForm._bound)
 const needsToken = computed(() => /^https?:\/\//i.test(repoForm.repoUrl.trim()))

@@ -1,6 +1,6 @@
 import { reactive } from 'vue'
-import { ApiError } from '../api/client'
-import { useToast } from './useToast'
+import { ApiError } from '../api/client.js'
+import { useToast } from './useToast.js'
 
 // 共享 busy 状态(单例):模板里大量 `busy.xxx` 判断,拆视图后仍指向同一实例。
 const busy = reactive({})

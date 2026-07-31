@@ -90,11 +90,11 @@
 <script setup>
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
-import { useBusy } from '../composables/useBusy'
-import { useConfirm } from '../composables/useConfirm'
-import { useSession } from '../composables/useSession'
-import { useTheme } from '../composables/useTheme'
-import { useToast } from '../composables/useToast'
+import { useBusy } from '../composables/useBusy.js'
+import { useConfirm } from '../composables/useConfirm.js'
+import { useSession } from '../composables/useSession.js'
+import { useTheme } from '../composables/useTheme.js'
+import { useToast } from '../composables/useToast.js'
 
 const emit = defineEmits(['navigate', 'refresh', 'logout'])
 const route = useRoute()
