@@ -33,13 +33,16 @@ test('invalid or stale patches disable human approval', () => {
 })
 
 test('agent workspace keeps run filtering, live refresh, and citation navigation', async () => {
-  const app = await readFile(new URL('../src/App.vue', import.meta.url), 'utf8')
+  const agent = await readFile(new URL('../src/composables/useAgentWorkspace.js', import.meta.url), 'utf8')
+  const routerSource = await readFile(new URL('../src/router.js', import.meta.url), 'utf8')
   const findings = await readFile(new URL('../src/components/agent/AgentFindings.vue', import.meta.url), 'utf8')
-  assert.match(app, /filteredAgentRuns/)
-  assert.match(app, /startAgentPolling/)
-  assert.match(app, /agent-evidence=/)
-  assert.match(app, /\/cancel/)
-  assert.match(app, /\/retry/)
+  assert.match(agent, /filteredAgentRuns/)
+  assert.match(agent, /startAgentPolling/)
+  // 旧 "#agent-evidence=" 外链由路由层转成 /agent?evidence=,定位逻辑读 route query。
+  assert.match(routerSource, /agent-evidence=/)
+  assert.match(agent, /query\.evidence/)
+  assert.match(agent, /\/cancel/)
+  assert.match(agent, /\/retry/)
   assert.match(findings, /data-evidence-path/)
 })
 
@@ -69,23 +72,24 @@ test('ApiError carries status, code and traceId for branching', () => {
 })
 
 test('the four paginated endpoints go through the envelope adapter', async () => {
-  const app = await readFile(new URL('../src/App.vue', import.meta.url), 'utf8')
-  const adapted = app.match(/unwrapPage\(await api\(/g) || []
+  const reviews = await readFile(new URL('../src/composables/useReviews.js', import.meta.url), 'utf8')
+  const knowledge = await readFile(new URL('../src/composables/useKnowledge.js', import.meta.url), 'utf8')
+  const adapted = [...(reviews.match(/unwrapPage\(await api\(/g) || []), ...(knowledge.match(/unwrapPage\(await api\(/g) || [])]
   assert.equal(adapted.length, 4, 'knowledge documents / review tasks / review reports / mq logs')
-  assert.match(app, /knowledge\/documents\?size=100/)
-  assert.match(app, /reviews\/tasks\?size=100/)
-  assert.match(app, /reviews\/reports\?size=100/)
-  assert.match(app, /mq\/logs\?taskId=\$\{taskId\}&size=100/)
+  assert.match(knowledge, /knowledge\/documents\?size=100/)
+  assert.match(reviews, /reviews\/tasks\?size=100/)
+  assert.match(reviews, /reviews\/reports\?size=100/)
+  assert.match(reviews, /mq\/logs\?taskId=\$\{taskId\}&size=100/)
 })
 
 test('no hardcoded demo account and no token in web storage', async () => {
-  const app = await readFile(new URL('../src/App.vue', import.meta.url), 'utf8')
+  const login = await readFile(new URL('../src/views/LoginView.vue', import.meta.url), 'utf8')
   const client = await readFile(new URL('../src/api/client.js', import.meta.url), 'utf8')
   const session = await readFile(new URL('../src/composables/useSession.js', import.meta.url), 'utf8')
-  assert.doesNotMatch(app, /ysainlin/)
-  assert.match(app, /username: ''/)
+  assert.doesNotMatch(login, /ysainlin/)
+  assert.match(login, /username: ''/)
   // 会话凭据只活在 HttpOnly Cookie 里;主题偏好之外(useTheme)不允许碰 Web Storage。
-  for (const source of [app, client, session]) {
+  for (const source of [login, client, session]) {
     assert.doesNotMatch(source, /localStorage|sessionStorage/)
   }
 })
@@ -115,8 +119,12 @@ test('csrf tokens are bootstrapped, read from the cookie, and never cached', asy
 })
 
 test('agent SSE and pollers are torn down with the session', async () => {
-  const app = await readFile(new URL('../src/App.vue', import.meta.url), 'utf8')
-  const reset = app.slice(app.indexOf('function resetReviewState'), app.indexOf('async function createReview'))
-  assert.match(reset, /stopAgentPolling\(\)/)
-  assert.match(reset, /agentRuns\.value = \[\]/)
+  const workspace = await readFile(new URL('../src/composables/useWorkspace.js', import.meta.url), 'utf8')
+  const agent = await readFile(new URL('../src/composables/useAgentWorkspace.js', import.meta.url), 'utf8')
+  // 项目切换/退出统一走 workspace.resetForProject → agent.reset(关 SSE、停轮询、清状态)。
+  const reset = workspace.slice(workspace.indexOf('function resetForProject'), workspace.indexOf('function selectProject'))
+  assert.match(reset, /agent\.reset\(\)/)
+  const agentReset = agent.slice(agent.indexOf('function reset'))
+  assert.match(agentReset, /stopAgentPolling\(\)/)
+  assert.match(agentReset, /agentRuns\.value = \[\]/)
 })
