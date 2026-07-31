@@ -31,7 +31,7 @@ class LangChain4jDependencyCompatibilityTest {
     @Test
     void pinsJava17CompatibleCoreAndOpenAiModules() throws Exception {
         assertThat(Runtime.version().feature()).isEqualTo(17);
-        assertThat(SpringBootVersion.getVersion()).isEqualTo("3.5.8");
+        assertThat(SpringBootVersion.getVersion()).isEqualTo("3.5.14");
         assertThat(artifactFileName(ChatModel.class))
                 .isEqualTo("langchain4j-core-" + LANGCHAIN4J_VERSION + ".jar");
         assertThat(artifactFileName(OpenAiChatModel.class))
@@ -55,7 +55,8 @@ class LangChain4jDependencyCompatibilityTest {
 
     @Test
     void keepsSpringBootJacksonAndSingleLoggingProvider() throws Exception {
-        assertThat(artifactFileName(ObjectMapper.class)).isEqualTo("jackson-databind-2.19.4.jar");
+        // jackson 2.19 线没有 CVE-2026-54512/54513 的修复版,随 pom 升到 2.21.4(见 jackson-bom.version)。
+        assertThat(artifactFileName(ObjectMapper.class)).isEqualTo("jackson-databind-2.21.4.jar");
 
         List<URL> providers = Collections.list(
                 getClass().getClassLoader()

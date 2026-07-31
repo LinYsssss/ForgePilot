@@ -7,7 +7,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.5.8</version>
+        <version>3.5.14</version>
         <relativePath/>
     </parent>
 
@@ -20,6 +20,11 @@
     <properties>
         <java.version>17</java.version>
         <maven.compiler.release>17</maven.compiler.release>
+        <!-- CVE-2026-54512/54513:Boot 3.5.14 的 BOM 仍管理 2.19.x,该线没有修复版,
+             按官方修复线升到 2.21.4(jackson 2.x 保持二进制兼容,全量测试兜底)。 -->
+        <jackson-bom.version>2.21.4</jackson-bom.version>
+        <!-- CVE-2026-41850/41842(DoS):Boot 3.5.14 管理 6.2.18,修复在 6.2.19。 -->
+        <spring-framework.version>6.2.19</spring-framework.version>
     </properties>
 
     <dependencies>
