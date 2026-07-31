@@ -224,4 +224,8 @@ feature 分支、`git apply` 对应 patch、再提交。
 对照表就不再对得上，而 SHA 比对能立刻把这件事暴露出来。
 
 确需改动 PR 分支内容时走完整流程：改 patch → 重建 → 把新的实际 SHA 更新进
-`scripts/demo-repos-expected-sha.txt` → 同步 `docs/演示素材与缺陷对照表.md` 的对应条目。
+`scripts/demo-repos-expected-sha.txt` → 同步下面这几处写死了 SHA 或缺陷编号的文档：
+
+- `docs/演示素材与缺陷对照表.md`：第二节的三张提交表（9 个短 SHA）、第四节的对应条目
+- `docs/功能测试准备清单.md`：3.1 的 PR 分支 HEAD 表，以及第四节用例里的 `6977028` / `d00999d` / `e205e0e`
+- `docs/12_服务器部署与演示手册.md`、`docs/11_本地开发与联调手册.md`：演示步骤里都写了 mall 的 `e205e0e`
