@@ -35,3 +35,6 @@ Thumbs.db
 
 # Claude Code session/memory
 .claude/
+
+# 数据库备份(业务数据,不入库)
+deploy/backups/
