@@ -19,9 +19,19 @@
 - **Docker 动态验收**（Compose 起全栈、Testcontainers 3 个跳过用例、镜像扫描）：本机具备条件，属加分验证项，不在本任务范围。
 - `scripts/verify-local.sh` 已按以上口径实现：缺工具链的项记 `SKIPPED(未验证)`，不冒充通过。
 
-## 基线结果（本任务收尾时更新）
+## 重大发现：Compose 全栈已在本机运行
 
-- frontend npm test：PASS（5 tests）
-- frontend npm run build：PASS
-- backend（容器化 mvn test）：见任务收尾记录
-- model-service pytest：见任务收尾记录
+`docker ps`（2026-07-31）：deploy-nginx / deploy-frontend / deploy-backend(healthy) / deploy-sandbox-runner / deploy-model-service 已运行 7 小时；deploy-postgres(pgvector, healthy) / deploy-rabbitmq(healthy) / prometheus / otel-collector 已运行 3 天。另有与本项目无关的 cli-proxy-api 容器。
+
+含义：
+- **端到端验收在本机完全可行**：Agent 链路（RabbitMQ）、Patch 沙箱（Docker）、真实 PostgreSQL 迁移、Prometheus 指标全部具备条件。
+- **注意**：这是活的部署环境——postgres 有 3 天的真实数据；改前端后需重建镜像才会反映到该环境；涉及数据库的操作（迁移/清库）必须先备份（deploy/backup.sh）。
+- deploy/.env 在位（Compose 依赖它），未受本次密钥备份清理影响。
+
+## 基线结果（2026-07-31 实测）
+
+- frontend npm test：PASS（5 tests，后续任务已扩展）
+- frontend npm run build：PASS（Vite 6.4.3）
+- backend（maven:3.9-eclipse-temurin-17 容器 `mvn test`）：PASS —— **524 tests / 0 failures / 0 errors / 3 skipped**（3 个 Testcontainers 用例照旧跳过；依赖缓存在 `reposage-m2` 卷）
+- model-service pytest（python:3.12-slim 容器）：PASS（9 passed, 43 warnings）
+- sandbox-runner：本轮未跑（后续任务收尾时用同一容器方式验证）
