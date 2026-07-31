@@ -334,8 +334,13 @@ docker compose up -d --build
 如果是从 GitHub 新 clone 到服务器，先初始化演示仓库（让后端能 clone & diff）：
 
 ```text
-bash scripts/init-demo-repo.sh
+bash scripts/init-demo-repos.sh --verify
 ```
+
+该脚本重建 `demo-repos/` 下的三个演示仓库（`mall-order-service`、`payment-settlement-service`、
+`tenant-user-center`）及各自的 PR 分支；`--verify` 会把 6 个 ref 的 SHA 与
+`scripts/demo-repos-expected-sha.txt` 逐条比对。PowerShell 用
+`pwsh -File scripts/init-demo-repos.ps1 -Verify`。素材说明见 `demo-repos/README.md`。
 
 启动的服务：PostgreSQL + pgvector、RabbitMQ、Spring Boot 后端、Sandbox Runner、FastAPI 模型服务、Vue 前端、Nginx。
 对外入口：前端 `http://服务器IP/`，健康检查 `http://服务器IP/actuator/health`，RabbitMQ 管理台 `http://服务器IP:15672`。
