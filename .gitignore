@@ -23,6 +23,12 @@ frontend/.vite-dev.*.log
 # Local env files
 .env
 deploy/.env
+# .env 的任何备份副本同样含明文密钥,一律不入库(安全渠道另存,见 deploy/backup.sh 注释)
+deploy/.env.bak*
+.env.bak*
+
+# 分析工具缓存(可再生)
+.ua/
 
 # IDE
 .idea/
