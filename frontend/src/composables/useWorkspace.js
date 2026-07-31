@@ -137,7 +137,7 @@ reviews.setCompletionHandler(openReport)
 
 export function useWorkspace() {
   return {
-    loadMe, afterLogin, logout, refreshAll, goTab, resetForProject, selectProject,
+    goto, loadMe, afterLogin, logout, refreshAll, goTab, resetForProject, selectProject,
     selectCommit, loadDiff, reviewSelectedCommit, fillPrFromSelectedCommit,
     openReport, openAgentWorkspace, openProjectAiLogs, openTaskAiLogs,
   }
