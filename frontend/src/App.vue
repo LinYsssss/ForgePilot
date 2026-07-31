@@ -679,7 +679,8 @@
 </template>
 
 <script setup>
-import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { fmtDate, fmtTime, shortCommit } from './utils/format'
 import { useTheme } from './composables/useTheme'
 import { useToast } from './composables/useToast'
@@ -693,7 +694,14 @@ import ReportSummary from './components/ReportSummary.vue'
 import KnowledgeDocPicker from './components/KnowledgeDocPicker.vue'
 
 const { authenticated, me, projects, activeProject } = useSession()
-const tab = ref('dashboard')
+const route = useRoute()
+const router = useRouter()
+// 过渡态桥接:tab 的唯一事实源改为路由,原有的 `tab === 'x'` 读与 `tab = 'x'` 写
+// 全部保持可用;T3~T8 拆出视图组件后,读侧会被 <router-view> 取代。
+const tab = computed({
+  get: () => (typeof route.name === 'string' ? route.name : 'dashboard'),
+  set: name => { router.push({ name }) },
+})
 
 const { theme, toggleTheme } = useTheme()
 
@@ -1384,6 +1392,9 @@ async function loadAgentWorkspace() {
     if (!agentHeadSha.value) agentHeadSha.value = timeline.run?.headSha || agentPatch.value?.headSha || ''
     if (timeline.run?.terminal) stopAgentPolling()
     else startAgentPolling()
+    // 工作台内容就位后补一次证据定位(外链进入时 DOM 此前不存在)。
+    await nextTick()
+    focusEvidenceAnchor()
   } finally { busy.agent = false }
 }
 async function loadAgentRuns() {
@@ -1510,10 +1521,12 @@ function diffLines(diff) {
   })
 }
 
+// 证据定位:旧 "#agent-evidence=path:line" 外链由 router 重定向为 /agent?evidence=...,
+// 这里以路由 query 为唯一事实源;元素可能在工作台数据加载后才出现,故加载完成处也会补调一次。
+const evidenceQuery = computed(() => (typeof route.query.evidence === 'string' ? route.query.evidence : ''))
 function focusEvidenceAnchor() {
-  const prefix = '#agent-evidence='
-  if (!window.location.hash.startsWith(prefix)) return
-  const location = decodeURIComponent(window.location.hash.slice(prefix.length))
+  const location = evidenceQuery.value
+  if (!location) return
   const separator = location.lastIndexOf(':')
   const path = separator > 0 ? location.slice(0, separator) : location
   const target = document.querySelector(`[data-evidence-path="${CSS.escape(path)}"]`)
@@ -1522,8 +1535,8 @@ function focusEvidenceAnchor() {
   target.classList.add('evidence-focus')
   setTimeout(() => target.classList.remove('evidence-focus'), 1800)
 }
+watch(evidenceQuery, () => nextTick(focusEvidenceAnchor))
 onMounted(async () => {
-  window.addEventListener('hashchange', focusEvidenceAnchor)
   // 先做 CSRF 引导:拿到开关状态与 Cookie 名,之后的写请求才知道要不要带 X-XSRF-TOKEN。
   await initCsrf()
   try {
@@ -1536,5 +1549,5 @@ onMounted(async () => {
     authenticated.value = false
   }
 })
-onUnmounted(() => { stopPolling(); stopAgentPolling(); window.removeEventListener('hashchange', focusEvidenceAnchor) })
+onUnmounted(() => { stopPolling(); stopAgentPolling() })
 </script>
