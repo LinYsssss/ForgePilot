@@ -41,6 +41,15 @@ build_repo() {
   git -C "$dir" init -q -b main
   git -C "$dir" config core.autocrlf false
   git -C "$dir" config core.eol lf
+  # 索引里的 mode 位参与 tree 哈希。若某人在 Linux 上给文件加了执行位，
+  # 不钉死 filemode 会让 Windows 与 Linux 产出不同的 tree。
+  git -C "$dir" config core.filemode false
+  # `git add -A` 会套用用户的全局 ignore（core.excludesFile 或
+  # ~/.config/git/ignore）。别人机器上一条 `target/` 会漏加文件、
+  # macOS 的 `.DS_Store` 会多加，两个方向都会毁掉 SHA。仓库级
+  # core.excludesFile 会覆盖全局与 XDG 两条来源；指向一个保证不存在
+  # 的路径即等于「无全局排除」，且 git 对缺失的排除文件静默略过。
+  git -C "$dir" config core.excludesFile "$dir/.git/no-global-excludes"
   git -C "$dir" config commit.gpgsign false
 
   # commit 1: 源码与构建描述
