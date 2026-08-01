@@ -6,7 +6,7 @@
         <svg class="donut" viewBox="0 0 120 120" role="img" :aria-label="`风险分布，共 ${reports.length} 份报告`">
           <circle class="donut-track" cx="60" cy="60" r="50" />
           <circle v-for="s in riskDonut" :key="s.key" class="donut-seg" cx="60" cy="60" r="50"
-            :stroke-dasharray="`${s.dash} ${s.C - s.dash}`" :stroke-dashoffset="s.offset"
+            :stroke-dasharray="ready ? `${s.dash} ${s.C - s.dash}` : `0.01 ${s.C}`" :stroke-dashoffset="s.offset"
             :style="{ stroke: s.color }" transform="rotate(-90 60 60)"
             @mouseenter="showTip($event, `${s.label}风险 · ${s.count} (${s.pct}%)`)" @mousemove="moveTip" @mouseleave="hideTip" />
           <text class="donut-total" x="60" y="57">{{ reports.length }}</text>
@@ -28,9 +28,9 @@
         <span class="badge plain">累计 {{ totalIssues }} 问题</span>
       </div>
       <div class="cols">
-        <div v-for="a in activitySeries" :key="a.reportId" class="col-cell"
+        <div v-for="(a, i) in activitySeries" :key="a.reportId" class="col-cell"
           @mouseenter="showTip($event, `${a.when} · ${a.issues} 问题`)" @mousemove="moveTip" @mouseleave="hideTip">
-          <div class="col-bar" :style="{ height: Math.max(a.h, 6) + '%' }"></div>
+          <div class="col-bar" :style="{ height: Math.max(a.h, 6) + '%', animationDelay: (i * 45) + 'ms' }"></div>
         </div>
       </div>
     </div>
@@ -41,10 +41,15 @@
 <script setup>
 // 概览仪表盘可视化(风险分布环形 + 审查活动柱)。纯展示:只吃 reports prop,无副作用。
 // 样式沿用全局 styles.css 的类(.viz-row/.donut/.cols…),故无需 scoped style。
-import { computed, reactive } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { fmtTime } from '../utils/format.js'
 
 const props = defineProps({ reports: { type: Array, default: () => [] } })
+
+// 环形段先以 0 长度渲染,mount 后置位真实弧长 → CSS transition 完成"绘制入场"。
+// reduced-motion 下全局块把 transition 压到 0.001ms,等价直达终态。
+const ready = ref(false)
+onMounted(() => { requestAnimationFrame(() => { ready.value = true }) })
 
 const RISK_META = [
   { key: 'HIGH', label: '高', color: 'var(--risk-high)' },

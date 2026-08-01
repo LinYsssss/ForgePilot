@@ -923,7 +923,7 @@ button.vote.on-NEED_DISCUSSION { background: var(--risk-medium-bg); color: var(-
 .donut-wrap { display: flex; align-items: center; gap: var(--sp-5); flex-wrap: wrap; }
 .donut { width: 128px; height: 128px; flex: none; }
 .donut-track { fill: none; stroke: var(--surface-3); stroke-width: 12; }
-.donut-seg { fill: none; stroke-width: 12; stroke-linecap: butt; cursor: default; transition: stroke-width var(--t-fast) var(--ease-out); }
+.donut-seg { fill: none; stroke-width: 12; stroke-linecap: butt; cursor: default; transition: stroke-width var(--t-fast) var(--ease-out), stroke-dasharray 0.9s var(--ease-out); }
 .donut-seg:hover { stroke-width: 15; }
 .donut-total { fill: var(--text); font-family: var(--font-display); font-size: 27px; font-weight: 800; text-anchor: middle; letter-spacing: -0.02em; }
 .donut-cap { fill: var(--text-dim); font-size: 10.5px; text-anchor: middle; letter-spacing: 0.14em; }
