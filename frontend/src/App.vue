@@ -2,7 +2,11 @@
   <LoginView v-if="!authenticated" @authenticated="afterLogin" />
 
   <AppShell v-else @navigate="onNavigate" @refresh="run(refreshAll)" @logout="logout">
-    <router-view />
+    <router-view v-slot="{ Component }">
+      <transition name="page" mode="out-in">
+        <component :is="Component" />
+      </transition>
+    </router-view>
   </AppShell>
 </template>
 

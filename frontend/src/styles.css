@@ -199,6 +199,9 @@ button, input, select, textarea { font: inherit; color: inherit; }
 
 ::selection { background: var(--accent-glow); color: var(--text); }
 
+/* 键盘可达性:统一 focus-visible 环(按钮/表单已各自定义,这里兜底其余可聚焦元素) */
+:where(a, [tabindex], summary):focus-visible { outline: 2px solid var(--accent-ring); outline-offset: 2px; border-radius: var(--r-xs); }
+
 /* themed scrollbars */
 * { scrollbar-width: thin; scrollbar-color: var(--border-strong) transparent; }
 *::-webkit-scrollbar { width: 10px; height: 10px; }
@@ -753,12 +756,20 @@ button.vote.on-NEED_DISCUSSION { background: var(--risk-medium-bg); color: var(-
   border-radius: var(--r-sm); box-shadow: var(--e-3); border: 1px solid var(--border-strong);
   max-width: 380px; font-weight: 500; font-size: var(--fs-sm);
   border-left: 3px solid var(--accent);
+  overflow: hidden; /* 底部进度条圆角内收 */
 }
 .toast.error { border-left-color: var(--risk-high); }
 .toast.success { border-left-color: var(--risk-low); }
 .toast::before { content: "●"; color: var(--accent); font-size: 10px; }
 .toast.error::before { content: "✕"; color: var(--risk-high); }
 .toast.success::before { content: "✓"; color: var(--risk-low); }
+/* 自动消失进度条:时长与 useToast 的 3.2s 一致,纯视觉不控制逻辑 */
+.toast::after {
+  content: ""; position: absolute; left: 0; bottom: 0; height: 2px; width: 100%;
+  background: currentColor; opacity: 0.35;
+  transform-origin: left; animation: toast-life 3.2s linear both;
+}
+@keyframes toast-life { from { transform: scaleX(1); } to { transform: scaleX(0); } }
 
 /* ============================================================
    MODAL
@@ -852,6 +863,12 @@ button.vote.on-NEED_DISCUSSION { background: var(--risk-medium-bg); color: var(-
    ============================================================ */
 .t-enter-active, .t-leave-active { transition: opacity var(--t-base) var(--ease-out), transform var(--t-base) var(--ease-out); }
 .t-enter-from, .t-leave-to { opacity: 0; transform: translateY(8px); }
+
+/* 路由页切换:轻位移淡入淡出(mode=out-in,时长压在 --t-fast 级避免迟滞感)
+   每个视图以单根 .view 包裹,transition 才能接管;.view 自身不参与布局语义 */
+.page-enter-active, .page-leave-active { transition: opacity 160ms var(--ease-out), transform 160ms var(--ease-out); }
+.page-enter-from { opacity: 0; transform: translateY(10px); }
+.page-leave-to { opacity: 0; transform: translateY(-6px); }
 
 .hide-sm { display: initial; }
 
