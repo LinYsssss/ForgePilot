@@ -7,3 +7,16 @@
 # picking either side (task state lives in task.json, not index.md). See
 # .trellis/spec/cli/backend/directory-structure.md for details.
 .trellis/workspace/*/journal-*.md merge=union
+# 演示仓库的文件参与 SHA 确定性重建，checkout 必须始终产出 LF
+# text=auto 会自动判别二进制，不会损坏日后可能加入的图片等素材
+demo-repos/** text=auto eol=lf
+
+# 本机 core.autocrlf=true。若 shell 脚本被检出为 CRLF，msys bash 会在
+# `set -uo pipefail\r` 直接报错，而这些脚本是后续任务的验收入口。
+*.sh text eol=lf
+
+# SHA 清单由 `while read -r repo ref sha` 逐行解析。若检出为 CRLF，sha 字段会
+# 多出结尾的 \r（长度 41 而非 40），init-demo-repos.sh --verify 与
+# verify-demo-repos.sh 的六条比对会在全新 Windows 克隆上全部失败。
+scripts/demo-repos-expected-sha.txt text eol=lf
+scripts/init-demo-repos.ps1 text eol=lf
