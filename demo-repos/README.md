@@ -147,6 +147,8 @@ git -C demo-repos/tenant-user-center         rev-parse feature/ops-console
 
 对同一个 PR 分支的 HEAD 审查三次，只改「关联哪些知识文档」，其余参数全部不变。
 
+> 本实验需 `AI_PROVIDER=openai-compatible`（真实模型）。mock 模式下三档产出相同（`MockAiReviewClient` 是四条字符串规则，不读知识文档），没有对照意义——详见 `docs/11_本地开发与联调手册.md` 第 9 节。
+
 | 档 | 关联文档 | 预期发现范围 |
 |---|---|---|
 | 第 1 档 | 不关联 | A 类，以及跨类那 3 条的 A 面（如 T13 前端硬编码 API Key）。少数形态明显的 B/C 类也可能被报出来——例如 T2 整个漏掉 `tenant_id` 过滤——但说不出依据，指不到具体条款或事故编号 |
