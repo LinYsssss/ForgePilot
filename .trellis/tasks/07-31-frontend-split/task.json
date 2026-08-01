@@ -3,7 +3,7 @@
   "name": "frontend-split",
   "title": "前端重构拆分 App.vue",
   "description": "App.vue 拆分 views+composables+AppShell，引入 vue-router，补行为测试",
-  "status": "planning",
+  "status": "in_progress",
   "dev_type": null,
   "scope": null,
   "package": null,

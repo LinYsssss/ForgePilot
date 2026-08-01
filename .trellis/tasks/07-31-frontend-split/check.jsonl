@@ -1,1 +1,2 @@
-{"_example": "Fill with {\"file\": \"<path>\", \"reason\": \"<why>\"}. Put spec/research files only — no code paths. Run `python3 .trellis/scripts/get_context.py --mode packages` to list available specs. Delete this line once real entries are added."}
+{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "前端质量红线(检查时对照)"}
+{"file": ".trellis/tasks/07-31-cleanup-baseline/research/environment.md", "reason": "验证命令与降级口径"}
