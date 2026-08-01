@@ -22,12 +22,30 @@ export function relativeDay(dateStr) {
 
 export function diffLines(diff) {
   if (!diff) return []
+  // 解析 @@ -old,+new @@ 头,为每行标注新旧行号(上下文行两侧都有,增/删行只有一侧)。
+  let oldNo = null
+  let newNo = null
   return diff.split(/\r?\n/).map(text => {
     let cls = ''
-    if (text.startsWith('@@')) cls = 'hunk'
-    else if (text.startsWith('+++') || text.startsWith('---') || text.startsWith('diff ') || text.startsWith('index ')) cls = 'meta'
-    else if (text.startsWith('+')) cls = 'add'
-    else if (text.startsWith('-')) cls = 'del'
-    return { text: text || ' ', cls }
+    let o = ''
+    let n = ''
+    const hunk = /^@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@/.exec(text)
+    if (hunk) {
+      cls = 'hunk'
+      oldNo = parseInt(hunk[1], 10)
+      newNo = parseInt(hunk[2], 10)
+    } else if (text.startsWith('+++') || text.startsWith('---') || text.startsWith('diff ') || text.startsWith('index ')) {
+      cls = 'meta'
+    } else if (text.startsWith('+')) {
+      cls = 'add'
+      if (newNo != null) n = newNo++
+    } else if (text.startsWith('-')) {
+      cls = 'del'
+      if (oldNo != null) o = oldNo++
+    } else if (oldNo != null && newNo != null) {
+      o = oldNo++
+      n = newNo++
+    }
+    return { text: text || ' ', cls, oldNo: String(o), newNo: String(n) }
   })
 }

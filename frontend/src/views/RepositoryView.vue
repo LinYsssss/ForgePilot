@@ -64,7 +64,7 @@
                 <span class="adds">+{{ f.additions }}</span>
                 <span class="dels">-{{ f.deletions }}</span>
               </div>
-              <pre class="diff-body"><code><span v-for="(ln, i) in diffLines(f.diff)" :key="i" class="diff-line" :class="ln.cls">{{ ln.text }}</span></code></pre>
+              <pre class="diff-body numbered"><code><span v-for="(ln, i) in diffLines(f.diff)" :key="i" class="diff-line" :class="ln.cls"><span class="ln-no" aria-hidden="true">{{ ln.oldNo }}</span><span class="ln-no" aria-hidden="true">{{ ln.newNo }}</span><span class="ln-text">{{ ln.text }}</span></span></code></pre>
             </div>
           </div>
         </template>
