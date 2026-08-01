@@ -890,7 +890,7 @@ button.vote.on-NEED_DISCUSSION { background: var(--risk-medium-bg); color: var(-
    ============================================================ */
 @media (max-width: 960px) {
   .app-shell { grid-template-columns: 1fr; }
-  .sidebar { position: relative; height: auto; flex-direction: column; }
+  .sidebar { position: relative; height: auto; flex-direction: column; border-right: 0; border-bottom: 1px solid var(--glass-border); }
   nav { grid-template-columns: repeat(3, 1fr); }
   nav button { justify-content: center; }
   nav button.active::before { display: none; }

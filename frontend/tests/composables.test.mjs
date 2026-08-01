@@ -156,6 +156,20 @@ test('agent workspace opens one SSE per run and reset() tears everything down', 
   assert.equal(agentRunId.value, null)
 })
 
+test('diffLines derives real old/new gutter numbers from hunk headers', async () => {
+  const { diffLines } = await import('../src/utils/labels.js')
+  const diff = ['@@ -3,3 +3,4 @@', ' ctx', '-removed', '+added-1', '+added-2', ' ctx2'].join('\n')
+  const rows = diffLines(diff)
+  assert.deepEqual(rows.map(r => [r.cls, r.oldNo, r.newNo]), [
+    ['hunk', '', ''],
+    ['', '3', '3'],
+    ['del', '4', ''],
+    ['add', '', '4'],
+    ['add', '', '5'],
+    ['', '5', '6'],
+  ])
+})
+
 test('switching runs closes the previous SSE connection', async () => {
   const { agentRunId, startAgentPolling, reset } = useAgentWorkspace()
   agentRunId.value = 21
