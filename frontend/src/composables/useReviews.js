@@ -15,7 +15,7 @@ const { activeProject } = useSession()
 const { busy } = useBusy()
 const { ask } = useConfirm()
 const { toastMsg } = useToast()
-const { reviewDocs } = useKnowledge()
+const { reviewDocs, documents } = useKnowledge()
 const { selectedCommit } = useRepository()
 
 const form = reactive({ commitId: '', baseCommitId: '', branch: '' })
@@ -58,6 +58,46 @@ async function loadReviews() {
     if (activeTask.value) activeTask.value = tasks.value.find(t => t.taskId === activeTask.value.taskId) || null
   } finally { busy.reviews = false }
 }
+
+/* ---------- 对比审查(带/不带知识库) ---------- */
+// comparePair: { commitId, withTaskId, withoutTaskId, withReport?, withoutReport? }
+const comparePair = ref(null)
+
+// 同一提交连发两次创建:全部 INDEXED 文档 vs 空集。后端幂等键含文档集指纹,两任务可共存。
+async function createCompareReview() {
+  const commitId = form.commitId || selectedCommit.value?.commitId || ''
+  const indexedDocIds = documents.value.filter(d => d.status === 'INDEXED').map(d => d.documentId)
+  if (!indexedDocIds.length) return toastMsg('知识库没有已索引(INDEXED)的文档,无法对比', 'error')
+  busy.compare = true
+  try {
+    const base = { ...form, commitId }
+    const withDocs = await api(`/projects/${activeProject.value.projectId}/reviews/tasks`,
+      { method: 'POST', body: JSON.stringify({ ...base, documentIds: indexedDocIds }) })
+    const withoutDocs = await api(`/projects/${activeProject.value.projectId}/reviews/tasks`,
+      { method: 'POST', body: JSON.stringify({ ...base, documentIds: [] }) })
+    comparePair.value = { commitId: withDocs.commitId, withTaskId: withDocs.taskId, withoutTaskId: withoutDocs.taskId }
+    await loadReviews()
+    toastMsg('对比审查已创建：知识库全选 + 不带知识库 两个任务', 'success')
+    maybeStartPolling()
+    await loadComparePairReports()
+  } finally { busy.compare = false }
+}
+
+// 两个任务的报告都出来后装载详情;报告按 taskId 关联。
+async function loadComparePairReports() {
+  if (!comparePair.value) return
+  const pairReport = taskId => reports.value.find(r => r.taskId === taskId)
+  const withMeta = pairReport(comparePair.value.withTaskId)
+  const withoutMeta = pairReport(comparePair.value.withoutTaskId)
+  if (!withMeta || !withoutMeta) return
+  const [withReport, withoutReport] = await Promise.all([
+    api(`/projects/${activeProject.value.projectId}/reviews/reports/${withMeta.reportId}`),
+    api(`/projects/${activeProject.value.projectId}/reviews/reports/${withoutMeta.reportId}`),
+  ])
+  comparePair.value = { ...comparePair.value, withReport, withoutReport }
+}
+
+function clearCompare() { comparePair.value = null }
 
 function selectTask(t) { activeTask.value = t; mqLogs.value = [] }
 
@@ -126,6 +166,7 @@ function maybeStartPolling() {
       try { await loadReviews() } catch { /* ignore */ }
       if (!tasks.value.some(t => t.status === 'PENDING' || t.status === 'RUNNING')) {
         stopPolling()
+        await loadComparePairReports().catch(() => {})
         if (reports.value[0] && completionHandler) await completionHandler(reports.value[0].reportId)
         toastMsg('审查已完成', 'success')
       }
@@ -137,6 +178,7 @@ function stopPolling() { if (pollTimer) { clearInterval(pollTimer); pollTimer = 
 
 function reset() {
   tasks.value = []; reports.value = []; activeTask.value = null; reportDetail.value = null; mqLogs.value = []
+  comparePair.value = null
 }
 
 export function useReviews() {
@@ -145,6 +187,7 @@ export function useReviews() {
     highRiskCount, sortedIssues,
     createReview, loadReviews, selectTask, loadReport, loadMqLogs, cancelTask,
     askDeleteTask, exportReport, askDeleteReport,
+    comparePair, createCompareReview, loadComparePairReports, clearCompare,
     setCompletionHandler, maybeStartPolling, stopPolling, reset,
   }
 }

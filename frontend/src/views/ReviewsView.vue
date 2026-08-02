@@ -19,9 +19,14 @@
           <button @click="run(createReview)" :disabled="busy.review">
             <span v-if="busy.review" class="spinner"></span>触发审查
           </button>
+          <button class="compare-btn" @click="run(createCompareReview)" :disabled="busy.compare" title="同一提交自动创建两个任务：带全部知识库 vs 不带知识库">
+            <span v-if="busy.compare" class="spinner"></span>⚖ 对比审查
+          </button>
           <button class="secondary" @click="run(loadReviews)" :disabled="busy.reviews">刷新列表</button>
         </div>
       </div>
+
+      <ReviewCompare />
 
       <div class="split">
         <div class="panel">
@@ -137,6 +142,7 @@
 
 <script setup>
 import KnowledgeDocPicker from '../components/KnowledgeDocPicker.vue'
+import ReviewCompare from '../components/ReviewCompare.vue'
 import ReportSummary from '../components/ReportSummary.vue'
 import { fmtTime, shortCommit } from '../utils/format.js'
 import { statusLabel, mqStatusClass, fbLabel, fbBadge, confClass, confText } from '../utils/labels.js'
@@ -152,7 +158,7 @@ const { busy, run } = useBusy()
 const { activeProject } = useSession()
 const { selectedCommit } = useRepository()
 const { documents, reviewDocs } = useKnowledge()
-const { reviewForm, tasks, reports, activeTask, reportDetail, mqLogs, pollingActive, sortedIssues, createReview, loadReviews, selectTask, loadMqLogs, cancelTask, askDeleteTask, exportReport, askDeleteReport } = useReviews()
+const { reviewForm, tasks, reports, activeTask, reportDetail, mqLogs, pollingActive, sortedIssues, createReview, createCompareReview, loadReviews, selectTask, loadMqLogs, cancelTask, askDeleteTask, exportReport, askDeleteReport } = useReviews()
 const { openFeedback, feedbackMap, ensureDraft, myVote, voteClass, feedbackCount, toggleFeedback, vote, submitFeedbackForm, removeMyFeedback } = useFeedback()
 const { openReport, openTaskAiLogs } = useWorkspace()
 </script>

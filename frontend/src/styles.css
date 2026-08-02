@@ -1051,3 +1051,36 @@ button.vote.on-NEED_DISCUSSION { background: var(--risk-medium-bg); color: var(-
 /* 被验证器否决的 Finding:整体降噪,与已验证的区分开 */
 .finding.rejected { opacity: 0.62; }
 .finding.rejected .finding-head b { text-decoration: line-through; text-decoration-color: var(--text-dim); }
+
+/* ============================================================
+   对比审查(带/不带知识库)。三列布局,知识库信号条目高亮。
+   ============================================================ */
+button.compare-btn {
+  background: linear-gradient(135deg, var(--accent-strong), var(--accent));
+  color: var(--accent-contrast);
+}
+button.compare-btn:hover:not(:disabled) { filter: brightness(1.08); box-shadow: var(--e-2), 0 0 22px -4px var(--accent-glow); }
+
+.compare-summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--sp-3); margin-bottom: var(--sp-5); }
+.cs-tile {
+  display: flex; flex-direction: column; gap: 4px; padding: var(--sp-4);
+  border: 1px solid var(--border); border-radius: var(--r); background: var(--surface-2);
+}
+.cs-tile span { font-size: var(--fs-xs); color: var(--text-dim); font-weight: 700; }
+.cs-tile strong { font-family: var(--font-display); font-size: var(--fs-2xl); font-weight: 800; letter-spacing: -0.02em; }
+.cs-tile.accent { border-color: var(--accent-ring); background: var(--accent-soft); }
+.cs-tile.accent strong { color: var(--accent); }
+
+.compare-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--sp-4); align-items: start; }
+@media (max-width: 1100px) { .compare-grid { grid-template-columns: 1fr; } .compare-summary { grid-template-columns: repeat(2, 1fr); } }
+.cc-head {
+  font-size: var(--fs-sm); font-weight: 800; letter-spacing: 0.02em; color: var(--text-soft);
+  padding: var(--sp-2) var(--sp-3); border-radius: var(--r-sm); background: var(--surface-2);
+  border: 1px solid var(--border); margin-bottom: var(--sp-3);
+}
+.cc-head.cc-with { color: var(--accent); border-color: var(--accent-ring); background: var(--accent-soft); }
+.cc-head.cc-without { color: var(--risk-none); }
+.compare-issue { padding: var(--sp-4); }
+.compare-issue h4 { font-size: var(--fs-base); }
+.compare-issue.kb-signal { border-color: var(--accent-ring); box-shadow: 0 0 18px -8px var(--accent-glow); }
+.kb-badge { color: var(--accent); background: var(--accent-soft); }

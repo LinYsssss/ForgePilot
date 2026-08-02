@@ -170,6 +170,27 @@ test('diffLines derives real old/new gutter numbers from hunk headers', async ()
   ])
 })
 
+test('compareReports buckets issues by file+title and flags knowledge signals', async () => {
+  const { compareReports, hasKnowledgeSignal } = await import('../src/utils/compareReports.js')
+  const withReport = { issues: [
+    { issueId: 1, filePath: 'a.java', title: '批量发货未校验支付状态', description: '这与 BUG-001 是同类问题', severity: 'HIGH' },
+    { issueId: 2, filePath: 'b.java', title: 'SQL 拼接', description: '注入', severity: 'HIGH' },
+    { issueId: 3, filePath: 'c.java', title: '费率与文档不符', description: '根据 settlement-rules.md 第 3 节', severity: 'MEDIUM' },
+  ] }
+  const withoutReport = { issues: [
+    { issueId: 9, filePath: 'b.java', title: 'SQL拼接', description: '注入', severity: 'HIGH' },
+    { issueId: 10, filePath: 'd.java', title: '幻觉问题', description: 'x', severity: 'LOW' },
+  ] }
+  const r = compareReports(withReport, withoutReport, ['settlement-rules.md'])
+  // 标题归一化让 "SQL 拼接" 与 "SQL拼接" 对上
+  assert.equal(r.both.length, 1)
+  assert.deepEqual(r.onlyWith.map(i => i.issueId), [1, 3])
+  assert.deepEqual(r.onlyWithout.map(i => i.issueId), [10])
+  assert.equal(r.summary.extraFromKnowledge, 2)
+  assert.equal(r.summary.knowledgeSignals, 2) // BUG-001 事故编号 + 文档名引用
+  assert.equal(hasKnowledgeSignal({ description: '普通建议' }, ['x.md']), false)
+})
+
 test('switching runs closes the previous SSE connection', async () => {
   const { agentRunId, startAgentPolling, reset } = useAgentWorkspace()
   agentRunId.value = 21
