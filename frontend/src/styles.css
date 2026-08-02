@@ -500,7 +500,7 @@ select { appearance: none; background-image: linear-gradient(45deg, transparent 
 .list-row .mono { font-size: var(--fs-sm); color: var(--text-soft); }
 .list-row .grow { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .row-commits { grid-template-columns: 96px 1fr auto; }
-.row-prs { grid-template-columns: 72px 1fr auto 92px; }
+.row-prs { grid-template-columns: 72px 1fr auto 92px auto; }
 .row-tasks { grid-template-columns: 52px 1fr auto auto; }
 .row-reports { grid-template-columns: 58px 1fr auto auto; }
 .row-ailog { grid-template-columns: 132px 1fr 88px 78px 110px; }

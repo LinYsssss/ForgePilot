@@ -42,7 +42,7 @@
         </div>
         <div v-if="busy.commits" class="skeleton"><div class="sk-row" v-for="n in 4" :key="n"></div></div>
         <div v-else-if="!commits.length" class="empty"><div class="ico" aria-hidden="true">⎇</div><p>暂无提交</p><p>先绑定仓库并点击“加载 Commit”。</p></div>
-        <div v-else class="list">
+        <div v-else class="list" v-list-nav>
           <button v-for="c in commits" :key="c.commitId" class="list-row row-commits" :class="{ selected: selectedCommit && selectedCommit.commitId === c.commitId }" @click="selectCommit(c)">
             <span class="mono">{{ shortCommit(c.commitId) }}</span>
             <span class="grow">{{ c.message }}</span>

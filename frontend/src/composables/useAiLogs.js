@@ -4,13 +4,16 @@ import { fmtDate } from '../utils/format.js'
 import { relativeDay } from '../utils/labels.js'
 import { useSession } from './useSession.js'
 
-// AI 调用日志(单例):项目/任务两个维度,按日期→任务分组展示。
+// AI 调用日志(单例):项目/任务两个维度,按日期→任务分组展示;信封分页。
 const { activeProject } = useSession()
 
 const aiLogs = ref([])
 const aiLogScope = ref('项目维度')
 const selectedAiLog = ref(null)
 const collapsedDates = reactive({})
+const aiLogPage = ref(0)
+const aiLogTotalPages = ref(1)
+let currentTaskId = null // 翻页时沿用当前维度
 
 const groupedAiLogs = computed(() => {
   const byDate = new Map()
@@ -31,11 +34,29 @@ const groupedAiLogs = computed(() => {
   })
 })
 
-async function loadAiLogs(taskId = null) {
+async function loadAiLogs(taskId = null, page = 0) {
   if (!activeProject.value) return
-  const query = taskId ? `taskId=${taskId}&limit=100` : `projectId=${activeProject.value.projectId}&limit=100`
-  aiLogs.value = await api(`/ai/logs?${query}`)
+  currentTaskId = taskId
+  const scope = taskId ? `taskId=${taskId}` : `projectId=${activeProject.value.projectId}`
+  const data = await api(`/ai/logs?${scope}&page=${page}&size=100`)
+  if (data && Array.isArray(data.items)) {
+    aiLogs.value = data.items
+    aiLogPage.value = data.page ?? 0
+    aiLogTotalPages.value = data.totalPages ?? 1
+  } else {
+    // 旧后端(信封化前)兜底
+    aiLogs.value = Array.isArray(data) ? data : []
+    aiLogPage.value = 0
+    aiLogTotalPages.value = 1
+  }
   aiLogScope.value = taskId ? `任务 #${taskId} 维度` : '项目维度'
+}
+
+async function nextAiLogPage() {
+  if (aiLogPage.value + 1 < aiLogTotalPages.value) await loadAiLogs(currentTaskId, aiLogPage.value + 1)
+}
+async function prevAiLogPage() {
+  if (aiLogPage.value > 0) await loadAiLogs(currentTaskId, aiLogPage.value - 1)
 }
 
 function toggleDate(date) { collapsedDates[date] = !collapsedDates[date] }
@@ -44,8 +65,14 @@ function reset() {
   aiLogs.value = []
   selectedAiLog.value = null
   aiLogScope.value = '项目维度'
+  aiLogPage.value = 0
+  aiLogTotalPages.value = 1
+  currentTaskId = null
 }
 
 export function useAiLogs() {
-  return { aiLogs, aiLogScope, selectedAiLog, collapsedDates, groupedAiLogs, loadAiLogs, toggleDate, reset }
+  return {
+    aiLogs, aiLogScope, selectedAiLog, collapsedDates, groupedAiLogs,
+    aiLogPage, aiLogTotalPages, loadAiLogs, nextAiLogPage, prevAiLogPage, toggleDate, reset,
+  }
 }

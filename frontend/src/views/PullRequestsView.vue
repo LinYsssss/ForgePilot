@@ -48,6 +48,9 @@
               <span class="grow">{{ pr.title }}</span>
               <span class="status-pill" :class="'st-' + pr.reviewState">{{ prStateLabel(pr.reviewState) }}</span>
               <span class="mono">{{ shortCommit(pr.headSha) }}</span>
+              <span class="row-actions">
+                <button class="sm secondary" title="打开该 PR 对应的 Agent Run" @click.stop="openAgentRunForPr(pr)">Agent Run</button>
+              </span>
             </div>
           </div>
         </div>
@@ -157,5 +160,5 @@ const { selectedCommit } = useRepository()
 const { loadReviews } = useReviews()
 const { documents, prDocs } = useKnowledge()
 const { pullRequestForm, prActionForm, pullRequests, activePullRequest, prActions, actionReportDetail, actionIssueIds, prReports, resetPullRequestForm, savePullRequest, loadPullRequests, selectPullRequest, editPullRequest, createPrReview, selectPrReport, loadActionReport, toggleActionIssue, selectBlockingIssues, clearActionIssues, submitPrAction } = usePullRequests()
-const { fillPrFromSelectedCommit, openReport } = useWorkspace()
+const { fillPrFromSelectedCommit, openReport, openAgentRunForPr } = useWorkspace()
 </script>

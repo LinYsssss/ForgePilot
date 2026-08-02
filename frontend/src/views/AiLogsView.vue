@@ -2,8 +2,15 @@
   <div class="view">
       <div class="panel">
         <div class="panel-head">
-          <div><h2>AI 调用日志</h2><div class="sub">{{ aiLogScope }} · 共 {{ aiLogs.length }} 条，按日期归类</div></div>
-          <button class="sm secondary" @click="run(openProjectAiLogs)">刷新项目日志</button>
+          <div><h2>AI 调用日志</h2><div class="sub">{{ aiLogScope }} · 本页 {{ aiLogs.length }} 条，按日期归类</div></div>
+          <div class="head-actions">
+            <template v-if="aiLogTotalPages > 1">
+              <button class="sm secondary" :disabled="aiLogPage === 0" @click="run(prevAiLogPage)">← 上一页</button>
+              <span class="muted mono">{{ aiLogPage + 1 }}/{{ aiLogTotalPages }}</span>
+              <button class="sm secondary" :disabled="aiLogPage + 1 >= aiLogTotalPages" @click="run(nextAiLogPage)">下一页 →</button>
+            </template>
+            <button class="sm secondary" @click="run(openProjectAiLogs)">刷新项目日志</button>
+          </div>
         </div>
         <div v-if="!aiLogs.length" class="empty"><div class="ico" aria-hidden="true">◷</div><p>暂无调用日志</p><p>执行一次审查或检索后会生成。</p></div>
         <div v-else>
@@ -22,7 +29,7 @@
                   <span class="grow"></span>
                   <span class="count">{{ tg.items.length }}</span>
                 </div>
-                <div class="list">
+                <div class="list" v-list-nav>
                   <button v-for="l in tg.items" :key="l.id" class="list-row row-ailog" :class="{ selected: selectedAiLog && selectedAiLog.id === l.id }" @click="selectedAiLog = l">
                     <span class="badge plain">{{ l.requestType }}</span>
                     <span class="grow mono hide-sm">{{ l.provider }} / {{ l.model }}</span>
@@ -60,6 +67,6 @@ import { useAiLogs } from '../composables/useAiLogs.js'
 import { useWorkspace } from '../composables/useWorkspace.js'
 
 const { busy, run } = useBusy()
-const { aiLogs, aiLogScope, selectedAiLog, collapsedDates, groupedAiLogs, toggleDate } = useAiLogs()
+const { aiLogs, aiLogScope, selectedAiLog, collapsedDates, groupedAiLogs, aiLogPage, aiLogTotalPages, nextAiLogPage, prevAiLogPage, toggleDate } = useAiLogs()
 const { openProjectAiLogs } = useWorkspace()
 </script>

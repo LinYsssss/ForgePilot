@@ -121,6 +121,20 @@ async function openAgentWorkspace() {
   if (agent.agentRunId.value) await run(agent.loadAgentWorkspace)
 }
 
+// PR 行直达对应 Agent Run:按 head SHA 匹配(Webhook 创建的 Run 与 PR 以 head 对齐)。
+async function openAgentRunForPr(pr) {
+  goto('agent')
+  await run(agent.loadAgentRuns)
+  const match = agent.agentRuns.value.find(item => item.headSha && item.headSha === pr.headSha)
+  if (!match) {
+    toastMsg(`该 PR(head ${String(pr.headSha || '').slice(0, 10)})尚无 Agent Run`, 'error')
+    return
+  }
+  agent.agentRunId.value = match.id
+  agent.agentHeadSha.value = match.headSha || ''
+  await run(agent.loadAgentWorkspace)
+}
+
 async function openProjectAiLogs() {
   if (!activeProject.value) return
   await aiLogs.loadAiLogs()
@@ -139,6 +153,6 @@ export function useWorkspace() {
   return {
     goto, loadMe, afterLogin, logout, refreshAll, goTab, resetForProject, selectProject,
     selectCommit, loadDiff, reviewSelectedCommit, fillPrFromSelectedCommit,
-    openReport, openAgentWorkspace, openProjectAiLogs, openTaskAiLogs,
+    openReport, openAgentWorkspace, openAgentRunForPr, openProjectAiLogs, openTaskAiLogs,
   }
 }

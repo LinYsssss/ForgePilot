@@ -1,5 +1,6 @@
 import { computed, nextTick, ref, watch } from 'vue'
 import { API_BASE, api } from '../api/client.js'
+import { unwrapPage } from '../api/page.js'
 import { nav } from '../nav.js'
 import { useBusy } from './useBusy.js'
 import { useConfirm } from './useConfirm.js'
@@ -51,12 +52,17 @@ function onAgentPage() { return nav.name() === 'agent' }
 
 // 证据定位:外链 /agent?evidence=path:line 进入时,内容可能尚未渲染,
 // 装载完成处会补调一次;query 变化(点击 citation)时也触发。
+// 优先定位 Patch diff 里的具体行(file+line),否则回退到 Finding 证据条目。
 function focusEvidenceAnchor() {
   const location = nav.query().evidence
   if (typeof location !== 'string' || !location) return
   const separator = location.lastIndexOf(':')
   const path = separator > 0 ? location.slice(0, separator) : location
-  const target = document.querySelector(`[data-evidence-path="${CSS.escape(path)}"]`)
+  const line = separator > 0 ? location.slice(separator + 1) : ''
+  const diffRow = line
+    ? document.querySelector(`[data-diff-file="${CSS.escape(path)}"][data-diff-line="${CSS.escape(line)}"]`)
+    : null
+  const target = diffRow || document.querySelector(`[data-evidence-path="${CSS.escape(path)}"]`)
   if (!target) return
   target.scrollIntoView({ behavior: 'smooth', block: 'center' })
   target.classList.add('evidence-focus')
@@ -71,7 +77,7 @@ async function loadAgentWorkspace() {
     const [timeline, patches, findings] = await Promise.all([
       api(`/agent-runs/${agentRunId.value}/timeline`),
       api(`/projects/${activeProject.value.projectId}/agent-runs/${agentRunId.value}/patches`),
-      api(`/projects/${activeProject.value.projectId}/agent-runs/${agentRunId.value}/findings`).catch(() => []),
+      api(`/projects/${activeProject.value.projectId}/agent-runs/${agentRunId.value}/findings?size=100`).then(unwrapPage).catch(() => []),
     ])
     agentTimeline.value = timeline.steps || []
     agentRunDetail.value = timeline.run || null
@@ -90,7 +96,7 @@ async function loadAgentRuns() {
   if (!activeProject.value) return
   busy.agentRuns = true
   try {
-    agentRuns.value = await api(`/agent-runs/project/${activeProject.value.projectId}`)
+    agentRuns.value = unwrapPage(await api(`/agent-runs/project/${activeProject.value.projectId}?size=100`))
     if (!agentRunId.value && agentRuns.value.length) {
       agentRunId.value = agentRuns.value[0].id
       agentHeadSha.value = agentRuns.value[0].headSha || ''
