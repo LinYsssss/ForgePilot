@@ -107,6 +107,33 @@ public class AiCallLogService {
                 .toList();
     }
 
+    /** Paginated listing; AI call logs grow with every review/retrieval for the project's lifetime. */
+    @Transactional(readOnly = true)
+    public com.example.codereview.common.api.PageResponse<AiCallLogResponse> listPage(
+            Long userId, Long projectId, Long taskId, Integer page, Integer size) {
+        PageRequest pageRequest = PageRequest.of(
+                com.example.codereview.common.api.PageResponse.sanitizePage(page),
+                com.example.codereview.common.api.PageResponse.sanitizeSize(size));
+        if (taskId != null) {
+            ReviewTask task = tasks.findById(taskId)
+                    .orElseThrow(() -> new BusinessException(ErrorCode.REVIEW_TASK_NOT_FOUND, "审查任务不存在"));
+            projectService.getRequired(task.getProjectId(), userId);
+            if (projectId != null && !projectId.equals(task.getProjectId())) {
+                throw new BusinessException(400, "任务不属于指定项目");
+            }
+            var rows = projectId == null
+                    ? logs.findPageByTaskIdOrderByCreatedAtDesc(taskId, pageRequest)
+                    : logs.findPageByProjectIdAndTaskIdOrderByCreatedAtDesc(projectId, taskId, pageRequest);
+            return com.example.codereview.common.api.PageResponse.from(rows, AiCallLogResponse::from);
+        }
+        if (projectId == null) {
+            throw new BusinessException(400, "projectId 或 taskId 至少传一个");
+        }
+        projectService.getRequired(projectId, userId);
+        return com.example.codereview.common.api.PageResponse.from(
+                logs.findPageByProjectIdOrderByCreatedAtDesc(projectId, pageRequest), AiCallLogResponse::from);
+    }
+
     private void save(Long projectId, Long taskId, String requestType, String model, int promptChars,
                       int responseChars, int promptTokens, int completionTokens, int totalTokens,
                       long latencyMs, String status, String errorMessage) {

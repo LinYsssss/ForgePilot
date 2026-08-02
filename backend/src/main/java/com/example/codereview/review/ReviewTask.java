@@ -19,7 +19,7 @@ import java.util.stream.Collectors;
         uniqueConstraints = {
                 @UniqueConstraint(
                         name = "uq_review_task_idempotency",
-                        columnNames = {"projectId", "repositoryId", "commitId", "baseCommitIdNormalized", "branchName"}
+                        columnNames = {"projectId", "repositoryId", "commitId", "baseCommitIdNormalized", "branchName", "docSetKey"}
                 )
         },
         indexes = {
@@ -50,6 +50,14 @@ public class ReviewTask {
 
     @Column(nullable = false, length = 128)
     private String branchName;
+
+    /**
+     * 参与审查的知识文档集合指纹(排序去重后 SHA-256;空集为空串)。
+     * 纳入幂等唯一键:同一提交携带不同文档组合应产生不同任务
+     * ——这是"带/不带知识库对比审查"的基础;相同组合的重复点击仍然幂等。
+     */
+    @Column(nullable = false, length = 64)
+    private String docSetKey;
 
     @Column(nullable = false)
     private Long triggerUserId;
@@ -103,6 +111,7 @@ public class ReviewTask {
         this.pullRequestId = pullRequestId;
         this.diffText = diffText;
         this.knowledgeDocIds = serializeDocIds(knowledgeDocIds);
+        this.docSetKey = computeDocSetKey(knowledgeDocIds);
         this.status = "PENDING";
         this.retryCount = 0;
         this.createdAt = Instant.now();
@@ -114,6 +123,37 @@ public class ReviewTask {
             return null;
         }
         return ids.stream().filter(java.util.Objects::nonNull).map(String::valueOf).collect(Collectors.joining(","));
+    }
+
+    /** 文档集合指纹:排序去重后逗号串的 SHA-256 hex;空集(含 null)固定为空串。 */
+    public static String computeDocSetKey(List<Long> ids) {
+        if (ids == null) {
+            return "";
+        }
+        String canonical = ids.stream()
+                .filter(java.util.Objects::nonNull)
+                .distinct()
+                .sorted()
+                .map(String::valueOf)
+                .collect(Collectors.joining(","));
+        if (canonical.isEmpty()) {
+            return "";
+        }
+        try {
+            byte[] digest = java.security.MessageDigest.getInstance("SHA-256")
+                    .digest(canonical.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            StringBuilder hex = new StringBuilder(digest.length * 2);
+            for (byte b : digest) {
+                hex.append(Character.forDigit((b >> 4) & 0xF, 16)).append(Character.forDigit(b & 0xF, 16));
+            }
+            return hex.toString();
+        } catch (java.security.NoSuchAlgorithmException e) {
+            throw new IllegalStateException("SHA-256 unavailable", e);
+        }
+    }
+
+    public String getDocSetKey() {
+        return docSetKey;
     }
 
     private static String normalizeBaseCommitId(String baseCommitId) {

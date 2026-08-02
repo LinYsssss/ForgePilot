@@ -22,7 +22,13 @@ public class AgentFindingController {
     }
 
     @GetMapping
-    public ApiResponse<List<AgentFindingResponse>> list(@PathVariable Long projectId, @PathVariable Long agentRunId) {
-        return ApiResponse.ok(service.list(projectId, agentRunId, currentUserProvider.getRequired().userId()));
+    public ApiResponse<com.example.codereview.common.api.PageResponse<AgentFindingResponse>> list(
+            @PathVariable Long projectId,
+            @PathVariable Long agentRunId,
+            @org.springframework.web.bind.annotation.RequestParam(required = false) Integer page,
+            @org.springframework.web.bind.annotation.RequestParam(required = false) Integer size
+    ) {
+        return ApiResponse.ok(service.list(
+                projectId, agentRunId, currentUserProvider.getRequired().userId(), page, size));
     }
 }

@@ -66,6 +66,18 @@ public class AgentRunService {
                 .map(run -> toDetail(run)).toList();
     }
 
+    /** Paginated listing; agent runs accumulate for the lifetime of a project. */
+    @Transactional(readOnly = true)
+    public com.example.codereview.common.api.PageResponse<AgentRunDetail> listForProject(
+            Long projectId, Long userId, Integer page, Integer size) {
+        projects.getRequired(projectId, userId);
+        var pageRequest = org.springframework.data.domain.PageRequest.of(
+                com.example.codereview.common.api.PageResponse.sanitizePage(page),
+                com.example.codereview.common.api.PageResponse.sanitizeSize(size));
+        return com.example.codereview.common.api.PageResponse.from(
+                runs.findByProjectIdOrderByCreatedAtDesc(projectId, pageRequest), this::toDetail);
+    }
+
     @Transactional(readOnly = true)
     public AgentRunTimeline timeline(Long runId, Long userId) {
         AgentRun run = requireOwnedRun(runId, userId);

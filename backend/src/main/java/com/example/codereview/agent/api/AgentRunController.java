@@ -42,8 +42,13 @@ public class AgentRunController {
     }
 
     @GetMapping("/project/{projectId}")
-    public ApiResponse<java.util.List<AgentRunDetail>> projectRuns(@PathVariable Long projectId) {
-        return ApiResponse.ok(agentRunService.listForProject(projectId, currentUserProvider.getRequired().userId()));
+    public ApiResponse<com.example.codereview.common.api.PageResponse<AgentRunDetail>> projectRuns(
+            @PathVariable Long projectId,
+            @org.springframework.web.bind.annotation.RequestParam(required = false) Integer page,
+            @org.springframework.web.bind.annotation.RequestParam(required = false) Integer size
+    ) {
+        return ApiResponse.ok(agentRunService.listForProject(
+                projectId, currentUserProvider.getRequired().userId(), page, size));
     }
 
     @GetMapping("/{id}/timeline")

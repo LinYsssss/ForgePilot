@@ -15,4 +15,8 @@ public interface AgentRunRepository extends JpaRepository<AgentRun, Long> {
     List<AgentRun> findByTriggerKeyStartingWith(String triggerKeyPrefix);
 
     List<AgentRun> findByProjectIdOrderByCreatedAtDesc(Long projectId);
+
+    /** Paginated variant for the API; the unbounded one stays for internal callers. */
+    org.springframework.data.domain.Page<AgentRun> findByProjectIdOrderByCreatedAtDesc(
+            Long projectId, org.springframework.data.domain.Pageable pageable);
 }

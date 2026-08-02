@@ -31,6 +31,7 @@ public interface ReviewTaskRepository extends JpaRepository<ReviewTask, Long> {
               and t.commitId = :commitId
               and t.baseCommitIdNormalized = :baseCommitIdNormalized
               and t.branchName = :branchName
+              and t.docSetKey = :docSetKey
             order by t.createdAt desc
             """)
     Optional<ReviewTask> findIdempotentTask(
@@ -38,6 +39,7 @@ public interface ReviewTaskRepository extends JpaRepository<ReviewTask, Long> {
             @Param("repositoryId") Long repositoryId,
             @Param("commitId") String commitId,
             @Param("baseCommitIdNormalized") String baseCommitIdNormalized,
-            @Param("branchName") String branchName
+            @Param("branchName") String branchName,
+            @Param("docSetKey") String docSetKey
     );
 }

@@ -6,6 +6,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.example.codereview.auth.AuthService;
+import com.example.codereview.agent.run.AgentRun;
+import com.example.codereview.agent.run.AgentRunRepository;
+import com.example.codereview.ai.AiCallLog;
+import com.example.codereview.ai.AiCallLogRepository;
 import com.example.codereview.knowledge.KnowledgeDocument;
 import com.example.codereview.knowledge.KnowledgeDocumentRepository;
 import com.example.codereview.review.ReviewTask;
@@ -56,8 +60,15 @@ class PaginatedEndpointsTest {
     @Autowired
     private KnowledgeDocumentRepository documents;
 
+    @Autowired
+    private AgentRunRepository agentRuns;
+
+    @Autowired
+    private AiCallLogRepository aiLogs;
+
     private Cookie owner;
     private Long projectId;
+    private Long agentRunId;
 
     @BeforeAll
     void seed() throws Exception {
@@ -68,6 +79,10 @@ class PaginatedEndpointsTest {
             tasks.saveAndFlush(new ReviewTask(
                     projectId, 1L, "commit-" + i + "-" + System.nanoTime(), null, "main", 1L, "diff"));
             documents.saveAndFlush(new KnowledgeDocument(projectId, 1L, "SPEC", "doc-" + i + ".md", "内容"));
+            aiLogs.saveAndFlush(new AiCallLog(
+                    projectId, null, "CHAT_REVIEW", "mock", "mock-model", 10, 10, 1, 1, 2, 5L, "SUCCESS", null));
+            agentRunId = agentRuns.saveAndFlush(new AgentRun(
+                    projectId, 1L, null, "trigger-" + i + "-" + System.nanoTime(), "headsha-" + i)).getId();
         }
     }
 
@@ -137,6 +152,44 @@ class PaginatedEndpointsTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.items.length()").value(0))
                 .andExpect(jsonPath("$.data.totalElements").value(25));
+    }
+
+    @Test
+    void agentRunsAreCappedAndPaged() throws Exception {
+        mockMvc.perform(get("/api/agent-runs/project/{id}", projectId)
+                        .param("size", "10000").cookie(owner))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.size").value(100))
+                .andExpect(jsonPath("$.data.totalElements").value(25));
+        mockMvc.perform(get("/api/agent-runs/project/{id}", projectId).cookie(owner))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.items.length()").value(20))
+                .andExpect(jsonPath("$.data.totalPages").value(2));
+    }
+
+    @Test
+    void aiCallLogsUseThePageEnvelopeAndHonourLegacyLimit() throws Exception {
+        mockMvc.perform(get("/api/ai/logs").param("projectId", String.valueOf(projectId))
+                        .param("size", "10000").cookie(owner))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.size").value(100))
+                .andExpect(jsonPath("$.data.totalElements").value(25));
+        // 信封化前的 limit 参数仍被当作 size 兜底
+        mockMvc.perform(get("/api/ai/logs").param("projectId", String.valueOf(projectId))
+                        .param("limit", "5").cookie(owner))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.items.length()").value(5))
+                .andExpect(jsonPath("$.data.totalPages").value(5));
+    }
+
+    @Test
+    void agentFindingsUseThePageEnvelope() throws Exception {
+        mockMvc.perform(get("/api/projects/{p}/agent-runs/{r}/findings", projectId, agentRunId)
+                        .param("size", "10000").cookie(owner))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.size").value(100))
+                .andExpect(jsonPath("$.data.totalElements").value(0))
+                .andExpect(jsonPath("$.data.items.length()").value(0));
     }
 
     // ------------------------------------------------------------------ helpers

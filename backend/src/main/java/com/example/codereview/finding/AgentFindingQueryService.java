@@ -38,14 +38,34 @@ public class AgentFindingQueryService {
     }
 
     public List<AgentFindingResponse> list(Long projectId, Long agentRunId, Long userId) {
+        requireOwnedRun(projectId, agentRunId, userId);
+        return assemble(findings.findByAgentRunIdOrderByIdAsc(agentRunId));
+    }
+
+    /** Paginated listing; findings of a run are bounded but can still be dozens per page. */
+    public com.example.codereview.common.api.PageResponse<AgentFindingResponse> list(
+            Long projectId, Long agentRunId, Long userId, Integer page, Integer size) {
+        requireOwnedRun(projectId, agentRunId, userId);
+        var pageRequest = org.springframework.data.domain.PageRequest.of(
+                com.example.codereview.common.api.PageResponse.sanitizePage(page),
+                com.example.codereview.common.api.PageResponse.sanitizeSize(size));
+        var rowsPage = findings.findByAgentRunIdOrderByIdAsc(agentRunId, pageRequest);
+        List<AgentFindingResponse> items = assemble(rowsPage.getContent());
+        return new com.example.codereview.common.api.PageResponse<>(
+                items, rowsPage.getNumber(), rowsPage.getSize(), rowsPage.getTotalElements(), rowsPage.getTotalPages());
+    }
+
+    private void requireOwnedRun(Long projectId, Long agentRunId, Long userId) {
         projectService.getRequired(projectId, userId);
         AgentRun run = runs.findById(agentRunId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.AGENT_RUN_NOT_FOUND, "Agent Run 不存在"));
         if (!projectId.equals(run.getProjectId())) {
             throw new BusinessException(ErrorCode.AGENT_RUN_NOT_FOUND, "Agent Run 不属于该项目");
         }
+    }
 
-        List<Finding> rows = findings.findByAgentRunIdOrderByIdAsc(agentRunId);
+    /** 装配证据链与最新裁决;入参行序即出参序。 */
+    private List<AgentFindingResponse> assemble(List<Finding> rows) {
         if (rows.isEmpty()) {
             return List.of();
         }

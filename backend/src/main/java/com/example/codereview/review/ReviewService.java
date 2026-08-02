@@ -80,7 +80,8 @@ public class ReviewService {
                         repository.getId(),
                         commitId,
                         normalizeBaseCommitId(diff.baseCommitId()),
-                        branchName
+                        branchName,
+                        ReviewTask.computeDocSetKey(request.documentIds())
                 )
                 .orElse(null);
         if (existing != null) {
@@ -125,7 +126,8 @@ public class ReviewService {
         try {
             return tasks.saveAndFlush(task);
         } catch (DataIntegrityViolationException ex) {
-            return tasks.findIdempotentTask(projectId, repositoryId, commitId, normalizeBaseCommitId(baseCommitId), branchName)
+            return tasks.findIdempotentTask(projectId, repositoryId, commitId, normalizeBaseCommitId(baseCommitId),
+                            branchName, ReviewTask.computeDocSetKey(documentIds))
                     .orElseThrow(() -> ex);
         }
     }
