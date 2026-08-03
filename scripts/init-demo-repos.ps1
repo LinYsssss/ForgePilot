@@ -1,6 +1,9 @@
 #Requires -Version 7
 param([switch]$Verify)
 $ErrorActionPreference = 'Stop'
+# pwsh 7.3+ 默认不把原生命令的非 0 退出码当成错误。缺了这一行，git apply
+# 冲突时脚本会若无其事地继续提交出一个错误仓库、最后退出 0——等价于 bash 的 set -e。
+$PSNativeCommandUseErrorActionPreference = $true
 
 $RootDir = Split-Path -Parent $PSScriptRoot
 $Demo = Join-Path $RootDir 'demo-repos'
@@ -38,6 +41,10 @@ foreach ($repo in $Repos) {
   git -C $dir init -q -b main
   git -C $dir config core.autocrlf false
   git -C $dir config core.eol lf
+  # 与 bash 版同理：钉死 mode 位，并用仓库级 core.excludesFile 指向一个
+  # 不存在的路径，屏蔽用户全局 ignore 对 `git add -A` 的干扰。
+  git -C $dir config core.filemode false
+  git -C $dir config core.excludesFile (Join-Path $dir '.git/no-global-excludes')
   git -C $dir config commit.gpgsign false
 
   git -C $dir add -A ':!docs' ':!README.md'
@@ -65,7 +72,9 @@ if ($Verify) {
     if ($actual -eq $parts[2]) {
       Write-Host "ok  : $($parts[0]) $($parts[1])"
     } else {
-      Write-Error "FAIL: $($parts[0]) $($parts[1]) expected $($parts[2]) but got $actual"
+      # 这里不能用 Write-Error：$ErrorActionPreference='Stop' 会让它成为终止性
+      # 错误，六条比对只报得出第一条，后面的 $status/exit 全是死代码。
+      Write-Host "FAIL: $($parts[0]) $($parts[1]) expected $($parts[2]) but got $actual"
       $status = 1
     }
   }

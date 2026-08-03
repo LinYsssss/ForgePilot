@@ -82,9 +82,9 @@ a4a6f6f feat: execute repository read tools in sandbox
 - 因仓库已存在 SCM `V7__scm_webhooks.sql`，Finding/Evidence 迁移安全顺延为 `V8__findings_and_evidence.sql`；后续 Patch 迁移顺延为 V9，不修改既有迁移。
 - Java 插件检测 Maven/Gradle，使用 JavaParser 提取变更类、方法、注解和调用；PMD、SpotBugs、Checkstyle XML 及 SARIF 归一化为 `FindingCandidate`。
 - backend 和 Runner 同步注册 Maven/Gradle compile/test、PMD、SpotBugs、Checkstyle 固定命令 ID；Runner 使用固定可执行路径与参数，不调用 shell 解释器。
-- Java Maven/Gradle 评测夹具位于 `demo-repos/evaluation/java/`。
+- Java Maven/Gradle 构建工具识别夹具位于 `demo-repos/build-tool-fixtures/java/`。
 - Python 插件检测 `pyproject.toml`、`requirements.txt` 和 `.py` 变更，注册 Ruff、Bandit、Pytest 固定命令；Ruff/Bandit JSON 归一化为 Finding，Pytest JUnit 归一化为独立验证结果而非缺陷。
-- Runner 同步注册固定 Ruff/Bandit/Pytest 可执行路径；Python 评测夹具位于 `demo-repos/evaluation/python/`。
+- Runner 同步注册固定 Ruff/Bandit/Pytest 可执行路径；Python 构建工具识别夹具位于 `demo-repos/build-tool-fixtures/python/`。
 - JavaScript/TypeScript 插件检测 npm/pnpm/yarn、TypeScript、Jest/Vitest；ESLint/Semgrep/tsc/Jest/Vitest 均通过 Runner 固定二进制执行，不调用 `npm run`、`npx` 或 payload 中的 scripts。
 - ESLint/Semgrep/TypeScript 输出归一化为 Finding，Jest/Vitest JSON 归一化为验证结果；恶意 `package.json` script 夹具证明其不会进入命令契约。
 - 证据置信度使用版本 `evidence-confidence-v1` 和固定权重：tool `0.35`、location `0.20`、knowledge `0.20`、verifier `0.15`、test `0.10`；冲突与过期位置负向扣分并 clamp 到 `[0,1]`。
