@@ -28,6 +28,8 @@ RepoSage 以 Git Commit 的 Diff 为输入，结合项目知识库和大模型�
 - **安全**：登录 Token 鉴权；Git accessToken 用 AES-GCM 加密存储，接口不返回明文。
 - **可观测**：`ai_call_log` 记录每次大模型 / embedding / 模型调用的类型、模型、耗时、输入输出长度、**Token 用量**、状态和错误；并通过 Micrometer 把审查时延 / 吞吐 / Token 成本暴露到 `/actuator/prometheus`。Agent 控制面另有 `reposage.agent.runs`（created/completed/failed/recovered 计数）与 `reposage.agent.step` / `reposage.agent.tool` 时延直方图，标签仅取有界维度（状态、步骤类型、工具名），绝不用 run id / 仓库名 / 错误消息做标签以免时间序列爆炸。
 - **生产级护栏**：每请求 `X-Trace-Id` 贯穿日志（MDC）；该 traceId 会随 Agent 步骤消息经 outbox → RabbitMQ 传递，消费端重新写入 MDC，使异步步骤与工具调用日志与最初的 HTTP 请求同源可关联；按用户/IP 的接口限流（超限返回 429 + `Retry-After`）；`/actuator/health` 深度探活（AI provider / 模型服务 / DB / 磁盘，细节仅鉴权可见）。
+- **审查工作台**：PR 列表可直达对应 Agent Run 时间线；报告引用可定位到 diff 具体行并展开证据抽屉；Agent Run / Finding / AI 调用日志等全部长列表统一分页信封（默认 20、上限 100）。
+- **带/不带知识库对比审查**：同一提交一键创建两个审查任务（关联全部已入库文档 vs 不关联），对比视图三栏呈现「仅带知识库发现 / 双方共有 / 仅不带知识库发现」，并给引用了知识文档/历史事故的条目加信号徽标。注意：mock 模式下规则引擎不读知识文档，两侧产出一致；差异对照需接真实大模型。
 - **可部署**：提供 Docker Compose（PostgreSQL+pgvector、RabbitMQ、后端、模型服务、前端、Nginx）。
 
 ---
@@ -232,16 +234,17 @@ RAG_FULL_CONTEXT=true
 4. 上传知识库文档（Markdown / TXT），如 `security-policy.md`、`order-flow.md`。
 5. 查询 Commit，选择要审查的提交。
 6. 触发审查任务。
-7. 查看审查报告：风险等级、问题列表、证据来源、修复建议。
-8. 对问题提交人工反馈（确认 / 误报 / 备注）。
-9. 在 PR 工作流中登记 Pull Request，基于 PR 触发审查，并按报告执行“通过 / 打回修改 / 风险豁免”。
-10. 查看 AI 调用日志与 MQ 日志。
+7. （可选）一键「对比审查」：对同一提交自动创建带/不带知识库两个任务，在对比视图查看知识库带来的 Finding 差异（mock 模式两侧一致，差异对照需真实大模型）。
+8. 查看审查报告：风险等级、问题列表、证据来源、修复建议；引用可定位到 diff 行并展开证据抽屉。
+9. 对问题提交人工反馈（确认 / 误报 / 备注）。
+10. 在 PR 工作流中登记 Pull Request，基于 PR 触发审查，并按报告执行“通过 / 打回修改 / 风险豁免”；PR 行可直达对应的 Agent Run 时间线。
+11. 查看 AI 调用日志与 MQ 日志。
 
 **验证大模型与全量注入是否生效**：报告中的问题应能引用到你上传文档里的具体内容（例如发货问题引用 `order-flow.md` 的支付校验规则），说明完整项目上下文确实进入了 Prompt。
 
 ### 接入自动 PR 守门（Webhook）
 
-手动流程（第 9 步）不需要任何配置。若要让 GitHub / GitLab 的 PR 事件**自动**触发守门 Agent，按下面三步接线：
+手动流程（第 10 步）不需要任何配置。若要让 GitHub / GitLab 的 PR 事件**自动**触发守门 Agent，按下面三步接线：
 
 1. **平台需公网可达**——webhook 是 SCM 主动回调；内网部署可用 `cloudflared` / `ngrok` 之类隧道暴露 nginx 的 80 端口。
 2. **注册 SCM 安装**（管理员）——webhook 的验签密钥与项目绑定都存在 `scm_installation` 表，未注册的事件会被 `NO_INSTALLATION` 忽略：
@@ -419,6 +422,12 @@ npm run build
 
 **RabbitMQ 日志为空？**
 开发环境默认 `REVIEW_INLINE=true`，审查同步执行、不经过 MQ，所以 MQ 日志为空。设 `REVIEW_INLINE=false` 后才走 RabbitMQ。
+
+**对比审查里两侧结果为什么一样？**
+mock 模式（默认，未配置 `AI_PROVIDER=openai-compatible`）的规则引擎不读知识文档，带/不带知识库产出相同——这是设计内行为，对比视图此时验证的是流程与展示。接入真实大模型后，两侧差异与文档引用才有对照意义（对照 `docs/演示素材与缺陷对照表.md` 第五节）。
+
+**质量门（langchain4j shadow 对比）有详情页吗？**
+未实施。langchain4j 运行时的 shadow / legacy 对比数据目前仅落在 `ai_call_log` 与 Prometheus 指标中，无独立展示页；评测数据在本机不可得，该页面明确降级为「未实施」而非隐藏承诺。
 
 ---
 
