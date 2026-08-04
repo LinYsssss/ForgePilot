@@ -16,9 +16,12 @@ services:
       timeout: 5s
       retries: 12
       start_period: 20s
+    restart: unless-stopped
+    mem_limit: 512m
+    memswap_limit: 768m
 
   rabbitmq:
-    image: rabbitmq:3-management
+    image: rabbitmq:3.13-management
     environment:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_USERNAME:?RABBITMQ_USERNAME is required}
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:?RABBITMQ_PASSWORD is required}
@@ -28,9 +31,12 @@ services:
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
       interval: 15s
-      timeout: 10s
-      retries: 12
+      timeout: 30s
+      retries: 20
       start_period: 30s
+    restart: unless-stopped
+    mem_limit: 384m
+    memswap_limit: 512m
 
   backend:
     build:
@@ -48,6 +54,7 @@ services:
         condition: service_started
     environment:
       OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: http://otel-collector:4318/v1/traces
+      JAVA_TOOL_OPTIONS: -XX:MaxRAMPercentage=60.0
     ports:
       - "127.0.0.1:8080:8080"
     volumes:
@@ -59,6 +66,9 @@ services:
       timeout: 5s
       retries: 12
       start_period: 70s
+    restart: unless-stopped
+    mem_limit: 1200m
+    memswap_limit: 1800m
 
   # Trusted orchestration component for controlled single-host demos. This is not a hostile
   # multi-tenant isolation boundary. Only the runner receives the Docker socket; containers it
@@ -74,6 +84,7 @@ services:
       SANDBOX_DEPENDENCY_CACHE_ROOT: /app/.cache/dependencies
       SANDBOX_ARCHIVE_ROOT: /app/archives
       OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: http://otel-collector:4318/v1/traces
+      JAVA_TOOL_OPTIONS: -XX:MaxRAMPercentage=50.0
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -85,6 +96,8 @@ services:
       - sandbox_dependency_cache:/app/.cache/dependencies
       - sandbox_archives:/app/archives:ro
     restart: unless-stopped
+    mem_limit: 512m
+    memswap_limit: 768m
 
   model-service:
     build:
@@ -96,6 +109,9 @@ services:
     # 发布出去徒增暴露面 —— 该服务没有任何认证。
     expose:
       - "8000"
+    restart: unless-stopped
+    mem_limit: 768m
+    memswap_limit: 1280m
 
   frontend:
     build:
@@ -104,6 +120,9 @@ services:
         VITE_DEMO_REPO_PATH: ${VITE_DEMO_REPO_PATH:-/app/demo-repos/mall-order-service}
     depends_on:
       - backend
+    restart: unless-stopped
+    mem_limit: 128m
+    memswap_limit: 128m
 
   nginx:
     image: nginx:1.30.4-alpine
@@ -114,6 +133,9 @@ services:
       - backend
     ports:
       - "80:80"
+    restart: unless-stopped
+    mem_limit: 128m
+    memswap_limit: 128m
 
   otel-collector:
     image: otel/opentelemetry-collector-contrib:0.104.0
@@ -124,6 +146,9 @@ services:
       - "127.0.0.1:4317:4317"
       - "127.0.0.1:4318:4318"
       - "127.0.0.1:9464:9464"
+    restart: unless-stopped
+    mem_limit: 256m
+    memswap_limit: 256m
 
   prometheus:
     image: prom/prometheus:v2.53.0
@@ -135,6 +160,9 @@ services:
       - otel-collector
     ports:
       - "127.0.0.1:9090:9090"
+    restart: unless-stopped
+    mem_limit: 512m
+    memswap_limit: 768m
 
 volumes:
   postgres_data:
