@@ -1,3 +1,11 @@
+# 单机演示宿主没有日志采集侧车,容器日志就地留存。不封顶的话一次崩溃循环
+# 就能刷爆磁盘 —— 每个服务最多 3 个 10m 分片,整栈上限约 270m。
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   postgres:
     image: pgvector/pgvector:pg16
@@ -19,6 +27,7 @@ services:
     restart: unless-stopped
     mem_limit: 512m
     memswap_limit: 768m
+    logging: *default-logging
 
   rabbitmq:
     image: rabbitmq:3.13-management
@@ -37,6 +46,7 @@ services:
     restart: unless-stopped
     mem_limit: 384m
     memswap_limit: 512m
+    logging: *default-logging
 
   backend:
     build:
@@ -69,6 +79,7 @@ services:
     restart: unless-stopped
     mem_limit: 1200m
     memswap_limit: 1800m
+    logging: *default-logging
 
   # Trusted orchestration component for controlled single-host demos. This is not a hostile
   # multi-tenant isolation boundary. Only the runner receives the Docker socket; containers it
@@ -98,6 +109,7 @@ services:
     restart: unless-stopped
     mem_limit: 512m
     memswap_limit: 768m
+    logging: *default-logging
 
   model-service:
     build:
@@ -112,6 +124,7 @@ services:
     restart: unless-stopped
     mem_limit: 768m
     memswap_limit: 1280m
+    logging: *default-logging
 
   frontend:
     build:
@@ -123,6 +136,7 @@ services:
     restart: unless-stopped
     mem_limit: 128m
     memswap_limit: 128m
+    logging: *default-logging
 
   nginx:
     image: nginx:1.30.4-alpine
@@ -136,6 +150,7 @@ services:
     restart: unless-stopped
     mem_limit: 128m
     memswap_limit: 128m
+    logging: *default-logging
 
   otel-collector:
     image: otel/opentelemetry-collector-contrib:0.104.0
@@ -149,6 +164,7 @@ services:
     restart: unless-stopped
     mem_limit: 256m
     memswap_limit: 256m
+    logging: *default-logging
 
   prometheus:
     image: prom/prometheus:v2.53.0
@@ -163,6 +179,7 @@ services:
     restart: unless-stopped
     mem_limit: 512m
     memswap_limit: 768m
+    logging: *default-logging
 
 volumes:
   postgres_data:
