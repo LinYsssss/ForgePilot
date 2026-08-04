@@ -1,0 +1,4 @@
+{"file": ".trellis/spec/frontend/state-management.md", "reason": "单例/依赖方向硬规则"}
+{"file": ".trellis/spec/frontend/directory-structure.md", "reason": "新代码落位规则"}
+{"file": ".trellis/tasks/archive/2026-08/07-31-frontend-split/research/walkthrough-result.md", "reason": "端到端验证方法基线"}
+{"file": ".trellis/tasks/07-31-feature-enhance/research/compare-walkthrough-result.md", "reason": "对比审查 E2E 走查结果与 CSRF 缺陷修复记录"}
