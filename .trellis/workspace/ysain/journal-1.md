@@ -36,3 +36,29 @@
 ### Status
 
 [OK] **Completed**
+
+
+## Session 2: r1: 解除 CI 阻塞——12 天连红终结,供应链门禁首跑即咬合
+
+**Date**: 2026-08-04
+**Task**: r1: 解除 CI 阻塞——12 天连红终结,供应链门禁首跑即咬合
+**Branch**: `integration/track-ab`
+
+### Summary
+
+F-01 trivy tag 修复途中发现上游删除 setup-trivy 旧 tag,升至 v0.36.0;F-02 测试归档路径隔离到 tmpdir;F-13 关闭 PR #3。门禁首跑咬出 CVE-2026-41695(HIGH),以 spring-data-bom 2025.0.12 属性覆盖当场修复。run 30888394125 三作业全绿,前端 21 项与 model-service 9 项测试首次在 CI 实际执行。证据存档 trivy-evidence.md,规范沉淀至 security/quality-guidelines。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `cd09a9d` | (see git log) |
+| `31373e6` | (see git log) |
+| `bb11cd7` | (see git log) |
+| `0a369c3` | (see git log) |
+| `ff4edde` | (see git log) |
+| `f9e97c4` | (see git log) |
+
+### Status
+
+[OK] **Completed**
