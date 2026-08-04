@@ -67,6 +67,13 @@ public class SecurityConfig {
             http.csrf(csrf -> csrf
                     .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
                     .csrfTokenRequestHandler(new SpaCsrfTokenRequestHandler())
+                    // 无状态会话下 SessionManagementFilter 把每个携带令牌的请求都当作"新认证",
+                    // 默认策略(CsrfAuthenticationStrategy)会在每个已认证响应里清除 XSRF Cookie
+                    // 并延迟重发——而普通 JSON 接口从不渲染令牌,浏览器的令牌就被永久抹掉,
+                    // 登录后的第一个写请求即被拒。登录/退出的轮换由 CsrfTokenRotator 显式完成,
+                    // 这里必须换成空策略,否则 SPA 的 CSRF 流程在真实浏览器里根本走不通。
+                    .sessionAuthenticationStrategy(
+                            new org.springframework.security.web.authentication.session.NullAuthenticatedSessionStrategy())
                     .ignoringRequestMatchers("/api/webhooks/**"));
         } else {
             // 关闭路径:部署侧经 SECURITY_CSRF_ENABLED=false 显式回退,或测试经

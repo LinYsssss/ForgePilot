@@ -1,4 +1,4 @@
-import { api } from '../api/client.js'
+import { api, initCsrf } from '../api/client.js'
 import { nav } from '../nav.js'
 import { useAgentWorkspace } from './useAgentWorkspace.js'
 import { useAiLogs } from './useAiLogs.js'
@@ -54,6 +54,8 @@ async function logout(callApi = true) {
   activeProject.value = null
   resetForProject()
   reviews.stopPolling()
+  // 退出同样轮换 CSRF;重新引导,让下一次登录的写请求直接可用
+  await initCsrf().catch(() => {})
 }
 
 /* ---------- 刷新与项目切换 ---------- */

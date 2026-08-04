@@ -27,7 +27,7 @@
 
 <script setup>
 import { reactive } from 'vue'
-import { api } from '../api/client.js'
+import { api, initCsrf } from '../api/client.js'
 import { useBusy } from '../composables/useBusy.js'
 import { useSession } from '../composables/useSession.js'
 import { useToast } from '../composables/useToast.js'
@@ -42,6 +42,9 @@ async function login() {
   busy.auth = true
   try {
     await api('/auth/login', { method: 'POST', body: JSON.stringify(auth) })
+    // 登录会轮换 CSRF token,且新 cookie 延迟到"下一次渲染 token 的请求"才发;
+    // 必须立刻重新引导,否则登录后的第一个写请求会因缺 token 被拒并触发全局登出。
+    await initCsrf()
     authenticated.value = true
     emit('authenticated')
   } catch (error) {
