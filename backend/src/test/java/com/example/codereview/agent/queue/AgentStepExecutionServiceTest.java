@@ -13,6 +13,7 @@ import com.example.codereview.agent.run.AgentRunStatus;
 import com.example.codereview.agent.run.AgentStep;
 import com.example.codereview.agent.run.AgentStepRepository;
 import com.example.codereview.agent.run.AgentStepStatus;
+import com.example.codereview.ai.AiCallTransientException;
 import java.time.Instant;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -178,6 +179,57 @@ class AgentStepExecutionServiceTest {
                 .isEqualTo(AgentStepExecutionService.ExecutionOutcome.LEASE_LOST);
         assertThat(steps.findById(fixture.stepId()).orElseThrow().getStatus())
                 .isEqualTo(AgentStepStatus.RUNNING);
+    }
+
+    // ------------------------------------------------------------------ transient provider failures
+    //
+    // 首次真实运行即暴露(run14,2026-08-08):handler 抛出的 AiCallTransientException 曾落进兜底的
+    // catch (RuntimeException),被按 INTERNAL_ERROR 直接终态,重试机制全程闲置。以下两条锁死
+    // "瞬态 provider 错误 → 调度重试;耗尽 attempt → 才允许终态 FAILED" 的映射。
+
+    @Test
+    void transientProviderFailureSchedulesARetryInsteadOfFailingTheRun() {
+        Fixture fixture = fixture(AgentRunStatus.PREPARING_REPOSITORY);
+        when(handler.execute(any()))
+                .thenThrow(new AiCallTransientException(
+                        "LangChain4j provider call failed transiently (InternalServerException)", null));
+
+        AgentStepExecutionService.ExecutionOutcome outcome = execution.execute(fixture.message());
+
+        assertThat(outcome).isEqualTo(AgentStepExecutionService.ExecutionOutcome.RETRY_SCHEDULED);
+        AgentRun run = runs.findById(fixture.runId()).orElseThrow();
+        assertThat(run.getStatus())
+                .as("a transient provider hiccup must park the run for retry, not kill it")
+                .isEqualTo(AgentRunStatus.RETRY_WAIT);
+        assertThat(steps.findById(fixture.stepId()).orElseThrow().getStatus())
+                .isEqualTo(AgentStepStatus.FAILED);
+        assertThat(outbox.count()).as("the retry message must be enqueued through the outbox").isEqualTo(1);
+    }
+
+    @Test
+    void transientProviderFailureFailsTheRunOnceAttemptsAreExhausted() {
+        Fixture fixture = fixture(AgentRunStatus.PREPARING_REPOSITORY);
+        when(handler.execute(any()))
+                .thenThrow(new AiCallTransientException(
+                        "LangChain4j provider call failed transiently (InternalServerException)", null));
+
+        // app.agent.queue.max-retry defaults to 3. Walk the real retry chain: a FAILED step only
+        // accepts attempt n+1, so attempts 0..2 each park the run in RETRY_WAIT again.
+        for (int attempt = 0; attempt < 3; attempt++) {
+            assertThat(execution.execute(new AgentStepMessage(fixture.runId(), 1, attempt, "trace-a2")))
+                    .as("attempt %d is below the cap and must be retried", attempt)
+                    .isEqualTo(AgentStepExecutionService.ExecutionOutcome.RETRY_SCHEDULED);
+        }
+
+        AgentStepExecutionService.ExecutionOutcome outcome =
+                execution.execute(new AgentStepMessage(fixture.runId(), 1, 3, "trace-a2"));
+
+        assertThat(outcome).isEqualTo(AgentStepExecutionService.ExecutionOutcome.FAILED);
+        assertThat(runs.findById(fixture.runId()).orElseThrow().getStatus())
+                .isEqualTo(AgentRunStatus.FAILED);
+        assertThat(outbox.count())
+                .as("exactly the three retryable attempts may enqueue a retry, never a fourth")
+                .isEqualTo(3);
     }
 
     // ------------------------------------------------------------------ atomicity and heartbeat

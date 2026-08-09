@@ -28,6 +28,10 @@ spring:
     publisher-returns: ${RABBITMQ_PUBLISHER_RETURNS:true}
     template:
       mandatory: ${RABBITMQ_TEMPLATE_MANDATORY:true}
+      # 沙箱工具走 sendAndReceive RPC:应答等待必须罩住工具执行预算
+      # (app.sandbox.tool-timeout-ms,默认 120s),否则默认 5s 一到,Runner 的
+      # 正常应答只会变成 "Reply received after timeout",链路必然假死。
+      reply-timeout: ${RABBITMQ_TEMPLATE_REPLY_TIMEOUT_MS:130000}
     listener:
       simple:
         auto-startup: ${RABBITMQ_LISTENER_AUTO_STARTUP:true}

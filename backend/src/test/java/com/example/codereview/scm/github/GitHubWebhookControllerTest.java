@@ -82,15 +82,16 @@ class GitHubWebhookControllerTest {
     }
 
     @Test
-    void acceptsOpenedAndStartsReceivedRun() throws Exception {
+    void acceptsOpenedAndSchedulesFirstStep() throws Exception {
         byte[] body = fixture("opened.json");
         mockMvc.perform(validSigned(body, "d-open"))
                 .andExpect(status().isAccepted())
                 .andExpect(jsonPath("$.data.outcome").value("PROCESSED"))
                 .andExpect(jsonPath("$.data.agentRunId").isNumber());
 
+        // 首步与建 Run 同事务派发(kickoff):提交后即离开 RECEIVED,消费者关闭时停在首步状态。
         assertThat(agentRuns.findByTriggerKey("github:42:pr:7:headsha111"))
-                .get().extracting(AgentRun::getStatus).isEqualTo(AgentRunStatus.RECEIVED);
+                .get().extracting(AgentRun::getStatus).isEqualTo(AgentRunStatus.PREPARING_REPOSITORY);
     }
 
     @Test

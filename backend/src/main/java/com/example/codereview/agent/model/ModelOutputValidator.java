@@ -92,7 +92,7 @@ public class ModelOutputValidator {
         if (rawOutput.getBytes(StandardCharsets.UTF_8).length > maxOutputBytes) {
             return invalid("model output size exceeds " + maxOutputBytes + " bytes");
         }
-        String json = unwrapMarkdown(rawOutput);
+        String json = ModelJsonOutputs.unwrapMarkdown(rawOutput);
         try {
             StructuredModelResponse response = mapper.readValue(json, StructuredModelResponse.class);
             if (response.summary() == null || response.summary().isBlank()) {
@@ -108,6 +108,14 @@ public class ModelOutputValidator {
             String citationError = validateCitations(response.claims(), allowedCitationIds);
             if (citationError != null) {
                 return invalid(citationError);
+            }
+            // 计划校验器可能裁剪了超预算条目(clampOverBudget)。验证器对外只交付
+            // "经裁剪的规范形态":下游(持久化的 ReviewPlan、EXECUTING_TOOLS)只见
+            // 存活条目,不必各自理解裁剪语义。
+            if (planResult.validatedItems().size() != planItems.size()) {
+                response = new StructuredModelResponse(
+                        response.summary(), planResult.validatedItems(), response.claims()
+                );
             }
             return new ValidationResult(true, response, null, null);
         } catch (JsonProcessingException ex) {
@@ -139,19 +147,6 @@ public class ModelOutputValidator {
             }
         }
         return null;
-    }
-
-    private String unwrapMarkdown(String raw) {
-        String trimmed = raw.trim();
-        if (!trimmed.startsWith("```")) {
-            return trimmed;
-        }
-        int firstNewline = trimmed.indexOf('\n');
-        int closing = trimmed.lastIndexOf("```");
-        if (firstNewline < 0 || closing <= firstNewline) {
-            return trimmed;
-        }
-        return trimmed.substring(firstNewline + 1, closing).trim();
     }
 
     private ValidationResult invalid(String error) {
