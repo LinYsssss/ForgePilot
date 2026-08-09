@@ -25,6 +25,8 @@
         <jackson-bom.version>2.21.4</jackson-bom.version>
         <!-- CVE-2026-41850/41842(DoS):Boot 3.5.14 管理 6.2.18,修复在 6.2.19。 -->
         <spring-framework.version>6.2.19</spring-framework.version>
+        <!-- CVE-2026-40983/40984(DoS,HIGH):Boot 3.5.14 管理 1.15.11,修复在 1.15.12。 -->
+        <micrometer.version>1.15.12</micrometer.version>
     </properties>
 
     <dependencies>

@@ -31,6 +31,8 @@
         <postgresql.version>42.7.12</postgresql.version>
         <!-- CVE-2026-41695(DoS,HIGH):Boot 3.5.14 管理 2025.0.11(commons 3.5.11),修复在 3.5.12,对应 BOM 版本 2025.0.12。 -->
         <spring-data-bom.version>2025.0.12</spring-data-bom.version>
+        <!-- CVE-2026-40983/40984(DoS,HIGH):Boot 3.5.14 管理 1.15.11,修复在 1.15.12。 -->
+        <micrometer.version>1.15.12</micrometer.version>
         <testcontainers.version>1.20.4</testcontainers.version>
         <langchain4j.version>1.8.0</langchain4j.version>
     </properties>
