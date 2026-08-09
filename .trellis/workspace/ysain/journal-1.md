@@ -62,3 +62,26 @@ F-01 trivy tag 修复途中发现上游删除 setup-trivy 旧 tag,升至 v0.36.0
 ### Status
 
 [OK] **Completed**
+
+
+## Session 3: r2: 沙箱归档断链修复收官——run18 全链路首次 COMPLETED
+
+**Date**: 2026-08-09
+**Task**: r2: 沙箱归档断链修复收官——run18 全链路首次 COMPLETED
+**Branch**: `integration/track-ab`
+
+### Summary
+
+F-03/F-04/F-05 契约核心落地(同构 WorkspaceArchiveReference+双向金标、WorkspaceArchiveService 唯一生产者原子落盘、SANDBOX_TOOL_IMAGE 生产快速失败)。当日 e2e 四轮点火修四截+复查自修四处:规划提示词数值约束同源、clampOverBudget 服务端裁剪+回执预算修正、claims/findings 条目形状钉死、瞬态错误接通重试、ModelJsonOutputs 防线单源、空知识白名单分档、无凭证发布显式跳过。run18 八步全绿:6 findings 持久化、发布记录 skipped 留痕、归档就地清理。backend 575/0 runner 75/0。规范沉淀 agent-model-contracts.md+error-handling.md 两硬约定。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `28a12b9` | (see git log) |
+| `d5a3cd3` | (see git log) |
+| `570c82c` | (see git log) |
+
+### Status
+
+[OK] **Completed**
