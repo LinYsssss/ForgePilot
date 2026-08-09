@@ -1,7 +1,6 @@
 package com.example.reposage.sandbox;
 
 import java.io.IOException;
-import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
@@ -16,19 +15,16 @@ public final class WorkspaceArchiveResolver {
     }
 
     public Path resolve(String reference) throws IOException {
-        if (reference == null || reference.isBlank()) {
-            throw new SecurityException("workspace archive reference is missing");
+        String fileName;
+        try {
+            // Every syntactic rule (scheme, traversal, whitelist, length) lives in the codec that
+            // mirrors the backend's encoder, so producer and validator can no longer drift apart.
+            // The former hand-rolled check here rejected the backend's real output unconditionally.
+            fileName = WorkspaceArchiveReference.parse(reference);
+        } catch (IllegalArgumentException ex) {
+            throw new SecurityException(ex.getMessage());
         }
-        Path candidate;
-        if (reference.startsWith("file:")) {
-            candidate = Path.of(URI.create(reference));
-        } else {
-            if (reference.contains(":") || reference.contains("\\")) {
-                throw new SecurityException("workspace archive reference scheme is not allowed");
-            }
-            candidate = archiveRoot.resolve(reference);
-        }
-        Path normalized = candidate.toAbsolutePath().normalize();
+        Path normalized = archiveRoot.resolve(fileName).toAbsolutePath().normalize();
         if (!normalized.startsWith(archiveRoot)) {
             throw new SecurityException("workspace archive reference escapes archive root");
         }

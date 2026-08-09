@@ -63,6 +63,102 @@ public class GitCliService {
         repositoryLocks.remove(repositoryId);
     }
 
+    /**
+     * 产出 Agent 取证用的工作区归档:head 提交的树 + 预置的 base→head diff
+     * ({@code .reposage/review.diff})。Runner 的 git.diff 命令不跑 git,只读这个预置文件,
+     * 因此 diff 必须在打包时就算好并塞进归档,否则取证步骤只会得到
+     * "prepared diff is unavailable"。
+     */
+    public void archiveForReview(CodeRepositoryEntity repository, String baseSha, String headSha, Path output) {
+        GitInputValidator.requireSafeRef(baseSha, "Base Commit");
+        GitInputValidator.requireSafeRef(headSha, "Commit");
+        Long lockKey = repository.getId() == null ? -1L : repository.getId();
+        Object lock = repositoryLocks.computeIfAbsent(lockKey, key -> new Object());
+        synchronized (lock) {
+            Path localPath = ensureCloneLocked(repository);
+            String diff = run(localPath, repository, "diff", "--find-renames", baseSha, headSha, "--");
+            archiveLocked(localPath, repository, headSha, java.util.Map.of("review.diff", diff), output);
+        }
+    }
+
+    /**
+     * 产出补丁验证用的工作区归档:commit 的树 + 调用方提供的附加文件(如
+     * {@code .reposage/candidate.patch})。extraFiles 的 key 是 {@code .reposage/} 下的裸文件名。
+     */
+    public void archiveWithFiles(CodeRepositoryEntity repository, String commitSha,
+                                 java.util.Map<String, String> extraFiles, Path output) {
+        GitInputValidator.requireSafeRef(commitSha, "Commit");
+        Long lockKey = repository.getId() == null ? -1L : repository.getId();
+        Object lock = repositoryLocks.computeIfAbsent(lockKey, key -> new Object());
+        synchronized (lock) {
+            Path localPath = ensureCloneLocked(repository);
+            archiveLocked(localPath, repository, commitSha, extraFiles, output);
+        }
+    }
+
+    /**
+     * 在持有仓库锁的前提下执行 git archive。产物先写 {@code <output>.partial} 再原子改名,
+     * 避免 Runner 从共享卷读到半个 tar。--prefix 的语义:对 --add-file 生效的是其左侧最近
+     * 一次出现,对 tracked 文件生效的是最右侧一次 —— 因此附加文件落在 .reposage/ 下,
+     * 仓库树保持在归档根(已实测验证)。
+     */
+    private void archiveLocked(Path localPath, CodeRepositoryEntity repository, String commitSha,
+                               java.util.Map<String, String> extraFiles, Path output) {
+        Path extrasDir = null;
+        try {
+            Path target = output.toAbsolutePath().normalize();
+            Files.createDirectories(target.getParent());
+            Path partial = target.resolveSibling(target.getFileName() + ".partial");
+            List<String> args = new ArrayList<>(List.of("archive", "--format=tar", "-o", partial.toString()));
+            if (extraFiles != null && !extraFiles.isEmpty()) {
+                extrasDir = Files.createTempDirectory("reposage-archive-extra-");
+                args.add("--prefix=.reposage/");
+                for (var extra : extraFiles.entrySet()) {
+                    // --add-file 在归档内的路径 = 最近一次 --prefix + 文件 basename,
+                    // 所以临时文件必须与目标文件名同名,且 key 只能是裸文件名。
+                    Path file = extrasDir.resolve(extra.getKey()).normalize();
+                    if (!extrasDir.equals(file.getParent())) {
+                        throw new IllegalArgumentException("archive extra file name must be a bare file name");
+                    }
+                    Files.writeString(file, extra.getValue() == null ? "" : extra.getValue(), StandardCharsets.UTF_8);
+                    args.add("--add-file=" + file);
+                }
+                args.add("--prefix=");
+            }
+            args.add(commitSha);
+            run(localPath, repository, args.toArray(String[]::new));
+            Files.move(partial, target,
+                    java.nio.file.StandardCopyOption.REPLACE_EXISTING,
+                    java.nio.file.StandardCopyOption.ATOMIC_MOVE);
+        } catch (IOException ex) {
+            // 盲错带因(run15/run17 教训同类):BusinessException 不承载 cause,IOException 的
+            // 定界原因(磁盘满/权限/路径)只能进 message,否则步骤失败时无从定位现场。
+            String detail = ex.getMessage() == null || ex.getMessage().isBlank()
+                    ? ex.getClass().getSimpleName()
+                    : ex.getMessage();
+            throw new BusinessException(6001, "写入工作区归档失败: " + detail);
+        } finally {
+            deleteQuietly(extrasDir);
+        }
+    }
+
+    private static void deleteQuietly(Path directory) {
+        if (directory == null) {
+            return;
+        }
+        try (Stream<Path> paths = Files.walk(directory)) {
+            paths.sorted(Comparator.reverseOrder()).forEach(path -> {
+                try {
+                    Files.deleteIfExists(path);
+                } catch (IOException ignored) {
+                    // 临时目录残留只浪费磁盘,不影响正确性。
+                }
+            });
+        } catch (IOException ignored) {
+            // 同上,尽力而为。
+        }
+    }
+
     private Path ensureCloneLocked(CodeRepositoryEntity repository) {
         GitInputValidator.requireSafeRepoUrl(repository.getRepoUrl(), allowLocalRepoPath);
         GitInputValidator.requireSafeRef(repository.getDefaultBranch(), "默认分支");

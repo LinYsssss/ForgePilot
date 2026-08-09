@@ -1,6 +1,7 @@
 package com.example.codereview.agent.queue;
 
 import com.example.codereview.agent.error.AgentFailureType;
+import com.example.codereview.ai.AiCallTransientException;
 import com.example.codereview.agent.observability.AgentMetrics;
 import com.example.codereview.agent.orchestration.AgentStepExecutionContext;
 import com.example.codereview.agent.orchestration.AgentStepResult;
@@ -72,6 +73,17 @@ public class AgentStepExecutionService {
         } catch (AgentStepExecutionException exception) {
             return completionService.fail(
                     context, claim.executionToken(), message, exception.getFailureType(), exception.getMessage());
+        } catch (AiCallTransientException exception) {
+            // 首次真实运行即暴露(run14,2026-08-08):LangChain4j 客户端已把 429/5xx/超时正确分类为
+            // AiCallTransientException,但它穿透到下面的兜底 catch 后被按 INTERNAL_ERROR 终态处理,
+            // RETRYABLE_PROVIDER_ERROR 与 scheduleRetry 全程闲置——分类与重试之间缺的就是这一跳。
+            // provider 一次瞬态抖动不该杀死整个 Run,在此映射为可重试的 provider 错误。
+            return completionService.fail(
+                    context,
+                    claim.executionToken(),
+                    message,
+                    AgentFailureType.RETRYABLE_PROVIDER_ERROR,
+                    failureMessage(exception));
         } catch (RuntimeException exception) {
             return completionService.fail(
                     context,

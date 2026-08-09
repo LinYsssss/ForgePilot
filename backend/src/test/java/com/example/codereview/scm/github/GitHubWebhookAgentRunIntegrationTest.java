@@ -36,7 +36,10 @@ import org.testcontainers.junit.jupiter.Testcontainers;
         "spring.rabbitmq.listener.simple.auto-startup=false",
         "management.health.rabbit.enabled=false",
         // 合流修复:prod profile 下 ProdSecretValidator 要求签名密钥非空且 ≥16 字符。
-        "app.sandbox.signing-secret=it-only-signing-secret-not-prod"
+        "app.sandbox.signing-secret=it-only-signing-secret-not-prod",
+        // 同上:prod profile 要求工具镜像按完整 64 位小写 hex digest 固定(r2 新增快速失败)。
+        "app.sandbox.tool-image=it-only/sandbox-tools@sha256:"
+                + "0000000000000000000000000000000000000000000000000000000000000000"
 })
 @AutoConfigureMockMvc
 @Testcontainers(disabledWithoutDocker = true)
@@ -81,7 +84,7 @@ class GitHubWebhookAgentRunIntegrationTest extends IntegrationTestContainers {
     }
 
     @Test
-    void signedPullRequestDeliveryCreatesReceivedAgentRunAndProcessedDelivery() throws Exception {
+    void signedPullRequestDeliverySchedulesFirstStepAndProcessesDelivery() throws Exception {
         byte[] body = fixture("opened.json");
         mockMvc.perform(post("/api/webhooks/scm/github")
                         .header("X-GitHub-Event", "pull_request")
@@ -90,10 +93,12 @@ class GitHubWebhookAgentRunIntegrationTest extends IntegrationTestContainers {
                         .content(body))
                 .andExpect(status().isAccepted());
 
+        // 首步与建 Run 同事务派发(kickoff):提交后即离开 RECEIVED。本上下文关闭了 MQ 消费者,
+        // 状态确定性停在 PREPARING_REPOSITORY,不会继续推进。
         assertThat(agentRuns.findByTriggerKey("github:42:pr:7:headsha111"))
                 .get()
                 .extracting(run -> run.getStatus())
-                .isEqualTo(AgentRunStatus.RECEIVED);
+                .isEqualTo(AgentRunStatus.PREPARING_REPOSITORY);
         assertThat(deliveries.findByProviderAndDeliveryId(ScmProviderType.GITHUB, "tc-delivery-1"))
                 .get()
                 .extracting(delivery -> delivery.getStatus())

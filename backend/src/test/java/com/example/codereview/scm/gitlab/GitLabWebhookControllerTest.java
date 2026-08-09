@@ -80,14 +80,15 @@ class GitLabWebhookControllerTest {
     }
 
     @Test
-    void acceptsOpenMergeRequestAndStartsReceivedRun() throws Exception {
+    void acceptsOpenMergeRequestAndSchedulesFirstStep() throws Exception {
         mockMvc.perform(request(fixture("mr_open.json"), TOKEN, "u-open"))
                 .andExpect(status().isAccepted())
                 .andExpect(jsonPath("$.data.outcome").value("PROCESSED"))
                 .andExpect(jsonPath("$.data.agentRunId").isNumber());
 
+        // 首步与建 Run 同事务派发(kickoff):提交后即离开 RECEIVED,消费者关闭时停在首步状态。
         assertThat(agentRuns.findByTriggerKey("gitlab:99:pr:5:glhead111"))
-                .get().extracting(AgentRun::getStatus).isEqualTo(AgentRunStatus.RECEIVED);
+                .get().extracting(AgentRun::getStatus).isEqualTo(AgentRunStatus.PREPARING_REPOSITORY);
     }
 
     @Test

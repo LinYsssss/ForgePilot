@@ -36,3 +36,52 @@
 ### Status
 
 [OK] **Completed**
+
+
+## Session 2: r1: 解除 CI 阻塞——12 天连红终结,供应链门禁首跑即咬合
+
+**Date**: 2026-08-04
+**Task**: r1: 解除 CI 阻塞——12 天连红终结,供应链门禁首跑即咬合
+**Branch**: `integration/track-ab`
+
+### Summary
+
+F-01 trivy tag 修复途中发现上游删除 setup-trivy 旧 tag,升至 v0.36.0;F-02 测试归档路径隔离到 tmpdir;F-13 关闭 PR #3。门禁首跑咬出 CVE-2026-41695(HIGH),以 spring-data-bom 2025.0.12 属性覆盖当场修复。run 30888394125 三作业全绿,前端 21 项与 model-service 9 项测试首次在 CI 实际执行。证据存档 trivy-evidence.md,规范沉淀至 security/quality-guidelines。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `cd09a9d` | (see git log) |
+| `31373e6` | (see git log) |
+| `bb11cd7` | (see git log) |
+| `0a369c3` | (see git log) |
+| `ff4edde` | (see git log) |
+| `f9e97c4` | (see git log) |
+
+### Status
+
+[OK] **Completed**
+
+
+## Session 3: r2: 沙箱归档断链修复收官——run18 全链路首次 COMPLETED
+
+**Date**: 2026-08-09
+**Task**: r2: 沙箱归档断链修复收官——run18 全链路首次 COMPLETED
+**Branch**: `integration/track-ab`
+
+### Summary
+
+F-03/F-04/F-05 契约核心落地(同构 WorkspaceArchiveReference+双向金标、WorkspaceArchiveService 唯一生产者原子落盘、SANDBOX_TOOL_IMAGE 生产快速失败)。当日 e2e 四轮点火修四截+复查自修四处:规划提示词数值约束同源、clampOverBudget 服务端裁剪+回执预算修正、claims/findings 条目形状钉死、瞬态错误接通重试、ModelJsonOutputs 防线单源、空知识白名单分档、无凭证发布显式跳过。run18 八步全绿:6 findings 持久化、发布记录 skipped 留痕、归档就地清理。backend 575/0 runner 75/0。规范沉淀 agent-model-contracts.md+error-handling.md 两硬约定。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `28a12b9` | (see git log) |
+| `d5a3cd3` | (see git log) |
+| `570c82c` | (see git log) |
+
+### Status
+
+[OK] **Completed**

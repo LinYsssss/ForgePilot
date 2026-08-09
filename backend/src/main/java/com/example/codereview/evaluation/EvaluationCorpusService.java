@@ -1,5 +1,6 @@
 package com.example.codereview.evaluation;
 
+import com.example.codereview.common.PinnedImageDigests;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
@@ -23,7 +24,7 @@ public class EvaluationCorpusService {
             JsonNode json = mapper.readTree(manifest.toFile());
             EvaluationReport.FixedRun fixed = mapper.treeToValue(json.path("fixedRun"), EvaluationReport.FixedRun.class);
             if (fixed.temperature() != 0) errors.add("temperature must be zero");
-            if (fixed.toolImage() == null || !fixed.toolImage().matches(".+@sha256:[a-fA-F0-9]+")) errors.add("tool image must be digest pinned");
+            if (!PinnedImageDigests.isPinned(fixed.toolImage())) errors.add("tool image must be digest pinned");
             List<EvaluationReport.CaseReport> cases = new ArrayList<>(); Set<String> ids = new HashSet<>();
             for (JsonNode item : json.path("cases")) {
                 EvaluationReport.CaseReport value = mapper.treeToValue(item, EvaluationReport.CaseReport.class);

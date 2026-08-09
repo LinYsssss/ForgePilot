@@ -40,6 +40,31 @@ class ModelOutputValidatorTest {
         assertInvalid(validJson(), "unknown tool");
     }
 
+    // 计划校验器裁剪超预算条目后,本验证器交付的是"经裁剪的规范形态":
+    // response.plan() 只含存活条目,下游无需理解裁剪语义。
+    @Test
+    void rebuildsResponseWithSurvivingPlanItemsWhenClamped() throws Exception {
+        var kept = new ReviewPlan.PlanItem(
+                "read_diff", mapper.createObjectNode().put("path", "src/Main.java"),
+                "inspect", "line evidence"
+        );
+        var clamped = new ReviewPlan.PlanItem(
+                "read_diff", mapper.createObjectNode().put("path", "src/Other.java"),
+                "over budget", "line evidence"
+        );
+        String raw = mapper.writeValueAsString(new StructuredModelResponse(
+                "Review changed files", List.of(kept, clamped)
+        ));
+        Mockito.when(plans.validate(Mockito.anyList(), Mockito.eq(false)))
+                .thenReturn(new ReviewPlanValidator.ValidationResult(true, List.of(kept), List.of()));
+
+        var result = validator.validate(raw, false, ignored -> ignored);
+
+        assertThat(result.valid()).isTrue();
+        assertThat(result.response().plan()).containsExactly(kept);
+        assertThat(result.response().summary()).isEqualTo("Review changed files");
+    }
+
     @Test
     void attemptsOneRepairThenReturnsTypedFailure() {
         AtomicInteger repairs = new AtomicInteger();

@@ -8,6 +8,7 @@ import com.example.codereview.agent.model.ModelOutputValidator;
 import com.example.codereview.agent.model.LangChainToolSchemaMapper;
 import com.example.codereview.agent.model.StructuredAgentModelService;
 import com.example.codereview.agent.orchestration.AgentStepExecutionContext;
+import com.example.codereview.agent.orchestration.AgentAnalysisContext;
 import com.example.codereview.agent.orchestration.AgentAnalysisContextRepository;
 import com.example.codereview.agent.orchestration.AgentChangeAnalysisCheckpoint;
 import com.example.codereview.agent.orchestration.AgentStepExecutor;
@@ -32,9 +33,13 @@ import org.springframework.stereotype.Component;
 public final class PlanningStepExecutor implements AgentStepExecutor {
 
     private static final Set<String> PLANNING_TOOLS = Set.of("git.diff", "git.file", "code.search");
+    // claims 条目形状与执行步终稿 schema 保持同源:空数组示例等于没有契约,
+    // 条目键名(text/knowledgeBacked/citationIds)必须逐键写明。规划步不要求产出
+    // claims,此处是对同一输出契约的预防性对齐。
     private static final String OUTPUT_SCHEMA = """
             {"summary":"string","plan":[{"toolName":"string","arguments":{},
-            "purpose":"string","expectedEvidence":"string","modelRequestId":"string"}],"claims":[]}
+            "purpose":"string","expectedEvidence":"string","modelRequestId":"string"}],
+            "claims":[{"text":"string","knowledgeBacked":false,"citationIds":[]}]}
             """;
 
     private final StructuredAgentModelService models;
@@ -46,6 +51,7 @@ public final class PlanningStepExecutor implements AgentStepExecutor {
     private final AgentModelBudgetPolicy modelBudget;
     private final LangChainToolSchemaMapper toolSchemas;
     private final AgentAnalysisContextRepository analysisContexts;
+    private final ReviewPlanValidator validator;
 
     @Autowired
     public PlanningStepExecutor(
@@ -57,7 +63,8 @@ public final class PlanningStepExecutor implements AgentStepExecutor {
             ObjectMapper mapper,
             AgentModelBudgetPolicy modelBudget,
             LangChainToolSchemaMapper toolSchemas,
-            AgentAnalysisContextRepository analysisContexts
+            AgentAnalysisContextRepository analysisContexts,
+            ReviewPlanValidator validator
     ) {
         this.models = models;
         this.client = client;
@@ -68,6 +75,7 @@ public final class PlanningStepExecutor implements AgentStepExecutor {
         this.modelBudget = modelBudget;
         this.toolSchemas = toolSchemas;
         this.analysisContexts = analysisContexts;
+        this.validator = validator;
     }
 
     public PlanningStepExecutor(
@@ -76,10 +84,11 @@ public final class PlanningStepExecutor implements AgentStepExecutor {
             AgentPromptAssembler prompts,
             ReviewPlanRepository plans,
             AgentToolRegistry tools,
-            ObjectMapper mapper
+            ObjectMapper mapper,
+            ReviewPlanValidator validator
     ) {
         this(models, client, prompts, plans, tools, mapper, AgentModelBudgetPolicy.defaults(),
-                new LangChainToolSchemaMapper(mapper), null);
+                new LangChainToolSchemaMapper(mapper), null, validator);
     }
 
     public PlanningStepExecutor() {
@@ -92,6 +101,7 @@ public final class PlanningStepExecutor implements AgentStepExecutor {
         this.modelBudget = null;
         this.toolSchemas = null;
         this.analysisContexts = null;
+        this.validator = null;
     }
 
     @Override
@@ -115,13 +125,35 @@ public final class PlanningStepExecutor implements AgentStepExecutor {
                 .map(AgentToolRegistry.ToolDescriptor::name)
                 .collect(java.util.stream.Collectors.toUnmodifiableSet());
         Set<String> activePlugins = activePlugins(context.agentRunId());
+        // 提示词声明上限(第一道约束)之后,首次真实运行(run12)MiMo 违规项从 2 降到 1,
+        // 但温度 0 下仍会给同一工具排 4 个计划项——提示词工程到头。数值上限是基础设施
+        // 约束而非语义判断,按既定哲学转为服务端确定性裁剪兜底(clampOverBudget):
+        // 超预算条目被丢弃并以 WARN 留痕,可审计,不再让整个 Run 因可裁剪的越限 FAILED。
         ReviewPlanValidator.PlanPolicy policy = new ReviewPlanValidator.PlanPolicy(
-                available, activePlugins, available, 8, true
+                available, activePlugins, available, 8, true, true
         );
+        // 变更 diff 喂进规划提示词(assembler 按 diffBudget 截断)。此前该槽传空串,
+        // 模型对"改了什么"一无所知,只能凭空编造工具参数(空 path/query),
+        // 在执行步被策略拒绝——首次真实运行即暴露。语义参数(看哪个文件、搜什么)
+        // 归模型,基础设施参数(archiveRef/base/head)由执行步服务端注入,模型无需知晓。
+        String changedDiff = analysisContexts == null ? "" : analysisContexts
+                .findByAgentRunId(context.agentRunId())
+                .map(AgentAnalysisContext::getChangedDiff)
+                .orElse("");
+        // 验证器强制的数值上限必须白纸黑字写进提示词——首次真实运行(run11)MiMo 不知道
+        // per-tool limit=3,给同一工具排了 5 个计划项,ReviewPlanValidator 拒绝
+        // (tool repetition exceeds limit 3)→ INVALID_MODEL_OUTPUT,步骤不重试,整个
+        // Run 直接 FAILED;温度 0 下同错必复现,只能靠提示词根治。数字引用
+        // policy.remainingToolCalls() 与 validator.defaultToolLimit() 同源取值,
+        // 不另写字面量,防止提示词与校验规则再次漂移(与执行步终稿提示词同一手法)。
         var prompt = prompts.assemble(new AgentPromptAssembler.Input(
                 "review-v1",
-                "Create a bounded review plan using only the supplied registered read-only tools.",
-                "",
+                "Create a bounded review plan using only the supplied registered read-only tools. "
+                        + "The plan may contain at most " + policy.remainingToolCalls()
+                        + " items in total, and the same toolName may appear at most "
+                        + validator.defaultToolLimit() + " times across the whole plan. "
+                        + "Exceeding either limit fails validation for the entire plan.",
+                changedDiff == null ? "" : changedDiff,
                 "",
                 "Active language plugins: " + activePlugins
                         + "\nAvailable LangChain4j tool specifications: " + toolSchemas.mapAll(descriptors),

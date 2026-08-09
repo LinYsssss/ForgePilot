@@ -77,3 +77,70 @@ authenticated.value = true
 ---
 
 **Related**: `.trellis/tasks/07-31-feature-enhance/research/compare-walkthrough-result.md` (discovery record), `backend/src/test/java/com/example/codereview/config/SpaCsrfBrowserFlowTest.java`.
+
+---
+
+## Scenario: Supply-chain gate (trivy) & dependency CVE remediation
+
+### 1. Scope / Trigger
+
+- Trigger: any change to the `supply-chain` job in `.github/workflows/ci.yml`, to `deploy/scan-images.sh`, or any dependency bump made to clear a CVE reported by the gate. The gate blocks on **fixable HIGH/CRITICAL only** (`ignore-unfixed: true` / same policy in `scan-images.sh`), so every red here is actionable by design — never "record and defer" a finding that keeps CI red.
+
+### 2. Signatures
+
+- Gate = two layers, both must pass:
+  ```yaml
+  uses: aquasecurity/trivy-action@v0.36.0   # fs scan of Maven/npm/Python manifests, exit-code "1"
+  run: deploy/scan-images.sh reposage-{backend,frontend,sandbox-runner,model-service}:ci
+  ```
+- Remediation pattern (backend): override the Boot-managed version via a property in `backend/pom.xml` `<properties>`, never by hardcoding versions in `<dependencies>`:
+  ```xml
+  <!-- CVE-2026-41695(DoS,HIGH):Boot 3.5.14 manages 2025.0.11 (commons 3.5.11), fixed in 3.5.12 => BOM 2025.0.12. -->
+  <spring-data-bom.version>2025.0.12</spring-data-bom.version>
+  ```
+  Precedents in the same file: `jackson-bom.version`, `spring-framework.version`, `tomcat.version`, `postgresql.version`.
+
+### 3. Contracts
+
+- Action pinning: `aquasecurity/trivy-action` release tags are `v`-prefixed. Versions **≤ v0.29.0 are permanently broken** — they pin `aquasecurity/setup-trivy` by old tags that upstream has deleted (`Unable to resolve action ... setup-trivy@v0.2.1`). v0.33.1+ pin setup-trivy by commit SHA; stay on those.
+- A 2-second failure at "Set up job" means action resolution, not scanning — check transitive action refs, not only the top-level tag.
+- CVE comment convention: every override property carries a comment naming the CVE, the Boot-managed version, and the fixed version.
+
+### 4. Validation & Error Matrix
+
+- Fixable HIGH/CRITICAL in any image → `Scan images` fails: `FAIL: 存在已有修复版本的 HIGH/CRITICAL 漏洞,升级依赖或基础镜像后重扫`.
+- Unresolvable action ref → job dies at "Set up job" in ~2 s, nothing scanned (a gate that never ran looks like a gate that passed — verify output exists, not just green).
+- Fixable HIGH/CRITICAL in a manifest → `Scan dependency manifests` step fails (exit-code "1").
+
+### 5. Good/Base/Bad Cases
+
+- Good: bump via BOM property (patch-level), verify resolution, full test suite green, CI image scan returns `Total: 0`.
+- Base: finding has no fixed version → gate ignores it (`ignore-unfixed`), no action needed.
+- Bad: pinning `trivy-action@v0.28.0` (dead transitive tag); hardcoding a version inside `<dependencyManagement>`/`<dependencies>` instead of the property override; "registering the CVE for later" while the gate stays red.
+
+### 6. Tests Required
+
+- After an override, verify what actually resolves before pushing:
+  ```bash
+  mvn -s .mvn/settings.xml help:evaluate -Dexpression=<property> -q -DforceStdout
+  mvn -s .mvn/settings.xml dependency:list -DincludeArtifactIds=<artifact> -q -DoutputFile=/dev/stdout
+  ```
+- Full backend suite (containerized on the deploy host) + the CI `supply-chain` job itself as the authoritative end-to-end check.
+
+### 7. Wrong vs Correct
+
+#### Wrong
+```yaml
+uses: aquasecurity/trivy-action@0.28.0    # tag without v never existed
+uses: aquasecurity/trivy-action@v0.28.0   # exists, but transitively dead (deleted setup-trivy tag)
+```
+
+#### Correct
+```yaml
+# v0.29.0 and earlier pin deleted setup-trivy tags; v0.33.1+ pin by commit SHA.
+uses: aquasecurity/trivy-action@v0.36.0
+```
+
+---
+
+**Related**: `.trellis/tasks/08-03-r1-fix-unblock-ci/trivy-evidence.md` (first real run of the gate: detection + remediation record), `deploy/scan-images.sh`.

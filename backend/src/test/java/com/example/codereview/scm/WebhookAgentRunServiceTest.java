@@ -16,6 +16,10 @@ import org.springframework.test.context.TestPropertySource;
  * Verifies the SCM-event → Agent Run rules: one verified event creates exactly one RECEIVED run, an
  * exact replay (same provider+installation+PR+head SHA) returns the original run and creates nothing
  * new, and a newer head SHA starts a fresh run while superseding the older active run for the same PR.
+ *
+ * <p>RECEIVED is only this service's hand-off state: the first step is scheduled by the queue layer's
+ * AgentRunKickoffListener reacting to {@code AgentRunCreatedEvent} in the same transaction — that
+ * listener is deliberately outside this JPA slice, so runs stay RECEIVED here.
  */
 @DataJpaTest
 @Import({WebhookAgentRunService.class, AgentStateMachine.class})

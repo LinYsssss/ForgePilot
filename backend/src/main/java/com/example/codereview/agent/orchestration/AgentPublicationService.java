@@ -22,12 +22,16 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class AgentPublicationService {
+
+    private static final Logger log = LoggerFactory.getLogger(AgentPublicationService.class);
 
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private com.example.codereview.ai.langchain4j.LangChain4jRolloutPolicy rolloutPolicy;
@@ -99,6 +103,23 @@ public class AgentPublicationService {
         if (installation.getProvider() != context.getProvider()) {
             throw new IllegalStateException("SCM provider context mismatch");
         }
+        // 无凭证 installation 是合法演示姿态(run17 实证,2026-08-09:演示 installation
+        // credentialConfigured=false、apiBaseUrl=null,仓库在 GitHub 并不存在,凭空投递必失败,
+        // 反而把合法姿态打成 FAILED,与 run16 的"零知识入库项目"同理)。发布步的职责分层——
+        // 渲染与落库必做,远端投递有凭证才做;因此在解密/构造 publisher 上下文之前就分流,
+        // 发布记录可审计地写明"渲染完成、远端投递跳过"。生产投递路径(有凭证)零改动。
+        String credential = installation.getEncryptedCredential();
+        if (credential == null || credential.isBlank()) {
+            ScmPublicationResult skipped = new ScmPublicationResult(
+                    true, List.of(),
+                    "SCM delivery skipped: installation has no credential (local demo posture)"
+            );
+            record.record(skipped);
+            publications.save(record);
+            log.warn("Agent run {} 远端投递已跳过:installation {} 未配置凭证(本地演示姿态),渲染与发布记录照常落库",
+                    runId, installation.getId());
+            return record;
+        }
         ScmReviewPublisher publisher = publishers.stream()
                 .filter(value -> value.type() == context.getProvider()).findFirst()
                 .orElseThrow(() -> new IllegalStateException("SCM publisher is unavailable"));
@@ -114,10 +135,13 @@ public class AgentPublicationService {
         } catch (SecurityException security) {
             throw new AgentStepExecutionException(AgentFailureType.SECURITY_VIOLATION, security.getMessage());
         } catch (RuntimeException failure) {
+            // 盲错修复(与 run15 教训同类):只有一句 "SCM publication failed" 时,连
+            // "null baseUrl 还是 401"都分不出来,run17 只能靠翻库反推根因。追加定界的底层原因,
+            // 截断手法沿用 ModelOutputValidator.limit;retryable 分类逻辑保持不变。
             throw new AgentStepExecutionException(
                     retryable(failure) ? AgentFailureType.RETRYABLE_PROVIDER_ERROR
                             : AgentFailureType.PERMANENT_PROVIDER_ERROR,
-                    "SCM publication failed"
+                    "SCM publication failed: " + describe(failure)
             );
         }
         record.record(result);
@@ -174,5 +198,13 @@ public class AgentPublicationService {
 
     private boolean retryable(List<Integer> codes) {
         return codes.stream().anyMatch(code -> code == 429 || code >= 500);
+    }
+
+    /** 底层失败的定界描述:优先原始 message,无 message 时退回异常类型名,不能再回到全盲。 */
+    private String describe(RuntimeException failure) {
+        String detail = failure.getMessage() == null || failure.getMessage().isBlank()
+                ? failure.getClass().getSimpleName()
+                : failure.getMessage();
+        return detail.length() <= 2_000 ? detail : detail.substring(0, 2_000);
     }
 }

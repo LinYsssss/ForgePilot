@@ -9,12 +9,16 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 @Component
 public class ReviewPlanValidator {
+
+    private static final Logger log = LoggerFactory.getLogger(ReviewPlanValidator.class);
 
     private final AgentToolRegistry tools;
     private final ObjectMapper mapper;
@@ -49,6 +53,14 @@ public class ReviewPlanValidator {
         this.maxArgumentBytes = maxArgumentBytes;
     }
 
+    /**
+     * 单工具重复上限的单一事实源:规划提示词必须引用此值向模型公开约束,
+     * 不得在别处另写字面量,防止提示词与校验规则漂移(run11 实证教训)。
+     */
+    public int defaultToolLimit() {
+        return defaultToolLimit;
+    }
+
     public ValidationResult validate(List<ReviewPlan.PlanItem> items, boolean approved) {
         return validate(items, approved, PlanPolicy.unrestricted());
     }
@@ -65,6 +77,7 @@ public class ReviewPlanValidator {
 
         Map<String, Integer> counts = new HashMap<>();
         Set<String> requestIds = new java.util.HashSet<>();
+        List<ReviewPlan.PlanItem> survivors = new ArrayList<>();
         for (int index = 0; index < items.size(); index++) {
             ReviewPlan.PlanItem item = items.get(index);
             String prefix = "item[" + index + "]: ";
@@ -76,19 +89,14 @@ public class ReviewPlanValidator {
                 errors.add(prefix + "unknown tool " + item.toolName());
                 continue;
             }
+            // 内在缺陷(工具不合法、缺参、缺审批等)永远是硬错误;先于预算判断收集,
+            // 使裁剪只作用于"内在合法但超预算"的条目——裁剪不是给坏条目开的后门。
+            int errorsBefore = errors.size();
             if (!policy.allowsState(item.toolName())) {
                 errors.add(prefix + "tool is not allowed in current state");
             }
             if (!policy.authorizesProject(item.toolName())) {
                 errors.add(prefix + "tool is not authorized for project");
-            }
-            int count = counts.merge(item.toolName(), 1, Integer::sum);
-            if (counts.values().stream().mapToInt(Integer::intValue).sum() > policy.remainingToolCalls()) {
-                errors.add(prefix + "remaining budget does not allow another tool call");
-            }
-            int limit = perToolLimits.getOrDefault(item.toolName(), defaultToolLimit);
-            if (count > limit) {
-                errors.add(prefix + "tool repetition exceeds limit " + limit);
             }
             if (tools.riskLevel(item.toolName()).isApprovalRequired() && !approved) {
                 errors.add(prefix + "tool requires approval");
@@ -111,9 +119,40 @@ public class ReviewPlanValidator {
                     errors.add(prefix + "duplicate model tool request ID");
                 }
             }
+            boolean intrinsicallyValid = errors.size() == errorsBefore;
+            // 预算判断在 merge 之前完成:被裁剪的条目不落入 counts,自然不消耗预算。
+            int limit = perToolLimits.getOrDefault(item.toolName(), defaultToolLimit);
+            int prospectiveCount = counts.getOrDefault(item.toolName(), 0) + 1;
+            int prospectiveTotal = counts.values().stream().mapToInt(Integer::intValue).sum() + 1;
+            boolean overRepetition = prospectiveCount > limit;
+            boolean overTotal = prospectiveTotal > policy.remainingToolCalls();
+            if (policy.clampOverBudget() && intrinsicallyValid && (overRepetition || overTotal)) {
+                // no silent caps:裁剪必须留痕,WARN 是该决策唯一的可审计出口。
+                log.warn(
+                        "Clamped over-budget plan item [{}] tool={} reason={}",
+                        index,
+                        item.toolName(),
+                        overRepetition
+                                ? "tool repetition exceeds limit " + limit
+                                : "remaining budget " + policy.remainingToolCalls() + " exhausted"
+                );
+                continue;
+            }
+            if (overTotal) {
+                errors.add(prefix + "remaining budget does not allow another tool call");
+            }
+            if (overRepetition) {
+                errors.add(prefix + "tool repetition exceeds limit " + limit);
+            }
+            counts.merge(item.toolName(), 1, Integer::sum);
+            survivors.add(item);
+        }
+        if (errors.isEmpty() && survivors.isEmpty()) {
+            // 全部条目都被裁掉时不得静默放行空计划——空计划与"计划为空"同罪。
+            errors.add("plan must not be empty after clamping");
         }
 
-        return new ValidationResult(errors.isEmpty(), errors.isEmpty() ? List.copyOf(items) : List.of(), List.copyOf(errors));
+        return new ValidationResult(errors.isEmpty(), errors.isEmpty() ? List.copyOf(survivors) : List.of(), List.copyOf(errors));
     }
 
     private int jsonBytes(Object value) {
@@ -136,7 +175,8 @@ public class ReviewPlanValidator {
             Set<String> activePlugins,
             Set<String> projectAuthorizedTools,
             int remainingToolCalls,
-            boolean requireModelRequestIds
+            boolean requireModelRequestIds,
+            boolean clampOverBudget
     ) {
         public PlanPolicy(
                 Set<String> stateAllowedTools,
@@ -144,7 +184,16 @@ public class ReviewPlanValidator {
                 Set<String> projectAuthorizedTools,
                 int remainingToolCalls
         ) {
-            this(stateAllowedTools, activePlugins, projectAuthorizedTools, remainingToolCalls, false);
+            this(stateAllowedTools, activePlugins, projectAuthorizedTools, remainingToolCalls, false, false);
+        }
+        public PlanPolicy(
+                Set<String> stateAllowedTools,
+                Set<String> activePlugins,
+                Set<String> projectAuthorizedTools,
+                int remainingToolCalls,
+                boolean requireModelRequestIds
+        ) {
+            this(stateAllowedTools, activePlugins, projectAuthorizedTools, remainingToolCalls, requireModelRequestIds, false);
         }
         public PlanPolicy {
             stateAllowedTools = Set.copyOf(stateAllowedTools);
@@ -164,7 +213,7 @@ public class ReviewPlanValidator {
         }
 
         public static PlanPolicy unrestricted() {
-            return new PlanPolicy(Set.of("*"), Set.of(), Set.of("*"), Integer.MAX_VALUE, false);
+            return new PlanPolicy(Set.of("*"), Set.of(), Set.of("*"), Integer.MAX_VALUE, false, false);
         }
     }
 }

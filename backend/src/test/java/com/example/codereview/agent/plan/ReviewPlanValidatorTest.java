@@ -84,6 +84,81 @@ class ReviewPlanValidatorTest {
         ), false, policy).errors()).anyMatch(error -> error.contains("remaining budget"));
     }
 
+    // run12 实证:提示词声明上限后模型违规项 2→1 但仍越限,数值上限属基础设施约束,
+    // 服务端确定性裁剪兜底——内在合法但超预算的条目被丢弃而非整计划报错。
+    @Test
+    void clampDropsOverRepeatedItemsInsteadOfFailing() {
+        registerDefaultLimitTool("code_search");
+        var result = validator.validate(List.of(
+                item("code_search", "one"),
+                item("code_search", "two"),
+                item("code_search", "three"),
+                item("code_search", "four")
+        ), false, clampPolicy(8));
+
+        assertThat(result.valid()).isTrue();
+        assertThat(result.errors()).isEmpty();
+        assertThat(result.validatedItems()).extracting(ReviewPlan.PlanItem::purpose)
+                .containsExactly("one", "two", "three");
+    }
+
+    @Test
+    void clampDropsItemsBeyondTotalBudgetWithoutConsumingIt() {
+        registerDefaultLimitTool("tool_a");
+        registerDefaultLimitTool("tool_b");
+        registerDefaultLimitTool("tool_c");
+        var items = new java.util.ArrayList<ReviewPlan.PlanItem>();
+        for (String tool : List.of("tool_a", "tool_b", "tool_c")) {
+            for (int i = 1; i <= 3; i++) {
+                items.add(item(tool, tool + "-" + i));
+            }
+        }
+
+        var result = validator.validate(items, false, clampPolicy(8));
+
+        assertThat(result.valid()).isTrue();
+        assertThat(result.errors()).isEmpty();
+        assertThat(result.validatedItems()).hasSize(8);
+    }
+
+    @Test
+    void clampToEmptyPlanIsStillAnError() {
+        var result = validator.validate(List.of(item("read_diff", "one")), false, clampPolicy(0));
+
+        assertThat(result.valid()).isFalse();
+        assertThat(result.validatedItems()).isEmpty();
+        assertThat(result.errors()).contains("plan must not be empty after clamping");
+    }
+
+    @Test
+    void withoutClampOverBudgetStillFailsHard() {
+        registerDefaultLimitTool("code_search");
+        var result = validator.validate(List.of(
+                item("code_search", "one"),
+                item("code_search", "two"),
+                item("code_search", "three"),
+                item("code_search", "four")
+        ), false, new ReviewPlanValidator.PlanPolicy(
+                java.util.Set.of("*"), java.util.Set.of(), java.util.Set.of("*"), 8, false, false
+        ));
+
+        assertThat(result.valid()).isFalse();
+        assertThat(result.validatedItems()).isEmpty();
+        assertThat(result.errors()).anyMatch(error -> error.contains("tool repetition exceeds limit"));
+    }
+
+    private ReviewPlanValidator.PlanPolicy clampPolicy(int remainingToolCalls) {
+        return new ReviewPlanValidator.PlanPolicy(
+                java.util.Set.of("*"), java.util.Set.of(), java.util.Set.of("*"),
+                remainingToolCalls, false, true
+        );
+    }
+
+    private void registerDefaultLimitTool(String toolName) {
+        when(tools.contains(toolName)).thenReturn(true);
+        when(tools.riskLevel(toolName)).thenReturn(ToolRiskLevel.READ_ONLY);
+    }
+
     private ReviewPlan.PlanItem item(String toolName, String purpose) {
         return new ReviewPlan.PlanItem(
                 toolName,

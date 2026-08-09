@@ -1,12 +1,14 @@
 package com.example.codereview.scm;
 
 import com.example.codereview.agent.run.AgentRun;
+import com.example.codereview.agent.run.AgentRunCreatedEvent;
 import com.example.codereview.agent.run.AgentRunRepository;
 import com.example.codereview.agent.run.AgentRunStatus;
 import com.example.codereview.agent.run.AgentStateMachine;
 import com.example.codereview.agent.orchestration.AgentScmContext;
 import com.example.codereview.agent.orchestration.AgentScmContextRepository;
 import java.util.Optional;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,9 +22,10 @@ import org.springframework.transaction.annotation.Transactional;
  *   <li>A new head SHA yields a distinct key and a fresh {@code RECEIVED} run, and any older active
  *       run for the same PR is superseded (canceled) so only the latest head is in flight.</li>
  * </ul>
- * The run is created in {@code RECEIVED}; downstream scheduling drives it further, so the webhook can
- * acknowledge with {@code 202} as soon as this returns — repository download and Agent execution
- * happen later.
+ * The run is created in {@code RECEIVED}, and an {@link AgentRunCreatedEvent} published in the same
+ * transaction lets the queue layer schedule the first step atomically (see AgentRunKickoffListener) —
+ * the webhook can acknowledge with {@code 202} as soon as this returns; repository download and Agent
+ * execution happen later through the outbox.
  */
 @Service
 public class WebhookAgentRunService {
@@ -34,12 +37,14 @@ public class WebhookAgentRunService {
     private final AgentRunRepository agentRunRepository;
     private final AgentStateMachine stateMachine;
     private final AgentScmContextRepository scmContexts;
+    private final ApplicationEventPublisher events;
 
     public WebhookAgentRunService(AgentRunRepository agentRunRepository, AgentStateMachine stateMachine,
-                                  AgentScmContextRepository scmContexts) {
+                                  AgentScmContextRepository scmContexts, ApplicationEventPublisher events) {
         this.agentRunRepository = agentRunRepository;
         this.stateMachine = stateMachine;
         this.scmContexts = scmContexts;
+        this.events = events;
     }
 
     @Transactional
@@ -64,6 +69,9 @@ public class WebhookAgentRunService {
         scmContexts.save(AgentScmContext.from(run.getId(), event, installation));
 
         supersedeOlderRuns(event, run.getId());
+        // 同事务发布创建事件,由队列层的 BEFORE_COMMIT 监听器排入首步——
+        // Run 与首步 outbox 事件要么一起提交、要么都不存在。
+        events.publishEvent(new AgentRunCreatedEvent(run.getId(), triggerKey));
         return new StartResult(run, true);
     }
 

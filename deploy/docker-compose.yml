@@ -70,6 +70,9 @@ services:
     volumes:
       - ../demo-repos:/app/demo-repos:ro
       - backend_work:/app/.work
+      # 工作区归档链路:backend 在派发沙箱作业前把归档写进该卷(唯一生产者),
+      # sandbox-runner 以只读挂载消费(见下方 :ro)。读写方向不能颠倒。
+      - sandbox_archives:/app/archives
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://localhost:8080/actuator/health || exit 1"]
       interval: 15s
