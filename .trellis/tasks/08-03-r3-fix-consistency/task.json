@@ -3,7 +3,7 @@
   "name": "r3-fix-consistency",
   "title": "修复批3：口径与工程一致性(F-06~F-14)",
   "description": "lockfile换官方源、README基线/Node版本/EMBEDDING默认值口径、python3、Maven统一、API表补漏",
-  "status": "planning",
+  "status": "in_progress",
   "dev_type": null,
   "scope": null,
   "package": null,

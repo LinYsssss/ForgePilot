@@ -30,13 +30,28 @@ jobs:
 
       - name: Verify backend
         working-directory: backend
-        run: mvn -s .mvn/settings.xml verify
+        run: mvn -B -s .mvn/settings.xml verify
 
       # 沙箱执行器是安全边界的一部分,其测试必须进合并门禁,
-      # 否则它的 37 个测试可以静默退化而 CI 依然全绿。
+      # 否则它的测试可以静默退化而 CI 依然全绿。
+      # settings 复用 backend 的同一份(F-11):两个模块必须走同一套仓库解析
+      # (覆盖宿主机全局镜像、强制 HTTPS Central),否则宿主机存在全局
+      # Maven 镜像时两模块的依赖来源会分歧。
       - name: Verify sandbox runner
         working-directory: sandbox-runner
-        run: mvn -B verify
+        run: mvn -B -s ../backend/.mvn/settings.xml verify
+
+      # 前端 lockfile 供应链一致性(F-06):依赖完整性必须锚定官方 registry。
+      # resolved 指向第三方镜像会把完整性信任转嫁给镜像站,且 npm>=12 直接拒装。
+      - name: Check frontend lockfile registry source
+        working-directory: frontend
+        run: |
+          bad="$(grep '"resolved":' package-lock.json | grep -v '"resolved": "https://registry.npmjs.org/' || true)"
+          if [ -n "$bad" ]; then
+            echo "package-lock.json contains resolved URLs outside registry.npmjs.org:"
+            echo "$bad"
+            exit 1
+          fi
 
       - name: Install frontend dependencies
         working-directory: frontend

@@ -86,12 +86,12 @@ Agent 步骤（RabbitMQ 异步，traceId 全程透传）
 - Runner 不接收任何 SCM / LLM / 数据库密钥，只拿到「已脱敏的仓库归档引用 + 签名作业」；Prompt 与工具输出均做密钥脱敏。
 - 单机 Docker Compose 面向**受控演示环境**，不构成对抗恶意多租户的安全隔离边界。
 
-**本地验证基线**（最近一次记录；依赖 Docker 的项在无 Docker 主机上未验证）：
+**测试与验证基线**（数据来源：main 分支 CI run [31310489195](https://github.com/LinYsssss/reposage/actions/runs/31310489195) 与本地容器化全量运行，2026-08-09）：
 
-- 后端 `mvn test`：190 项通过，3 项依赖 Docker 的 Testcontainers 用例明确跳过。
-- Sandbox Runner：37 项通过；前端：4 项测试通过 + 生产 Vite 构建通过。
+- 后端 `mvn verify`：575 项测试在 CI 全部执行并通过（含 3 项 Testcontainers 集成用例；本地容器化运行中这 3 项明确跳过，其余 572 项通过）。
+- Sandbox Runner：75 项通过；前端：21 项测试通过 + 生产 Vite 构建通过；model-service：9 项通过。
 - 评测语料：6 个版本化用例，确定性输入校验通过；提交进仓库的评测基线是**已知混淆矩阵的计算**，不是真实 Docker 语料跑分。
-- 最终发布验收需要 Docker；缺 Docker 时，容器安全、真实链路追踪、语料基准跑分均属**未验证**。
+- 依赖 Docker 的沙箱链路已实测：2026-08-09 在 Docker 环境把 PR 守门 Agent 全链路（webhook → 沙箱取证 → 门禁裁决）端到端跑至 COMPLETED。
 
 Demo 与运维细节见 `docs/PR守门Agent SCM与Sandbox运维验收.md`；Agent 运行时间线可在前端「审查工作台」查看，或经下方 `/api/agent-runs/**` 接口访问。
 
@@ -181,6 +181,8 @@ RAG_FULL_CONTEXT=true
 这样：对话审查走真实 MiMo；检索走**全量注入**（把项目全部文档喂给模型，不依赖 embedding）；文档上传时的向量用本地 mock 占位，不参与审查决策。
 
 > **MiMo 没有 embedding 接口**，所以这里必须用全量注入而不是向量检索。这正是 `RAG_FULL_CONTEXT=true` 的用途。
+>
+> **注意**：`EMBEDDING_PROVIDER` 未显式设置时会**继承 `AI_PROVIDER`**（二者皆空才是 `mock`）。只设 `AI_PROVIDER=openai-compatible` 而漏设它，embedding 会静默切到真实 API——要么产生计费调用，要么在端点无 embedding 路由时直接报错。请像上面一样显式写出。
 
 ---
 
@@ -198,7 +200,7 @@ RAG_FULL_CONTEXT=true
 | `RAG_MAX_CONTEXT_CHARS` | `6000` | 全量注入时上下文最大字符数，超出截断，防止 Prompt 过长 |
 | `RAG_MODE` | `memory` | 向量存储/检索模式：`memory`（内存余弦）/ `pgvector`（数据库向量） |
 | `RAG_TOP_K` | `5` | 向量检索时返回的片段数（全量注入模式下不生效） |
-| `EMBEDDING_PROVIDER` | `mock` | 向量化提供方：`mock`（本地占位）/ `openai-compatible`（真实 embedding API） |
+| `EMBEDDING_PROVIDER` | 继承 `AI_PROVIDER`，二者皆空时 `mock` | 向量化提供方：`mock`（本地占位）/ `openai-compatible`（真实 embedding API）。接真实大模型时请显式设置，避免 embedding 静默跟随 `AI_PROVIDER` 走真实 API |
 | `REVIEW_INLINE` | `true` | `true` 同步审查（免 MQ）；`false` 走 RabbitMQ 异步 |
 | `REVIEW_MAX_DIFF_CHARS` | `20000` | 单个 AI 调用的 Diff 字符预算（分片审查按此打包文件） |
 | `REVIEW_MAX_TOTAL_DIFF_CHARS` | `200000` | 单任务存储的 Diff 总上限（安全边界，超出才截断） |
@@ -300,16 +302,16 @@ NOTIFY_BASE_URL=https://<你的域名>         # 可选,通知里附「查看完
 
 ## API 速查
 
-统一前缀 `/api`，除登录与 SCM webhook 外均需请求头 `Authorization: Bearer <token>`（webhook 改用 HMAC/Token 验签）。
+统一前缀 `/api`，除登录、CSRF 引导（`/api/auth/csrf`）与 SCM webhook 外均需请求头 `Authorization: Bearer <token>`（webhook 改用 HMAC/Token 验签）。
 
 | 模块 | 方法与路径 |
 | --- | --- |
-| 认证 | `POST /api/auth/login`、`GET /api/auth/me`（无公开注册，首个管理员由 `SEED_ADMIN_*` 种子创建） |
+| 认证 | `POST /api/auth/login`、`POST /api/auth/logout`、`GET /api/auth/me`、`GET /api/auth/csrf`（SPA 的 CSRF 引导，未登录可访问；无公开注册，首个管理员由 `SEED_ADMIN_*` 种子创建） |
 | 项目 | `POST /api/projects`、`GET /api/projects`、`GET/PUT/DELETE /api/projects/{projectId}` |
 | 仓库 | `POST/GET/DELETE /api/projects/{projectId}/repository`、`GET .../commits`、`GET .../commits/{commitId}/diff` |
 | PR 工作流 | `POST/GET/PUT /api/projects/{projectId}/pull-requests`、`POST .../pull-requests/{pullRequestId}/review-task`、`POST/GET .../pull-requests/{pullRequestId}/actions` |
-| 知识库 | `POST/GET /api/projects/{projectId}/knowledge/documents`、`DELETE .../documents/{documentId}`、`POST .../knowledge/search` |
-| 审查 | `POST/GET /api/projects/{projectId}/reviews/tasks`、`GET .../tasks/{taskId}`、`GET .../reviews/reports`、`GET .../reports/{reportId}` |
+| 知识库 | `POST/GET /api/projects/{projectId}/knowledge/documents`、`DELETE .../documents/{documentId}`、`POST .../knowledge/search`、`POST .../knowledge/reindex`（重建过期 embedding 的文档索引） |
+| 审查 | `POST/GET /api/projects/{projectId}/reviews/tasks`、`GET .../tasks/{taskId}`、`POST .../tasks/{taskId}/cancel`（取消排队/执行中任务）、`DELETE .../tasks/{taskId}`、`GET .../reviews/reports`、`GET/DELETE .../reports/{reportId}` |
 | 反馈 | `POST/GET /api/review-issues/{issueId}/feedback` |
 | MQ 日志 | `GET /api/mq/logs` |
 | AI 日志 | `GET /api/ai/logs` |
@@ -364,7 +366,7 @@ Sandbox Runner 没有对外 HTTP 端口，只通过专用 RabbitMQ 队列接收�
 | --- | --- |
 | Java | 17 |
 | Maven | 3.9+ |
-| Node.js | 20 LTS |
+| Node.js | 22 LTS（`frontend/package.json` engines 要求 `>=22 <23`，与 Dockerfile、CI 一致） |
 | PostgreSQL | 16 + pgvector |
 | RabbitMQ | 3.13 |
 | Docker Compose | v2 |

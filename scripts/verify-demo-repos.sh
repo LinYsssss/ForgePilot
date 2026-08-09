@@ -57,8 +57,10 @@ if not paths:
 for p in paths:
     compile(p.read_bytes(), str(p), "exec")'
 
+# python3 而非裸 python：Ubuntu 22.04+ 等系统默认无 python 别名，
+# 裸 python 会让本检查恒定误报 FAIL（与 verify-local.sh 口径统一）。
 py_log="$(mktemp)"
-if python -c "$PY_SYNTAX_CHECK" "$DEMO/tenant-user-center/src" >"$py_log" 2>&1; then
+if python3 -c "$PY_SYNTAX_CHECK" "$DEMO/tenant-user-center/src" >"$py_log" 2>&1; then
   pass "tenant-user-center: python syntax"
 else
   fail "tenant-user-center: python syntax"
