@@ -16,10 +16,11 @@ This directory contains guidelines for backend development. Fill in each file wi
 |-------|-------------|--------|
 | [Directory Structure](./directory-structure.md) | Module organization and file layout | To fill |
 | [Database Guidelines](./database-guidelines.md) | ORM patterns, queries, migrations | To fill |
-| [Error Handling](./error-handling.md) | Error types, handling strategies | To fill |
+| [Error Handling](./error-handling.md) | Error types, handling strategies | Partially filled (no-blind-errors; transient→retryable mapping) |
 | [Quality Guidelines](./quality-guidelines.md) | Code standards, forbidden patterns | Partially filled (testing requirements) |
 | [Logging Guidelines](./logging-guidelines.md) | Structured logging, log levels | To fill |
 | [Security Guidelines](./security-guidelines.md) | SPA CSRF contract; supply-chain gate & CVE remediation | Filled |
+| [Agent Model Contracts](./agent-model-contracts.md) | Two-tier defense for model-output constraints; shared defense single-source; explicit posture degradation | Filled |
 
 ---
 

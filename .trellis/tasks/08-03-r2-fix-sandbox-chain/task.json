@@ -3,7 +3,7 @@
   "name": "r2-fix-sandbox-chain",
   "title": "修复批2：沙箱归档断链(F-03/F-04/F-05)",
   "description": "归档引用契约冲突+归档卷无写入方+SANDBOX_TOOL_IMAGE缺配，三处同批修复并补契约测试",
-  "status": "planning",
+  "status": "in_progress",
   "dev_type": null,
   "scope": null,
   "package": null,
