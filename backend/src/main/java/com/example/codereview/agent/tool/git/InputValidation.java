@@ -1,15 +1,17 @@
 package com.example.codereview.agent.tool.git;
 
+import com.example.codereview.sandbox.WorkspaceArchiveReference;
+
 final class InputValidation {
 
     private InputValidation() {
     }
 
     static void requireArchive(String value) {
-        if (value == null || value.isBlank() || value.length() > 512
-                || value.contains("\\") || value.contains("..") || value.startsWith("-")) {
-            throw new IllegalArgumentException("archiveRef is invalid");
-        }
+        // 归档引用的合法性规则收敛到与 Runner 同构的编解码器:后端产出(encode)、
+        // 后端请求校验(这里)、Runner 解析(parse)从此同一规则源。此前这里各写各的
+        // 校验(不查 scheme),放行了 Runner 必拒的 workspace:// 格式,链路必然断。
+        WorkspaceArchiveReference.parse(value);
     }
 
     static void requireRef(String value, String field) {

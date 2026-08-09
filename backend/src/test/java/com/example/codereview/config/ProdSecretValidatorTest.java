@@ -12,11 +12,17 @@ import org.junit.jupiter.api.Test;
 class ProdSecretValidatorTest {
 
     private static final String STRONG = "a-sufficiently-long-random-value-0123456789";
+    private static final String PINNED_IMAGE = "reposage/sandbox-tools@sha256:" + "0".repeat(64);
 
     private ProdSecretValidator validator(String sandboxSecret, String seedUser, String seedPassword,
                                           boolean cookieSecure, long ttlSeconds) {
         return new ProdSecretValidator(STRONG, STRONG, STRONG, STRONG, "",
-                sandboxSecret, seedUser, seedPassword, cookieSecure, ttlSeconds, false, false);
+                sandboxSecret, PINNED_IMAGE, seedUser, seedPassword, cookieSecure, ttlSeconds, false, false);
+    }
+
+    private ProdSecretValidator withToolImage(String toolImage) {
+        return new ProdSecretValidator(STRONG, STRONG, STRONG, STRONG, "",
+                STRONG, toolImage, "", "", true, 86400, false, false);
     }
 
     private ProdSecretValidator valid() {
@@ -31,17 +37,17 @@ class ProdSecretValidatorTest {
     @Test
     void rejectsPlaceholderAndShortCoreSecrets() {
         assertThatThrownBy(() -> new ProdSecretValidator("dev-secret-change-me", STRONG, STRONG, STRONG, "",
-                STRONG, "", "", true, 86400, false, false).validate())
+                STRONG, PINNED_IMAGE, "", "", true, 86400, false, false).validate())
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("JWT_SECRET");
 
         assertThatThrownBy(() -> new ProdSecretValidator(STRONG, "short", STRONG, STRONG, "",
-                STRONG, "", "", true, 86400, false, false).validate())
+                STRONG, PINNED_IMAGE, "", "", true, 86400, false, false).validate())
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("TOKEN_ENCRYPT_KEY");
 
         assertThatThrownBy(() -> new ProdSecretValidator(STRONG, STRONG, "guest", STRONG, "",
-                STRONG, "", "", true, 86400, false, false).validate())
+                STRONG, PINNED_IMAGE, "", "", true, 86400, false, false).validate())
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("DB_PASSWORD");
     }
@@ -103,12 +109,38 @@ class ProdSecretValidatorTest {
     @Test
     void rejectsInsecureScmLocalhostButToleratesLocalDemoRepoSwitch() {
         assertThatThrownBy(() -> new ProdSecretValidator(STRONG, STRONG, STRONG, STRONG, "",
-                STRONG, "", "", true, 86400, false, true).validate())
+                STRONG, PINNED_IMAGE, "", "", true, 86400, false, true).validate())
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("SCM_ALLOW_INSECURE_LOCALHOST");
 
         assertThatCode(() -> new ProdSecretValidator(STRONG, STRONG, STRONG, STRONG, "",
-                STRONG, "", "", true, 86400, true, false).validate())
+                STRONG, PINNED_IMAGE, "", "", true, 86400, true, false).validate())
                 .doesNotThrowAnyException();
+    }
+
+    /**
+     * 工具镜像缺失时网关只会软失败(返回 ENVIRONMENT_INCOMPLETE 而健康检查照常 UP),
+     * 生产必须在启动期拦下;且必须按完整 64 位小写 hex 的真实 digest 固定,
+     * tag、缩写 digest、大写 hex 都不算数(与评测语料的形状校验分档,见 PinnedImageDigests)。
+     */
+    @Test
+    void requiresDigestPinnedSandboxToolImage() {
+        assertThatThrownBy(() -> withToolImage("").validate())
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("SANDBOX_TOOL_IMAGE");
+
+        assertThatThrownBy(() -> withToolImage("reposage/sandbox-tools:1.2.3").validate())
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("digest");
+
+        assertThatThrownBy(() -> withToolImage("reposage/sandbox-tools@sha256:abc123").validate())
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("digest");
+
+        assertThatThrownBy(() -> withToolImage("reposage/sandbox-tools@sha256:" + "A".repeat(64)).validate())
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("digest");
+
+        assertThatCode(() -> withToolImage(PINNED_IMAGE).validate()).doesNotThrowAnyException();
     }
 }

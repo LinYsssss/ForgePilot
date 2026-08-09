@@ -54,6 +54,14 @@ app:
     signing-secret: ${SANDBOX_SIGNING_SECRET:}
     tool-image: ${SANDBOX_TOOL_IMAGE:}
     tool-timeout-ms: ${SANDBOX_TOOL_TIMEOUT_MS:120000}
+    # 工作区归档:backend 是唯一生产者,写入与 sandbox-runner 共享的卷(runner 只读消费)。
+    # 本地 dev/test 没有 /app,该路径必须可配置;Spring 上下文测试一律覆盖到
+    # ${java.io.tmpdir}(F-02 教训:CI runner 非 root,/app 不可写)。
+    archive-root: ${SANDBOX_ARCHIVE_ROOT:/app/archives}
+    # TTL 兜底清扫:正常完成的 Run 在发布步骤就地清理;FAILED/TIMED_OUT 的归档保留到
+    # TTL 以便运维 reopenForRetry 续跑,连同崩溃残留一起由清扫回收,防共享卷膨胀。
+    # 设 0 或负值可停用清扫。
+    archive-ttl: ${SANDBOX_ARCHIVE_TTL:PT6H}
   scm:
     allow-insecure-localhost: ${SCM_ALLOW_INSECURE_LOCALHOST:false}
     webhook:

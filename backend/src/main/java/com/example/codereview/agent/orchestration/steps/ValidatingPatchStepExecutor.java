@@ -6,10 +6,11 @@ import com.example.codereview.agent.orchestration.AgentChangeAnalysisCheckpoint;
 import com.example.codereview.agent.orchestration.AgentStepExecutionContext;
 import com.example.codereview.agent.orchestration.AgentStepExecutor;
 import com.example.codereview.agent.orchestration.AgentStepResult;
-import com.example.codereview.agent.orchestration.PatchArchiveRefResolver;
+import com.example.codereview.agent.orchestration.WorkspaceArchiveService;
 import com.example.codereview.agent.queue.AgentStepExecutionException;
 import com.example.codereview.agent.run.AgentRunStatus;
 import com.example.codereview.agent.tool.ToolContext;
+import com.example.codereview.common.exception.BusinessException;
 import com.example.codereview.finding.FindingRepository;
 import com.example.codereview.language.ToolCommand;
 import com.example.codereview.patch.PatchCandidate;
@@ -33,7 +34,7 @@ public final class ValidatingPatchStepExecutor implements AgentStepExecutor {
     private final PatchValidationService validation;
     private final AgentAnalysisContextRepository contexts;
     private final FindingRepository findings;
-    private final PatchArchiveRefResolver archives;
+    private final WorkspaceArchiveService workspaceArchives;
     private final ObjectMapper mapper;
 
     @Autowired
@@ -42,14 +43,14 @@ public final class ValidatingPatchStepExecutor implements AgentStepExecutor {
             PatchValidationService validation,
             AgentAnalysisContextRepository contexts,
             FindingRepository findings,
-            PatchArchiveRefResolver archives,
+            WorkspaceArchiveService workspaceArchives,
             ObjectMapper mapper
     ) {
         this.patches = patches;
         this.validation = validation;
         this.contexts = contexts;
         this.findings = findings;
-        this.archives = archives;
+        this.workspaceArchives = workspaceArchives;
         this.mapper = mapper;
     }
 
@@ -58,7 +59,7 @@ public final class ValidatingPatchStepExecutor implements AgentStepExecutor {
         this.validation = null;
         this.contexts = null;
         this.findings = null;
-        this.archives = null;
+        this.workspaceArchives = null;
         this.mapper = null;
     }
 
@@ -98,7 +99,14 @@ public final class ValidatingPatchStepExecutor implements AgentStepExecutor {
                     .flatMap(findings::findById)
                     .map(value -> value.getFingerprint() == null ? "" : value.getFingerprint())
                     .orElse("");
-            String archiveRef = archives.resolve(patch);
+            // 补丁归档在验证前才真实产出(head 树 + 候选补丁)。产不出来走既有的设计内降级:
+            // approvable=false 附原因,Run 直接去发布,而不是把整个 Run 打成 FAILED。
+            String archiveRef;
+            try {
+                archiveRef = workspaceArchives.produceForPatch(context.repositoryId(), patch);
+            } catch (BusinessException | IllegalStateException ex) {
+                return publish("sandbox patch validation is unavailable");
+            }
             List<String> completed = new ArrayList<>();
             PatchCandidate current = patch;
             for (Map.Entry<PatchValidationKind, ToolCommand> entry : commands.entrySet()) {

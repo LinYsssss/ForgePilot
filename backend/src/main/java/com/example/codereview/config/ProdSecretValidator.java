@@ -1,5 +1,6 @@
 package com.example.codereview.config;
 
+import com.example.codereview.common.PinnedImageDigests;
 import jakarta.annotation.PostConstruct;
 import java.util.Locale;
 import java.util.Set;
@@ -40,6 +41,7 @@ public class ProdSecretValidator {
     private final String rabbitPassword;
     private final String llmApiKey;
     private final String sandboxSigningSecret;
+    private final String sandboxToolImage;
     private final String seedUsername;
     private final String seedPassword;
     private final boolean authCookieSecure;
@@ -54,6 +56,7 @@ public class ProdSecretValidator {
             @Value("${spring.rabbitmq.password:}") String rabbitPassword,
             @Value("${app.ai.api-key:}") String llmApiKey,
             @Value("${app.sandbox.signing-secret:}") String sandboxSigningSecret,
+            @Value("${app.sandbox.tool-image:}") String sandboxToolImage,
             @Value("${app.security.seed-admin.username:}") String seedUsername,
             @Value("${app.security.seed-admin.password:}") String seedPassword,
             @Value("${app.security.auth-cookie-secure:false}") boolean authCookieSecure,
@@ -67,6 +70,7 @@ public class ProdSecretValidator {
         this.rabbitPassword = rabbitPassword;
         this.llmApiKey = llmApiKey;
         this.sandboxSigningSecret = sandboxSigningSecret;
+        this.sandboxToolImage = sandboxToolImage;
         this.seedUsername = seedUsername;
         this.seedPassword = seedPassword;
         this.authCookieSecure = authCookieSecure;
@@ -82,10 +86,29 @@ public class ProdSecretValidator {
         check("DB_PASSWORD (spring.datasource.password)", dbPassword);
         check("RABBITMQ_PASSWORD (spring.rabbitmq.password)", rabbitPassword);
         check("SANDBOX_SIGNING_SECRET (app.sandbox.signing-secret)", sandboxSigningSecret);
+        checkSandboxToolImage();
         checkOptional("LLM_API_KEY (app.ai.api-key)", llmApiKey);
         checkSeedAdmin();
         checkCookieAndTtl();
         checkOutboundLoopbackSwitches();
+    }
+
+    /**
+     * 工具镜像缺失时网关只会软失败:返回 ENVIRONMENT_INCOMPLETE 而 /actuator/health 照常 UP,
+     * 缺口在健康检查里完全不可见。生产环境把它变成启动期快速失败;格式校验与评测语料的
+     * digest 固定要求同源({@link PinnedImageDigests}),但这里要求完整 64 位真实 digest。
+     * dev/mock profile 不受影响 —— 本校验器仅在 prod profile 装配。
+     */
+    private void checkSandboxToolImage() {
+        String name = "SANDBOX_TOOL_IMAGE (app.sandbox.tool-image)";
+        if (sandboxToolImage == null || sandboxToolImage.isBlank()) {
+            throw new IllegalStateException("生产环境必须配置 " + name
+                    + "，否则沙箱工具调用会在运行期静默降级（ENVIRONMENT_INCOMPLETE）且健康检查不可见");
+        }
+        if (!PinnedImageDigests.isStrictlyPinned(sandboxToolImage.trim())) {
+            throw new IllegalStateException("生产环境 " + name
+                    + " 必须按完整 digest 固定，格式 <镜像>@sha256:<64位小写hex>，当前值不符合");
+        }
     }
 
     /**
