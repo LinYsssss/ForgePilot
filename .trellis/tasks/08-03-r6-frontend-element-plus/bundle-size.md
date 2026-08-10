@@ -24,4 +24,5 @@
 
 | 页面 | index.html | index.css | index.js | gzip 合计 | 备注 |
 | --- | --- | --- | --- | --- | --- |
-| (迁移开始后追加) | | | | | |
+| 登录页(08ac7b0) | 0.83 / 0.48 | 97.74 / 16.95 | 306.13 / 108.99 | 126.42 | 首页摊入 Element 基础层(form/input/button/card 族),对基准 +42.31 gzip |
+| 并行检查点:+概览/项目/仓库/日志四页 | 0.83 / 0.48 | 208.90 / 31.67 | 523.35 / 181.64 | 213.79 | 并行模式下构建集中跑,记检查点而非严格逐页;新增 table/select/skeleton/empty/tag/space/row/col/alert/descriptions 等组件层。对基准 +129.7 gzip,预算(+300)内 |

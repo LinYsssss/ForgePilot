@@ -541,20 +541,6 @@ select { appearance: none; background-image: linear-gradient(45deg, transparent 
 .proj-card:hover .card-actions, .proj-card:focus-within .card-actions { opacity: 1; transform: translateY(0); }
 
 /* ============================================================
-   STATS
-   ============================================================ */
-.stat-grid { display: grid; gap: var(--sp-4); grid-template-columns: repeat(auto-fit, minmax(168px, 1fr)); margin-bottom: var(--sp-5); }
-.stat {
-  background: var(--surface); border: 1px solid var(--border); border-radius: var(--r);
-  padding: var(--sp-5); box-shadow: var(--e-1), var(--inset-hi); position: relative; overflow: hidden;
-}
-.stat .label { color: var(--text-dim); font-size: var(--fs-xs); font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; }
-.stat .value { font-family: var(--font-display); font-size: var(--fs-3xl); font-weight: 800; margin-top: var(--sp-2); letter-spacing: -0.02em; line-height: 1; }
-.stat .value.tinted-high { color: var(--risk-high); }
-.stat .value.tinted-ok { color: var(--risk-low); }
-.stat .spark { position: absolute; right: var(--sp-4); top: var(--sp-4); font-size: var(--fs-lg); opacity: 0.5; }
-
-/* ============================================================
    DOCUMENTS
    ============================================================ */
 .doc-grid { display: grid; gap: var(--sp-3); grid-template-columns: repeat(auto-fill, minmax(232px, 1fr)); }
@@ -929,35 +915,6 @@ button.vote.on-NEED_DISCUSSION { background: var(--risk-medium-bg); color: var(-
 .field-hint{display:block;color:var(--muted);font-size:12px;margin-top:5px}.inline-link{border:0;background:none;color:var(--accent);padding:0;cursor:pointer;font:inherit}
 
 /* ============================================================
-   DASHBOARD VIZ · 阶段1(风险分布环形 + 审查活动柱)
-   复用 Observatory 令牌;风险用保留的状态色,活动为单一 accent 色。
-   ============================================================ */
-.viz-row { display: grid; grid-template-columns: minmax(230px, 0.85fr) 1.4fr; gap: var(--sp-4); margin-bottom: var(--sp-5); }
-@media (max-width: 760px) { .viz-row { grid-template-columns: 1fr; } }
-.panel.viz { margin-bottom: 0; }
-
-.donut-wrap { display: flex; align-items: center; gap: var(--sp-5); flex-wrap: wrap; }
-.donut { width: 128px; height: 128px; flex: none; }
-.donut-track { fill: none; stroke: var(--surface-3); stroke-width: 12; }
-.donut-seg { fill: none; stroke-width: 12; stroke-linecap: butt; cursor: default; transition: stroke-width var(--t-fast) var(--ease-out), stroke-dasharray 0.9s var(--ease-out); }
-.donut-seg:hover { stroke-width: 15; }
-.donut-total { fill: var(--text); font-family: var(--font-display); font-size: 27px; font-weight: 800; text-anchor: middle; letter-spacing: -0.02em; }
-.donut-cap { fill: var(--text-dim); font-size: 10.5px; text-anchor: middle; letter-spacing: 0.14em; }
-.legend { display: flex; flex-direction: column; gap: 2px; min-width: 118px; flex: 1; }
-.legend-item { display: flex; align-items: center; gap: var(--sp-2); background: none; border: 0; padding: 5px 7px; border-radius: var(--r-xs); color: var(--text-soft); font-size: var(--fs-sm); cursor: default; transition: background var(--t-fast); }
-.legend-item:hover { background: var(--surface-2); }
-.legend .dot { width: 10px; height: 10px; border-radius: 3px; flex: none; box-shadow: 0 0 9px -1px currentColor; }
-.legend .lg-label { flex: 1; text-align: left; }
-.legend .lg-count { color: var(--text); font-weight: 700; }
-
-.cols { display: flex; align-items: flex-end; gap: 5px; height: 128px; padding-top: var(--sp-3); }
-.col-cell { flex: 1 1 0; max-width: 46px; height: 100%; display: flex; align-items: flex-end; justify-content: center; cursor: default; }
-.col-bar { width: 100%; min-height: 4px; background: linear-gradient(180deg, var(--accent), var(--accent-strong)); border-radius: 3px 3px 0 0; box-shadow: 0 0 14px -5px var(--accent-glow); transition: filter var(--t-fast); }
-.col-cell:hover .col-bar { filter: brightness(1.2) saturate(1.1); }
-
-.viz-tip { position: fixed; z-index: var(--z-toast); transform: translate(-50%, calc(-100% - 12px)); background: var(--surface-3); color: var(--text); border: 1px solid var(--border-strong); border-radius: var(--r-xs); padding: 5px 9px; font-size: var(--fs-sm); font-family: var(--font-mono); white-space: nowrap; pointer-events: none; box-shadow: var(--e-2); }
-
-/* ============================================================
    REPORT DETAIL 精修 · 阶段2(严重度分布条 + 证据/建议卡片 + 置信度分级)
    ============================================================ */
 .sev-strip { display: flex; gap: 2px; height: 7px; margin-top: var(--sp-3); border-radius: var(--r-full); overflow: hidden; max-width: 340px; }
@@ -988,22 +945,8 @@ button.vote.on-NEED_DISCUSSION { background: var(--risk-medium-bg); color: var(-
 /* ============================================================
    全站打磨 · 阶段3(轻触点缀;base 已含大量 hover/入场/focus,故只补缺口)
    注:reduced-motion 全局块会自动弱化以下动画。
+   概览磁贴/图表的动效已随 Dashboard 迁移收进各组件 scoped。
    ============================================================ */
-/* 概览统计磁贴:此前静态 —— 补纯 opacity 交错入场 + hover 微升
-   (入场只动 opacity,不占用 transform,故 hover 位移不被 both 填充覆盖) */
-.stat { animation: stat-in var(--t-slow) var(--ease-out) both; transition: border-color var(--t-base) var(--ease-out), box-shadow var(--t-base) var(--ease-out), transform var(--t-base) var(--ease-out); }
-@keyframes stat-in { from { opacity: 0; } to { opacity: 1; } }
-.stat:nth-child(2) { animation-delay: 50ms; }
-.stat:nth-child(3) { animation-delay: 100ms; }
-.stat:nth-child(4) { animation-delay: 150ms; }
-.stat:hover { border-color: var(--border-strong); box-shadow: var(--e-2); transform: translateY(-3px); }
-
-/* 仪表盘图表入场:柱自底生长,环淡入+微旋缩放 */
-.col-bar { animation: col-grow var(--t-slow) var(--spring) both; transform-origin: bottom; }
-@keyframes col-grow { from { transform: scaleY(0.02); opacity: 0.25; } to { transform: scaleY(1); opacity: 1; } }
-.donut { animation: donut-in var(--t-slow) var(--ease-out) both; }
-@keyframes donut-in { from { opacity: 0; transform: scale(0.93) rotate(-8deg); } to { opacity: 1; transform: none; } }
-
 /* 证据/建议卡片:hover 微亮描边 */
 .issue .callout { transition: border-color var(--t-fast) var(--ease-out), background var(--t-fast); }
 .co-fix:hover { border-color: var(--accent); }

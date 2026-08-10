@@ -229,6 +229,14 @@ html:root {
   --el-box-shadow-dark: var(--rs-shadow-lg);
 }
 
+/* el-card 容器变量(描边工作台风):theme-chalk 把 --el-card-* 定义在
+   .el-card 选择器自身,html:root 的继承值会被遮蔽;以 html .el-card
+   ((0,1,1) > (0,1,0))覆盖,与打包顺序无关。 */
+html .el-card {
+  --el-card-border-radius: var(--rs-radius-base);
+  --el-card-border-color: var(--rs-border);
+}
+
 /* ------------------------------------------------------------
    3) 产品语义(diff 变量 + 工具类)
    ------------------------------------------------------------ */
