@@ -98,29 +98,7 @@ public final class PreparingRepositoryStepExecutor implements AgentStepExecutor 
                     "Workspace archive is unavailable: " + ex.getMessage(), ex
             );
         }
-        JsonNode input = mapper.createObjectNode()
-                .put("archiveRef", archiveRef)
-                .put("baseRef", shas.baseSha())
-                .put("headRef", shas.headSha())
-                // 与工具入参校验(requireMaxBytes ≤65536)及全平台输出预算同一口径;
-                // 旧值 131072 超过工具自己的上限,首次真实调用即被 Malformed input 拒绝。
-                .put("maxBytes", 65_536);
-        ToolResult<?> result = tools.execute(
-                "git.diff",
-                input,
-                new ToolContext(
-                        context.agentRunId(), context.agentStepId(),
-                        "prepare:" + context.agentRunId() + ":git.diff:" + context.headSha(),
-                        false, context.traceId()
-                )
-        );
-        if (!result.success()) {
-            throw new AgentStepExecutionException(
-                    AgentFailureType.ENVIRONMENT_INCOMPLETE,
-                    result.error() == null ? "Prepared repository diff is unavailable" : result.error()
-            );
-        }
-        String diff = output(result.data());
+        String diff = readBackPreparedDiff(context, archiveRef, shas);
         List<String> paths = changedPaths(diff);
         RepositoryProfile profile = RepositoryProfile.fromPaths(paths);
         AgentAnalysisContext analysis = contexts.findByAgentRunId(context.agentRunId())
@@ -161,6 +139,33 @@ public final class PreparingRepositoryStepExecutor implements AgentStepExecutor 
                         "SCM context is missing for webhook-triggered run"
                 ));
         return new BaseHead(scm.getBaseSha(), scm.getHeadSha());
+    }
+
+    /** 经沙箱只读工具读回预置 diff:入参口径与工具校验同源(maxBytes ≤65536),失败即环境不完整。 */
+    private String readBackPreparedDiff(AgentStepExecutionContext context, String archiveRef, BaseHead shas) {
+        JsonNode input = mapper.createObjectNode()
+                .put("archiveRef", archiveRef)
+                .put("baseRef", shas.baseSha())
+                .put("headRef", shas.headSha())
+                // 与工具入参校验(requireMaxBytes ≤65536)及全平台输出预算同一口径;
+                // 旧值 131072 超过工具自己的上限,首次真实调用即被 Malformed input 拒绝。
+                .put("maxBytes", 65_536);
+        ToolResult<?> result = tools.execute(
+                "git.diff",
+                input,
+                new ToolContext(
+                        context.agentRunId(), context.agentStepId(),
+                        "prepare:" + context.agentRunId() + ":git.diff:" + context.headSha(),
+                        false, context.traceId()
+                )
+        );
+        if (!result.success()) {
+            throw new AgentStepExecutionException(
+                    AgentFailureType.ENVIRONMENT_INCOMPLETE,
+                    result.error() == null ? "Prepared repository diff is unavailable" : result.error()
+            );
+        }
+        return output(result.data());
     }
 
     private String output(Object data) {

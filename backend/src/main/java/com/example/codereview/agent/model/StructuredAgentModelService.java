@@ -76,34 +76,8 @@ public class StructuredAgentModelService {
         );
         AtomicReference<AgentModelCall> repairCall = new AtomicReference<>();
         AtomicReference<AgentModelClient.ModelResponse> repairResponse = new AtomicReference<>();
-        java.util.function.Function<String, String> repair = invalid -> {
-                    generation.fail("model output required JSON repair");
-                    audit.save(generation);
-                    long repairStarted = System.nanoTime();
-                    try {
-                        AgentModelClient.ModelResponse repaired = client.repairJson(
-                                invalid,
-                                "Output must match schema " + prompt.schemaVersion()
-                        );
-                        AgentModelCall persisted = audit.save(
-                                new AgentModelCall(agentRunId, repaired, prompt, "REPAIR")
-                        );
-                        repairCall.set(persisted);
-                        repairResponse.set(repaired);
-                        return repaired.content();
-                    } catch (RuntimeException failure) {
-                        audit.save(AgentModelCall.failedAttempt(
-                                agentRunId,
-                                client.provider(),
-                                client.model(),
-                                prompt,
-                                "REPAIR",
-                                elapsedMs(repairStarted),
-                                failure
-                        ));
-                        throw failure;
-                    }
-                };
+        java.util.function.Function<String, String> repair = invalid ->
+                attemptRepair(agentRunId, client, prompt, generation, repairCall, repairResponse, invalid);
         ModelOutputValidator.ValidationResult result = planPolicy == null
                 ? validator.validate(response.content(), approved, prompt.citationIds(), repair)
                 : validator.validate(response.content(), approved, prompt.citationIds(), planPolicy, repair);
@@ -126,6 +100,48 @@ public class StructuredAgentModelService {
                 response.outputTokens() + (repaired == null ? 0 : repaired.outputTokens()),
                 response.latencyMs() + (repaired == null ? 0 : repaired.latencyMs())
         );
+    }
+
+    /**
+     * JSON 修复回调:标记原始生成失败并审计,请求 repairJson,把 REPAIR 调用与响应经
+     * AtomicReference 侧信道回传(validator 的 {@code Function<String, String>} 回调签名
+     * 只允许返回修复后的文本);修复自身失败时同样落一条 FAILED 审计再抛出。
+     */
+    private String attemptRepair(
+            Long agentRunId,
+            AgentModelClient client,
+            PromptEnvelope prompt,
+            AgentModelCall generation,
+            AtomicReference<AgentModelCall> repairCall,
+            AtomicReference<AgentModelClient.ModelResponse> repairResponse,
+            String invalid
+    ) {
+        generation.fail("model output required JSON repair");
+        audit.save(generation);
+        long repairStarted = System.nanoTime();
+        try {
+            AgentModelClient.ModelResponse repaired = client.repairJson(
+                    invalid,
+                    "Output must match schema " + prompt.schemaVersion()
+            );
+            AgentModelCall persisted = audit.save(
+                    new AgentModelCall(agentRunId, repaired, prompt, "REPAIR")
+            );
+            repairCall.set(persisted);
+            repairResponse.set(repaired);
+            return repaired.content();
+        } catch (RuntimeException failure) {
+            audit.save(AgentModelCall.failedAttempt(
+                    agentRunId,
+                    client.provider(),
+                    client.model(),
+                    prompt,
+                    "REPAIR",
+                    elapsedMs(repairStarted),
+                    failure
+            ));
+            throw failure;
+        }
     }
 
     private long elapsedMs(long startedNanos) {

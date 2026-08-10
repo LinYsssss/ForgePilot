@@ -34,6 +34,47 @@
 - 契约零改动复核：diff 仅含上述删除/注释/CI 项；REST 路径、DTO 字段、Flyway 迁移、
   ErrorCode/PageResponse/ProjectAuthorization 签名、MQ 载荷零触碰。
 
-## 批B 超长类/方法拆分（未开始）
+## 批B 超长类/方法拆分（2026-08-10，已完成，待提交）
+
+普查口径、逐项处置(拆分依据/保留理由)与前后对照全量留档:
+[batch-b-structure.md](./batch-b-structure.md);普查脚本 `scripts/scan-structure.py`(可复跑)。
+
+### 改动摘要
+
+**类拆分(唯一 >500 行类)**
+
+- `git/GitCliService`(512→328):进程执行管道逐字搬出为同包包级私有 `GitCommandRunner`
+  (221 行,非 Spring Bean):命令组装/safe.directory、askpass 凭据注入、超时、限量抽干
+  (OutputDrain)、失败输出脱敏(sanitize)。GitCliService 保留全部公共 API 与 git 语义,
+  对运行器只经一行私有委托——调用方不再知道 askpass/抽干/脱敏细节(深模块缝)。
+
+**方法拆分(9 个 >60 体行方法中 6 拆 3 留)**
+
+- `ExecutingToolsStepExecutor.execute` 138→48:`runPlannedTools` / `finalizeReceipt` / `receiptPrompt`。
+- `PlanningStepExecutor.execute` 95→31:`planningPrompt` / `persistPlanAndAdvance`。
+- `ReviewPlanValidator.validate` 83→57:`intrinsicIssues`(errorsBefore 计数技巧显式化,
+  与代码注释既有的"内在/预算两阶段"概念对齐)。
+- `AgentPublicationService.publish` 78→55:`deliverToRemote`;@Transactional 留在 publish
+  入口,无自调用失效面(批内唯一事务方法,已核查)。
+- `StructuredAgentModelService.generateInternal` 72→46:28 行内联修复 lambda 具名化为
+  `attemptRepair`。
+- `PreparingRepositoryStepExecutor.execute` 72→50:`readBackPreparedDiff`(F-04 取证读回)。
+- **保留(写实,数字不动)**:ValidatingPatchStepExecutor.execute(80,线性降级管道,外拆
+  强制 Either 式返回协议)、MockAiReviewClient.review(73,数据重逻辑轻的 mock 规则表)、
+  GitHubWebhookController.receive(63,安全时序即契约)。理由逐条见留档。
+
+**特征测试与命名**
+
+- 新增 `characterization/GitCredentialFlowCharacterizationTest`:askpass 凭据路径此前零覆盖
+  (离线不可达 http 远端),重构前对未改动代码先跑绿再动手;存量测试仅 2 处 sanitize 静态
+  引用同包改指新类,断言零改动。
+- 命名对齐:逐项核对 r4 规范,无包级私有名被规范点名为错,改名 0(不猎取)。
+
+### 验证
+
+- 容器化 `mvn -s .mvn/settings.xml -B clean verify`:**BUILD SUCCESS**
+  `Tests run: 576, Failures: 0, Errors: 0, Skipped: 3`(批A 基线 575 全保留 + 1 新特征测试)。
+- 契约零改动复核:resources(迁移/yml)、common/(冻结契约)、pom、REST 注解与 DTO record
+  行零变更;公共类名/包/签名全部不动,抽出协作对象均为包级私有或 private。
 
 ## 批C 模块边界（未开始）

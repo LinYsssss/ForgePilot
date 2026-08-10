@@ -6,6 +6,7 @@ import com.example.codereview.agent.model.AgentModelBudgetPolicy;
 import com.example.codereview.agent.model.AgentPlanningCheckpoint;
 import com.example.codereview.agent.model.ModelOutputValidator;
 import com.example.codereview.agent.model.LangChainToolSchemaMapper;
+import com.example.codereview.agent.model.PromptEnvelope;
 import com.example.codereview.agent.model.StructuredAgentModelService;
 import com.example.codereview.agent.orchestration.AgentStepExecutionContext;
 import com.example.codereview.agent.orchestration.AgentAnalysisContext;
@@ -132,10 +133,30 @@ public final class PlanningStepExecutor implements AgentStepExecutor {
         ReviewPlanValidator.PlanPolicy policy = new ReviewPlanValidator.PlanPolicy(
                 available, activePlugins, available, 8, true, true
         );
-        // 变更 diff 喂进规划提示词(assembler 按 diffBudget 截断)。此前该槽传空串,
-        // 模型对"改了什么"一无所知,只能凭空编造工具参数(空 path/query),
-        // 在执行步被策略拒绝——首次真实运行即暴露。语义参数(看哪个文件、搜什么)
-        // 归模型,基础设施参数(archiveRef/base/head)由执行步服务端注入,模型无需知晓。
+        PromptEnvelope prompt = planningPrompt(context, policy, activePlugins, descriptors);
+        StructuredAgentModelService.ModelGenerationResult generation = models.generateBounded(
+                context.agentRunId(), client.orElseThrow(), prompt, false, policy
+        );
+        ModelOutputValidator.ValidationResult result = generation.validation();
+        AgentModelBudgetPolicy.UsageSnapshot usage = modelBudget.requireWithinBudget(List.of(generation));
+        if (!result.valid()) {
+            throw new AgentStepExecutionException(result.failureType(), result.error());
+        }
+        return persistPlanAndAdvance(context, result, usage, generation, prompt);
+    }
+
+    /**
+     * 组装规划提示词。变更 diff 喂进规划提示词(assembler 按 diffBudget 截断)。此前该槽传空串,
+     * 模型对"改了什么"一无所知,只能凭空编造工具参数(空 path/query),
+     * 在执行步被策略拒绝——首次真实运行即暴露。语义参数(看哪个文件、搜什么)
+     * 归模型,基础设施参数(archiveRef/base/head)由执行步服务端注入,模型无需知晓。
+     */
+    private PromptEnvelope planningPrompt(
+            AgentStepExecutionContext context,
+            ReviewPlanValidator.PlanPolicy policy,
+            Set<String> activePlugins,
+            List<AgentToolRegistry.ToolDescriptor> descriptors
+    ) {
         String changedDiff = analysisContexts == null ? "" : analysisContexts
                 .findByAgentRunId(context.agentRunId())
                 .map(AgentAnalysisContext::getChangedDiff)
@@ -146,7 +167,7 @@ public final class PlanningStepExecutor implements AgentStepExecutor {
         // Run 直接 FAILED;温度 0 下同错必复现,只能靠提示词根治。数字引用
         // policy.remainingToolCalls() 与 validator.defaultToolLimit() 同源取值,
         // 不另写字面量,防止提示词与校验规则再次漂移(与执行步终稿提示词同一手法)。
-        var prompt = prompts.assemble(new AgentPromptAssembler.Input(
+        return prompts.assemble(new AgentPromptAssembler.Input(
                 "review-v1",
                 "Create a bounded review plan using only the supplied registered read-only tools. "
                         + "The plan may contain at most " + policy.remainingToolCalls()
@@ -162,14 +183,16 @@ public final class PlanningStepExecutor implements AgentStepExecutor {
                 "review-plan-v1",
                 budget(), budget(), budget(), budget()
         ));
-        StructuredAgentModelService.ModelGenerationResult generation = models.generateBounded(
-                context.agentRunId(), client.orElseThrow(), prompt, false, policy
-        );
-        ModelOutputValidator.ValidationResult result = generation.validation();
-        AgentModelBudgetPolicy.UsageSnapshot usage = modelBudget.requireWithinBudget(List.of(generation));
-        if (!result.valid()) {
-            throw new AgentStepExecutionException(result.failureType(), result.error());
-        }
+    }
+
+    /** 已验证计划连同规划检查点(模型用量)落库,并推进到执行工具步。 */
+    private AgentStepResult persistPlanAndAdvance(
+            AgentStepExecutionContext context,
+            ModelOutputValidator.ValidationResult result,
+            AgentModelBudgetPolicy.UsageSnapshot usage,
+            StructuredAgentModelService.ModelGenerationResult generation,
+            PromptEnvelope prompt
+    ) {
         try {
             String json = mapper.writeValueAsString(result.response());
             String checkpointJson = mapper.writeValueAsString(new AgentPlanningCheckpoint(

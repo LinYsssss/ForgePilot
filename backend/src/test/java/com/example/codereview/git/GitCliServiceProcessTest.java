@@ -34,7 +34,7 @@ class GitCliServiceProcessTest {
         String output = "fatal: unable to access 'https://x-access-token:ghp_supersecret@github.com/a/b.git'"
                 + " askpass=/tmp/.work/repos/git-askpass-123.sh token=ghp_supersecret";
 
-        String cleaned = GitCliService.sanitize(output, "ghp_supersecret",
+        String cleaned = GitCommandRunner.sanitize(output, "ghp_supersecret",
                 Path.of("/tmp/.work/repos/git-askpass-123.sh"));
 
         assertThat(cleaned).doesNotContain("ghp_supersecret");
@@ -45,11 +45,11 @@ class GitCliServiceProcessTest {
 
     @Test
     void sanitizeTruncatesAndHandlesEmptyOutput() {
-        assertThat(GitCliService.sanitize("   ", "t", null)).isEqualTo("(无输出)");
-        assertThat(GitCliService.sanitize(null, "t", null)).isEqualTo("(无输出)");
+        assertThat(GitCommandRunner.sanitize("   ", "t", null)).isEqualTo("(无输出)");
+        assertThat(GitCommandRunner.sanitize(null, "t", null)).isEqualTo("(无输出)");
 
         String huge = "x".repeat(5000);
-        String cleaned = GitCliService.sanitize(huge, null, null);
+        String cleaned = GitCommandRunner.sanitize(huge, null, null);
         assertThat(cleaned).hasSizeLessThan(huge.length());
         assertThat(cleaned).endsWith("(已截断)");
     }

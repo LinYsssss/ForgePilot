@@ -6,6 +6,7 @@ import com.example.codereview.agent.model.AgentModelClient;
 import com.example.codereview.agent.model.AgentModelBudgetPolicy;
 import com.example.codereview.agent.model.AgentPlanningCheckpoint;
 import com.example.codereview.agent.model.ModelOutputValidator;
+import com.example.codereview.agent.model.PromptEnvelope;
 import com.example.codereview.agent.model.StructuredAgentModelService;
 import com.example.codereview.agent.orchestration.AgentAnalysisContext;
 import com.example.codereview.agent.orchestration.AgentAnalysisContextRepository;
@@ -118,113 +119,23 @@ public final class ExecutingToolsStepExecutor implements AgentStepExecutor {
                     .orElseThrow(() -> new AgentStepExecutionException(
                             AgentFailureType.ENVIRONMENT_INCOMPLETE, "Prepared repository checkpoint is missing"
                     ));
-            List<AgentToolLoop.ToolRequest> requests = response.plan().stream()
-                    .map(item -> new AgentToolLoop.ToolRequest(
-                            item.modelRequestId(), item.toolName(),
-                            authoritativeArguments(item.toolName(), item.arguments(), analysis)
-                    ))
-                    .filter(ExecutingToolsStepExecutor::hasRequiredSemanticArguments)
-                    .toList();
-            long skippedBlind = response.plan().size() - requests.size();
-            Set<String> planned = response.plan().stream()
-                    .map(ReviewPlan.PlanItem::toolName)
-                    .collect(Collectors.toUnmodifiableSet());
-            List<AgentToolLoop.ToolResultEnvelope> results = loop.execute(
-                    new AgentToolLoop.LoopContext(
-                            context.agentRunId(), context.agentStepId(), context.traceId(), false
-                    ),
-                    requests,
-                    new AgentToolLoop.LoopPolicy(planned, READ_TOOLS, 8, 16_384),
-                    context::cancellationRequested
-            );
-            long succeeded = results.stream()
-                    .filter(item -> item.status() == AgentToolLoop.ToolStatus.SUCCESS)
-                    .count();
-            long rejected = results.stream()
-                    .filter(item -> item.status() == AgentToolLoop.ToolStatus.POLICY_REJECTED)
-                    .count();
-            if (rejected > 0) {
-                throw new AgentStepExecutionException(
-                        AgentFailureType.SECURITY_VIOLATION,
-                        "One or more model tool requests were rejected by policy"
-                );
-            }
-            StructuredModelResponse finalPlan = response;
-            AgentModelBudgetPolicy.UsageSnapshot totalUsage = client.isPresent()
-                    ? previousUsage(plan)
-                    : new AgentModelBudgetPolicy.UsageSnapshot(0, 0, 0, 0, java.math.BigDecimal.ZERO);
-            if (client.isPresent()) {
-                // 终稿计划的 plan 数组是"已执行证据的回执"而非新请求(本步之后无人再执行它),
-                // 但校验器拒绝空 plan 且只认注册工具名——首次真实运行 MiMo 自创
-                // static_analysis/security_scan 即整步失败,故合法工具名必须白纸黑字枚举,
-                // 并要求逐字回写原计划项,不给模型自由发挥的空间。
-                var prompt = prompts.assemble(new AgentPromptAssembler.Input(
-                        "review-v1",
-                        "Use the supplied persisted tool results to return the final schema-valid review plan. "
-                                + "Copy the original validated plan items verbatim into \"plan\" (same toolName, "
-                                + "arguments, purpose, expectedEvidence and modelRequestId; \"plan\" must not be "
-                                + "empty and must not contain new items). The only legal toolName values are: "
-                                + planned + ". Any other tool name (for example static_analysis or security_scan) "
-                                + "fails validation. Put your actual review conclusions, each backed by the "
-                                + "supplied tool evidence, into \"claims\". "
-                                // 输出契约严格拒绝未知字段(温度 0 下同错必复现):键名必须逐字钉死,
-                                // 首次真实运行 MiMo 把 claims 写成 claim 即整步失败。
-                                + "Respond with a single JSON object whose top-level keys are exactly "
-                                + "\"summary\", \"plan\" and \"claims\" (plural, always an array). "
-                                // run13 实证:顶层键钉死后,断点前移到 claims 条目内部——schema 里的
-                                // 空数组示例等于没有契约,MiMo 把条目键名写成 "claim" 即整步失败。
-                                // 条目形状必须逐键写明,并连带钉死引用规则:本步骤 citations 传空集,
-                                // validateCitations 在空白名单下拒绝一切 citation,knowledgeBacked=true
-                                // 又强制要求 citation——不写明就是下一个必然断点。
-                                + "Each entry in \"claims\" must be an object whose keys are exactly "
-                                + "\"text\", \"knowledgeBacked\" and \"citationIds\"; any other key name "
-                                + "(for example \"claim\") fails validation. No knowledge sources are "
-                                + "provided in this step, so \"knowledgeBacked\" must be false and "
-                                + "\"citationIds\" must be an empty array in every entry.",
-                        "",
-                        "",
-                        mapper.writeValueAsString(results),
-                        List.of(),
-                        "{\"summary\":\"string\",\"plan\":[{\"toolName\":\"string\","
-                                + "\"arguments\":{},\"purpose\":\"string\","
-                                + "\"expectedEvidence\":\"string\",\"modelRequestId\":\"string\"}],"
-                                + "\"claims\":[{\"text\":\"string\","
-                                + "\"knowledgeBacked\":false,\"citationIds\":[]}]}",
-                        "review-plan-v1",
-                        budget(), budget(), budget(), budget()
-                ));
-                // 回执校验的预算必须容纳"逐字回写原计划全部条目"这一提示词要求本身:
-                // 此前的 8 - requests.size() 是把"新请求预算"误用于"收据校验",原计划
-                // 一旦 ≥5 项,合规回执的条数必超预算,步骤必然失败。回执预算=原计划条数。
-                // clampOverBudget 保持关闭:回执是已执行证据的收据,裁剪等于撕毁收据,
-                // 宁可硬失败暴露问题。
-                ReviewPlanValidator.PlanPolicy policy = new ReviewPlanValidator.PlanPolicy(
-                        planned, Set.of(), planned, Math.max(1, response.plan().size()), true
-                );
-                StructuredAgentModelService.ModelGenerationResult finalGeneration = models.generateBounded(
-                        context.agentRunId(), client.orElseThrow(), prompt, false, policy
-                );
-                totalUsage = modelBudget.requireWithinBudget(totalUsage, finalGeneration);
-                ModelOutputValidator.ValidationResult finalResult = finalGeneration.validation();
-                if (!finalResult.valid()) {
-                    throw new AgentStepExecutionException(finalResult.failureType(), finalResult.error());
-                }
-                finalPlan = finalResult.response();
-                plan.accept(mapper.writeValueAsString(finalPlan));
-                plans.save(plan);
-            }
+            ToolRun tools = runPlannedTools(context, response, analysis);
+            Receipt receipt = client.isPresent()
+                    ? finalizeReceipt(context, plan, response, tools)
+                    : new Receipt(response, new AgentModelBudgetPolicy.UsageSnapshot(
+                            0, 0, 0, 0, java.math.BigDecimal.ZERO));
             return new AgentStepResult(
                     "agent-step-result-v1",
                     state(),
                     AgentStepResult.Disposition.ADVANCE,
                     AgentRunStatus.RETRIEVING_CONTEXT,
                     Map.of(
-                            "toolRequests", results.size(),
-                            "toolSucceeded", succeeded,
-                            "skippedBlindPlanItems", skippedBlind,
-                            "finalPlanItems", finalPlan.plan().size(),
-                            "modelCalls", totalUsage.modelCalls(),
-                            "estimatedCost", totalUsage.estimatedCost().toPlainString()
+                            "toolRequests", tools.results().size(),
+                            "toolSucceeded", tools.succeeded(),
+                            "skippedBlindPlanItems", tools.skippedBlind(),
+                            "finalPlanItems", receipt.finalPlan().plan().size(),
+                            "modelCalls", receipt.totalUsage().modelCalls(),
+                            "estimatedCost", receipt.totalUsage().estimatedCost().toPlainString()
                     )
             );
         } catch (JsonProcessingException ex) {
@@ -232,6 +143,140 @@ public final class ExecutingToolsStepExecutor implements AgentStepExecutor {
                     AgentFailureType.INVALID_MODEL_OUTPUT, "Validated review plan JSON is invalid", ex
             );
         }
+    }
+
+    /** 计划工具执行的结果与审计计数(跳过数记入步骤输出可审计)。 */
+    private record ToolRun(
+            List<AgentToolLoop.ToolResultEnvelope> results,
+            Set<String> planned,
+            long succeeded,
+            long skippedBlind
+    ) {
+    }
+
+    /** 终稿回执:回执校验后的最终计划与累计模型用量。 */
+    private record Receipt(StructuredModelResponse finalPlan, AgentModelBudgetPolicy.UsageSnapshot totalUsage) {
+    }
+
+    /**
+     * 按策略执行已验证计划的工具:基础设施参数服务端权威注入、盲目占位项预检跳过、
+     * 任何策略违规(计划外工具、超预算、危险字符)使整步以 SECURITY_VIOLATION 失败。
+     */
+    private ToolRun runPlannedTools(
+            AgentStepExecutionContext context,
+            StructuredModelResponse response,
+            AgentAnalysisContext analysis
+    ) {
+        List<AgentToolLoop.ToolRequest> requests = response.plan().stream()
+                .map(item -> new AgentToolLoop.ToolRequest(
+                        item.modelRequestId(), item.toolName(),
+                        authoritativeArguments(item.toolName(), item.arguments(), analysis)
+                ))
+                .filter(ExecutingToolsStepExecutor::hasRequiredSemanticArguments)
+                .toList();
+        long skippedBlind = response.plan().size() - requests.size();
+        Set<String> planned = response.plan().stream()
+                .map(ReviewPlan.PlanItem::toolName)
+                .collect(Collectors.toUnmodifiableSet());
+        List<AgentToolLoop.ToolResultEnvelope> results = loop.execute(
+                new AgentToolLoop.LoopContext(
+                        context.agentRunId(), context.agentStepId(), context.traceId(), false
+                ),
+                requests,
+                new AgentToolLoop.LoopPolicy(planned, READ_TOOLS, 8, 16_384),
+                context::cancellationRequested
+        );
+        long succeeded = results.stream()
+                .filter(item -> item.status() == AgentToolLoop.ToolStatus.SUCCESS)
+                .count();
+        long rejected = results.stream()
+                .filter(item -> item.status() == AgentToolLoop.ToolStatus.POLICY_REJECTED)
+                .count();
+        if (rejected > 0) {
+            throw new AgentStepExecutionException(
+                    AgentFailureType.SECURITY_VIOLATION,
+                    "One or more model tool requests were rejected by policy"
+            );
+        }
+        return new ToolRun(results, planned, succeeded, skippedBlind);
+    }
+
+    /** 终稿回执的模型交互:提示词组装、回执预算策略、生成校验、终稿计划落库。 */
+    private Receipt finalizeReceipt(
+            AgentStepExecutionContext context,
+            ReviewPlan plan,
+            StructuredModelResponse response,
+            ToolRun tools
+    ) throws JsonProcessingException {
+        AgentModelBudgetPolicy.UsageSnapshot totalUsage = previousUsage(plan);
+        PromptEnvelope prompt = receiptPrompt(tools.planned(), tools.results());
+        // 回执校验的预算必须容纳"逐字回写原计划全部条目"这一提示词要求本身:
+        // 此前的 8 - requests.size() 是把"新请求预算"误用于"收据校验",原计划
+        // 一旦 ≥5 项,合规回执的条数必超预算,步骤必然失败。回执预算=原计划条数。
+        // clampOverBudget 保持关闭:回执是已执行证据的收据,裁剪等于撕毁收据,
+        // 宁可硬失败暴露问题。
+        ReviewPlanValidator.PlanPolicy policy = new ReviewPlanValidator.PlanPolicy(
+                tools.planned(), Set.of(), tools.planned(), Math.max(1, response.plan().size()), true
+        );
+        StructuredAgentModelService.ModelGenerationResult finalGeneration = models.generateBounded(
+                context.agentRunId(), client.orElseThrow(), prompt, false, policy
+        );
+        totalUsage = modelBudget.requireWithinBudget(totalUsage, finalGeneration);
+        ModelOutputValidator.ValidationResult finalResult = finalGeneration.validation();
+        if (!finalResult.valid()) {
+            throw new AgentStepExecutionException(finalResult.failureType(), finalResult.error());
+        }
+        StructuredModelResponse finalPlan = finalResult.response();
+        plan.accept(mapper.writeValueAsString(finalPlan));
+        plans.save(plan);
+        return new Receipt(finalPlan, totalUsage);
+    }
+
+    /**
+     * 终稿计划的 plan 数组是"已执行证据的回执"而非新请求(本步之后无人再执行它),
+     * 但校验器拒绝空 plan 且只认注册工具名——首次真实运行 MiMo 自创
+     * static_analysis/security_scan 即整步失败,故合法工具名必须白纸黑字枚举,
+     * 并要求逐字回写原计划项,不给模型自由发挥的空间。
+     */
+    private PromptEnvelope receiptPrompt(
+            Set<String> planned,
+            List<AgentToolLoop.ToolResultEnvelope> results
+    ) throws JsonProcessingException {
+        return prompts.assemble(new AgentPromptAssembler.Input(
+                "review-v1",
+                "Use the supplied persisted tool results to return the final schema-valid review plan. "
+                        + "Copy the original validated plan items verbatim into \"plan\" (same toolName, "
+                        + "arguments, purpose, expectedEvidence and modelRequestId; \"plan\" must not be "
+                        + "empty and must not contain new items). The only legal toolName values are: "
+                        + planned + ". Any other tool name (for example static_analysis or security_scan) "
+                        + "fails validation. Put your actual review conclusions, each backed by the "
+                        + "supplied tool evidence, into \"claims\". "
+                        // 输出契约严格拒绝未知字段(温度 0 下同错必复现):键名必须逐字钉死,
+                        // 首次真实运行 MiMo 把 claims 写成 claim 即整步失败。
+                        + "Respond with a single JSON object whose top-level keys are exactly "
+                        + "\"summary\", \"plan\" and \"claims\" (plural, always an array). "
+                        // run13 实证:顶层键钉死后,断点前移到 claims 条目内部——schema 里的
+                        // 空数组示例等于没有契约,MiMo 把条目键名写成 "claim" 即整步失败。
+                        // 条目形状必须逐键写明,并连带钉死引用规则:本步骤 citations 传空集,
+                        // validateCitations 在空白名单下拒绝一切 citation,knowledgeBacked=true
+                        // 又强制要求 citation——不写明就是下一个必然断点。
+                        + "Each entry in \"claims\" must be an object whose keys are exactly "
+                        + "\"text\", \"knowledgeBacked\" and \"citationIds\"; any other key name "
+                        + "(for example \"claim\") fails validation. No knowledge sources are "
+                        + "provided in this step, so \"knowledgeBacked\" must be false and "
+                        + "\"citationIds\" must be an empty array in every entry.",
+                "",
+                "",
+                mapper.writeValueAsString(results),
+                List.of(),
+                "{\"summary\":\"string\",\"plan\":[{\"toolName\":\"string\","
+                        + "\"arguments\":{},\"purpose\":\"string\","
+                        + "\"expectedEvidence\":\"string\",\"modelRequestId\":\"string\"}],"
+                        + "\"claims\":[{\"text\":\"string\","
+                        + "\"knowledgeBacked\":false,\"citationIds\":[]}]}",
+                "review-plan-v1",
+                budget(), budget(), budget(), budget()
+        ));
     }
 
     private AgentModelBudgetPolicy.UsageSnapshot previousUsage(ReviewPlan plan)

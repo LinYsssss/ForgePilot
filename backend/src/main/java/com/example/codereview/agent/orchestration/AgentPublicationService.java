@@ -120,30 +120,7 @@ public class AgentPublicationService {
                     runId, installation.getId());
             return record;
         }
-        ScmReviewPublisher publisher = publishers.stream()
-                .filter(value -> value.type() == context.getProvider()).findFirst()
-                .orElseThrow(() -> new IllegalStateException("SCM publisher is unavailable"));
-        ScmPublicationResult result;
-        try {
-            result = publisher.publish(
-                    new ScmPublicationContext(
-                            installation.getApiBaseUrl(), crypto.decrypt(installation.getEncryptedCredential()),
-                            context.getRepositoryFullName(), context.getPullRequestNumber(), headSha, patchApproved
-                    ),
-                    publication
-            );
-        } catch (SecurityException security) {
-            throw new AgentStepExecutionException(AgentFailureType.SECURITY_VIOLATION, security.getMessage());
-        } catch (RuntimeException failure) {
-            // 盲错修复(与 run15 教训同类):只有一句 "SCM publication failed" 时,连
-            // "null baseUrl 还是 401"都分不出来,run17 只能靠翻库反推根因。追加定界的底层原因,
-            // 截断手法沿用 ModelOutputValidator.limit;retryable 分类逻辑保持不变。
-            throw new AgentStepExecutionException(
-                    retryable(failure) ? AgentFailureType.RETRYABLE_PROVIDER_ERROR
-                            : AgentFailureType.PERMANENT_PROVIDER_ERROR,
-                    "SCM publication failed: " + describe(failure)
-            );
-        }
+        ScmPublicationResult result = deliverToRemote(context, installation, publication, patchApproved, headSha);
         record.record(result);
         publications.save(record);
         if (!result.success()) {
@@ -154,6 +131,41 @@ public class AgentPublicationService {
             );
         }
         return record;
+    }
+
+    /**
+     * 远端投递与失败分类:publisher 按 provider 解析,底层失败映射为
+     * SECURITY_VIOLATION / RETRYABLE / PERMANENT 并附定界原因。盲错修复(与 run15 教训同类):
+     * 只有一句 "SCM publication failed" 时,连"null baseUrl 还是 401"都分不出来,run17 只能
+     * 靠翻库反推根因;截断手法沿用 ModelOutputValidator.limit,retryable 分类逻辑保持不变。
+     */
+    private ScmPublicationResult deliverToRemote(
+            AgentScmContext context,
+            ScmInstallation installation,
+            ReviewPublication publication,
+            boolean patchApproved,
+            String headSha
+    ) {
+        ScmReviewPublisher publisher = publishers.stream()
+                .filter(value -> value.type() == context.getProvider()).findFirst()
+                .orElseThrow(() -> new IllegalStateException("SCM publisher is unavailable"));
+        try {
+            return publisher.publish(
+                    new ScmPublicationContext(
+                            installation.getApiBaseUrl(), crypto.decrypt(installation.getEncryptedCredential()),
+                            context.getRepositoryFullName(), context.getPullRequestNumber(), headSha, patchApproved
+                    ),
+                    publication
+            );
+        } catch (SecurityException security) {
+            throw new AgentStepExecutionException(AgentFailureType.SECURITY_VIOLATION, security.getMessage());
+        } catch (RuntimeException failure) {
+            throw new AgentStepExecutionException(
+                    retryable(failure) ? AgentFailureType.RETRYABLE_PROVIDER_ERROR
+                            : AgentFailureType.PERMANENT_PROVIDER_ERROR,
+                    "SCM publication failed: " + describe(failure)
+            );
+        }
     }
 
     private ReviewPublication publication(Long runId, PatchCandidate patch, boolean patchApproved) {

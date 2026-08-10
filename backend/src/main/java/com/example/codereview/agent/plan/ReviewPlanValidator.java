@@ -91,35 +91,9 @@ public class ReviewPlanValidator {
             }
             // 内在缺陷(工具不合法、缺参、缺审批等)永远是硬错误;先于预算判断收集,
             // 使裁剪只作用于"内在合法但超预算"的条目——裁剪不是给坏条目开的后门。
-            int errorsBefore = errors.size();
-            if (!policy.allowsState(item.toolName())) {
-                errors.add(prefix + "tool is not allowed in current state");
-            }
-            if (!policy.authorizesProject(item.toolName())) {
-                errors.add(prefix + "tool is not authorized for project");
-            }
-            if (tools.riskLevel(item.toolName()).isApprovalRequired() && !approved) {
-                errors.add(prefix + "tool requires approval");
-            }
-            if (item.arguments() == null) {
-                errors.add(prefix + "arguments are required");
-            } else if (jsonBytes(item.arguments()) > maxArgumentBytes) {
-                errors.add(prefix + "arguments exceed " + maxArgumentBytes + " bytes");
-            }
-            if (item.purpose() == null || item.purpose().isBlank()) {
-                errors.add(prefix + "purpose is required");
-            }
-            if (item.expectedEvidence() == null || item.expectedEvidence().isBlank()) {
-                errors.add(prefix + "expected evidence is required");
-            }
-            if (policy.requireModelRequestIds()) {
-                if (item.modelRequestId() == null || item.modelRequestId().isBlank()) {
-                    errors.add(prefix + "model tool request ID is required");
-                } else if (!requestIds.add(item.modelRequestId())) {
-                    errors.add(prefix + "duplicate model tool request ID");
-                }
-            }
-            boolean intrinsicallyValid = errors.size() == errorsBefore;
+            List<String> intrinsicIssues = intrinsicIssues(item, prefix, approved, policy, requestIds);
+            errors.addAll(intrinsicIssues);
+            boolean intrinsicallyValid = intrinsicIssues.isEmpty();
             // 预算判断在 merge 之前完成:被裁剪的条目不落入 counts,自然不消耗预算。
             int limit = perToolLimits.getOrDefault(item.toolName(), defaultToolLimit);
             int prospectiveCount = counts.getOrDefault(item.toolName(), 0) + 1;
@@ -153,6 +127,49 @@ public class ReviewPlanValidator {
         }
 
         return new ValidationResult(errors.isEmpty(), errors.isEmpty() ? List.copyOf(survivors) : List.of(), List.copyOf(errors));
+    }
+
+    /**
+     * 单条目的内在(非预算)校验:状态/项目授权、审批、参数存在与大小、purpose/evidence、
+     * modelRequestId 必填与去重。返回该条目自身的错误列表,空列表即内在合法。
+     * requestIds 跨条目累积——重复检测是有状态的,被裁剪条目的 ID 也照常占位。
+     */
+    private List<String> intrinsicIssues(
+            ReviewPlan.PlanItem item,
+            String prefix,
+            boolean approved,
+            PlanPolicy policy,
+            Set<String> requestIds
+    ) {
+        List<String> issues = new ArrayList<>();
+        if (!policy.allowsState(item.toolName())) {
+            issues.add(prefix + "tool is not allowed in current state");
+        }
+        if (!policy.authorizesProject(item.toolName())) {
+            issues.add(prefix + "tool is not authorized for project");
+        }
+        if (tools.riskLevel(item.toolName()).isApprovalRequired() && !approved) {
+            issues.add(prefix + "tool requires approval");
+        }
+        if (item.arguments() == null) {
+            issues.add(prefix + "arguments are required");
+        } else if (jsonBytes(item.arguments()) > maxArgumentBytes) {
+            issues.add(prefix + "arguments exceed " + maxArgumentBytes + " bytes");
+        }
+        if (item.purpose() == null || item.purpose().isBlank()) {
+            issues.add(prefix + "purpose is required");
+        }
+        if (item.expectedEvidence() == null || item.expectedEvidence().isBlank()) {
+            issues.add(prefix + "expected evidence is required");
+        }
+        if (policy.requireModelRequestIds()) {
+            if (item.modelRequestId() == null || item.modelRequestId().isBlank()) {
+                issues.add(prefix + "model tool request ID is required");
+            } else if (!requestIds.add(item.modelRequestId())) {
+                issues.add(prefix + "duplicate model tool request ID");
+            }
+        }
+        return issues;
     }
 
     private int jsonBytes(Object value) {
