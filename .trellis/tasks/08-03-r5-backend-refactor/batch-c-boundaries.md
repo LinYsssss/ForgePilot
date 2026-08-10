@@ -1,4 +1,4 @@
-# 批C 模块边界:依赖普查、处置表与纯移动(Stage 1)
+# 批C 模块边界:依赖普查、处置表、纯移动(Stage 1)与反转/收敛(Stage 2)
 
 > 普查脚本:`scripts/scan-package-deps.py`(可复跑)。扫描口径:`backend/src/main/java` 全部
 > 347 个类的 `import com.example.codereview.*` 语句,按 `com.example.codereview` 下第一级包聚合成
@@ -88,7 +88,7 @@ scm -> project : 1       scm -> repo : 1          scm -> webhook : 1
 | M1 | common → ai(1 import) | `common/exception/GlobalExceptionHandler` import `ai.AiCallTransientException` | **移动 `AiCallTransientException` → `common/exception/`**。该异常是重试分类学里 `BusinessException` 的孪生(其类头 Javadoc 即以两者对举:瞬时可重试 vs 确定性不重试),由 ai 产、common 全局处理、agent.queue 分类消费,是三方共享词汇;common 不得知道 ai,但人人可知道 common。ErrorCode 已冻结 `AI_CALL_FAILED/AI_CIRCUIT_OPEN`,common 层本就说"AI 调用"这门词汇。连带修复 agent → ai 的一条边(`AgentStepExecutionService`)。 |
 | M2 | common → auth(5 imports) | `common/security/TokenAuthenticationFilter` import `auth.{TokenService, ParsedToken, UserAccount, UserAccountRepository, AuthCookieService}` | **移动 `TokenAuthenticationFilter` → `auth/`**。它的全部三个协作者都是 auth 类,职责就是"令牌→用户→认证上下文";r4 规范对 common/security 的清单只点名 CurrentUser/ProjectAuthorization(+密码学与审计工具),未把它钉在 common;非冻结类,无 yml/反射 FQN 引用。新人问"令牌认证过滤器放哪"——auth。副作用:新增 config → auth 1 条(SecurityConfig 装配),组合根引域属正常(见 R2)。 |
 
-### 2.2 引入接口反转(2 项,**Stage 2 执行**,本阶段不动代码)
+### 2.2 引入接口反转(2 项,**Stage 2 已执行**,结果见 §7)
 
 | # | 违规边 | 涉及类 | Stage 2 方案 |
 |---|--------|--------|--------------|
@@ -159,9 +159,154 @@ webhook/、PinnedImageDigests 核后不动)。规范树与现实的其余差异�
 - 契约复核:REST 路径/DTO 字段/Flyway 迁移零改动;冻结四类(ErrorCode/PageResponse/ApiResponse/
   ProjectAuthorization)零触碰;MQ 载荷零触碰;`application.yml` 仅 resilience4j 两行 FQN 随迁。
 
-## 6. Stage 2 工单(反转/收敛,另批派发)
+## 6. Stage 2 工单(反转/收敛,已全部执行,过程与证据见 §7–§10)
 
-1. **I1 反转**:SecurityAuditFilter 摘除 `AuthCookieService` 依赖(cookie 名下沉共享属性源);完成后 common 的领域依赖仅剩 R1 冻结例外。
-2. **I2 反转**:agent 侧检索端口 + langchain4j 适配器实现(照 `AgentModelClient` 范式,`toQuery` 收进适配器)。
-3. **重复收敛(达 ≥3 处准入线)**:AI 瞬时失败分类逻辑 3 处——`LangChain4jAgentModelClient.classify` 与 `LangChain4jEmbeddingClient.classify` 文本级近同(因果链遍历:RetriableException/HttpTimeout/SocketTimeout/ConnectException + HTTP 429/5xx 判定),`OpenAiCompatibleReviewClient` 的 catch 阶梯是同一决策表在 Spring RestClient 异常族上的第三份实现(429→瞬时、5xx→瞬时、ResourceAccess→瞬时、余者永久)。候选:ai 包内包级私有分类器,消息前缀作参数。
-4. **明确不抽象(两处重复,写实留案)**:cookie 凭据嗅探循环(`TokenAuthenticationFilter.resolveToken` vs `SecurityAuditFilter.hasCredential`,I1 落地后再看是否自然合一)、GitHub/GitLab webhook 验签-入队形状(2 处,各自安全时序即契约)。
+1. **I1 反转**:SecurityAuditFilter 摘除 `AuthCookieService` 依赖(cookie 名下沉共享属性源);完成后 common 的领域依赖仅剩 R1 冻结例外。✅ 见 §7.1
+2. **I2 反转**:agent 侧检索端口 + langchain4j 适配器实现(照 `AgentModelClient` 范式,`toQuery` 收进适配器)。✅ 见 §7.2
+3. **重复收敛(达 ≥3 处准入线)**:AI 瞬时失败分类逻辑 3 处——`LangChain4jAgentModelClient.classify` 与 `LangChain4jEmbeddingClient.classify` 文本级近同(因果链遍历:RetriableException/HttpTimeout/SocketTimeout/ConnectException + HTTP 429/5xx 判定),`OpenAiCompatibleReviewClient` 的 catch 阶梯是同一决策表在 Spring RestClient 异常族上的第三份实现(429→瞬时、5xx→瞬时、ResourceAccess→瞬时、余者永久)。候选:ai 包内包级私有分类器,消息前缀作参数。✅ 见 §7.3(包级私有不可行的原因也在该节写实)
+4. **明确不抽象(两处重复,写实留案)**:cookie 凭据嗅探循环(`TokenAuthenticationFilter.resolveToken` vs `SecurityAuditFilter.hasCredential`,I1 落地后复核:两个循环各自 6 行、语义不同——前者要取值后者只判存在,合一需引入回调或返回 Optional 的共享 helper,抽象成本高于重复成本,维持不抽象)、GitHub/GitLab webhook 验签-入队形状(2 处,各自安全时序即契约)。✅ 零代码改动
+
+---
+
+## 7. Stage 2 执行结果(2026-08-10)
+
+### 7.1 I1:SecurityAuditFilter 摘除 common→auth
+
+- `common/web/SecurityAuditFilter` 不再注入 `AuthCookieService`,改为
+  `@Value("${app.security.auth-cookie-name:reposage_auth}")` 直读共享属性源。
+- **两处读数永远一致的依据**:该属性唯一定义在 `config/app-boundary.yml:27`
+  (`${AUTH_COOKIE_NAME:reposage_auth}`),`AuthCookieService` 用同一表达式同一默认值;
+  过滤器本就只消费 `getCookieName()` 这一个字符串,反转后语义零变。
+- 行为锁:`SecurityAuditFilterTest` 9 例断言零改动(仅构造函数换参,常量仍 `reposage_auth`),
+  测试类同时甩掉了对 auth 的 import。
+- 效果:`common → auth` 1→**0**;common 的领域依赖仅剩 R1(见 §8)。
+
+### 7.2 I2:agent 检索端口反转(照 AgentModelClient 范式)
+
+- 新端口 `agent/orchestration/AgentContextRetriever`(public,消费域持有;放 orchestration
+  是因为它回的 `AgentRetrievedContextCheckpoint.Evidence` 词汇就住在这里,与
+  `agent/model/AgentModelClient` 的"端口住在能力子包"同构):
+  `List<Evidence> retrieve(ReviewRetrievalQuery scope)`——签名只有域类型,零框架泄漏。
+- 适配器 = 既有 `ai/langchain4j/LangChain4jReviewContentRetriever` 增实现该端口;
+  框架 `Query` 组装(`toQuery`,公共静态方法**原样保留**,既有测试与签名不动)与
+  Content→Evidence 映射(自 `RetrievingContextStepExecutor` **逐字迁入**,diff 可核)
+  都收进适配器;端口方法内部调用链 = 执行器原调用链(`retrieve(toQuery(scope))` + 同一 map)。
+- 执行器不再 import `ai.*` 与 `dev.langchain4j.*`(连 `ContentMetadata` 也一并甩掉)。
+- **注册机制写实偏差**:`AgentModelClient` 适配器走 `LangChain4jModelConfiguration` 的
+  条件 `@Bean`(它需要装配 provider 条件配置);检索适配器无条件面,维持既有 `@Component`
+  注册——若移进该条件配置类,bean 会在 `app.ai.runtime != langchain4j` 下消失,
+  执行器构造注入失败,属行为变更,不做。
+- 行为锁与覆盖保全:执行器测试改 mock 端口并**新增** scope 捕获断言(projectId/sourceVersion/
+  changedPaths);适配器测试新增端口路径逐字段映射锁定用例——原先经执行器测试间接覆盖的
+  Content→Evidence 映射不失覆盖。
+- @Transactional 自调用核查:被迁移的映射代码与端口方法均无事务注解、不触及事务方法(全文件 grep 佐证)。
+- 效果:`agent → ai` 1→**0**;`ai → agent` 3→5(端口/Evidence 引用,方向正确,即 R5 范式);
+  `agent → context` 3→4(端口签名引 `ReviewRetrievalQuery`,合法方向)。
+
+### 7.3 重复收敛:AI 瞬时失败分类 3 处 → `ai/AiTransientFailureClassifier`
+
+一张决策表(429/5xx/超时/连接层→瞬时,余者→永久)收敛为一个类、两个入口——两个入口对应
+两个异常族**各自的分发语义**,同质化会改行为,不做:
+
+- **causalChain 实例入口**(langchain4j 双胞胎):两个 `classify` 逐字收敛,按调用点参数化
+  (消息前缀 `LangChain4j provider`/`Embedding provider`、永久错误码 6004/6003、兜底命名)。
+  **diff 双胞胎时发现并写实保留的行为差**:因果链走完无一命中时,"returned an invalid response"
+  消息点名的异常层不同——模型客户端点名链上**最深层**、Embedding 点名**顶层抛出**异常;
+  以 `UnrecognizedNaming.{DEEPEST_CAUSE,THROWN_FAILURE}` 枚举参数保留,不统一。
+- **classifyRestClientFailure 静态入口**(OpenAiCompatibleReviewClient):保留原 catch 阶梯的
+  **顶层类型分发**(不沿因果链遍历——遍历会让"包着 429 的未知异常"从永久变瞬时,反向同理);
+  逐条消息逐字节一致;4xx 面上保留**字面 429** 判定(不复用 `429||5xx` 共享行,手工构造 5xx
+  `HttpClientErrorException` 的假想路径维持既有永久走向);`describeFailure`(链扁平化 +
+  「读超时,请增大 AI_READ_TIMEOUT_MS」运维提示)留在客户端——它是站点专属文案,不进共享类。
+- **传统 int 构造保留(重要)**:`BusinessException(6004/6003, msg)` 经 `resolveHttpStatus`
+  落 HTTP **400**;若"顺手"换成 `ErrorCode` 枚举构造会静默变 **503**——error-handling.md
+  明文禁止在重构里规整 legacy 码与状态的对应,分类器类注释留档。
+- **可见性写实**:三调用点横跨 `ai` 与 `ai.langchain4j` 两个 Java 包,类无法 package-private,
+  取 ai 顶层包 public;`classifyRestClientFailure` 仅同包使用,收窄为包级私有方法。
+  家选 ai 而非 common 的依据:分类逻辑的词汇是提供方异常分类学(langchain4j/Spring Web),
+  r4 明文 common 不得反向依赖领域知识;common 只共享纯标记异常 `AiCallTransientException`
+  (其 FQN 被 `application.yml` resilience4j retry/record-exceptions 钉死,本批零触碰零移动,
+  重试/熔断语义不变)。
+- **特征测试先行**(PRD 硬约束:无覆盖先补锁):catch 阶梯此前零直接覆盖,新增
+  `characterization/AiReviewFailureClassificationCharacterizationTest`(6 例)**先对未改动
+  代码跑绿**再动手。首跑纠正一处预设并写进测试:响应体提取阶段的读超时被 Spring 包为
+  `RestClientException`(非 `ResourceAccessException`),现状落兜底**永久**分支(仅消息带
+  「读超时」提示)——收敛原样保留该走向,未"顺手修正"为瞬时。双胞胎侧的既有 WireMock
+  分类测试(8+5 例)断言零改动,即行为锁。
+
+### 7.4 契约复核(Stage 2)
+
+`git status` 全量:6 个 main 文件修改 + 3 个测试修改 + 3 个新文件,`backend/src/main/resources`
+与 `pom.xml` **零改动**(迁移/yml/REST 无涉);冻结面(`common/api/*`、`ProjectAuthorization`、
+`common/exception/*` 含 `AiCallTransientException`)diff 为空;公共 API 变更仅新端口接口一处
+(任务允许项),`toQuery`/`retrieve(Query)` 等既有公共签名原样。
+
+---
+
+## 8. 终态依赖图(Stage 2 后复跑 `scan-package-deps.py`,349 类)
+
+- **88 条边、363 个跨包 import**(§4 基线 90/360)。消失的 2 条边恰是两张工单:
+  `common→auth`(I1)与 `agent→ai`(I2)。import 净 +3 的构成:+1 `agent→context`
+  (端口签名)、+2 `ai→agent`(适配器引端口与 Evidence)、+2 `ai→common`(分类器引
+  ErrorCode/BusinessException/AiCallTransientException,扣除 OpenAiCompatibleReviewClient
+  甩掉的 1 条)、-2(工单两边)。
+- **common 的领域依赖:3 import/2 类 → 2 import/1 类**——仅剩 `ProjectAuthorization` →
+  `project.{ProjectEntity,ProjectRepository}`,即 R1 冻结契约例外,别无其他。
+  r4 明文规则("common/ 不得反向依赖领域包")的违规清单至此**只剩具名冻结例外**。
+- **SCC 写实**:仍 1 个 20 包强连通分量,成员与 §1.2 相同。余环全部由 §2.3 的 14 项留档
+  保留缝构成——Stage 2 前"每条回边要么有工单、要么有留档理由"中的工单项已清零,
+  现在**每条回边都有留档理由**。物理消环需破坏冻结契约(R1/R3)与查询侧 join 缝(R8/R9),
+  维持不做的结论。
+
+## 9. 逻辑分层图(AC「包依赖方向可画出无环图」的达成口径)
+
+25 包按职责落 5 层;**层间图无环**(把每层缩为一点、下表具名回边剔除后,所有跨层边
+严格由高层指向低层);层内环团逐项有主。逐边核对口径:88 条边全数过筛,无未具名回边。
+
+```text
+层4 审查与 Agent 执行域   review  ai  agent  patch  scm  pullrequest
+层3 资源/知识/产物域      repo  knowledge  rag  context  language  finding  feedback  model  evaluation
+层2 项目枢纽             project
+层1 平台设施             auth  config  git  mq
+层0 契约基座与叶子        common  |  report  notify  webhook  sandbox(无出边)
+```
+
+**具名上行回边(低层→高层,全部有主,共 8 束 25 import)**
+
+| 回边 | import 数 | 依据 |
+|------|-----------|------|
+| common→project | 2 | R1 冻结契约(ProjectAuthorization 鉴权缝) |
+| git→repo | 5 | R12(GitCliService 公共签名收实体,批B 留档的深模块代价) |
+| mq→review | 3 | R4(MqLogQueryService 按 ReviewTask 做项目域鉴权 join) |
+| project→{repo,knowledge,rag,feedback,ai,pullrequest,review} | 11 | R13 清理辐辏束(ProjectCleanupService 级联清到每个从属聚合) |
+| finding→agent | 2 | R8(查询侧 join run 做域权过滤) |
+| rag→ai | 1 | R10(RagService→AiCallLogService 调用留痕) |
+| knowledge→ai | 1 | 同 R10 性质:AI 调用留痕缝(KnowledgeService→AiCallLogService) |
+| model→ai | 1 | 同 R10 性质(HttpModelRiskClient→AiCallLogService) |
+
+**层内环团(写实,不假装成对消除)**
+
+- 层4 核:R5(ai→agent,端口方向正确的单向,I2 后 agent→ai 已消,不再成对)、
+  R6(agent↔patch)、R7(agent↔scm)、R9(ai↔review)、R14(pullrequest↔review)
+  加 agent→pullrequest(读 PR 上下文,单向)共同构成一个层内连通环团——这就是 20 包 SCC
+  的核,缝上是接口与 record(R6/R7)或查询侧 join(R9/R14),逐项理由见 §2.3。
+- 层3 内:knowledge↔rag(R11,检索横跨两域的实相);其余层3 边
+  (context→{knowledge,rag}、language→finding)无环。
+- 层1 内:mq→config→auth 线性无环(R2/R3)。
+
+新人口径自测:"这个类该放哪"——契约/横切进 common,装配进 config,凭据进 auth,
+项目所有权进 project,产物词汇进 finding,AI 提供方适配进 ai,Agent 闭环进 agent 及其
+机制子包——25 包布局与 r4 规范树零差异(§3 结论在 Stage 2 后依然成立,本阶段零移动)。
+
+## 10. 验证(Stage 2)
+
+- 特征测试先行:`AiReviewFailureClassificationCharacterizationTest` 对未改动代码
+  `Tests run: 6, Failures: 0`(改前基线),重构后原样不动继续绿。
+- 改动面定向回归(6 个测试类):`Tests run: 33, Failures: 0, Errors: 0`。
+- 容器化 `mvn -s .mvn/settings.xml -B clean verify`:**BUILD SUCCESS**
+  `Tests run: 583, Failures: 0, Errors: 0, Skipped: 3`
+  (Stage 1 基线 576 全保留 + 6 特征测试 + 1 适配器端口映射锁定用例 = 583);
+  Spring 上下文在测试内完整拉起 = 组件扫描冒烟(新端口与分类器均在扫描根下,
+  检索适配器仍为无条件 @Component)。
+- 契约复核见 §7.4:resources/pom 零改动,冻结面 diff 为空,resilience4j 匹配的
+  `AiCallTransientException` FQN 零触碰。

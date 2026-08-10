@@ -7,6 +7,8 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.example.codereview.agent.orchestration.AgentContextRetriever;
+import com.example.codereview.agent.orchestration.AgentRetrievedContextCheckpoint;
 import com.example.codereview.context.ReviewContextService;
 import com.example.codereview.context.ReviewRetrievalQuery;
 import dev.langchain4j.rag.content.ContentMetadata;
@@ -62,6 +64,35 @@ class LangChain4jReviewContentRetrieverTest {
         assertThat(request.getValue().strings()).containsExactly("SELECT users");
         assertThat(request.getValue().toolRuleIds()).containsExactly("PMD.CloseResource");
         assertThat(request.getValue().topK()).isEqualTo(3);
+    }
+
+    /** agent 侧端口路径(I2):scope→框架 Query→Content→Evidence 全程收在适配器内,映射逐字段锁定。 */
+    @Test
+    void agentPortMapsScopeToDomainEvidenceWithoutExposingFrameworkTypes() {
+        ReviewContextService service = mock(ReviewContextService.class);
+        when(service.retrieve(any())).thenReturn(List.of(new ReviewContextService.ContextEvidence(
+                "Close SQL connections",
+                "security.md#chunk-2",
+                "security.md",
+                2,
+                "head-abc",
+                "SECURITY",
+                0.87,
+                true
+        )));
+        AgentContextRetriever retriever = new LangChain4jReviewContentRetriever(service);
+
+        List<AgentRetrievedContextCheckpoint.Evidence> evidence = retriever.retrieve(query(7L));
+
+        assertThat(evidence).containsExactly(new AgentRetrievedContextCheckpoint.Evidence(
+                "Close SQL connections", "security.md#chunk-2", "security.md", 2,
+                "SECURITY", "head-abc", 0.87, true
+        ));
+        ArgumentCaptor<ReviewContextService.Request> request =
+                ArgumentCaptor.forClass(ReviewContextService.Request.class);
+        verify(service).retrieve(request.capture());
+        assertThat(request.getValue().projectId()).isEqualTo(7L);
+        assertThat(request.getValue().toolRuleIds()).containsExactly("PMD.CloseResource");
     }
 
     @Test

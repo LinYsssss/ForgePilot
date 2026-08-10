@@ -1,6 +1,5 @@
 package com.example.codereview.common.web;
 
-import com.example.codereview.auth.AuthCookieService;
 import com.example.codereview.common.security.CurrentUser;
 import com.example.codereview.common.security.SecurityAuditLogger;
 import com.example.codereview.common.security.SecurityAuditLogger.Outcome;
@@ -40,13 +39,16 @@ public class SecurityAuditFilter extends OncePerRequestFilter {
 
     private final SecurityAuditLogger audit;
     private final ClientIpResolver clientIpResolver;
-    private final AuthCookieService authCookieService;
+    private final String authCookieName;
 
     public SecurityAuditFilter(SecurityAuditLogger audit,
-                               AuthCookieService authCookieService,
+                               // 与 auth.AuthCookieService 各自读同一属性源(app-boundary.yml 的
+                               // app.security.auth-cookie-name),而不是 common 反向依赖 auth 去问
+                               // cookie 名——本过滤器只需要「这个名字的 cookie 算凭据」这一个字符串。
+                               @Value("${app.security.auth-cookie-name:reposage_auth}") String authCookieName,
                                @Value("${app.security.trusted-proxies:}") String trustedProxies) {
         this.audit = audit;
-        this.authCookieService = authCookieService;
+        this.authCookieName = authCookieName;
         this.clientIpResolver = new ClientIpResolver(trustedProxies);
     }
 
@@ -109,7 +111,7 @@ public class SecurityAuditFilter extends OncePerRequestFilter {
             return false;
         }
         for (Cookie cookie : cookies) {
-            if (authCookieService.getCookieName().equals(cookie.getName())) {
+            if (authCookieName.equals(cookie.getName())) {
                 return true;
             }
         }

@@ -1,7 +1,6 @@
 package com.example.codereview.ai;
 
 import com.example.codereview.common.api.ErrorCode;
-import com.example.codereview.common.exception.AiCallTransientException;
 import com.example.codereview.common.exception.BusinessException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -18,9 +17,6 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.HttpClientErrorException;
-import org.springframework.web.client.HttpServerErrorException;
-import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
 
 @Service
@@ -85,20 +81,9 @@ public class OpenAiCompatibleReviewClient implements AiReviewClient {
             return parseContent(content, extractUsage(root));
         } catch (BusinessException ex) {
             throw ex;
-        } catch (HttpClientErrorException ex) {
-            // 4xx is a deterministic client problem (bad key/request) — retrying won't help.
-            // 429 is the exception: it is a transient rate-limit, so let it retry / trip the breaker.
-            if (ex.getStatusCode().value() == 429) {
-                throw new AiCallTransientException("AI 调用被限流(429): " + describeFailure(ex), ex);
-            }
-            throw new BusinessException(ErrorCode.AI_CALL_FAILED, "AI 调用失败: " + describeFailure(ex));
-        } catch (HttpServerErrorException ex) {
-            throw new AiCallTransientException("AI 服务端错误(5xx): " + describeFailure(ex), ex);
-        } catch (ResourceAccessException ex) {
-            // Connect/read timeout or connection reset — transient, worth retrying.
-            throw new AiCallTransientException("AI 调用网络异常: " + describeFailure(ex), ex);
         } catch (Exception ex) {
-            throw new BusinessException(ErrorCode.AI_CALL_FAILED, "AI 调用失败: " + describeFailure(ex));
+            // 瞬时/永久的定性收敛在共享决策表(顶层类型分发,保留原 catch 阶梯语义与消息)。
+            throw AiTransientFailureClassifier.classifyRestClientFailure(ex, describeFailure(ex));
         }
     }
 

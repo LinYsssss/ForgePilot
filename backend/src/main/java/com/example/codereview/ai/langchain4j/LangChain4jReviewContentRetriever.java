@@ -1,5 +1,7 @@
 package com.example.codereview.ai.langchain4j;
 
+import com.example.codereview.agent.orchestration.AgentContextRetriever;
+import com.example.codereview.agent.orchestration.AgentRetrievedContextCheckpoint;
 import com.example.codereview.context.ReviewContextService;
 import com.example.codereview.context.ReviewRetrievalQuery;
 import dev.langchain4j.data.document.Metadata;
@@ -18,7 +20,7 @@ import java.util.UUID;
 import org.springframework.stereotype.Component;
 
 @Component
-public final class LangChain4jReviewContentRetriever implements ContentRetriever {
+public final class LangChain4jReviewContentRetriever implements ContentRetriever, AgentContextRetriever {
 
     private static final String SCOPE_PARAMETER = "reposage.review-retrieval-scope";
 
@@ -33,6 +35,17 @@ public final class LangChain4jReviewContentRetriever implements ContentRetriever
         ReviewRetrievalQuery scope = scopeFrom(query);
         return reviewContextService.retrieve(scope.toDomainRequest()).stream()
                 .map(LangChain4jReviewContentRetriever::toContent)
+                .toList();
+    }
+
+    /**
+     * agent 侧端口({@link AgentContextRetriever})的适配实现:框架 Query 组装与
+     * Content→Evidence 映射都收在适配器内,调用方只见域类型。
+     */
+    @Override
+    public List<AgentRetrievedContextCheckpoint.Evidence> retrieve(ReviewRetrievalQuery scope) {
+        return retrieve(toQuery(scope)).stream()
+                .map(LangChain4jReviewContentRetriever::toEvidence)
                 .toList();
     }
 
@@ -78,5 +91,19 @@ public final class LangChain4jReviewContentRetriever implements ContentRetriever
                 .put("trust", evidence.untrusted() ? "untrusted" : "trusted");
         TextSegment segment = TextSegment.from(evidence.content(), metadata);
         return Content.from(segment, Map.of(ContentMetadata.SCORE, evidence.score()));
+    }
+
+    // 自 RetrievingContextStepExecutor 逐字迁入(批C Stage 2 I2):映射语义零改动。
+    private static AgentRetrievedContextCheckpoint.Evidence toEvidence(Content content) {
+        return new AgentRetrievedContextCheckpoint.Evidence(
+                content.textSegment().text(),
+                content.textSegment().metadata().getString("citation"),
+                content.textSegment().metadata().getString("source_name"),
+                content.textSegment().metadata().getInteger("chunk_index"),
+                content.textSegment().metadata().getString("document_type"),
+                content.textSegment().metadata().getString("source_version"),
+                ((Number) content.metadata().get(ContentMetadata.SCORE)).doubleValue(),
+                "untrusted".equals(content.textSegment().metadata().getString("trust"))
+        );
     }
 }

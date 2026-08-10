@@ -5,7 +5,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import ch.qos.logback.classic.LoggerContext;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
-import com.example.codereview.auth.AuthCookieService;
 import com.example.codereview.common.security.CurrentUser;
 import com.example.codereview.common.security.SecurityAuditLogger;
 import jakarta.servlet.FilterChain;
@@ -29,8 +28,7 @@ class SecurityAuditFilterTest {
 
     @BeforeEach
     void setUp() {
-        AuthCookieService cookies = new AuthCookieService(COOKIE_NAME, true, 3600, "Lax");
-        filter = new SecurityAuditFilter(audit, cookies, "127.0.0.1");
+        filter = new SecurityAuditFilter(audit, COOKIE_NAME, "127.0.0.1");
         auditLogger = ((LoggerContext) LoggerFactory.getILoggerFactory()).getLogger("security.audit");
         appender = new ListAppender<>();
         appender.start();

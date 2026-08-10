@@ -3,18 +3,17 @@ package com.example.codereview.agent.orchestration.steps;
 import com.example.codereview.agent.error.AgentFailureType;
 import com.example.codereview.agent.orchestration.AgentAnalysisContextRepository;
 import com.example.codereview.agent.orchestration.AgentChangeAnalysisCheckpoint;
+import com.example.codereview.agent.orchestration.AgentContextRetriever;
 import com.example.codereview.agent.orchestration.AgentRetrievedContextCheckpoint;
 import com.example.codereview.agent.orchestration.AgentStepExecutionContext;
 import com.example.codereview.agent.orchestration.AgentStepExecutor;
 import com.example.codereview.agent.orchestration.AgentStepResult;
 import com.example.codereview.agent.queue.AgentStepExecutionException;
 import com.example.codereview.agent.run.AgentRunStatus;
-import com.example.codereview.ai.langchain4j.LangChain4jReviewContentRetriever;
 import com.example.codereview.context.ReviewRetrievalQuery;
 import com.example.codereview.language.ToolCommand;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import dev.langchain4j.rag.content.ContentMetadata;
 import java.util.List;
 import java.util.Map;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,13 +23,13 @@ import org.springframework.stereotype.Component;
 public final class RetrievingContextStepExecutor implements AgentStepExecutor {
 
     private final AgentAnalysisContextRepository contexts;
-    private final LangChain4jReviewContentRetriever retriever;
+    private final AgentContextRetriever retriever;
     private final ObjectMapper mapper;
 
     @Autowired
     public RetrievingContextStepExecutor(
             AgentAnalysisContextRepository contexts,
-            LangChain4jReviewContentRetriever retriever,
+            AgentContextRetriever retriever,
             ObjectMapper mapper
     ) {
         this.contexts = contexts;
@@ -76,18 +75,7 @@ public final class RetrievingContextStepExecutor implements AgentStepExecutor {
                     context.projectId(), List.of(), context.headSha(), 65_536, 0.35, 12,
                     paths, List.of(), List.of(), List.of(), List.of(), ruleIds
             );
-            List<AgentRetrievedContextCheckpoint.Evidence> evidence = retriever.retrieve(
-                    LangChain4jReviewContentRetriever.toQuery(scope)
-            ).stream().map(content -> new AgentRetrievedContextCheckpoint.Evidence(
-                    content.textSegment().text(),
-                    content.textSegment().metadata().getString("citation"),
-                    content.textSegment().metadata().getString("source_name"),
-                    content.textSegment().metadata().getInteger("chunk_index"),
-                    content.textSegment().metadata().getString("document_type"),
-                    content.textSegment().metadata().getString("source_version"),
-                    ((Number) content.metadata().get(ContentMetadata.SCORE)).doubleValue(),
-                    "untrusted".equals(content.textSegment().metadata().getString("trust"))
-            )).toList();
+            List<AgentRetrievedContextCheckpoint.Evidence> evidence = retriever.retrieve(scope);
             analysisContext.contextRetrieved(mapper.writeValueAsString(
                     new AgentRetrievedContextCheckpoint("agent-retrieved-context-v1", evidence)
             ));

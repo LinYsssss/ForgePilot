@@ -3,23 +3,18 @@ package com.example.codereview.ai.langchain4j;
 import com.example.codereview.common.api.ErrorCode;
 import com.example.codereview.agent.model.AgentModelClient;
 import com.example.codereview.agent.model.PromptEnvelope;
+import com.example.codereview.ai.AiTransientFailureClassifier;
 import com.example.codereview.common.exception.AiCallTransientException;
 import com.example.codereview.common.exception.BusinessException;
 import dev.langchain4j.data.message.ChatMessage;
 import dev.langchain4j.data.message.SystemMessage;
 import dev.langchain4j.data.message.UserMessage;
-import dev.langchain4j.exception.HttpException;
-import dev.langchain4j.exception.NonRetriableException;
-import dev.langchain4j.exception.RetriableException;
 import dev.langchain4j.model.chat.ChatModel;
 import dev.langchain4j.model.chat.request.ChatRequest;
 import dev.langchain4j.model.chat.response.ChatResponse;
 import dev.langchain4j.model.output.TokenUsage;
 import io.micrometer.observation.Observation;
 import io.micrometer.observation.ObservationRegistry;
-import java.net.ConnectException;
-import java.net.SocketTimeoutException;
-import java.net.http.HttpTimeoutException;
 import java.util.List;
 import java.util.Objects;
 
@@ -27,6 +22,13 @@ public final class LangChain4jAgentModelClient implements AgentModelClient {
 
     private static final String GENERATE = "generate";
     private static final String REPAIR = "repair";
+
+    /** 兜底命名沿用本类既有行为:点名因果链最深一层(与 Embedding 客户端不同,写实保留)。 */
+    private static final AiTransientFailureClassifier CLASSIFIER = AiTransientFailureClassifier.causalChain(
+            "LangChain4j provider",
+            6004,
+            AiTransientFailureClassifier.UnrecognizedNaming.DEEPEST_CAUSE
+    );
 
     private final ChatModel chatModel;
     private final String provider;
@@ -130,53 +132,8 @@ public final class LangChain4jAgentModelClient implements AgentModelClient {
         } catch (BusinessException | AiCallTransientException ex) {
             throw ex;
         } catch (RuntimeException ex) {
-            throw classify(ex);
+            throw CLASSIFIER.classify(ex);
         }
-    }
-
-    private RuntimeException classify(RuntimeException failure) {
-        Throwable current = failure;
-        Throwable providerFailure = failure;
-        while (current != null) {
-            providerFailure = current;
-            if (current instanceof RetriableException
-                    || current instanceof HttpTimeoutException
-                    || current instanceof SocketTimeoutException
-                    || current instanceof ConnectException) {
-                return new AiCallTransientException(
-                        "LangChain4j provider call failed transiently ("
-                                + current.getClass().getSimpleName() + ")",
-                        failure
-                );
-            }
-            if (current instanceof HttpException http) {
-                if (http.statusCode() == 429 || http.statusCode() >= 500) {
-                    return new AiCallTransientException(
-                            "LangChain4j provider call failed transiently (HTTP "
-                                    + http.statusCode() + ")",
-                            failure
-                    );
-                }
-                return permanent(current);
-            }
-            if (current instanceof NonRetriableException) {
-                return permanent(current);
-            }
-            current = current.getCause();
-        }
-        return new BusinessException(
-                6004,
-                "LangChain4j provider returned an invalid response ("
-                        + providerFailure.getClass().getSimpleName() + ")"
-        );
-    }
-
-    private BusinessException permanent(Throwable failure) {
-        return new BusinessException(
-                6004,
-                "LangChain4j provider call failed permanently ("
-                        + failure.getClass().getSimpleName() + ")"
-        );
     }
 
     private static String safe(String value) {

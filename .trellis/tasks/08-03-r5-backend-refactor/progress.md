@@ -77,7 +77,7 @@
 - 契约零改动复核:resources(迁移/yml)、common/(冻结契约)、pom、REST 注解与 DTO record
   行零变更;公共类名/包/签名全部不动,抽出协作对象均为包级私有或 private。
 
-## 批C 模块边界(Stage 1:普查 + 处置表 + 纯移动,2026-08-10,已完成,待提交;Stage 2:反转/收敛,待派发)
+## 批C 模块边界(Stage 1:普查 + 处置表 + 纯移动;Stage 2:反转/收敛。2026-08-10,两阶段均已完成,待提交)
 
 普查口径、原始边表、环报告、逐项处置(移动/反转/保留+理由)全量留档:
 [batch-c-boundaries.md](./batch-c-boundaries.md);普查脚本 `scripts/scan-package-deps.py`(可复跑)。
@@ -107,7 +107,7 @@ SCC 成员不变(余环即 Stage 2 工单 + 14 项留档保留缝,物理消环�
 重复收敛 1 项达 ≥3 线(AI 瞬时失败分类 ×3:两个 langchain4j `classify` 近同 + OpenAiCompatibleReviewClient
 catch 阶梯);明确不抽象 2 项(两处线,留案)。
 
-### 验证
+### 验证(Stage 1)
 
 - 容器化 `mvn -s .mvn/settings.xml -B clean verify`:**BUILD SUCCESS**
   `Tests run: 576, Failures: 0, Errors: 0, Skipped: 3`(与批B 基线逐数相同);
@@ -115,3 +115,40 @@ catch 阶梯);明确不抽象 2 项(两处线,留案)。
 - 契约零改动复核:迁移/REST 路径/DTO 字段/MQ 载荷零触碰;冻结四类
   (ErrorCode/PageResponse/ApiResponse/ProjectAuthorization)零触碰;
   `application.yml` 仅 resilience4j 两行 FQN 随迁,`app-agent.yml`/`app-boundary.yml` 零改动。
+
+### Stage 2:反转 + 重复收敛(2026-08-10,已完成,待提交)
+
+逐项过程、行为保全证据与终态分层图留档:[batch-c-boundaries.md](./batch-c-boundaries.md) §7–§10。
+
+**I1(common→auth 1→0)**:`SecurityAuditFilter` 摘除 `AuthCookieService` 注入,cookie 名改
+`@Value` 直读共享属性源 `app.security.auth-cookie-name`(唯一定义在 app-boundary.yml:27,
+双方同表达式同默认值 `reposage_auth`);测试 9 例断言零改动。
+
+**I2(agent→ai 1→0)**:新端口 `agent/orchestration/AgentContextRetriever`(域类型签名,照
+AgentModelClient「端口在消费域」范式);适配器 = 既有 `LangChain4jReviewContentRetriever`
+增实现端口,`toQuery` 组装与 Content→Evidence 映射逐字收进适配器(公共 `toQuery`/
+`retrieve(Query)` 签名原样);执行器甩掉全部 ai 与 langchain4j import;注册维持无条件
+`@Component`(移进条件配置类会让 bean 随 runtime 条件消失,属行为变更,写实留档)。
+
+**重复收敛(≥3 线)**:AI 瞬时失败分类 3 处 → `ai/AiTransientFailureClassifier` 单类双入口
+(langchain4j 族沿因果链遍历、RestClient 族顶层类型分发——同质化会改包装路径行为,不做);
+参数化保留的既有行为差:消息前缀、永久码 6004/6003、兜底命名(最深层 vs 顶层,枚举写实);
+**传统 int 构造保留**(6004/6003 落 HTTP 400,换 ErrorCode 枚举会静默变 503,error-handling.md
+禁止顺手规整);429 字面判定在 4xx 分支保留。resilience4j 匹配的 `AiCallTransientException`
+FQN 零触碰。**特征测试先行**:catch 阶梯此前零覆盖,新增
+`characterization/AiReviewFailureClassificationCharacterizationTest`(6 例)改前跑绿再动;
+首跑纠正预设——提取阶段读超时现状走**永久**分支,原样保留。明确不抽象 2 项复核后维持
+(cookie 嗅探两循环语义不同:取值 vs 判存在)。
+
+**终态依赖(复跑 scan-package-deps.py)**:88 边/363 import(Stage 1 后 90/360;消失的 2 条
+恰是两张工单边);common 领域依赖 → **2 import/1 类**(仅 R1 冻结例外);SCC 仍 20 包但
+每条余边均有留档理由(工单项清零);5 层逻辑分层图 + 8 束具名上行回边(25 import)+
+层内环团逐项有主,层间图无环——AC「可画出无环图」以此口径达成,留档 §9。
+
+### 验证(Stage 2)
+
+- 容器化 `mvn -s .mvn/settings.xml -B clean verify`:**BUILD SUCCESS**
+  `Tests run: 583, Failures: 0, Errors: 0, Skipped: 3`(Stage 1 基线 576 全保留 + 7 新增)。
+- 契约零改动复核:`backend/src/main/resources` 与 `pom.xml` diff 为空(迁移/yml/REST 无涉);
+  冻结面(common/api、ProjectAuthorization、common/exception)零触碰;公共 API 变更仅
+  新端口接口一处(任务允许项);@Transactional 自调用核查:被迁移代码均不含、不触及事务方法。
