@@ -3,7 +3,7 @@
   "name": "r6-frontend-element-plus",
   "title": "前端美化：Element Plus+design tokens",
   "description": "单库Element Plus+深度主题定制，逐页替换Observatory手写视觉，一页一提交截图对比",
-  "status": "planning",
+  "status": "in_progress",
   "dev_type": null,
   "scope": null,
   "package": null,

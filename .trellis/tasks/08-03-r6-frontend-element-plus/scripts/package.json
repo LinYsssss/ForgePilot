@@ -1,0 +1,9 @@
+{
+  "name": "r6-capture-tool",
+  "private": true,
+  "type": "module",
+  "description": "任务内截图工具,依赖仅 playwright(与容器 v1.48.0 严格同版);node_modules 与 lockfile 不入库",
+  "dependencies": {
+    "playwright": "^1.48.0"
+  }
+}

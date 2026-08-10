@@ -1,0 +1,353 @@
+/* ============================================================
+   RepoSage · Design Tokens — 「Precision Workbench」
+   唯一色板权威:.trellis/tasks/08-03-r6-frontend-element-plus/design-tokens.md
+   任何页面禁止魔法色值;组件微调走 Element CSS 变量接口。
+
+   三段结构:
+     1) --rs-* 原生 tokens(:root)
+     2) Element Plus 变量覆盖(html:root,原因见该段注释)
+     3) 产品语义工具类(@layer rs-tokens 降优先级:迁移期 styles.css
+        的同名未分层类继续生效,styles.css 删除后本段自然接管)
+
+   暗色模式本期不做:tokens 全部挂 :root;未来加 html.dark 块
+   覆写同名 token 即可扩展。
+   ============================================================ */
+
+/* ------------------------------------------------------------
+   1) 原生 tokens(--rs-*)
+   ------------------------------------------------------------ */
+:root {
+  /* ---- 品牌主色(teal) ---- */
+  --rs-primary: #0F766E;      /* 主按钮/激活态/链接(白底 5.4:1) */
+  --rs-primary-dark: #0C5E58; /* hover/active 深化(=向黑 20% 混合) */
+
+  /* ---- 冷灰阶(slate) ---- */
+  --rs-text: #1E293B;         /* 主文本(14.6:1) */
+  --rs-text-soft: #475569;    /* 次级文本(8.0:1) */
+  --rs-text-dim: #64748B;     /* 弱文本/说明(4.76:1) */
+  --rs-placeholder: #94A3B8;  /* 占位符 */
+  --rs-border: #DCE3EC;
+  --rs-border-strong: #C6D0DD;
+  --rs-border-faint: #EAEFF5;
+  --rs-fill: #F1F5F9;
+  --rs-fill-lighter: #F8FAFC;
+  --rs-bg: #F4F6FA;           /* 页面底(微冷) */
+  --rs-surface: #FFFFFF;      /* 卡片面 */
+
+  /* ---- 风险四级(riskLevel:NONE<LOW<MEDIUM<HIGH,全站唯一映射)
+     每级四值:text(tint 底上 AA)/ bg(tint)/ border / solid(实心条/表盘) ---- */
+  --rs-risk-high-text: #B91C1C;
+  --rs-risk-high-bg: #FEECEB;
+  --rs-risk-high-border: #F5C6C2;
+  --rs-risk-high-solid: #DC2626;
+
+  --rs-risk-medium-text: #B45309;
+  --rs-risk-medium-bg: #FDF0DD;
+  --rs-risk-medium-border: #F2D9AC;
+  --rs-risk-medium-solid: #D97706;
+
+  --rs-risk-low-text: #15803D;
+  --rs-risk-low-bg: #E8F6ED;
+  --rs-risk-low-border: #BFE3CC;
+  --rs-risk-low-solid: #16A34A;
+
+  --rs-risk-none-text: #64748B;
+  --rs-risk-none-bg: #EEF2F7;
+  --rs-risk-none-border: #D8E0EA;
+  --rs-risk-none-solid: #94A3B8;
+
+  /* ---- Finding 严重度两端扩展(CRITICAL/INFO;HIGH/MEDIUM/LOW 复用风险色) ---- */
+  --rs-sev-critical-text: #9F1239;
+  --rs-sev-critical-bg: #FCE7EF;
+  --rs-sev-critical-border: #F3C2D4;
+  --rs-sev-critical-solid: #BE123C;
+
+  --rs-sev-info-text: #0369A1;
+  --rs-sev-info-bg: #E4F3FB;
+  --rs-sev-info-border: #BBDFF2;
+  --rs-sev-info-solid: #0284C7;
+
+  /* ---- 圆角(工作台感,软于 Element 默认 4px) ---- */
+  --rs-radius-sm: 6px;
+  --rs-radius-base: 8px;
+  --rs-radius-round: 999px;
+
+  /* ---- 字体(系统栈;Google Fonts 外链在收尾阶段移除) ---- */
+  --rs-font-body: "Inter", "Segoe UI", system-ui, -apple-system, "PingFang SC",
+    "Microsoft YaHei", sans-serif;
+  --rs-font-mono: ui-monospace, "SF Mono", "Cascadia Code", "JetBrains Mono",
+    Consolas, monospace;
+
+  /* ---- 字号阶(1.2 音程,base 14;与现行 --fs-* 数值一致) ---- */
+  --rs-fs-xs: 11.5px;
+  --rs-fs-sm: 12.5px;
+  --rs-fs-base: 14px;
+  --rs-fs-md: 15px;
+  --rs-fs-lg: 17px;
+  --rs-fs-xl: 20px;
+  --rs-fs-2xl: 25px;
+  --rs-fs-3xl: 31px;
+
+  /* ---- 间距(4px 基准;沿用现行 --sp-* 名称,页面既有引用直接续用) ---- */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 20px;
+  --sp-6: 24px;
+  --sp-8: 32px;
+  --sp-10: 40px;
+  --sp-12: 48px;
+  --sp-16: 64px;
+
+  /* ---- 阴影三级(冷色低强度) ---- */
+  --rs-shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.06);
+  --rs-shadow-md: 0 4px 16px rgba(15, 23, 42, 0.08);
+  --rs-shadow-lg: 0 12px 32px rgba(15, 23, 42, 0.14);
+
+  /* ---- z-index 五层 ---- */
+  --rs-z-base: 1;
+  --rs-z-sticky: 20;
+  --rs-z-dropdown: 30;
+  --rs-z-modal: 40;
+  --rs-z-toast: 50;
+
+  /* ---- motion(三时长二缓动) ---- */
+  --rs-t-fast: 130ms;
+  --rs-t-base: 230ms;
+  --rs-t-slow: 400ms;
+  --rs-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --rs-ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+
+  /* 亮色工作台;迁移期被 styles.css 的 color-scheme: dark 覆盖(其后加载),
+     styles.css 删除后本声明生效 */
+  color-scheme: light;
+}
+
+/* ------------------------------------------------------------
+   2) Element Plus 变量覆盖
+   选择器用 html:root 而非 :root:Element 自身 theme-chalk 的默认值
+   也声明在 :root 上,且按需注入的组件样式在打包产物中的位置随页面
+   迁移进度浮动;html:root 特异性 (0,1,1) > :root (0,1,0),保证本段
+   覆盖与 CSS 打包顺序无关。变量仍落在 html 元素上,继承语义不变。
+
+   色阶派生公式(设计定稿约定,已用 primary 字面值反向验证):
+     light-N = 向白 N×10% 混合;dark-2 = 向黑 20% 混合。
+   primary 亮阶用定稿文档字面值;success/warning/danger/info 亮阶按
+   公式算出写死(四舍五入;禁止 color-mix() 以保浏览器兼容与可审计)。
+   ------------------------------------------------------------ */
+html:root {
+  /* 品牌主色 ramp(teal,= --rs-primary) */
+  --el-color-primary: #0F766E;
+  --el-color-primary-light-3: #579F99;
+  --el-color-primary-light-5: #87BAB6;
+  --el-color-primary-light-7: #B7D6D3;
+  --el-color-primary-light-8: #CFE3E2;
+  --el-color-primary-light-9: #E7F1F0;
+  --el-color-primary-dark-2: #0C5E58; /* = --rs-primary-dark */
+
+  /* success(= 风险 LOW solid #16A34A) */
+  --el-color-success: #16A34A;
+  --el-color-success-light-3: #5CBF80;
+  --el-color-success-light-5: #8BD1A5;
+  --el-color-success-light-7: #B9E3C9;
+  --el-color-success-light-8: #D0EDDB;
+  --el-color-success-light-9: #E8F6ED; /* = 风险 LOW bg,色板自洽 */
+  --el-color-success-dark-2: #12823B;
+
+  /* warning(= 风险 MEDIUM solid #D97706) */
+  --el-color-warning: #D97706;
+  --el-color-warning-light-3: #E4A051;
+  --el-color-warning-light-5: #ECBB83;
+  --el-color-warning-light-7: #F4D6B4;
+  --el-color-warning-light-8: #F7E4CD;
+  --el-color-warning-light-9: #FBF1E6;
+  --el-color-warning-dark-2: #AE5F05;
+
+  /* danger(= 风险 HIGH solid #DC2626) */
+  --el-color-danger: #DC2626;
+  --el-color-danger-light-3: #E76767;
+  --el-color-danger-light-5: #EE9393;
+  --el-color-danger-light-7: #F5BEBE;
+  --el-color-danger-light-8: #F8D4D4;
+  --el-color-danger-light-9: #FCE9E9;
+  --el-color-danger-dark-2: #B01E1E;
+
+  /* error:Element 官方默认主题中 error 与 danger 同值(表单校验/
+     ElMessage 走 error 族),此处同步指向 danger 值,防默认红漏出 */
+  --el-color-error: #DC2626;
+  --el-color-error-light-3: #E76767;
+  --el-color-error-light-5: #EE9393;
+  --el-color-error-light-7: #F5BEBE;
+  --el-color-error-light-8: #F8D4D4;
+  --el-color-error-light-9: #FCE9E9;
+  --el-color-error-dark-2: #B01E1E;
+
+  /* info(slate-500 #64748B,= --rs-text-dim / 风险 NONE text) */
+  --el-color-info: #64748B;
+  --el-color-info-light-3: #939EAE;
+  --el-color-info-light-5: #B2BAC5;
+  --el-color-info-light-7: #D1D5DC;
+  --el-color-info-light-8: #E0E3E8;
+  --el-color-info-light-9: #F0F1F3;
+  --el-color-info-dark-2: #505D6F;
+
+  /* 圆角 */
+  --el-border-radius-base: var(--rs-radius-base); /* 8px */
+  --el-border-radius-small: var(--rs-radius-sm);  /* 6px */
+  --el-border-radius-round: var(--rs-radius-round);
+
+  /* 排版 */
+  --el-font-family: var(--rs-font-body);
+  --el-font-size-base: var(--rs-fs-base); /* 14px */
+
+  /* 文本 */
+  --el-text-color-primary: var(--rs-text);
+  --el-text-color-regular: var(--rs-text-soft);
+  --el-text-color-secondary: var(--rs-text-dim);
+  --el-text-color-placeholder: var(--rs-placeholder);
+
+  /* 描边(rs 三档 → Element 四档:light/lighter 共用 faint,
+     extra-light 落到近白填充) */
+  --el-border-color: var(--rs-border);
+  --el-border-color-light: var(--rs-border-faint);
+  --el-border-color-lighter: var(--rs-border-faint);
+  --el-border-color-extra-light: var(--rs-fill-lighter);
+
+  /* 填充 */
+  --el-fill-color: var(--rs-fill);
+  --el-fill-color-light: var(--rs-fill-lighter);
+  --el-fill-color-lighter: var(--rs-fill-lighter);
+
+  /* 背景 */
+  --el-bg-color: var(--rs-surface);
+  --el-bg-color-page: var(--rs-bg);
+
+  /* 阴影(light/base/dark ← sm/md/lg) */
+  --el-box-shadow-light: var(--rs-shadow-sm);
+  --el-box-shadow: var(--rs-shadow-md);
+  --el-box-shadow-dark: var(--rs-shadow-lg);
+}
+
+/* ------------------------------------------------------------
+   3) 产品语义(diff 变量 + 工具类)
+   ------------------------------------------------------------ */
+
+/* diff 六色(亮色代码面;--rs-diff-* 变量形式,由迁移页消费) */
+:root {
+  --rs-diff-add-bg: #E8F6ED;
+  --rs-diff-add-text: #116932;
+  --rs-diff-del-bg: #FEECEB;
+  --rs-diff-del-text: #B91C1C;
+  --rs-diff-hunk-bg: #E4F3FB;
+  --rs-diff-hunk-text: #0369A1;
+  --rs-diff-meta: #64748B;
+  --rs-diff-lineno: #94A3B8;
+  --rs-diff-surface: #F8FAFC;
+}
+
+/* 工具类只定义颜色+底+描边色,形状交给 Element tag/badge 或迁移页。
+   整段入 @layer(未分层的 styles.css 同名类优先级更高):迁移期不与
+   Observatory 现行规则叠加冲突,styles.css 删除后本段自然接管。 */
+@layer rs-tokens {
+  .mono {
+    font-family: var(--rs-font-mono);
+    font-feature-settings: "liga" 0;
+  }
+
+  /* 风险徽标(riskLevel)+ 严重度(FindingSeverity;HIGH/MEDIUM/LOW
+     复用风险色,sev-NONE 为风险 NONE 别名) */
+  .risk-HIGH,
+  .sev-HIGH {
+    color: var(--rs-risk-high-text);
+    background: var(--rs-risk-high-bg);
+    border-color: var(--rs-risk-high-border);
+  }
+  .risk-MEDIUM,
+  .sev-MEDIUM {
+    color: var(--rs-risk-medium-text);
+    background: var(--rs-risk-medium-bg);
+    border-color: var(--rs-risk-medium-border);
+  }
+  .risk-LOW,
+  .sev-LOW {
+    color: var(--rs-risk-low-text);
+    background: var(--rs-risk-low-bg);
+    border-color: var(--rs-risk-low-border);
+  }
+  .risk-NONE,
+  .sev-NONE {
+    color: var(--rs-risk-none-text);
+    background: var(--rs-risk-none-bg);
+    border-color: var(--rs-risk-none-border);
+  }
+  .sev-CRITICAL {
+    color: var(--rs-sev-critical-text);
+    background: var(--rs-sev-critical-bg);
+    border-color: var(--rs-sev-critical-border);
+  }
+  .sev-INFO {
+    color: var(--rs-sev-info-text);
+    background: var(--rs-sev-info-bg);
+    border-color: var(--rs-sev-info-border);
+  }
+
+  /* 状态 pill 家族(归组见 design-tokens.md) */
+  .st-SUCCESS,
+  .st-INDEXED,
+  .st-ACTIVE,
+  .st-CONSUMED,
+  .st-PUBLISHED,
+  .st-PASSED,
+  .st-OPEN,
+  .st-MERGED {
+    color: var(--rs-risk-low-text);
+    background: var(--rs-risk-low-bg);
+    border-color: var(--rs-risk-low-border);
+  }
+  .st-RUNNING,
+  .st-PENDING,
+  .st-WAIVED {
+    color: var(--rs-risk-medium-text);
+    background: var(--rs-risk-medium-bg);
+    border-color: var(--rs-risk-medium-border);
+  }
+  .st-FAILED,
+  .st-DEAD,
+  .st-ERROR,
+  .st-CHANGES_REQUESTED {
+    color: var(--rs-risk-high-text);
+    background: var(--rs-risk-high-bg);
+    border-color: var(--rs-risk-high-border);
+  }
+  .st-CANCELED,
+  .st-CLOSED {
+    color: var(--rs-risk-none-text);
+    background: var(--rs-risk-none-bg);
+    border-color: var(--rs-risk-none-border);
+  }
+
+  /* 进行中脉冲(自带 keyframes,命名 rs- 前缀不与 styles.css 的
+     pulse 相互覆盖;pseudo 圆点形状由宿主 pill 类提供) */
+  .st-RUNNING::before,
+  .st-PENDING::before {
+    animation: rs-pulse 1.1s var(--rs-ease-in-out) infinite;
+  }
+  @keyframes rs-pulse {
+    0%,
+    100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 0.3;
+      transform: scale(0.82);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .st-RUNNING::before,
+    .st-PENDING::before {
+      animation: none;
+    }
+  }
+}
