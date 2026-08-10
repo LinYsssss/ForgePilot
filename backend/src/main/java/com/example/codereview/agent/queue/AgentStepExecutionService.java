@@ -1,7 +1,7 @@
 package com.example.codereview.agent.queue;
 
 import com.example.codereview.agent.error.AgentFailureType;
-import com.example.codereview.ai.AiCallTransientException;
+import com.example.codereview.common.exception.AiCallTransientException;
 import com.example.codereview.agent.observability.AgentMetrics;
 import com.example.codereview.agent.orchestration.AgentStepExecutionContext;
 import com.example.codereview.agent.orchestration.AgentStepResult;

@@ -1,10 +1,8 @@
-package com.example.codereview.common.security;
+package com.example.codereview.auth;
 
-import com.example.codereview.auth.AuthCookieService;
-import com.example.codereview.auth.TokenService;
 import com.example.codereview.auth.TokenService.ParsedToken;
-import com.example.codereview.auth.UserAccount;
-import com.example.codereview.auth.UserAccountRepository;
+import com.example.codereview.common.security.CurrentUser;
+import com.example.codereview.common.security.SecurityAuditLogger;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.Cookie;

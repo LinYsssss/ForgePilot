@@ -13,7 +13,7 @@ import com.example.codereview.agent.run.AgentRunStatus;
 import com.example.codereview.agent.run.AgentStep;
 import com.example.codereview.agent.run.AgentStepRepository;
 import com.example.codereview.agent.run.AgentStepStatus;
-import com.example.codereview.ai.AiCallTransientException;
+import com.example.codereview.common.exception.AiCallTransientException;
 import java.time.Instant;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;

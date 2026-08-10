@@ -77,4 +77,41 @@
 - 契约零改动复核:resources(迁移/yml)、common/(冻结契约)、pom、REST 注解与 DTO record
   行零变更;公共类名/包/签名全部不动,抽出协作对象均为包级私有或 private。
 
-## 批C 模块边界（未开始）
+## 批C 模块边界(Stage 1:普查 + 处置表 + 纯移动,2026-08-10,已完成,待提交;Stage 2:反转/收敛,待派发)
+
+普查口径、原始边表、环报告、逐项处置(移动/反转/保留+理由)全量留档:
+[batch-c-boundaries.md](./batch-c-boundaries.md);普查脚本 `scripts/scan-package-deps.py`(可复跑)。
+
+### 依赖图(写实数字)
+
+- 移动前:25 顶层包、90 条跨包边、361 个 import;Tarjan 检出 **1 个 20 包强连通分量**
+  (环外仅 sandbox/report/notify/webhook/evaluation)。
+- r4 规范明文规则("common/ 不得反向依赖领域包")的违规:common → {ai:1, auth:6, project:2},
+  共 9 import / 4 类。其余环边为域间双向缝与 project 鉴权/清理辐辏,无明文规则约束。
+
+### 处置(三选一计数:移动归位 2 / 接口反转 2→Stage 2 / 合理保留 14)
+
+**纯移动 2 项(已执行,git 识别 rename 93%/91%,diff 内零逻辑改动)**
+
+- `ai/AiCallTransientException` → `common/exception/`:BusinessException 的重试分类学孪生,
+  ai 产、common 全局处理、agent 分类消费;连带 `application.yml` resilience4j 两处 FQN 字符串
+  同步更新(retry-exceptions/record-exceptions,漏改即重试熔断静默失配)+ 9 处 Java import 校正。
+- `common/security/TokenAuthenticationFilter` → `auth/`:三个协作者全在 auth,规范清单未把它
+  钉在 common;无 yml/反射 FQN 引用(全仓 grep 佐证);`SecurityConfig` import 随迁。
+
+**效果**:common 的领域依赖 9 import/4 类 → **3 import/2 类**,仅剩者均具名有主——
+`SecurityAuditFilter`→auth(I1,Stage 2 反转)与 `ProjectAuthorization`→project(冻结契约例外,留档)。
+SCC 成员不变(余环即 Stage 2 工单 + 14 项留档保留缝,物理消环需破坏冻结契约,不做)。
+
+**Stage 2 工单(另批)**:I1 cookie 名下沉属性源;I2 agent 检索端口反转(照 AgentModelClient 范式);
+重复收敛 1 项达 ≥3 线(AI 瞬时失败分类 ×3:两个 langchain4j `classify` 近同 + OpenAiCompatibleReviewClient
+catch 阶梯);明确不抽象 2 项(两处线,留案)。
+
+### 验证
+
+- 容器化 `mvn -s .mvn/settings.xml -B clean verify`:**BUILD SUCCESS**
+  `Tests run: 576, Failures: 0, Errors: 0, Skipped: 3`(与批B 基线逐数相同);
+  Spring 上下文在测试内完整拉起 = 组件扫描冒烟(两个被移类均仍在 `com.example.codereview` 扫描根下)。
+- 契约零改动复核:迁移/REST 路径/DTO 字段/MQ 载荷零触碰;冻结四类
+  (ErrorCode/PageResponse/ApiResponse/ProjectAuthorization)零触碰;
+  `application.yml` 仅 resilience4j 两行 FQN 随迁,`app-agent.yml`/`app-boundary.yml` 零改动。

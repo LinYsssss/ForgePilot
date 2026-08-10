@@ -1,4 +1,4 @@
-package com.example.codereview.ai;
+package com.example.codereview.common.exception;
 
 /**
  * Marks a transient AI-provider failure (network error, read timeout, HTTP 5xx, or 429 rate-limit)

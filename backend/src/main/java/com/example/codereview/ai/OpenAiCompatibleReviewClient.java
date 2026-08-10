@@ -1,6 +1,7 @@
 package com.example.codereview.ai;
 
 import com.example.codereview.common.api.ErrorCode;
+import com.example.codereview.common.exception.AiCallTransientException;
 import com.example.codereview.common.exception.BusinessException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;

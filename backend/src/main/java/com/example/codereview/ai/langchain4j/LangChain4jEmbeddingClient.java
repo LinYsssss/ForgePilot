@@ -1,7 +1,7 @@
 package com.example.codereview.ai.langchain4j;
 
 import com.example.codereview.common.api.ErrorCode;
-import com.example.codereview.ai.AiCallTransientException;
+import com.example.codereview.common.exception.AiCallTransientException;
 import com.example.codereview.common.exception.BusinessException;
 import com.example.codereview.rag.EmbeddingClient;
 import dev.langchain4j.data.embedding.Embedding;

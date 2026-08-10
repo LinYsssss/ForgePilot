@@ -1,7 +1,7 @@
 package com.example.codereview.config;
 
+import com.example.codereview.auth.TokenAuthenticationFilter;
 import com.example.codereview.common.security.SpaCsrfTokenRequestHandler;
-import com.example.codereview.common.security.TokenAuthenticationFilter;
 import com.example.codereview.common.web.ClientIpResolver;
 import com.example.codereview.common.web.RateLimitFilter;
 import com.fasterxml.jackson.databind.ObjectMapper;

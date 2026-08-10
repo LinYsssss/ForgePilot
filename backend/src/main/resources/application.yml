@@ -55,7 +55,7 @@ resilience4j:
         max-attempts: ${AI_RETRY_MAX_ATTEMPTS:3}
         wait-duration: ${AI_RETRY_WAIT:2s}
         retry-exceptions:
-          - com.example.codereview.ai.AiCallTransientException
+          - com.example.codereview.common.exception.AiCallTransientException
   circuitbreaker:
     instances:
       aiReview:
@@ -66,4 +66,4 @@ resilience4j:
         wait-duration-in-open-state: 30s
         permitted-number-of-calls-in-half-open-state: 2
         record-exceptions:
-          - com.example.codereview.ai.AiCallTransientException
+          - com.example.codereview.common.exception.AiCallTransientException

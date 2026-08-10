@@ -11,7 +11,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import com.example.codereview.ai.AiCallTransientException;
+import com.example.codereview.common.exception.AiCallTransientException;
 import com.example.codereview.common.exception.BusinessException;
 import com.example.codereview.rag.EmbeddingClient;
 import com.github.tomakehurst.wiremock.WireMockServer;

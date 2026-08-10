@@ -3,7 +3,7 @@ package com.example.codereview.ai.langchain4j;
 import com.example.codereview.common.api.ErrorCode;
 import com.example.codereview.agent.model.AgentModelClient;
 import com.example.codereview.agent.model.PromptEnvelope;
-import com.example.codereview.ai.AiCallTransientException;
+import com.example.codereview.common.exception.AiCallTransientException;
 import com.example.codereview.common.exception.BusinessException;
 import dev.langchain4j.data.message.ChatMessage;
 import dev.langchain4j.data.message.SystemMessage;

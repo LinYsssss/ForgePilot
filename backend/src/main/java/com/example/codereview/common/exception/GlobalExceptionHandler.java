@@ -1,6 +1,5 @@
 package com.example.codereview.common.exception;
 
-import com.example.codereview.ai.AiCallTransientException;
 import com.example.codereview.common.api.ApiResponse;
 import com.example.codereview.common.api.ErrorCode;
 import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
