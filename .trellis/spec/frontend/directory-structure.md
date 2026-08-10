@@ -13,6 +13,7 @@ frontend/src/
 ├─ components/              # shared presentational components (AppShell chrome, dashboard widgets, agent/*)
 ├─ composables/             # module-singleton state + actions, one file per domain (see state-management.md)
 ├─ api/                     # client.js (fetch wrapper: envelope, CSRF, 401 funnel), page.js, apiError.js
+├─ directives/              # custom directives (listNav.js: shared list keyboard navigation)
 └─ utils/                   # pure functions only (format.js, labels.js)
 ```
 

@@ -3,7 +3,7 @@
   "name": "r4-spec-bootstrap",
   "title": "立规范：编码规范+prompt管理规范+契约测试纪律",
   "description": "trellis-spec-bootstrap生成.trellis/spec：编码规范、prompt资产管理规范(宁精勿多/评测门禁/退役)、跨服务契约测试纪律",
-  "status": "planning",
+  "status": "in_progress",
   "dev_type": null,
   "scope": null,
   "package": null,

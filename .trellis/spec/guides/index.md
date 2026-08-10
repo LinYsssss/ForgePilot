@@ -23,6 +23,8 @@ These guides help you **ask the right questions before coding**.
 |-------|---------|-------------|
 | [Code Reuse Thinking Guide](./code-reuse-thinking-guide.md) | Identify patterns and reduce duplication | When you notice repeated patterns |
 | [Cross-Layer Thinking Guide](./cross-layer-thinking-guide.md) | Think through data flow across layers | Features spanning multiple layers |
+| [Contract Testing Discipline](./contract-testing.md) | 跨进程/跨模块数据格式的双向契约测试铁律(F-03 事故固化) | Any change to MQ payloads, shared string references, REST contracts, HMAC canonical forms |
+| [Demo Assets & Honest Claims](./demo-assets-and-claims.md) | demo-repos 故意缺陷保留义务、README 诚实声明不可回退、能力表述以实测为准 | Any task touching demo-repos, README capability claims, or public-facing numbers |
 
 ---
 
@@ -50,6 +52,21 @@ These guides help you **ask the right questions before coding**.
 - [ ] Multiple branches update the same derived state from `kind` / `action`
 
 → Read [Code Reuse Thinking Guide](./code-reuse-thinking-guide.md)
+
+### When a Data Format Crosses a Process/Module Boundary
+
+- [ ] You're adding or changing an MQ payload, a shared string reference, or a REST request/response shape
+- [ ] Two deployables each hold a copy (isomorphic mirror) of the same codec/record
+- [ ] A test feeds hand-made fixtures to a consumer instead of the producer's real output
+
+→ Read [Contract Testing Discipline](./contract-testing.md)
+
+### When Touching Demo Assets or Public Claims
+
+- [ ] Task scope includes `demo-repos/`, its patches, or knowledge docs
+- [ ] You're editing README capability statements or answer-defense numbers
+
+→ Read [Demo Assets & Honest Claims](./demo-assets-and-claims.md)
 
 ### When Verifying AI Cross-Review Results
 

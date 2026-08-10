@@ -1,40 +1,22 @@
 # Backend Development Guidelines
 
-> Best practices for backend development in this project.
-
----
-
-## Overview
-
-This directory contains guidelines for backend development. Fill in each file with your project's specific conventions.
+> RepoSage 后端(`backend/`,Spring Boot 3.5 / Java 17 / PostgreSQL+pgvector / RabbitMQ)的开发规范。
+> 每条规则都以仓库内真实代码为锚点;发现规则与代码不符时,先查证代码,再修正规范。
 
 ---
 
 ## Guidelines Index
 
-| Guide | Description | Status |
-|-------|-------------|--------|
-| [Directory Structure](./directory-structure.md) | Module organization and file layout | To fill |
-| [Database Guidelines](./database-guidelines.md) | ORM patterns, queries, migrations | To fill |
-| [Error Handling](./error-handling.md) | Error types, handling strategies | Partially filled (no-blind-errors; transient→retryable mapping) |
-| [Quality Guidelines](./quality-guidelines.md) | Code standards, forbidden patterns | Partially filled (testing requirements) |
-| [Logging Guidelines](./logging-guidelines.md) | Structured logging, log levels | To fill |
-| [Security Guidelines](./security-guidelines.md) | SPA CSRF contract; supply-chain gate & CVE remediation | Filled |
-| [Agent Model Contracts](./agent-model-contracts.md) | Two-tier defense for model-output constraints; shared defense single-source; explicit posture degradation | Filled |
+| Guide | 内容 |
+|-------|------|
+| [Directory Structure](./directory-structure.md) | 领域包组织、分层与依赖方向、命名约定 |
+| [Frozen Contracts](./frozen-contracts.md) | 跨线冻结契约:ErrorCode / PageResponse / ProjectAuthorization / Flyway 不可变迁移 / REST 与 MQ 载荷 |
+| [Database Guidelines](./database-guidelines.md) | Flyway 迁移纪律、事务边界与 `@Transactional` 不自调用 |
+| [Error Handling](./error-handling.md) | ErrorCode 词汇表、BusinessException、no-blind-errors、瞬态错误重试映射 |
+| [Logging Guidelines](./logging-guidelines.md) | traceId 全链路纪律(HTTP → MDC → MQ)、级别约定、脱敏 |
+| [Quality Guidelines](./quality-guidelines.md) | 测试写法与目录、授权矩阵准入、Spring 上下文测试路径规则 |
+| [Security Guidelines](./security-guidelines.md) | SPA CSRF 契约、供应链门禁(trivy)与 CVE 修复模式 |
+| [Agent Model Contracts](./agent-model-contracts.md) | 模型输出约束的两级防御、共享防御单源、合法姿态显式降级 |
+| [Prompt Management](./prompt-management.md) | Prompt 资产治理五规则:宁精勿多 / recall-first / 评测门禁 / 退役 / 禁承诺红线 |
 
----
-
-## How to Fill These Guidelines
-
-For each guideline file:
-
-1. Document your project's **actual conventions** (not ideals)
-2. Include **code examples** from your codebase
-3. List **forbidden patterns** and why
-4. Add **common mistakes** your team has made
-
-The goal is to help AI assistants and new team members understand how YOUR project works.
-
----
-
-**Language**: All documentation should be written in **English**.
+跨包共享的纪律(契约测试、演示资产口径)见 `.trellis/spec/guides/`。

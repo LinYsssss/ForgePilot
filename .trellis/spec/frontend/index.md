@@ -1,39 +1,17 @@
 # Frontend Development Guidelines
 
-> Best practices for frontend development in this project.
-
----
-
-## Overview
-
-This directory contains guidelines for frontend development. Fill in each file with your project's specific conventions.
+> RepoSage 前端(`frontend/`,Vue 3 + Vite 6 + vue-router hash 模式,纯 JS 无 TS/Pinia,node 内置 test runner)的开发规范。
 
 ---
 
 ## Guidelines Index
 
-| Guide | Description | Status |
-|-------|-------------|--------|
-| [Directory Structure](./directory-structure.md) | Module organization and file layout | To fill |
-| [Component Guidelines](./component-guidelines.md) | Component patterns, props, composition | To fill |
-| [Hook Guidelines](./hook-guidelines.md) | Custom hooks, data fetching patterns | To fill |
-| [State Management](./state-management.md) | Local state, global state, server state | To fill |
-| [Quality Guidelines](./quality-guidelines.md) | Code standards, forbidden patterns | To fill |
-| [Type Safety](./type-safety.md) | Type patterns, validation | To fill |
+| Guide | 内容 |
+|-------|------|
+| [Directory Structure](./directory-structure.md) | src 布局、views/composables/api/utils 职责边界、nav 接缝 |
+| [State Management](./state-management.md) | 模块级单例 composable 模式、领域划分、401/SSE 硬规则 |
+| [Component Guidelines](./component-guidelines.md) | SFC 写法、props/emits、Observatory 设计系统、逻辑抽离测试 |
+| [Quality Guidelines](./quality-guidelines.md) | lockfile 源纪律、API 边界容错、node --test 测试写法 |
 
----
-
-## How to Fill These Guidelines
-
-For each guideline file:
-
-1. Document your project's **actual conventions** (not ideals)
-2. Include **code examples** from your codebase
-3. List **forbidden patterns** and why
-4. Add **common mistakes** your team has made
-
-The goal is to help AI assistants and new team members understand how YOUR project works.
-
----
-
-**Language**: All documentation should be written in **English**.
+后端契约(分页信封、ErrorCode、REST 字段)见 `.trellis/spec/backend/frozen-contracts.md`;
+跨包纪律见 `.trellis/spec/guides/`。
