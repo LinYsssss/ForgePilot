@@ -13,7 +13,7 @@ import org.springframework.data.domain.PageRequest;
 
 /**
  * Guards the contracts frozen in Phase 0 so that neither parallel workstream can drift them by
- * accident. See {@code docs/并行实施拆分方案.md}.
+ * accident. See {@code docs/archive/并行实施拆分方案.md}.
  *
  * <p>The point of these assertions is not that the values are interesting, but that they are
  * <em>stable</em>: the frontend and both backend tracks are written against them.

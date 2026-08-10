@@ -7,7 +7,7 @@ import org.springframework.data.domain.Page;
 /**
  * Uniform page envelope for every growing collection endpoint.
  *
- * <p>Frozen in Phase 0 (see {@code docs/并行实施拆分方案.md}) so the frontend can be written against
+ * <p>Frozen in Phase 0 (see {@code docs/archive/并行实施拆分方案.md}) so the frontend can be written against
  * the shape before the backend endpoints are paginated, and neither workstream has to wait on the
  * other.
  */

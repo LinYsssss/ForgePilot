@@ -1,6 +1,6 @@
 # Track B 独占配置：安全基础设施与外部边界
 #
-# 归属见 docs/并行实施拆分方案.md 第二节。Track A 不得修改本文件。
+# 归属见 docs/archive/并行实施拆分方案.md 第二节。Track A 不得修改本文件。
 # 由 application.yml 的 spring.config.import 引入（非 optional，缺失即启动失败）。
 #
 # 注意：application-dev.yml / application-prod.yml 中的同名键优先级更高，

@@ -9,7 +9,7 @@ import org.springframework.stereotype.Component;
 /**
  * Single place where "does this project belong to this user" is decided.
  *
- * <p>Frozen in Phase 0 (see {@code docs/并行实施拆分方案.md}). Track A applies it across the business
+ * <p>Frozen in Phase 0 (see {@code docs/archive/并行实施拆分方案.md}). Track A applies it across the business
  * controllers while closing the object-level authorization gaps; Track B owns the file. The method
  * surface is deliberately tiny so it does not need to change once both tracks are underway — call
  * sites that also need the entity should keep using {@code ProjectService.getRequired}.

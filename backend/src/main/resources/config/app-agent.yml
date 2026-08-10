@@ -1,6 +1,6 @@
 # Track A 独占配置：Agent 执行闭环与业务处理
 #
-# 归属见 docs/并行实施拆分方案.md 第二节。Track B 不得修改本文件。
+# 归属见 docs/archive/并行实施拆分方案.md 第二节。Track B 不得修改本文件。
 # 由 application.yml 的 spring.config.import 引入（非 optional，缺失即启动失败）。
 #
 # 注意：application-dev.yml / application-prod.yml 中的同名键优先级更高，
@@ -29,13 +29,6 @@ app:
       # 周期 watchdog：只在启动时恢复会让进程内挂掉的 Step 一直卡到下次重启。
       interval-ms: ${AGENT_RECOVERY_INTERVAL_MS:60000}
       initial-delay-ms: ${AGENT_RECOVERY_INITIAL_DELAY_MS:60000}
-    budget:
-      max-elapsed: ${AGENT_MAX_ELAPSED:10m}
-      max-tool-calls: ${AGENT_MAX_TOOL_CALLS:20}
-      max-model-calls: ${AGENT_MAX_MODEL_CALLS:6}
-      max-input-tokens: ${AGENT_MAX_INPUT_TOKENS:60000}
-      max-output-tokens: ${AGENT_MAX_OUTPUT_TOKENS:12000}
-      max-estimated-cost: ${AGENT_MAX_ESTIMATED_COST:2.00}
     tool:
       max-input-bytes: ${AGENT_TOOL_MAX_INPUT_BYTES:16384}
       max-output-bytes: ${AGENT_TOOL_MAX_OUTPUT_BYTES:65536}

@@ -3,7 +3,7 @@ package com.example.codereview.common.api;
 /**
  * Stable, client-facing error vocabulary shared by both parallel workstreams.
  *
- * <p>Frozen in Phase 0 (see {@code docs/并行实施拆分方案.md}). Both tracks draw from this single
+ * <p>Frozen in Phase 0 (see {@code docs/archive/并行实施拆分方案.md}). Both tracks draw from this single
  * enum so neither has to edit the other's files to introduce an error code. Entries are grouped by
  * owning track; adding a member is the one change that needs a quick cross-track heads-up, since
  * the file itself is shared.

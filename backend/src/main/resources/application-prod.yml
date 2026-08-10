@@ -38,7 +38,7 @@ spring:
 
 app:
   agent:
-    # Track A 所有键（见 docs/并行实施拆分方案.md）。生产必须有后台调度在跑，
+    # Track A 所有键（见 docs/archive/并行实施拆分方案.md）。生产必须有后台调度在跑，
     # 否则 Outbox 事件停在 PENDING、卡死的 Step 也无人回收，整条链路不会自动推进。
     scheduling:
       enabled: ${AGENT_SCHEDULING_ENABLED:true}

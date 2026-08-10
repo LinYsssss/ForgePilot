@@ -11,7 +11,7 @@ spring:
       max-file-size: ${MULTIPART_MAX_FILE_SIZE:4MB}
       max-request-size: ${MULTIPART_MAX_REQUEST_SIZE:8MB}
   # app.* 按所有权拆分到两个文件，供并行开发时互不冲突地修改。
-  # 见 docs/并行实施拆分方案.md。刻意不使用 optional:——文件缺失时
+  # 见 docs/archive/并行实施拆分方案.md。刻意不使用 optional:——文件缺失时
   # 必须启动失败，而不是静默丢掉整块安全配置。
   config:
     import:
