@@ -271,7 +271,7 @@ webhook/、PinnedImageDigests 核后不动)。规范树与现实的其余差异�
 层0 契约基座与叶子        common  |  report  notify  webhook  sandbox(无出边)
 ```
 
-**具名上行回边(低层→高层,全部有主,共 8 束 25 import)**
+**具名上行回边(低层→高层,全部有主,共 8 束 26 import)**
 
 | 回边 | import 数 | 依据 |
 |------|-----------|------|

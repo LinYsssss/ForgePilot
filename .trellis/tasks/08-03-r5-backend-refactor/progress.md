@@ -1,6 +1,6 @@
 # Progress：后端分批重构
 
-## 批A 零风险清理（2026-08-10，已完成，待提交）
+## 批A 零风险清理(2026-08-10,已完成,已提交 3e9122a)
 
 证据清单：[batch-a-deadcode.md](./batch-a-deadcode.md)（普查方法、逐项证据与处置全量留档）。
 
@@ -34,7 +34,7 @@
 - 契约零改动复核：diff 仅含上述删除/注释/CI 项；REST 路径、DTO 字段、Flyway 迁移、
   ErrorCode/PageResponse/ProjectAuthorization 签名、MQ 载荷零触碰。
 
-## 批B 超长类/方法拆分（2026-08-10，已完成，待提交）
+## 批B 超长类/方法拆分（2026-08-10，已完成，已提交 b0e7514）
 
 普查口径、逐项处置(拆分依据/保留理由)与前后对照全量留档:
 [batch-b-structure.md](./batch-b-structure.md);普查脚本 `scripts/scan-structure.py`(可复跑)。
@@ -77,7 +77,7 @@
 - 契约零改动复核:resources(迁移/yml)、common/(冻结契约)、pom、REST 注解与 DTO record
   行零变更;公共类名/包/签名全部不动,抽出协作对象均为包级私有或 private。
 
-## 批C 模块边界(Stage 1:普查 + 处置表 + 纯移动;Stage 2:反转/收敛。2026-08-10,两阶段均已完成,待提交)
+## 批C 模块边界(Stage 1:普查 + 处置表 + 纯移动;Stage 2:反转/收敛。2026-08-10,两阶段均已完成,已提交 955a088 / 251b8c5)
 
 普查口径、原始边表、环报告、逐项处置(移动/反转/保留+理由)全量留档:
 [batch-c-boundaries.md](./batch-c-boundaries.md);普查脚本 `scripts/scan-package-deps.py`(可复跑)。
@@ -116,7 +116,7 @@ catch 阶梯);明确不抽象 2 项(两处线,留案)。
   (ErrorCode/PageResponse/ApiResponse/ProjectAuthorization)零触碰;
   `application.yml` 仅 resilience4j 两行 FQN 随迁,`app-agent.yml`/`app-boundary.yml` 零改动。
 
-### Stage 2:反转 + 重复收敛(2026-08-10,已完成,待提交)
+### Stage 2:反转 + 重复收敛(2026-08-10,已完成,已提交 251b8c5)
 
 逐项过程、行为保全证据与终态分层图留档:[batch-c-boundaries.md](./batch-c-boundaries.md) §7–§10。
 
@@ -142,7 +142,7 @@ FQN 零触碰。**特征测试先行**:catch 阶梯此前零覆盖,新增
 
 **终态依赖(复跑 scan-package-deps.py)**:88 边/363 import(Stage 1 后 90/360;消失的 2 条
 恰是两张工单边);common 领域依赖 → **2 import/1 类**(仅 R1 冻结例外);SCC 仍 20 包但
-每条余边均有留档理由(工单项清零);5 层逻辑分层图 + 8 束具名上行回边(25 import)+
+每条余边均有留档理由(工单项清零);5 层逻辑分层图 + 8 束具名上行回边(26 import)+
 层内环团逐项有主,层间图无环——AC「可画出无环图」以此口径达成,留档 §9。
 
 ### 验证(Stage 2)
@@ -152,3 +152,19 @@ FQN 零触碰。**特征测试先行**:catch 阶梯此前零覆盖,新增
 - 契约零改动复核:`backend/src/main/resources` 与 `pom.xml` diff 为空(迁移/yml/REST 无涉);
   冻结面(common/api、ProjectAuthorization、common/exception)零触碰;公共 API 变更仅
   新端口接口一处(任务允许项);@Transactional 自调用核查:被迁移代码均不含、不触及事务方法。
+
+## 终验收尾(2026-08-10,质检自修 + 演示动线复跑)
+
+**质检自修(trellis-check 全量复核后落盘)**
+
+- `AgentPublicationService` 移除 4 个批B 拆分后遗留的死 import(PatchApproval/ScmProviderType/JsonNode/Map);
+  `LangChain4jEmbeddingClientTest` 移除死 `java.util.List` import。
+- `.gitignore` 补 `scripts/__pycache__/`:e7d350e 提交信息声称已加但实际漏加,此次补真。
+- `batch-c-boundaries.md` 25→26 回边 import 计数勘误(§9 束表合计)。
+
+**演示动线复跑**:重构后镜像重建部署,13 步全绿(登录→审查→报告→Agent 工作台,
+run18 时间线与 6 条 findings 完好),PRD 最后一条 AC 闭环。证据:[demo-rerun.md](./demo-rerun.md)
+(含展示项目 owner 悬挂的备份先行修复记录与 NoResourceFound→500 观察项)。
+
+**规范更新决策(Phase 3.3)**:r5 全程按 r4 规范执行且逐条验证有效(冻结契约清单、error-handling
+禁止顺手规整、目录结构),无新增教训达到入规范门槛 → 本任务不新增 spec 条目,决策留档于此。
