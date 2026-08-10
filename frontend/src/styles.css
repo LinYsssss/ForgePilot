@@ -210,8 +210,12 @@ button, input, select, textarea { font: inherit; color: inherit; }
 
 /* ============================================================
    BUTTONS
+   迁移期护栏:Element 组件(.el-button)不吃 Observatory 元素级皮肤,
+   否则已迁页面会新旧混搭(min-height/glow 阴影/hover 底色泄漏)。
+   :where() 零特异性——未迁页面的级联行为逐字节不变。
+   本段随 Observatory 全局收尾一并退役。
    ============================================================ */
-button {
+button:where(:not(.el-button)) {
   position: relative;
   border: 0;
   border-radius: var(--r-sm);
@@ -234,10 +238,10 @@ button {
               opacity var(--t-fast);
   box-shadow: var(--e-1), 0 0 0 0 var(--accent-glow);
 }
-button:hover:not(:disabled) { background: var(--accent-strong); box-shadow: var(--e-2), 0 0 22px -4px var(--accent-glow); }
-button:active:not(:disabled) { transform: translateY(1px) scale(0.992); }
-button:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--accent-ring); }
-button:disabled { cursor: not-allowed; opacity: 0.42; box-shadow: none; }
+button:where(:not(.el-button)):hover:not(:disabled) { background: var(--accent-strong); box-shadow: var(--e-2), 0 0 22px -4px var(--accent-glow); }
+button:where(:not(.el-button)):active:not(:disabled) { transform: translateY(1px) scale(0.992); }
+button:where(:not(.el-button)):focus-visible { outline: none; box-shadow: 0 0 0 3px var(--accent-ring); }
+button:where(:not(.el-button)):disabled { cursor: not-allowed; opacity: 0.42; box-shadow: none; }
 
 button.secondary {
   background: var(--surface-2);
@@ -422,7 +426,9 @@ nav .nav-ico { width: 20px; text-align: center; opacity: 0.95; font-size: var(--
 .grid.four { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 
 label.field { display: grid; gap: var(--sp-2); color: var(--text-soft); font-size: var(--fs-sm); font-weight: 600; }
-input, select, textarea {
+/* 迁移期护栏(同 BUTTONS 段):排除 Element 内部原生控件
+   (class 以 el- 开头:el-input__inner / el-textarea__inner / el-select__input 等) */
+input:where(:not([class^="el-"])), select:where(:not([class^="el-"])), textarea:where(:not([class^="el-"])) {
   border: 1px solid var(--border-strong);
   border-radius: var(--r-sm);
   min-height: 40px;
@@ -432,9 +438,9 @@ input, select, textarea {
   width: 100%;
   transition: border-color var(--t-fast) var(--ease-out), box-shadow var(--t-fast) var(--ease-out), background var(--t-fast);
 }
-textarea { min-height: 76px; resize: vertical; line-height: 1.6; }
-input:hover:not(:focus), select:hover:not(:focus), textarea:hover:not(:focus) { border-color: var(--text-dim); }
-input:focus, select:focus, textarea:focus {
+textarea:where(:not([class^="el-"])) { min-height: 76px; resize: vertical; line-height: 1.6; }
+input:where(:not([class^="el-"])):hover:not(:focus), select:where(:not([class^="el-"])):hover:not(:focus), textarea:where(:not([class^="el-"])):hover:not(:focus) { border-color: var(--text-dim); }
+input:where(:not([class^="el-"])):focus, select:where(:not([class^="el-"])):focus, textarea:where(:not([class^="el-"])):focus {
   outline: none; border-color: var(--accent);
   box-shadow: 0 0 0 3px var(--accent-ring);
   background: var(--surface);
@@ -808,49 +814,9 @@ button.vote.on-NEED_DISCUSSION { background: var(--risk-medium-bg); color: var(-
 .modal .actions { justify-content: flex-end; }
 
 /* ============================================================
-   AUTH
+   HINT(共享说明文本:KnowledgeDocPicker / RepositoryView 在用;
+   原 AUTH 段其余样式已随 LoginView 迁移 Element Plus 删除)
    ============================================================ */
-.auth-wrap {
-  min-height: 100vh; display: grid; place-items: center; padding: var(--sp-5);
-  background:
-    radial-gradient(900px 520px at 76% 12%, var(--bg-mesh-1), transparent 60%),
-    radial-gradient(800px 540px at 12% 96%, var(--bg-mesh-2), transparent 56%),
-    var(--bg);
-  position: relative; overflow: hidden;
-}
-.auth-wrap::before {
-  content: ""; position: absolute; inset: 0;
-  background-image: linear-gradient(var(--grid-line) 1px, transparent 1px), linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
-  background-size: 46px 46px; mask-image: radial-gradient(circle at 50% 40%, #000, transparent 72%);
-}
-.auth-wrap::after {
-  content: ""; position: absolute; inset: -20%; pointer-events: none;
-  background:
-    radial-gradient(40% 34% at 26% 22%, var(--aurora-1), transparent 70%),
-    radial-gradient(36% 30% at 76% 16%, var(--aurora-2), transparent 70%),
-    radial-gradient(32% 28% at 60% 88%, var(--aurora-3), transparent 72%);
-  filter: blur(52px) saturate(1.15);
-  animation: aurora-drift 90s var(--ease-in-out) infinite alternate;
-}
-.auth-card {
-  position: relative; z-index: 1;
-  background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: var(--r-lg);
-  backdrop-filter: blur(var(--blur)) saturate(1.2);
-  -webkit-backdrop-filter: blur(var(--blur)) saturate(1.2);
-  box-shadow: var(--e-3); padding: var(--sp-8); width: 100%; max-width: 420px;
-  animation: card-rise var(--t-slow) var(--ease-out) both;
-}
-@supports not (backdrop-filter: blur(1px)) {
-  .auth-card { background: var(--surface); border-color: var(--border-strong); }
-}
-@keyframes card-rise { from { opacity: 0; transform: translateY(14px) scale(0.985); } to { opacity: 1; transform: none; } }
-.auth-card .brand { justify-content: center; margin-bottom: var(--sp-2); }
-.auth-card h1 { color: var(--text); }
-.auth-card .auth-sub { text-align: center; color: var(--text-dim); margin: var(--sp-2) 0 var(--sp-6); font-size: var(--fs-sm); }
-.auth-card .grid { gap: var(--sp-4); }
-.auth-card .actions { margin-top: var(--sp-5); }
-.auth-card .actions button { flex: 1; }
-
 .hint { color: var(--text-soft); font-size: var(--fs-sm); margin: var(--sp-3) 0 0; display: flex; align-items: center; gap: var(--sp-2); line-height: 1.5; }
 
 /* ============================================================
