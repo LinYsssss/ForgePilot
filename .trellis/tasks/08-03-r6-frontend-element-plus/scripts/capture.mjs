@@ -54,8 +54,10 @@ await settle()
 
 for (const [label, name] of NAV_VIEWS) {
   if (!wants(name)) continue
-  const btn = page.getByRole('button', { name: label, exact: true })
+  // Observatory 导航是 button;Element 收尾后可能是 el-menu 的 menuitem——两种角色都认。
+  let btn = page.getByRole('button', { name: label, exact: true })
   try {
+    if (!(await btn.count())) btn = page.getByRole('menuitem', { name: label, exact: true })
     await btn.waitFor({ timeout: 8000 })
     for (let i = 0; i < 20 && (await btn.isDisabled()); i++) await page.waitForTimeout(500)
     await btn.click()

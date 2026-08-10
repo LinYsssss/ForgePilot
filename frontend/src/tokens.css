@@ -3,11 +3,13 @@
    唯一色板权威:.trellis/tasks/08-03-r6-frontend-element-plus/design-tokens.md
    任何页面禁止魔法色值;组件微调走 Element CSS 变量接口。
 
-   三段结构:
+   三段结构 + 全局底座:
      1) --rs-* 原生 tokens(:root)
      2) Element Plus 变量覆盖(html:root,原因见该段注释)
-     3) 产品语义工具类(@layer rs-tokens 降优先级:迁移期 styles.css
-        的同名未分层类继续生效,styles.css 删除后本段自然接管)
+     3) 产品语义工具类(@layer rs-tokens:页面 scoped 同名重定义
+        属未分层规则,可自然压过本段做页内微调)
+     4) 全局底座 base(原 Observatory 全局样式的非页面职责归家:正文/
+        滚动条/选区/焦点兜底/全局过渡/减动效)
 
    暗色模式本期不做:tokens 全部挂 :root;未来加 html.dark 块
    覆写同名 token 即可扩展。
@@ -119,8 +121,7 @@
   --rs-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
   --rs-ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
 
-  /* 亮色工作台;迁移期被 styles.css 的 color-scheme: dark 覆盖(其后加载),
-     styles.css 删除后本声明生效 */
+  /* 亮色工作台(Observatory 的 color-scheme: dark 已随旧全局样式退役) */
   color-scheme: light;
 }
 
@@ -255,8 +256,8 @@ html .el-card {
 }
 
 /* 工具类只定义颜色+底+描边色,形状交给 Element tag/badge 或迁移页。
-   整段入 @layer(未分层的 styles.css 同名类优先级更高):迁移期不与
-   Observatory 现行规则叠加冲突,styles.css 删除后本段自然接管。 */
+   整段入 @layer:分层规则天然让位于未分层规则,页面 scoped 的同名
+   重定义(如各页 status-pill 补形状)可无摩擦压过本段做微调。 */
 @layer rs-tokens {
   .mono {
     font-family: var(--rs-font-mono);
@@ -335,8 +336,7 @@ html .el-card {
     border-color: var(--rs-risk-none-border);
   }
 
-  /* 进行中脉冲(自带 keyframes,命名 rs- 前缀不与 styles.css 的
-     pulse 相互覆盖;pseudo 圆点形状由宿主 pill 类提供) */
+  /* 进行中脉冲(rs- 前缀 keyframes;pseudo 圆点形状由宿主 pill 类提供) */
   .st-RUNNING::before,
   .st-PENDING::before {
     animation: rs-pulse 1.1s var(--rs-ease-in-out) infinite;
@@ -357,5 +357,122 @@ html .el-card {
     .st-PENDING::before {
       animation: none;
     }
+  }
+
+  /* ---- toast(全局单例:AppShell 与 LoginView 共用同一结构与类名,
+     useToast 零改动。type 为 ''/error/success 三型:左条与图标随型
+     走品牌/风险色;底部进度条时长与 useToast 的 3.2s 约定一致,
+     纯视觉不控制逻辑;reduced-motion 由 base 段全局块统一冻结) ---- */
+  .toast {
+    position: fixed;
+    right: var(--sp-6);
+    bottom: var(--sp-6);
+    z-index: var(--rs-z-toast);
+    display: flex;
+    align-items: center;
+    gap: var(--sp-3);
+    overflow: hidden; /* 底部进度条圆角内收 */
+    max-width: 380px;
+    padding: 13px 18px;
+    background: var(--rs-surface);
+    border: 1px solid var(--rs-border-strong);
+    border-left: 3px solid var(--rs-primary);
+    border-radius: var(--rs-radius-base);
+    box-shadow: var(--rs-shadow-lg);
+    color: var(--rs-text);
+    font-size: var(--rs-fs-sm);
+    font-weight: 500;
+  }
+  .toast::before {
+    content: "●";
+    color: var(--rs-primary);
+    font-size: 10px;
+  }
+  .toast.error { border-left-color: var(--rs-risk-high-solid); }
+  .toast.error::before {
+    content: "✕";
+    color: var(--rs-risk-high-solid);
+  }
+  .toast.success { border-left-color: var(--rs-risk-low-solid); }
+  .toast.success::before {
+    content: "✓";
+    color: var(--rs-risk-low-solid);
+  }
+  .toast::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: 100%;
+    height: 2px;
+    background: currentColor;
+    opacity: 0.3;
+    transform-origin: left;
+    animation: rs-toast-life 3.2s linear both;
+  }
+  @keyframes rs-toast-life {
+    from { transform: scaleX(1); }
+    to { transform: scaleX(0); }
+  }
+}
+
+/* ------------------------------------------------------------
+   4) 全局底座(base)
+   Observatory 全局样式退役后,其"非页面归属"的职责归家于此:
+   盒模型/正文底座/标题与表单控件字体继承/选区/滚动条/焦点兜底/
+   全局过渡类/减动效偏好。全部走 tokens,不引入任何主题态。
+   ------------------------------------------------------------ */
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  font-family: var(--rs-font-body);
+  font-size: var(--rs-fs-base);
+  line-height: 1.6;
+  color: var(--rs-text);
+  background: var(--rs-bg);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+h1, h2, h3, h4 { margin: 0; line-height: 1.18; letter-spacing: -0.01em; }
+button, input, select, textarea { font: inherit; color: inherit; }
+
+::selection { background: var(--el-color-primary-light-8); color: var(--rs-text); }
+
+/* 键盘可达性:统一 focus-visible 兜底环(按钮/表单控件已各自定义) */
+:where(a, [tabindex], summary):focus-visible {
+  outline: 2px solid var(--rs-primary);
+  outline-offset: 2px;
+  border-radius: var(--rs-radius-sm);
+}
+
+/* 主题化滚动条(亮色) */
+* { scrollbar-width: thin; scrollbar-color: var(--rs-border-strong) transparent; }
+*::-webkit-scrollbar { width: 10px; height: 10px; }
+*::-webkit-scrollbar-thumb {
+  background: var(--rs-border-strong);
+  border-radius: var(--rs-radius-round);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+*::-webkit-scrollbar-thumb:hover { background: var(--rs-placeholder); background-clip: padding-box; }
+
+/* 全局过渡类:t = toast 等浮层淡入淡出(AppShell/LoginView);
+   page = 路由切换(App.vue <transition name="page" mode="out-in">,
+   各视图以单根 .view 承接) */
+.t-enter-active, .t-leave-active { transition: opacity var(--rs-t-base) var(--rs-ease-out), transform var(--rs-t-base) var(--rs-ease-out); }
+.t-enter-from, .t-leave-to { opacity: 0; transform: translateY(8px); }
+
+.page-enter-active, .page-leave-active { transition: opacity 160ms var(--rs-ease-out), transform 160ms var(--rs-ease-out); }
+.page-enter-from { opacity: 0; transform: translateY(10px); }
+.page-leave-to { opacity: 0; transform: translateY(-6px); }
+
+/* 无障碍:整站尊重系统减动效偏好 */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
   }
 }
