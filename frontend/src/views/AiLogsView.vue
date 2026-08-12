@@ -72,7 +72,8 @@ const { openProjectAiLogs } = useWorkspace()
 </script>
 
 <style scoped>
-/* Precision Workbench 版式基线(迁移期 AppShell 仍是 Observatory,基线只挂本视图根)。
+/* Precision Workbench 版式基线(并行迁移期 AppShell 尚未迁移,基线挂本视图根;
+   收尾后维持原状,与全局底座无冲突)。
    面板外壳手铸而非 el-card:本页交互核心是 sticky 日期组头,el-card 的
    .el-card__body 自带 overflow:auto,会把 sticky 的滚动容器截在卡体内
    (页面滚动时组头永不吸附,交互静默失效);修正内部结构需 :deep(),为规约所禁。

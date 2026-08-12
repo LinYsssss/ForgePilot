@@ -232,8 +232,8 @@ const { openReport, openTaskAiLogs } = useWorkspace()
   text-align: left; cursor: pointer; min-height: 0;
   transition: border-color var(--rs-t-fast) var(--rs-ease-out), background var(--rs-t-fast), box-shadow var(--rs-t-fast);
 }
-/* 与全局 .list-row:hover:not(:disabled) 同形取更高特异性,顺带清掉
-   Observatory 的位移/阴影动效 */
+/* 选择器保持旧全局 .list-row:hover:not(:disabled) 同形(styles.css 冻结期
+   借此压过它,该全局现已退役),顺带清掉 Observatory 的位移/阴影动效 */
 .list-row:hover:not(:disabled) {
   border-color: var(--el-color-primary-light-5);
   background: var(--rs-fill-lighter);

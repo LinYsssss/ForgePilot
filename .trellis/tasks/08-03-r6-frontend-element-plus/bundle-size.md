@@ -26,4 +26,6 @@
 | --- | --- | --- | --- | --- | --- |
 | 登录页(08ac7b0) | 0.83 / 0.48 | 97.74 / 16.95 | 306.13 / 108.99 | 126.42 | 首页摊入 Element 基础层(form/input/button/card 族),对基准 +42.31 gzip |
 | 并行检查点:+概览/项目/仓库/日志四页 | 0.83 / 0.48 | 208.90 / 31.67 | 523.35 / 181.64 | 213.79 | 并行模式下构建集中跑,记检查点而非严格逐页;新增 table/select/skeleton/empty/tag/space/row/col/alert/descriptions 等组件层。对基准 +129.7 gzip,预算(+300)内 |
-| **终态(全 21 视图 + 全局收尾,styles.css 退役)** | 0.83 / 0.48 | 234.45 / 32.45 | 540.88 / 185.59 | **218.04** | 干净 npm ci 后构建;含 PR/报告/Agent 三复杂页与 el-dialog/el-timeline;styles.css(-995 行)删除被新增组件层抵消。**最终增幅 +133.93 gzip,预算 300 内达标** |
+| **终态(全 21 视图 + 全局收尾,styles.css 退役)** | 0.47 / 0.33 | 234.45 / 32.45 | 540.88 / 186.46 | **219.24** | 干净 npm ci 后构建;含 PR/报告/Agent 三复杂页与 el-dialog/el-timeline;styles.css(-995 行)删除被新增组件层抵消;index.html 随收尾删 Google Fonts 外链而变小。**最终增幅 +135.13 gzip,预算 300 内达标** |
+
+> 终态行 trellis-check 校正(2026-08-11):原记录 html 沿用了删 Google Fonts 前的 0.83/0.48,且「gzip 合计 218.04」漏加 html 一列(与前三行口径不一致);现按复验构建(产物 `index-BbEQrwfo.css` / `index-1B1Zl432.js`,vite 输出口径)重记,结论(预算 300 内)不变。
