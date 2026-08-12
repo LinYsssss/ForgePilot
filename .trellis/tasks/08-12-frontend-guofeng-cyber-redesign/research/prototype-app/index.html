@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="light" />
+  <title>RepoSage · 墨境书院原型</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <a class="skip-link" href="#workspace">跳到审查工作区</a>
+  <div class="ink-app" data-state="normal">
+    <div class="ambient" aria-hidden="true">
+      <canvas class="particle-canvas" id="inkParticleCanvas"></canvas>
+      <div class="taiji-watermark"><span></span></div>
+      <div class="paper-grain"></div>
+      <div class="cloud cloud-one"></div>
+      <div class="cloud cloud-two"></div>
+      <div class="cloud cloud-three"></div>
+      <svg class="mountain mountain-far" viewBox="0 0 1440 900" preserveAspectRatio="none">
+        <path d="M0 710 C150 650 225 690 325 590 C430 480 510 650 620 565 C760 455 840 650 960 555 C1085 455 1190 600 1440 470 L1440 900 L0 900Z" />
+      </svg>
+      <svg class="mountain mountain-near" viewBox="0 0 1440 900" preserveAspectRatio="none">
+        <path d="M0 790 C170 650 280 790 410 675 C535 565 640 770 790 655 C940 545 1105 705 1440 560 L1440 900 L0 900Z" />
+      </svg>
+      <div class="ink-mist mist-one"></div>
+      <div class="ink-mist mist-two"></div>
+      <div class="brush-accent"></div>
+    </div>
+
+    <header class="topbar">
+      <button class="icon-button mobile-only" id="navToggle" aria-label="打开案卷导航" aria-expanded="false" aria-controls="caseIndex">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" /></svg>
+      </button>
+      <a class="brand" href="./login.html" aria-label="返回 RepoSage 登录页">
+        <span class="brand-mark" aria-hidden="true">睿</span>
+        <span><strong>RepoSage</strong><small>墨境审查院</small></span>
+      </a>
+      <div class="context-title"><span>当前案卷</span><strong>AuthZ 权限提升复核</strong></div>
+      <div class="top-actions">
+        <div class="connection" id="connection"><span></span>实时同步</div>
+        <button class="text-button" id="motionToggle" aria-pressed="false">静态墨境</button>
+        <button class="icon-button" aria-label="通知，2 条未读"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M9 21h6" /></svg><i>2</i></button>
+        <button class="avatar" aria-label="打开用户菜单">林</button>
+      </div>
+    </header>
+
+    <aside class="case-index" id="caseIndex" aria-label="案卷与主导航">
+      <div class="index-head">
+        <span class="eyebrow">案卷索引</span>
+        <button class="icon-button mobile-only" id="navClose" aria-label="关闭案卷导航"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg></button>
+      </div>
+      <label class="search"><span class="sr-only">搜索案卷</span><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m16 16 4 4"/></svg><input type="search" placeholder="搜索案卷、仓库…" /></label>
+      <nav class="main-nav" aria-label="主导航">
+        <button><span>概</span>总览</button>
+        <button><span>项</span>项目</button>
+        <button><span>仓</span>仓库</button>
+        <button><span>审</span>审查记录<i>8</i></button>
+        <button class="active" aria-current="page"><span>巡</span>Agent 审查<i>3</i></button>
+        <button><span>知</span>知识库</button>
+        <button><span>录</span>AI 日志</button>
+      </nav>
+      <section class="active-case" aria-labelledby="activeCaseTitle">
+        <div class="section-label"><span id="activeCaseTitle">当前案卷</span><b>运行中</b></div>
+        <h2>AuthZ 权限提升复核</h2>
+        <dl><div><dt>Run</dt><dd>#2048</dd></div><div><dt>Head</dt><dd><code>8af31c09</code></dd></div><div><dt>分支</dt><dd>feature/rbac-fix</dd></div></dl>
+      </section>
+      <section class="saved-cases">
+        <div class="section-label"><span>近阅案卷</span><button aria-label="添加案卷">＋</button></div>
+        <button class="case-row"><span>SQL 注入修复</span><small>12 分钟前</small></button>
+        <button class="case-row"><span>Secrets in Config</span><small>昨天</small></button>
+      </section>
+      <div class="index-foot"><span>书院守门规则</span><strong>v2.4 · 已同步</strong></div>
+    </aside>
+
+    <main class="paper-workspace" id="workspace" tabindex="-1">
+      <section class="workspace-head ink-reveal">
+        <div>
+          <span class="eyebrow">Agent Run #2048</span>
+          <h1>权限提升风险复核</h1>
+          <p>检查角色校验、越权路径与候选 Patch；仅持久化证据可用于阻断。</p>
+        </div>
+        <div class="head-actions">
+          <button class="outline-button" id="simulateError">演示错误</button>
+          <button class="outline-button" id="simulateOffline">演示离线</button>
+          <button class="primary-button" id="refreshRun">刷新案卷</button>
+        </div>
+      </section>
+
+      <div class="state-banner error-banner" id="errorBanner" role="alert" hidden>
+        <div><strong>验证步骤未完成</strong><span>策略校验服务暂时不可用，现有 Finding 保留但不可批准。</span></div>
+        <button class="outline-button" id="retryAction">重试失败步骤</button>
+      </div>
+      <div class="state-banner offline-banner" id="offlineBanner" role="status" hidden>
+        <div><strong>当前离线</strong><span>已加载内容仍可阅读；操作将在恢复连接后提交。</span></div>
+        <button class="outline-button" id="restoreConnection">恢复连接</button>
+      </div>
+
+      <section class="risk-strip ink-reveal" aria-label="风险摘要">
+        <article class="risk-score"><span>风险评分</span><strong>76</strong><small>较上次 +12</small></article>
+        <article><span class="seal seal-critical">危</span><div><strong>3</strong><small>Critical</small></div></article>
+        <article><span class="seal seal-high">高</span><div><strong>7</strong><small>High</small></div></article>
+        <article><span class="seal seal-medium">中</span><div><strong>12</strong><small>Medium</small></div></article>
+        <article><span class="seal seal-low">低</span><div><strong>4</strong><small>Low</small></div></article>
+        <article class="run-health"><span>当前状态</span><strong><i></i>安全分析中</strong><small>自动刷新 8 秒前</small></article>
+      </section>
+
+      <section class="brush-progress ink-reveal" aria-labelledby="progressTitle">
+        <div class="section-heading"><div><span class="eyebrow">审查进度</span><h2 id="progressTitle">六步守门流程</h2></div><span>4 / 6 已完成</span></div>
+        <ol>
+          <li class="done"><i>✓</i><strong>接卷</strong><small>10:18</small></li>
+          <li class="done"><i>✓</i><strong>索引</strong><small>10:19</small></li>
+          <li class="done"><i>✓</i><strong>静态分析</strong><small>10:20</small></li>
+          <li class="current"><i>析</i><strong>安全分析</strong><small>进行中</small></li>
+          <li><i>核</i><strong>复核</strong><small>待执行</small></li>
+          <li><i>报</i><strong>报告</strong><small>待生成</small></li>
+        </ol>
+      </section>
+
+      <section class="ledger-section ink-reveal" aria-labelledby="findingTitle">
+        <div class="section-heading finding-heading"><div><span class="eyebrow">朱批清单</span><h2 id="findingTitle">发现 12 项 · 3 项需立即处理</h2></div><div class="filter-chips" role="group" aria-label="严重度筛选"><button class="active">全部 12</button><button>Critical 3</button><button>High 7</button></div></div>
+        <div class="finding-ledger" role="listbox" aria-label="Finding 列表">
+          <button class="finding-row selected" role="option" aria-selected="true" data-id="f001" data-file="src/api/admin.py" data-title="缺少管理员授权校验" data-desc="端点仅验证登录态，普通用户可枚举全部账户。" data-line="139" data-confidence="96%"><span class="severity critical">危</span><span><strong>F-001 · 缺少管理员授权校验</strong><small>src/api/admin.py:139 · 2 条证据</small></span><span class="status">待复核</span></button>
+          <button class="finding-row" role="option" aria-selected="false" data-id="f002" data-file="src/services/role.py" data-title="角色参数可被客户端覆盖" data-desc="profile 更新接口接受未过滤的 role 字段。" data-line="84" data-confidence="91%"><span class="severity critical">危</span><span><strong>F-002 · 角色参数可被客户端覆盖</strong><small>src/services/role.py:84 · 3 条证据</small></span><span class="status">待复核</span></button>
+          <button class="finding-row" role="option" aria-selected="false" data-id="f003" data-file="src/middleware/cors.py" data-title="CORS 策略过度宽松" data-desc="受保护端点允许任意来源携带凭证访问。" data-line="31" data-confidence="88%"><span class="severity high">高</span><span><strong>F-003 · CORS 策略过度宽松</strong><small>src/middleware/cors.py:31 · 1 条证据</small></span><span class="status">分析中</span></button>
+        </div>
+      </section>
+
+      <section class="evidence-section ink-reveal" aria-labelledby="evidenceTitle">
+        <div class="section-heading"><div><span class="eyebrow">证据与 Diff</span><h2 id="evidenceTitle"><span id="evidenceId">F-001</span> · <span id="evidenceTitleText">缺少管理员授权校验</span></h2></div><div class="view-switch" role="group" aria-label="Diff 模式"><button class="active">并排</button><button>统一</button></div></div>
+        <div class="evidence-meta"><code id="evidenceFile">src/api/admin.py:139</code><span>置信度 <strong id="evidenceConfidence">96%</strong></span><span>CVSS 9.1</span><span class="blocking">可阻断</span></div>
+        <p class="evidence-description" id="evidenceDescription">端点仅验证登录态，普通用户可枚举全部账户。</p>
+        <div class="diff" role="region" aria-label="代码差异" tabindex="0">
+          <div class="diff-head"><span>原始代码</span><span>候选修复</span></div>
+          <div class="diff-line"><i>137</i><code>def get_user_list():</code><i>137</i><code>def get_user_list():</code></div>
+          <div class="diff-line"><i>138</i><code>    user = get_current_user()</code><i>138</i><code>    user = get_current_user()</code></div>
+          <div class="diff-line changed"><i>139</i><code class="removed">-   if user.is_admin:</code><i>139</i><code class="added">+   ensure_role(user, "admin")</code></div>
+          <div class="diff-line changed"><i>140</i><code class="removed">-       return User.query.all()</code><i>140</i><code class="added">+   return User.query.all()</code></div>
+          <div class="diff-line"><i>141</i><code>    return []</code><i>141</i><code> </code></div>
+        </div>
+      </section>
+
+      <section class="approval-section ink-reveal" aria-labelledby="approvalTitle">
+        <div class="section-heading"><div><span class="eyebrow">人工落款</span><h2 id="approvalTitle">Patch 审批</h2></div><span class="gate-pass">四道校验已通过</span></div>
+        <div class="gate-grid"><span>Apply <b>通过</b></span><span>Build <b>通过</b></span><span>Test <b>通过</b></span><span>Scan <b>通过</b></span></div>
+        <label class="comment-field"><span>审批意见</span><textarea id="reviewComment" rows="3" placeholder="记录批准或拒绝依据…">授权校验已收敛到统一策略，建议批准。</textarea></label>
+        <div class="approval-actions"><button class="outline-button danger" id="rejectButton">退回修改</button><button class="primary-button" id="approveButton">批准并落印</button></div>
+      </section>
+    </main>
+
+    <aside class="annotation-rail" id="annotationRail" aria-label="朱批与案卷信息">
+      <div class="rail-head"><div><span class="eyebrow">朱批</span><h2>审查批注</h2></div><button class="icon-button tablet-close" id="railClose" aria-label="关闭批注"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg></button></div>
+      <ol class="annotations">
+        <li class="critical"><time>10:21</time><strong>F-001 · 权限绕过</strong><p>角色校验缺失，可由低权限账户复现。</p><button data-focus="f001">定位证据</button></li>
+        <li><time>10:19</time><strong>索引完成</strong><p>已扫描 1,248 个文件，命中 28 条候选证据。</p></li>
+        <li><time>10:18</time><strong>案卷建立</strong><p>以 commit <code>8af31c09</code> 为审查基线。</p></li>
+      </ol>
+      <section class="case-facts"><h3>案卷简目</h3><dl><div><dt>创建</dt><dd>2026-08-12 10:18</dd></div><div><dt>文件</dt><dd>1,248</dd></div><div><dt>代码行</dt><dd>182,451</dd></div><div><dt>模型</dt><dd>GLM-5.2</dd></div></dl></section>
+      <blockquote>“所有阻断结论，必须能回到持久化证据。”<cite>— RepoSage 守门规范</cite></blockquote>
+    </aside>
+
+    <button class="rail-fab" id="railToggle" aria-label="打开朱批栏" aria-expanded="false" aria-controls="annotationRail">批 <i>3</i></button>
+
+    <div class="dialog-backdrop" id="confirmDialog" hidden>
+      <section class="confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="dialogTitle" aria-describedby="dialogDesc">
+        <span class="seal-preview" aria-hidden="true">准</span>
+        <h2 id="dialogTitle">确认批准候选 Patch？</h2>
+        <p id="dialogDesc">批准后将记录当前 Head SHA 与审批意见。此原型不会提交真实数据。</p>
+        <div><button class="outline-button" id="dialogCancel">返回复核</button><button class="primary-button" id="dialogConfirm">确认落印</button></div>
+      </section>
+    </div>
+
+    <div class="result-layer" id="resultLayer" aria-live="assertive" hidden><div class="result-seal" aria-hidden="true">准</div><strong>已批准</strong><span>审批记录已写入案卷</span></div>
+    <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+  </div>
+  <script src="./app.js"></script>
+</body>
+</html>

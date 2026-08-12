@@ -1,11 +1,11 @@
 {
   "id": "frontend-guofeng-cyber-redesign",
   "name": "frontend-guofeng-cyber-redesign",
-  "title": "前端产品重构：古风赛博动态审查台",
-  "description": "基于 frontend-product-workflow 重构 RepoSage 前端；古风赛博视觉、分层虚化、鼠标响应动效，并保持代码审查的可读性、无障碍与性能。",
+  "title": "前端产品重构：墨境书院动态审查台",
+  "description": "基于 frontend-product-workflow 重构 RepoSage 前端为墨境书院；加入可降级水墨动效，允许重组前端架构，同时保持业务合同、可读性、无障碍与性能。",
   "status": "planning",
   "dev_type": null,
-  "scope": null,
+  "scope": "frontend",
   "package": null,
   "priority": "P1",
   "creator": "LinYsssss",
@@ -24,6 +24,8 @@
   "notes": "",
   "meta": {
     "workflow": "frontend-product-workflow",
-    "stage": "planning"
+    "stage": "planning",
+    "chosen_direction": "ink-review-atelier",
+    "frontend_stage": "prototype-review"
   }
 }
