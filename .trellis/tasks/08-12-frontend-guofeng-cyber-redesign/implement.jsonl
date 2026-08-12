@@ -1,0 +1,6 @@
+{"file":".trellis/spec/frontend/index.md","reason":"前端代码改动前必须遵循的仓库级规范入口"}
+{"file":".trellis/tasks/08-12-frontend-guofeng-cyber-redesign/prd.md","reason":"产品目标、范围、动效边界与验收标准"}
+{"file":".trellis/tasks/08-12-frontend-guofeng-cyber-redesign/design.md","reason":"渐进迁移架构、表现层分层和技术决策门"}
+{"file":".trellis/tasks/08-12-frontend-guofeng-cyber-redesign/implement.md","reason":"Stage 0–7 实施顺序、隔离策略和回滚粒度"}
+{"file":".trellis/tasks/08-12-frontend-guofeng-cyber-redesign/research/ui-inventory.md","reason":"现有页面、组件、状态和响应式基线"}
+{"file":".trellis/tasks/08-12-frontend-guofeng-cyber-redesign/research/visual-directions.md","reason":"三套古风赛博方向与尚未完成的用户选择门"}

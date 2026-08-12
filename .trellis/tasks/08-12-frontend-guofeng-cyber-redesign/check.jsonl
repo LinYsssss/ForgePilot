@@ -1,0 +1,5 @@
+{"file":".trellis/spec/frontend/index.md","reason":"检查实现是否遵守仓库前端规范"}
+{"file":".trellis/tasks/08-12-frontend-guofeng-cyber-redesign/prd.md","reason":"逐项核对范围、约束和验收标准"}
+{"file":".trellis/tasks/08-12-frontend-guofeng-cyber-redesign/design.md","reason":"核对层级、动效、响应式、降级和迁移边界"}
+{"file":".trellis/tasks/08-12-frontend-guofeng-cyber-redesign/research/ui-design.md","reason":"实现阶段核对已批准的设计契约；规划期允许文件尚未生成"}
+{"file":".trellis/tasks/08-12-frontend-guofeng-cyber-redesign/research/qa-report.md","reason":"终验阶段核对浏览器、无障碍、性能与构建证据；规划期允许文件尚未生成"}
