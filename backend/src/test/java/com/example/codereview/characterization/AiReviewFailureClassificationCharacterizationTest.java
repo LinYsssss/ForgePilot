@@ -2,6 +2,7 @@ package com.example.codereview.characterization;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.post;
+import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -12,11 +13,14 @@ import com.example.codereview.ai.OpenAiCompatibleReviewClient;
 import com.example.codereview.common.api.ErrorCode;
 import com.example.codereview.common.exception.AiCallTransientException;
 import com.example.codereview.common.exception.BusinessException;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
+import com.github.tomakehurst.wiremock.verification.LoggedRequest;
 import java.io.IOException;
 import java.net.ServerSocket;
+import java.util.List;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -40,6 +44,10 @@ import org.springframework.web.client.RestClient;
  *
  * <p>先对未改动代码跑绿,收敛(引入 AiTransientFailureClassifier)后测试原样不动即行为不变。
  * 将来可被针对该客户端的正经单测替换。
+ *
+ * <p>另:r7-D4 temperature 对齐后,本类顺带承接「请求体 temperature 来自 app.ai.temperature 配置」
+ * 的回归断言(复用同一 WireMock 台架,见 {@link #configuredTemperatureZeroLandsInRequestBody()};
+ * 该条不属于失败分类特征,是行为变更后的正向锁定)。
  */
 class AiReviewFailureClassificationCharacterizationTest {
 
@@ -132,6 +140,30 @@ class AiReviewFailureClassificationCharacterizationTest {
                 });
     }
 
+    @Test
+    void configuredTemperatureZeroLandsInRequestBody() throws IOException {
+        // r7-D4 temperature 对齐:temperature 不再硬编码 0.2,改由 app.ai.temperature 注入
+        // (默认 0.0,与 LangChain4j 路径同键同默认)。本类直构不走 Spring,@Value 默认值不生效,
+        // 故按默认值语义显式传 0.0(见 client(...)),再用 WireMock 捕获真实请求体,
+        // 断言序列化出的 temperature 恰为 0.0 而非旧硬编码 0.2——评测 manifest 的
+        // fixedRun.temperature=0 自此对 legacy chat 路径成立。
+        server.stubFor(post(urlEqualTo(COMPLETIONS_PATH))
+                .willReturn(aResponse()
+                        .withStatus(200)
+                        .withHeader("Content-Type", "application/json")
+                        .withBody("{\"choices\":[{\"message\":{\"content\":\"{}\"}}]}")));
+
+        client(server.baseUrl(), 2_000).review("diff", null);
+
+        List<LoggedRequest> requests = server.findAll(postRequestedFor(urlEqualTo(COMPLETIONS_PATH)));
+        assertThat(requests).hasSize(1);
+        JsonNode body = new ObjectMapper().readTree(requests.get(0).getBodyAsString());
+        assertThat(body.path("temperature").isNumber())
+                .as("请求体必须携带数值型 temperature 字段(缺字段时 path().asDouble() 会假绿,先锁类型)")
+                .isTrue();
+        assertThat(body.path("temperature").asDouble()).isEqualTo(0.0);
+    }
+
     private OpenAiCompatibleReviewClient client(String baseUrl, int readTimeoutMs) {
         return new OpenAiCompatibleReviewClient(
                 RestClient.builder(),
@@ -140,6 +172,9 @@ class AiReviewFailureClassificationCharacterizationTest {
                 baseUrl,
                 "test-api-key",
                 "review-model",
+                // 直构不经 Spring 环境,@Value 默认值不会生效;此处显式传 app.ai.temperature
+                // 的默认值 0.0,保持与配置默认同义(r7-D4 对齐)
+                0.0,
                 1_000,
                 readTimeoutMs
         );

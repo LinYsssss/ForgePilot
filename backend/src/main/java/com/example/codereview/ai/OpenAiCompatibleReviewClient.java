@@ -32,6 +32,7 @@ public class OpenAiCompatibleReviewClient implements AiReviewClient {
     private final ObjectMapper objectMapper;
     private final AgentPromptAssembler prompts;
     private final String model;
+    private final double temperature;
 
     public OpenAiCompatibleReviewClient(
             RestClient.Builder restClientBuilder,
@@ -40,6 +41,11 @@ public class OpenAiCompatibleReviewClient implements AiReviewClient {
             @Value("${app.ai.base-url}") String baseUrl,
             @Value("${app.ai.api-key}") String apiKey,
             @Value("${app.ai.chat-model}") String model,
+            // r7-D4 temperature 对齐:原硬编码 0.2 改为配置注入。键与默认值必须与
+            // LangChain4jModelConfiguration 的 ChatModel(app.ai.temperature,默认 0.0)逐字相同——
+            // legacy 与 langchain4j 两条运行时路径同源,评测 manifest 的 fixedRun.temperature=0
+            // 才对两条路径都成立。改键或改默认必须两处同步(部署侧映射见 app-agent.yml 的 AI_TEMPERATURE)。
+            @Value("${app.ai.temperature:0.0}") double temperature,
             @Value("${app.http.connect-timeout-ms:10000}") int connectTimeoutMs,
             @Value("${app.ai.read-timeout-ms:300000}") int readTimeoutMs
     ) {
@@ -61,6 +67,7 @@ public class OpenAiCompatibleReviewClient implements AiReviewClient {
         this.objectMapper = objectMapper;
         this.prompts = prompts;
         this.model = model;
+        this.temperature = temperature;
     }
 
     @Override
@@ -74,7 +81,7 @@ public class OpenAiCompatibleReviewClient implements AiReviewClient {
                 prompt.systemTemplateVersion(), prompt.projectTemplateVersion(), prompt.taskTemplateVersion());
         Map<String, Object> request = Map.of(
                 "model", model,
-                "temperature", 0.2,
+                "temperature", temperature,
                 "messages", List.of(
                         Map.of("role", "system", "content", prompt.systemMessage()),
                         Map.of("role", "user", "content", prompt.userMessage())

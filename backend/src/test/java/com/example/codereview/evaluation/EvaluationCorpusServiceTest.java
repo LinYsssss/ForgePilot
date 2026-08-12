@@ -1,8 +1,10 @@
 package com.example.codereview.evaluation;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.exc.UnrecognizedPropertyException;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -101,6 +103,28 @@ class EvaluationCorpusServiceTest {
         EvaluationReport report = new EvaluationCorpusService(new ObjectMapper()).validate(manifest);
         assertThat(report.valid()).isFalse();
         assertThat(report.errors()).contains("invalid category equivalents: equiv-case");
+    }
+
+    @Test
+    void unknownCaseFieldFailsLoudlyInsteadOfBeingSilentlyIgnored(@TempDir Path tempDir) throws IOException {
+        // D2 前提复证:未知字段不会被静默忽略。本服务与本套件全程用裸 new ObjectMapper()
+        // (FAIL_ON_UNKNOWN_PROPERTIES 默认开启),case 条目出现未识别字段时 treeToValue 抛
+        // UnrecognizedPropertyException(IOException 子类),validate 不将其收进 errors,而是统一
+        // 包装成 IllegalArgumentException 抛出。含义:manifest schema 演进必须先扩 EvaluationReport
+        // 的 record 字段(如本轮 fixtureLayout/lineEnd/categoryEquivalents,缺省值保向后兼容),
+        // 手滑拼错键名也会当场炸而非被吞。注意该守门依赖裸 mapper——Spring Boot 定制 mapper 会
+        // 关闭该开关,但评测集校验入口就是本套件(容器 mvn test),不经 Spring 上下文,守门有效。
+        Files.createDirectories(tempDir.resolve("cases/future-case"));
+        Files.createDirectories(tempDir.resolve("cases/holdout-filler"));
+        Path manifest = writeManifest(tempDir, """
+                { "id": "future-case", "split": "development", "language": "JAVA",
+                  "fixture": "cases/future-case", "futureField": 1,
+                  "expectedFindings": [], "nonFindings": [], "expectedPatch": null }""");
+        assertThatThrownBy(() -> new EvaluationCorpusService(new ObjectMapper()).validate(manifest))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("evaluation manifest is unreadable")
+                .hasCauseInstanceOf(UnrecognizedPropertyException.class)
+                .cause().hasMessageContaining("futureField");
     }
 
     private Path writeManifest(Path root, String developmentCase) throws IOException {
