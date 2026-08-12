@@ -1,0 +1,33 @@
+# eval-stack.override.yml — 评测隔离栈 compose 覆盖层(r7 design D4;README「基线跑分操作顺序」第 3 步的具体化)。
+#
+# 与演示栈共用同一份 deploy/docker-compose.yml 与 deploy/.env(MiMo 凭据经 env_file
+# 注入,不落盘不打印),但 project 名独立(-p reposage-eval)⇒ 网络与 named volumes
+# 全部按项目名前缀隔离;跑完 down -v 即弃,演示栈全程零接触。
+#
+# 用法(统一从仓库根执行;或直接用 eval-stack.sh 包装):
+#   docker compose -p reposage-eval \
+#     -f deploy/docker-compose.yml -f evaluation/tools/eval-stack.override.yml \
+#     up -d --build backend
+#   # 依赖自动拉起 postgres/rabbitmq/model-service/otel-collector;
+#   # frontend/nginx/prometheus/sandbox-runner 不在 backend 依赖树上,不会启动。
+#
+# 端口纪律:演示栈把 5432/5672/15672/4317/4318/9464/8080 全绑在 127.0.0.1,
+# 隔离栈必须全部收回(!reset),只把 backend 错开到 18080 供 run-baseline.sh 进入
+# ——这也正是 EVAL_BASE_URL 故意无默认值的另一半:端口对不上就进不来,双保险。
+services:
+  backend:
+    ports: !override
+      - "127.0.0.1:18080:8080"
+    volumes:
+      # 追加挂载:build-case-repos.sh 产物(宿主默认 EVAL_WORK_DIR)→ 容器内
+      # EVAL_REPOS_MOUNT 默认值。只读:跑分对用例仓库只 clone 不写。
+      - /tmp/reposage-eval-repos:/eval-repos:ro
+    environment:
+      # LOCAL provider 是跑分唯一的仓库绑定方式,显式钉死,不依赖 .env 当时值。
+      GIT_ALLOW_LOCAL_PATH: "true"
+  postgres:
+    ports: !reset []
+  rabbitmq:
+    ports: !reset []
+  otel-collector:
+    ports: !reset []

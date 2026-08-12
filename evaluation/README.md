@@ -129,6 +129,10 @@ python3 evaluation/tools/score.py --selftest   # 内置小矩阵自测,必须打
    (沿用 deploy/.env 变量名,不落盘不打印)、把 `$EVAL_WORK_DIR` 挂载到 backend 容器的
    `$EVAL_REPOS_MOUNT`(只读即可;注意挂载目录对容器用户可读,若 clone 报 dubious ownership,
    在栈内容器加 `git config --global --add safe.directory '*'`)。
+   **具体化实现**:以上要点已固化为 `tools/eval-stack.override.yml`(compose 覆盖层:18080 错开、
+   非入口端口 `!reset` 收回、/eval-repos 只读挂载)+ `tools/eval-stack.sh`(up/run/calls/down
+   四子命令;`run` 在子壳内把 `SEED_ADMIN_*` 映射为 `EVAL_*`,凭据不打印不落盘;`calls` 在
+   down 前导出 ai_call_log 实数)。步骤 3/4/7 可分别用 `eval-stack.sh up / run / down` 执行。
 4. **跑分**:设 `EVAL_BASE_URL`/`EVAL_USERNAME`/`EVAL_PASSWORD` 后执行 `run-baseline.sh`;
    失败例用 `--resume` 补跑至清零(或在档案里逐条声明)。
 5. **判分**:`score.py --runs baseline-runs/<date>`,得两率与逐例明细。
