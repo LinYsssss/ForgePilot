@@ -1,0 +1,33 @@
+{
+  "root": "workspace",
+  "modules": [
+    {
+      "name": "api-server",
+      "files": 42
+    },
+    {
+      "name": "batch-jobs",
+      "files": 17
+    },
+    {
+      "name": "docs",
+      "files": 9
+    },
+    {
+      "name": "frontend",
+      "files": 63
+    },
+    {
+      "name": "infra",
+      "files": 11
+    },
+    {
+      "name": "scripts",
+      "files": 5
+    },
+    {
+      "name": "shared-lib",
+      "files": 24
+    }
+  ]
+}

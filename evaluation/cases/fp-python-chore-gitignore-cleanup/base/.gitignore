@@ -1,0 +1,6 @@
+# 本地环境
+.env.local
+.vscode/
+
+# 构建产物
+dist/
