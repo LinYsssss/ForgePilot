@@ -1,6 +1,6 @@
 # evaluation/ — PR Gatekeeper 评测语料与判分工具
 
-r7 起,评测集从 6 例扩到 40+ 例,并配套独立判分工具链(不改造后端评测框架)。
+r7 起,评测集从 6 例扩到 32 例(dev 22 / holdout 10),并配套独立判分工具链(不改造后端评测框架)。
 规格权威:`.trellis/tasks/08-03-r7-eval-corpus/design.md`(D1-D4)。
 
 ## 目录结构

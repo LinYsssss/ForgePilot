@@ -10,7 +10,7 @@
   },
   "fixedRun": {
     "toolImage": "reposage-tools@sha256:abcdef",
-    "model": "gpt-5",
+    "model": "z-ai/glm-5.2",
     "promptVersion": "pr-gatekeeper-v1",
     "findingSchemaVersion": "finding-v1",
     "temperature": 0,

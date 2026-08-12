@@ -25,6 +25,11 @@ services:
     environment:
       # LOCAL provider 是跑分唯一的仓库绑定方式,显式钉死,不依赖 .env 当时值。
       GIT_ALLOW_LOCAL_PATH: "true"
+      # 评测运行参数(非模型参数,不影响输出分布,只影响可用性;基线档案如实记录):
+      # 供应商限流(429)下 2s 重试等于连环撞墙,失败灌满 aiReview 熔断窗(COUNT_BASED
+      # 不随时间衰减,残渣会毒害后续用例)。15s 让限流窗口喘息;r8 各轮沿用同参数保持可比。
+      AI_RETRY_WAIT: "15s"
+      AI_RETRY_MAX_ATTEMPTS: "4"
   postgres:
     ports: !reset []
   rabbitmq:
