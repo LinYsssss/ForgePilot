@@ -3,7 +3,7 @@
   "name": "r7-eval-corpus",
   "title": "评测集扩充：6到30-50例含漏报专项",
   "description": "扩充evaluation语料至30-50个标注diff，含漏报专项用例，作为提示词调优的评测地基",
-  "status": "planning",
+  "status": "in_progress",
   "dev_type": null,
   "scope": null,
   "package": null,

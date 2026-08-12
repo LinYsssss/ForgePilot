@@ -1,0 +1,171 @@
+[
+  {
+    "id": "biz-fee-rate-hardcoded",
+    "split": "development",
+    "language": "JAVA",
+    "fixture": "cases/biz-fee-rate-hardcoded",
+    "fixtureLayout": "base-head",
+    "expectedFindings": [
+      {
+        "category": "BUSINESS_RULE_RISK",
+        "severity": "HIGH",
+        "path": "src/main/java/com/acme/clearing/service/InstantSettlementService.java",
+        "line": 13,
+        "lineEnd": 26,
+        "categoryEquivalents": ["UNKNOWN"]
+      }
+    ],
+    "nonFindings": [
+      "基仓 FeeCalculator 走 fee_rate_config 配置表的既有实现不许报",
+      "幂等键由调用方传入属正确设计，不许报"
+    ],
+    "expectedPatch": null
+  },
+  {
+    "id": "biz-fee-rounding-mode",
+    "split": "holdout",
+    "language": "JAVA",
+    "fixture": "cases/biz-fee-rounding-mode",
+    "fixtureLayout": "base-head",
+    "expectedFindings": [
+      {
+        "category": "BUSINESS_RULE_RISK",
+        "severity": "HIGH",
+        "path": "src/main/java/com/acme/clearing/fee/MerchantFeeService.java",
+        "line": 30,
+        "lineEnd": 32,
+        "categoryEquivalents": ["UNKNOWN"]
+      }
+    ],
+    "nonFindings": [
+      "新增 FeeBreakdown 三段拆分值对象属正常重构，不许报"
+    ],
+    "expectedPatch": null
+  },
+  {
+    "id": "biz-min-net-amount-skipped",
+    "split": "development",
+    "language": "JAVA",
+    "fixture": "cases/biz-min-net-amount-skipped",
+    "fixtureLayout": "base-head",
+    "expectedFindings": [
+      {
+        "category": "BUSINESS_RULE_RISK",
+        "severity": "MEDIUM",
+        "path": "src/main/java/com/acme/clearing/batch/BatchSettlementService.java",
+        "line": 26,
+        "lineEnd": 32,
+        "categoryEquivalents": ["UNKNOWN"]
+      }
+    ],
+    "nonFindings": [
+      "幂等键按结算日期+商户构造属正确设计，不许报"
+    ],
+    "expectedPatch": null
+  },
+  {
+    "id": "biz-currency-unchecked",
+    "split": "development",
+    "language": "JAVA",
+    "fixture": "cases/biz-currency-unchecked",
+    "fixtureLayout": "base-head",
+    "expectedFindings": [
+      {
+        "category": "BUSINESS_RULE_RISK",
+        "severity": "MEDIUM",
+        "path": "src/main/java/com/acme/clearing/service/SettlementService.java",
+        "line": 26,
+        "lineEnd": 37,
+        "categoryEquivalents": ["UNKNOWN"]
+      }
+    ],
+    "nonFindings": [
+      "为跨境接入预留 currency 参数的 API 演进方向本身不许报"
+    ],
+    "expectedPatch": null
+  },
+  {
+    "id": "biz-status-machine-bypass",
+    "split": "development",
+    "language": "JAVA",
+    "fixture": "cases/biz-status-machine-bypass",
+    "fixtureLayout": "base-head",
+    "expectedFindings": [
+      {
+        "category": "BUSINESS_RULE_RISK",
+        "severity": "HIGH",
+        "path": "src/main/java/com/acme/clearing/payout/service/ExpressPayoutService.java",
+        "line": 20,
+        "lineEnd": 29,
+        "categoryEquivalents": ["TRANSACTION_RISK", "UNKNOWN"]
+      }
+    ],
+    "nonFindings": [
+      "小额免排队的产品策略与额度上限本身不许报"
+    ],
+    "expectedPatch": null
+  },
+  {
+    "id": "biz-ship-ignores-pay-status",
+    "split": "development",
+    "language": "JAVA",
+    "fixture": "cases/biz-ship-ignores-pay-status",
+    "fixtureLayout": "base-head",
+    "expectedFindings": [
+      {
+        "category": "BUSINESS_RULE_RISK",
+        "severity": "HIGH",
+        "path": "src/main/java/com/acme/shop/service/OrderShipService.java",
+        "line": 45,
+        "lineEnd": 52,
+        "categoryEquivalents": ["TRANSACTION_RISK", "UNKNOWN"]
+      }
+    ],
+    "nonFindings": [
+      "跳过已删除与非 WAIT_SHIP 订单的 continue 过滤属正常，不许报"
+    ],
+    "expectedPatch": null
+  },
+  {
+    "id": "biz-order-amount-double",
+    "split": "development",
+    "language": "JAVA",
+    "fixture": "cases/biz-order-amount-double",
+    "fixtureLayout": "base-head",
+    "expectedFindings": [
+      {
+        "category": "BUSINESS_RULE_RISK",
+        "severity": "HIGH",
+        "path": "src/main/java/com/acme/shop/service/OrderAmountService.java",
+        "line": 33,
+        "lineEnd": 37,
+        "categoryEquivalents": ["UNKNOWN"]
+      }
+    ],
+    "nonFindings": [
+      "applyVoucherDeduction 的 long 运算与 0 下限钳制属正常，不许报"
+    ],
+    "expectedPatch": null
+  },
+  {
+    "id": "biz-ship-missing-shipped-at",
+    "split": "holdout",
+    "language": "JAVA",
+    "fixture": "cases/biz-ship-missing-shipped-at",
+    "fixtureLayout": "base-head",
+    "expectedFindings": [
+      {
+        "category": "BUSINESS_RULE_RISK",
+        "severity": "MEDIUM",
+        "path": "src/main/java/com/acme/shop/fulfillment/service/FulfillmentService.java",
+        "line": 26,
+        "lineEnd": 31,
+        "categoryEquivalents": ["TRANSACTION_RISK", "UNKNOWN"]
+      }
+    ],
+    "nonFindings": [
+      "条件更新防并发重复发货本身是正确改造，不许报"
+    ],
+    "expectedPatch": null
+  }
+]

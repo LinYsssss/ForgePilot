@@ -3,7 +3,7 @@
   "name": "r8-prompt-tuning",
   "title": "提示词调优：分层模板+两段复核+动态few-shot",
   "description": "分层prompt模板、文件类型清单、两段式复核、动态few-shot、版本化+评测门禁；硬约束：宁精勿多、漏报recall-first",
-  "status": "planning",
+  "status": "in_progress",
   "dev_type": null,
   "scope": null,
   "package": null,

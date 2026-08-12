@@ -1,0 +1,174 @@
+[
+  {
+    "id": "eng-startup-path-assumption",
+    "split": "development",
+    "language": "JAVA",
+    "fixture": "cases/eng-startup-path-assumption",
+    "fixtureLayout": "base-head",
+    "expectedFindings": [
+      {
+        "category": "STARTUP_ASSUMPTION",
+        "severity": "HIGH",
+        "path": "src/main/java/com/acme/export/ArchiveStorageService.java",
+        "line": 16,
+        "lineEnd": 20,
+        "categoryEquivalents": ["NULL_POINTER", "UNKNOWN"]
+      }
+    ],
+    "nonFindings": [
+      "store() writes each archive with a single Files.write call and holds no open handle; it must not be reported as a resource leak"
+    ],
+    "expectedPatch": null
+  },
+  {
+    "id": "eng-contract-drift-dual-encode",
+    "split": "development",
+    "language": "JAVA",
+    "fixture": "cases/eng-contract-drift-dual-encode",
+    "fixtureLayout": "base-head",
+    "expectedFindings": [
+      {
+        "category": "CONTRACT_DRIFT",
+        "severity": "HIGH",
+        "path": "src/main/java/com/acme/report/ReportLinkRenderer.java",
+        "line": 8,
+        "lineEnd": 10,
+        "categoryEquivalents": ["BUSINESS_RULE_RISK", "UNKNOWN"]
+      }
+    ],
+    "nonFindings": [
+      "the legacy bucket:objectKey decode fallback in AssetReferenceCodec is deliberate backward compatibility and must not be reported"
+    ],
+    "expectedPatch": null
+  },
+  {
+    "id": "eng-second-path-fence-bypass",
+    "split": "holdout",
+    "language": "JAVA",
+    "fixture": "cases/eng-second-path-fence-bypass",
+    "fixtureLayout": "base-head",
+    "expectedFindings": [
+      {
+        "category": "CONTRACT_DRIFT",
+        "severity": "MEDIUM",
+        "path": "src/main/java/com/acme/modelio/SummaryResponseParser.java",
+        "line": 16,
+        "lineEnd": 18,
+        "categoryEquivalents": ["BUSINESS_RULE_RISK", "UNKNOWN"]
+      }
+    ],
+    "nonFindings": [
+      "the ~~~ fence hardening inside the shared ModelOutputs.stripCodeFence is itself correct and must not be reported",
+      "the existing PlanResponseParser path already goes through the shared stripper and must not be reported"
+    ],
+    "expectedPatch": null
+  },
+  {
+    "id": "eng-transactional-self-invocation",
+    "split": "development",
+    "language": "JAVA",
+    "fixture": "cases/eng-transactional-self-invocation",
+    "fixtureLayout": "base-head",
+    "expectedFindings": [
+      {
+        "category": "TRANSACTION_RISK",
+        "severity": "HIGH",
+        "path": "src/main/java/com/acme/inventory/InventoryService.java",
+        "line": 31,
+        "lineEnd": 39,
+        "categoryEquivalents": []
+      }
+    ],
+    "nonFindings": [
+      "the existing single-item path (controller to adjustStock through the Spring proxy) keeps correct transactional semantics and must not be reported",
+      "continuing the batch after one failed item (partial-success semantics) is intentional and must not be reported"
+    ],
+    "expectedPatch": null
+  },
+  {
+    "id": "eng-file-stream-leak",
+    "split": "development",
+    "language": "JAVA",
+    "fixture": "cases/eng-file-stream-leak",
+    "fixtureLayout": "base-head",
+    "expectedFindings": [
+      {
+        "category": "RESOURCE_LEAK",
+        "severity": "MEDIUM",
+        "path": "src/main/java/com/acme/ingest/ManifestImporter.java",
+        "line": 21,
+        "lineEnd": 26,
+        "categoryEquivalents": ["PERFORMANCE_RISK", "UNKNOWN"]
+      }
+    ],
+    "nonFindings": [
+      "wrapping IOException into UncheckedIOException is acceptable error handling, not a defect"
+    ],
+    "expectedPatch": null
+  },
+  {
+    "id": "eng-http-client-leak",
+    "split": "development",
+    "language": "JAVA",
+    "fixture": "cases/eng-http-client-leak",
+    "fixtureLayout": "base-head",
+    "expectedFindings": [
+      {
+        "category": "RESOURCE_LEAK",
+        "severity": "MEDIUM",
+        "path": "src/main/java/com/acme/notify/WebhookNotifier.java",
+        "line": 27,
+        "lineEnd": 33,
+        "categoryEquivalents": ["PERFORMANCE_RISK", "UNKNOWN"]
+      }
+    ],
+    "nonFindings": [
+      "best-effort delivery that catches exceptions and only logs a warning is intended for webhook notifications and must not be reported",
+      "the RequestConfig response timeout is correct hardening, not a defect"
+    ],
+    "expectedPatch": null
+  },
+  {
+    "id": "eng-optional-get-unchecked",
+    "split": "development",
+    "language": "JAVA",
+    "fixture": "cases/eng-optional-get-unchecked",
+    "fixtureLayout": "base-head",
+    "expectedFindings": [
+      {
+        "category": "NULL_POINTER",
+        "severity": "MEDIUM",
+        "path": "src/main/java/com/acme/profile/ProfileService.java",
+        "line": 20,
+        "lineEnd": 21,
+        "categoryEquivalents": []
+      }
+    ],
+    "nonFindings": [
+      "the existing displayName() path using orElse(\"anonymous\") is safe and must not be reported"
+    ],
+    "expectedPatch": null
+  },
+  {
+    "id": "eng-map-get-deref-chain",
+    "split": "holdout",
+    "language": "JAVA",
+    "fixture": "cases/eng-map-get-deref-chain",
+    "fixtureLayout": "base-head",
+    "expectedFindings": [
+      {
+        "category": "NULL_POINTER",
+        "severity": "MEDIUM",
+        "path": "src/main/java/com/acme/routing/EndpointResolver.java",
+        "line": 21,
+        "lineEnd": 23,
+        "categoryEquivalents": []
+      }
+    ],
+    "nonFindings": [
+      "the constructor guard rejecting an empty route catalog is correct, not a defect",
+      "loading the route catalog once at startup (no hot reload) is intentional and must not be reported"
+    ],
+    "expectedPatch": null
+  }
+]

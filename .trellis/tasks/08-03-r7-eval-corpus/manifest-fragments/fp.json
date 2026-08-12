@@ -1,0 +1,54 @@
+[
+  {
+    "id": "fp-java-whitelist-order-by",
+    "split": "development",
+    "language": "JAVA",
+    "fixture": "cases/fp-java-whitelist-order-by",
+    "fixtureLayout": "base-head",
+    "expectedFindings": [],
+    "nonFindings": [
+      "关键字始终经 PreparedStatement 占位符绑定（LIKE 通配符拼接发生在参数值侧且已转义），不得报 SQL 注入",
+      "ORDER BY 片段仅来自 AuditSortField 枚举白名单常量（请求原文只用于白名单查找，未匹配回落默认值），不得报注入或未校验输入"
+    ],
+    "expectedPatch": null
+  },
+  {
+    "id": "fp-java-guarded-admin-endpoint",
+    "split": "holdout",
+    "language": "JAVA",
+    "fixture": "cases/fp-java-guarded-admin-endpoint",
+    "fixtureLayout": "base-head",
+    "expectedFindings": [],
+    "nonFindings": [
+      "新增管理接口已由类级 @PreAuthorize(\"hasRole('ADMIN')\") 全量覆盖，不得报未鉴权接口或越权",
+      "停用操作按操作者租户加载目标并显式比对 tenantId（跨租户抛 AccessDeniedException，且禁止自我停用），不得报水平越权/IDOR"
+    ],
+    "expectedPatch": null
+  },
+  {
+    "id": "fp-python-chore-gitignore-cleanup",
+    "split": "development",
+    "language": "PYTHON",
+    "fixture": "cases/fp-python-chore-gitignore-cleanup",
+    "fixtureLayout": "base-head",
+    "expectedFindings": [],
+    "nonFindings": [
+      "scripts/reports/layout-report.json 是 scan_layout.py 可随时重建的生成物，删除不构成功能回归或数据丢失",
+      ".gitignore 新增 __pycache__/、*.pyc 与 scripts/reports/ 忽略规则属常规工程卫生，不得报配置风险或掩盖问题"
+    ],
+    "expectedPatch": null
+  },
+  {
+    "id": "fp-java-payout-extract-method",
+    "split": "development",
+    "language": "JAVA",
+    "fixture": "cases/fp-java-payout-extract-method",
+    "fixtureLayout": "base-head",
+    "expectedFindings": [],
+    "nonFindings": [
+      "本次 diff 为抽取私有方法、幂等短路改用 Optional.orElseGet 与命名统一（netFen→netAmountFen、rates→rateRepository），校验条件、异常信息、幂等语义、最小净额规则逐行保持不变，不得报业务规则违规",
+      "佣金整数运算 grossAmountFen * rateBp / 10_000L 为既有向下取整设计，本次仅重命名字段未触碰计算逻辑，不得报金额精度缺陷"
+    ],
+    "expectedPatch": null
+  }
+]
