@@ -85,3 +85,43 @@ F-03/F-04/F-05 契约核心落地(同构 WorkspaceArchiveReference+双向金标�
 ### Status
 
 [OK] **Completed**
+
+
+## Session 4: r6 校正收官归档 + r7 语料 6→32 例合并落地 + r8-R1 字节等价模板入库
+
+**Date**: 2026-08-12
+**Task**: r6 校正收官归档 + r7 语料 6→32 例合并落地 + r8-R1 字节等价模板入库
+**Branch**: `integration/track-ab`
+
+### Summary
+
+衔接 trellis-check 校正后的断点会话。r6:三处校正(bundle 口径补 html 列、color-scheme 亮色定稿、注释对齐 styles.css 退役)提交并归档收官。r7:按创作规约执行主会话合并职责——26 例标注碎片并入 manifest(6→32,dev 22/holdout 10),schema 三字段+base-head/行区间校验规则、判分工具三件套(build-case-repos 32/32 确定性建仓、score.py 自测 14 项、README 真实校验口径)落盘,抽查两例行号区间精确命中;遗留 temperature 对齐与真实基线跑分,任务保持 in_progress。r8-R1:分层模板字节等价搬迁入库(11 模板注册表+步骤内联指令清零,golden 钉死),上会话遗漏的 6 处执行器单测以 spy 真组装器修复(instruction 走真模板,内容断言连带钉住模板文件),任务保持 in_progress。质量门:后端全量 606/0、前端 21/21+build 绿、作者纪律核验通过。补录:r6 十二提交(e9b0ff7..b56a9b1)与 r7 规划两提交(b8ae66c/29f2b79)此前未入日志,并入本条;r3-r5 会话日志历史欠账仍在。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `33f8c75` | (see git log) |
+| `6972a47` | (see git log) |
+| `cf55fb7` | (see git log) |
+| `840ee92` | (see git log) |
+| `bdf07d4` | (see git log) |
+| `392b0c9` | (see git log) |
+| `e9b0ff7` | (see git log) |
+| `aa5ccac` | (see git log) |
+| `08ac7b0` | (see git log) |
+| `1c2d629` | (see git log) |
+| `2519b4e` | (see git log) |
+| `3cbb677` | (see git log) |
+| `39df3ab` | (see git log) |
+| `1a4f3d0` | (see git log) |
+| `f743c37` | (see git log) |
+| `70d9e90` | (see git log) |
+| `119f9a8` | (see git log) |
+| `b56a9b1` | (see git log) |
+| `b8ae66c` | (see git log) |
+| `29f2b79` | (see git log) |
+
+### Status
+
+[OK] **Completed**
