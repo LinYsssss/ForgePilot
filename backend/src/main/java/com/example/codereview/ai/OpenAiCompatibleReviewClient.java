@@ -1,5 +1,6 @@
 package com.example.codereview.ai;
 
+import com.example.codereview.agent.prompt.AgentPromptAssembler;
 import com.example.codereview.common.api.ErrorCode;
 import com.example.codereview.common.exception.BusinessException;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -11,6 +12,8 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpHeaders;
@@ -23,13 +26,17 @@ import org.springframework.web.client.RestClient;
 @ConditionalOnProperty(prefix = "app.ai", name = "provider", havingValue = "openai-compatible")
 public class OpenAiCompatibleReviewClient implements AiReviewClient {
 
+    private static final Logger log = LoggerFactory.getLogger(OpenAiCompatibleReviewClient.class);
+
     private final RestClient restClient;
     private final ObjectMapper objectMapper;
+    private final AgentPromptAssembler prompts;
     private final String model;
 
     public OpenAiCompatibleReviewClient(
             RestClient.Builder restClientBuilder,
             ObjectMapper objectMapper,
+            AgentPromptAssembler prompts,
             @Value("${app.ai.base-url}") String baseUrl,
             @Value("${app.ai.api-key}") String apiKey,
             @Value("${app.ai.chat-model}") String model,
@@ -52,6 +59,7 @@ public class OpenAiCompatibleReviewClient implements AiReviewClient {
                 .requestFactory(requestFactory)
                 .build();
         this.objectMapper = objectMapper;
+        this.prompts = prompts;
         this.model = model;
     }
 
@@ -59,13 +67,17 @@ public class OpenAiCompatibleReviewClient implements AiReviewClient {
     @Retry(name = "aiReview")
     @CircuitBreaker(name = "aiReview")
     public AiReviewResult review(String diffText, String ragContext) {
-        String prompt = buildPrompt(diffText, ragContext);
+        // r8-R1 分层模板：系统/项目/任务层出自 PromptTemplateRegistry，组装与旧内联文本字节等价
+        // （golden 测试钉死）。模板版本先落日志留痕；ai_call_log 列扩展留待内容性变更时一并评估。
+        AgentPromptAssembler.ChatReviewPrompt prompt = prompts.assembleChatReview(diffText, ragContext);
+        log.info("chat review prompt assembled: system={}, project={}, task={}",
+                prompt.systemTemplateVersion(), prompt.projectTemplateVersion(), prompt.taskTemplateVersion());
         Map<String, Object> request = Map.of(
                 "model", model,
                 "temperature", 0.2,
                 "messages", List.of(
-                        Map.of("role", "system", "content", systemPrompt()),
-                        Map.of("role", "user", "content", prompt)
+                        Map.of("role", "system", "content", prompt.systemMessage()),
+                        Map.of("role", "user", "content", prompt.userMessage())
                 )
         );
         try {
@@ -209,58 +221,5 @@ public class OpenAiCompatibleReviewClient implements AiReviewClient {
             return trimmed.substring(firstBrace, lastBrace + 1);
         }
         return trimmed;
-    }
-
-    private String systemPrompt() {
-        return """
-                你是资深 Java 代码审查专家。
-                你必须基于 Git Diff、静态分析结果和 RAG 项目上下文进行审查。
-                你不能编造不存在的文件、行号或证据。
-                你只能输出 JSON，不要输出 Markdown。
-                """;
-    }
-
-    private String buildPrompt(String diffText, String ragContext) {
-        return """
-                请审查下面的 Git Diff。
-
-                审查重点：
-                1. 空指针风险
-                2. SQL 注入风险
-                3. 权限校验缺失
-                4. 事务一致性问题
-                5. 性能问题
-                6. 业务规则破坏
-
-                输出 JSON Schema：
-                {
-                  "summary": "string",
-                  "overallRisk": "HIGH|MEDIUM|LOW|NONE",
-                  "issues": [
-                    {
-                      "severity": "HIGH|MEDIUM|LOW",
-                      "category": "NULL_POINTER|SQL_INJECTION|AUTH_RISK|TRANSACTION_RISK|PERFORMANCE_RISK|BUSINESS_RULE_RISK|UNKNOWN",
-                      "filePath": "string",
-                      "lineStart": 1,
-                      "lineEnd": 1,
-                      "title": "string",
-                      "description": "string",
-                      "impact": "string",
-                      "evidenceSources": [{"sourceName":"string","quote":"string"}],
-                      "suggestion": "string",
-                      "confidence": 0.0
-                    }
-                  ]
-                }
-
-                RAG 项目上下文：
-                %s
-
-                Git Diff：
-                %s
-                """.formatted(
-                ragContext == null || ragContext.isBlank() ? "未检索到项目上下文。" : ragContext,
-                diffText == null ? "" : diffText
-        );
     }
 }

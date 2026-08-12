@@ -101,8 +101,8 @@ public final class GeneratingPatchStepExecutor implements AgentStepExecutor {
         try {
             var prompt = prompts.assemble(new AgentPromptAssembler.Input(
                     "review-v1",
-                    "Generate one minimal unified diff only for the supplied verified findings. "
-                            + "Never alter CI, CODEOWNERS, Flyway history, secrets, or unrelated files.",
+                    // r8-R1:指令文本移入 generating-patch-task-v1 模板(逐字搬迁,无槽位)。
+                    prompts.instruction("generating-patch-task-v1"),
                     analysis.getChangedDiff(),
                     mapper.writeValueAsString(eligible.stream().map(this::findingSummary).toList()),
                     "",

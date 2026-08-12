@@ -6,6 +6,8 @@ import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.example.codereview.agent.prompt.AgentPromptAssembler;
+import com.example.codereview.agent.prompt.PromptTemplateRegistry;
 import com.example.codereview.ai.OpenAiCompatibleReviewClient;
 import com.example.codereview.common.api.ErrorCode;
 import com.example.codereview.common.exception.AiCallTransientException;
@@ -134,6 +136,7 @@ class AiReviewFailureClassificationCharacterizationTest {
         return new OpenAiCompatibleReviewClient(
                 RestClient.builder(),
                 new ObjectMapper(),
+                new AgentPromptAssembler(new PromptTemplateRegistry()),
                 baseUrl,
                 "test-api-key",
                 "review-model",

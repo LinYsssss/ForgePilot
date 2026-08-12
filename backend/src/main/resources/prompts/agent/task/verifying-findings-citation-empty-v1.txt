@@ -1,0 +1,6 @@
+# template: verifying-findings-citation-empty-v1（验证发现步·空知识分支的 citation 指令片段）
+# 来源: VerifyingFindingsStepExecutor 的 citationInstruction 空知识分支（原 183-185 行），r8-R1 字节等价。
+# 空知识是合法部署姿态：citation 白名单为空集时强制引用即无解约束（run16），故明示 citationIds 必须为空数组。
+# 原文尾随空格由主模板 verifying-findings-task-v1 的槽后空格承担。
+
+No knowledge sources are provided in this run, so "citationIds" must be an empty array in every finding; base every finding strictly on the supplied diff and change analyses.

@@ -244,27 +244,15 @@ public final class ExecutingToolsStepExecutor implements AgentStepExecutor {
     ) throws JsonProcessingException {
         return prompts.assemble(new AgentPromptAssembler.Input(
                 "review-v1",
-                "Use the supplied persisted tool results to return the final schema-valid review plan. "
-                        + "Copy the original validated plan items verbatim into \"plan\" (same toolName, "
-                        + "arguments, purpose, expectedEvidence and modelRequestId; \"plan\" must not be "
-                        + "empty and must not contain new items). The only legal toolName values are: "
-                        + planned + ". Any other tool name (for example static_analysis or security_scan) "
-                        + "fails validation. Put your actual review conclusions, each backed by the "
-                        + "supplied tool evidence, into \"claims\". "
-                        // 输出契约严格拒绝未知字段(温度 0 下同错必复现):键名必须逐字钉死,
-                        // 首次真实运行 MiMo 把 claims 写成 claim 即整步失败。
-                        + "Respond with a single JSON object whose top-level keys are exactly "
-                        + "\"summary\", \"plan\" and \"claims\" (plural, always an array). "
-                        // run13 实证:顶层键钉死后,断点前移到 claims 条目内部——schema 里的
-                        // 空数组示例等于没有契约,MiMo 把条目键名写成 "claim" 即整步失败。
-                        // 条目形状必须逐键写明,并连带钉死引用规则:本步骤 citations 传空集,
-                        // validateCitations 在空白名单下拒绝一切 citation,knowledgeBacked=true
-                        // 又强制要求 citation——不写明就是下一个必然断点。
-                        + "Each entry in \"claims\" must be an object whose keys are exactly "
-                        + "\"text\", \"knowledgeBacked\" and \"citationIds\"; any other key name "
-                        + "(for example \"claim\") fails validation. No knowledge sources are "
-                        + "provided in this step, so \"knowledgeBacked\" must be false and "
-                        + "\"citationIds\" must be an empty array in every entry.",
+                // 指令文本见 executing-tools-receipt-task-v1 模板(r8-R1 逐字搬迁)。文本形状的
+                // 实证依据保持有效:输出契约严格拒绝未知字段(温度 0 下同错必复现),顶层键必须
+                // 逐字钉死——首次真实运行 MiMo 把 claims 写成 claim 即整步失败;run13 实证:顶层
+                // 键钉死后断点前移到 claims 条目内部,schema 里的空数组示例等于没有契约,条目
+                // 键名(text/knowledgeBacked/citationIds)必须逐键写明,并连带钉死引用规则——
+                // 本步骤 citations 传空集,validateCitations 在空白名单下拒绝一切 citation,
+                // knowledgeBacked=true 又强制要求 citation,不写明就是下一个必然断点。
+                // 合法工具名集合 planned 为服务端事实,经 %s 槽同源注入。
+                prompts.instruction("executing-tools-receipt-task-v1", planned),
                 "",
                 "",
                 mapper.writeValueAsString(results),

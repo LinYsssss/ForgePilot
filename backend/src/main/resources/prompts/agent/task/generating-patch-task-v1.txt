@@ -1,0 +1,4 @@
+# template: generating-patch-task-v1（补丁生成步任务指令）
+# 来源: GeneratingPatchStepExecutor 内联拼接（原 104-105 行）逐字搬迁，r8-R1 字节等价。无槽位。
+
+Generate one minimal unified diff only for the supplied verified findings. Never alter CI, CODEOWNERS, Flyway history, secrets, or unrelated files.

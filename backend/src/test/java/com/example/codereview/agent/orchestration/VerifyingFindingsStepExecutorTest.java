@@ -2,8 +2,10 @@ package com.example.codereview.agent.orchestration;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -13,6 +15,7 @@ import com.example.codereview.agent.model.FindingModelResponse;
 import com.example.codereview.agent.model.PromptEnvelope;
 import com.example.codereview.agent.orchestration.steps.VerifyingFindingsStepExecutor;
 import com.example.codereview.agent.prompt.AgentPromptAssembler;
+import com.example.codereview.agent.prompt.PromptTemplateRegistry;
 import com.example.codereview.agent.run.AgentRunStatus;
 import com.example.codereview.finding.FindingConfidenceService;
 import com.example.codereview.finding.FindingDecisionRepository;
@@ -143,7 +146,9 @@ class VerifyingFindingsStepExecutorTest {
     @Test
     void emptyKnowledgeSwitchesPromptToEmptyCitationContract() throws Exception {
         ObjectMapper mapper = new ObjectMapper();
-        AgentPromptAssembler prompts = mock(AgentPromptAssembler.class);
+        // r8-R1 后指令文本来自模板注册表:spy 真组装器让 instruction() 走真模板
+        // (citation 契约断言连带钉住模板文件),assemble 仍打桩隔离信封逻辑。
+        AgentPromptAssembler prompts = spy(new AgentPromptAssembler(new PromptTemplateRegistry()));
         AgentPromptAssembler.Input input = capturedPromptInput(
                 mapper, prompts, 3L, "abcdef3",
                 new AgentRetrievedContextCheckpoint("agent-retrieved-context-v1", List.of())
@@ -161,7 +166,9 @@ class VerifyingFindingsStepExecutorTest {
     @Test
     void suppliedKnowledgeKeepsMandatoryCitationContract() throws Exception {
         ObjectMapper mapper = new ObjectMapper();
-        AgentPromptAssembler prompts = mock(AgentPromptAssembler.class);
+        // r8-R1 后指令文本来自模板注册表:spy 真组装器让 instruction() 走真模板
+        // (citation 契约断言连带钉住模板文件),assemble 仍打桩隔离信封逻辑。
+        AgentPromptAssembler prompts = spy(new AgentPromptAssembler(new PromptTemplateRegistry()));
         AgentPromptAssembler.Input input = capturedPromptInput(
                 mapper, prompts, 4L, "abcdef4",
                 new AgentRetrievedContextCheckpoint("agent-retrieved-context-v1", List.of(
@@ -198,10 +205,10 @@ class VerifyingFindingsStepExecutorTest {
         stored.contextRetrieved(mapper.writeValueAsString(retrieved));
         when(contexts.findByAgentRunId(runId)).thenReturn(Optional.of(stored));
         when(contexts.save(any())).thenAnswer(call -> call.getArgument(0));
-        when(prompts.assemble(any())).thenReturn(new PromptEnvelope(
+        doReturn(new PromptEnvelope(
                 "policy", "findings", "diff", "", "", "", "{}",
                 "review-v1", null, "finding-candidates-v1", List.of(), List.of()
-        ));
+        )).when(prompts).assemble(any());
         when(findingModel.generate(any(), any(), any(), any())).thenReturn(
                 new AgentFindingModelService.Result(new FindingModelResponse(List.of()), 1, 1, 1)
         );

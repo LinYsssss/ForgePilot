@@ -2,7 +2,9 @@ package com.example.codereview.agent.orchestration;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -11,6 +13,7 @@ import com.example.codereview.agent.model.AgentModelClient;
 import com.example.codereview.agent.model.AgentPatchModelService;
 import com.example.codereview.agent.orchestration.steps.GeneratingPatchStepExecutor;
 import com.example.codereview.agent.prompt.AgentPromptAssembler;
+import com.example.codereview.agent.prompt.PromptTemplateRegistry;
 import com.example.codereview.agent.run.AgentRunStatus;
 import com.example.codereview.finding.Finding;
 import com.example.codereview.finding.FindingDecisionEntity;
@@ -34,7 +37,9 @@ class GeneratingPatchStepExecutorTest {
         FindingDecisionRepository decisions = mock(FindingDecisionRepository.class);
         AgentModelClient client = mock(AgentModelClient.class);
         AgentPatchModelService patchModel = mock(AgentPatchModelService.class);
-        AgentPromptAssembler prompts = mock(AgentPromptAssembler.class);
+        // r8-R1 后指令文本来自模板注册表:spy 真组装器让 instruction() 走真模板,
+        // assemble 仍打桩隔离信封逻辑。
+        AgentPromptAssembler prompts = spy(new AgentPromptAssembler(new PromptTemplateRegistry()));
         PatchCandidateService patches = mock(PatchCandidateService.class);
         Finding finding = new Finding(
                 1L, com.example.codereview.finding.FindingSeverity.HIGH, "security", "Leak",
@@ -47,10 +52,10 @@ class GeneratingPatchStepExecutorTest {
         when(contexts.findByAgentRunId(1L)).thenReturn(Optional.of(context(1L, mapper)));
         when(findings.findByAgentRunIdOrderByIdAsc(1L)).thenReturn(List.of(finding));
         when(decisions.findByFindingIdOrderByIdAsc(42L)).thenReturn(List.of(decision));
-        when(prompts.assemble(any())).thenReturn(new com.example.codereview.agent.model.PromptEnvelope(
+        doReturn(new com.example.codereview.agent.model.PromptEnvelope(
                 "policy", "patch", "diff", "", "", "", "{}",
                 "review-v1", null, "patch-candidate-v1", List.of(), List.of()
-        ));
+        )).when(prompts).assemble(any());
         when(patchModel.generate(any(), any(), any())).thenReturn(new AgentPatchModelService.Result(
                 new com.example.codereview.agent.model.PatchModelResponse(
                         "diff --git a/src/Main.java b/src/Main.java\n"

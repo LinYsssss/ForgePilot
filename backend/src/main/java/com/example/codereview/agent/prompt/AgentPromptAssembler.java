@@ -26,8 +26,60 @@ public final class AgentPromptAssembler {
 
     private final PromptTemplateRegistry templates;
 
+    private static final String CHAT_SYSTEM_TEMPLATE = "chat-review-system-v1";
+    private static final String CHAT_PROJECT_TEMPLATE = "chat-review-project-v1";
+    private static final String CHAT_PROJECT_EMPTY_TEMPLATE = "chat-review-project-empty-v1";
+    private static final String CHAT_TASK_TEMPLATE = "chat-review-task-v1";
+
     public AgentPromptAssembler(PromptTemplateRegistry templates) {
         this.templates = templates;
+    }
+
+    /**
+     * 从注册表取任务指令模板并按 {@code %s} 槽注入取值（r8-R1：步骤执行器内联拼接清零）。
+     * 数值/枚举等约束值必须由调用方从校验器/枚举同源传入（agent-model-contracts.md 纪律），
+     * 模板文件内不落字面量。
+     */
+    public String instruction(String templateVersion, Object... values) {
+        return templates.require(templateVersion).formatted(values);
+    }
+
+    /**
+     * chat 审查路径（OpenAiCompatibleReviewClient）的三层组装：系统层（角色 + JSON 输出契约 +
+     * 审查纪律）/ 项目层（知识库上下文槽）/ 任务层（审查任务 + diff/分片槽）。
+     *
+     * <p>r8-R1 为严格字节等价搬迁：产出与旧 systemPrompt()/buildPrompt() 内联文本逐字节相同
+     * （golden 测试钉死），因此本路径沿用旧行为——不套用信封的打码/截断（内容性变更留待后续
+     * 步骤在评测门禁下进行）。分片由 ReviewProcessor 上游完成：任务层按分片逐次实例化，
+     * 系统/项目层内容跨分片复用。
+     */
+    public ChatReviewPrompt assembleChatReview(String diffText, String ragContext) {
+        String knowledge = ragContext == null || ragContext.isBlank()
+                ? templates.require(CHAT_PROJECT_EMPTY_TEMPLATE)
+                : ragContext;
+        String projectLayer = templates.layer(CHAT_PROJECT_TEMPLATE).formatted(knowledge);
+        String userMessage = templates.layer(CHAT_TASK_TEMPLATE)
+                .formatted(projectLayer, diffText == null ? "" : diffText);
+        return new ChatReviewPrompt(
+                templates.layer(CHAT_SYSTEM_TEMPLATE),
+                userMessage,
+                CHAT_SYSTEM_TEMPLATE,
+                CHAT_PROJECT_TEMPLATE,
+                CHAT_TASK_TEMPLATE
+        );
+    }
+
+    /**
+     * chat 审查提示词：两条消息正文 + 三层模板版本。版本当前记入调用方日志
+     * （ai_call_log 列扩展留待后续内容性变更时一并评估，见 r8 任务遗留项）。
+     */
+    public record ChatReviewPrompt(
+            String systemMessage,
+            String userMessage,
+            String systemTemplateVersion,
+            String projectTemplateVersion,
+            String taskTemplateVersion
+    ) {
     }
 
     public PromptEnvelope assemble(Input input) {

@@ -1,0 +1,6 @@
+# template: executing-tools-receipt-task-v1（执行工具步·终稿回执任务指令）
+# 来源: ExecutingToolsStepExecutor.receiptPrompt() 内联拼接（原 247-267 行）逐字搬迁，r8-R1 字节等价。
+# 文本形状的实证依据（顶层键/claims 条目键逐键钉死、空知识 citation 规则，run13）见调用点注释。
+# %s 槽 = 合法工具名集合（planned，服务端事实，同源注入）。
+
+Use the supplied persisted tool results to return the final schema-valid review plan. Copy the original validated plan items verbatim into "plan" (same toolName, arguments, purpose, expectedEvidence and modelRequestId; "plan" must not be empty and must not contain new items). The only legal toolName values are: %s. Any other tool name (for example static_analysis or security_scan) fails validation. Put your actual review conclusions, each backed by the supplied tool evidence, into "claims". Respond with a single JSON object whose top-level keys are exactly "summary", "plan" and "claims" (plural, always an array). Each entry in "claims" must be an object whose keys are exactly "text", "knowledgeBacked" and "citationIds"; any other key name (for example "claim") fails validation. No knowledge sources are provided in this step, so "knowledgeBacked" must be false and "citationIds" must be an empty array in every entry.

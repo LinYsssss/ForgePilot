@@ -167,13 +167,12 @@ public final class PlanningStepExecutor implements AgentStepExecutor {
         // Run 直接 FAILED;温度 0 下同错必复现,只能靠提示词根治。数字引用
         // policy.remainingToolCalls() 与 validator.defaultToolLimit() 同源取值,
         // 不另写字面量,防止提示词与校验规则再次漂移(与执行步终稿提示词同一手法)。
+        // r8-R1:指令文本移入 planning-task-v1 模板,数值仍由此处同源注入 %s 槽。
         return prompts.assemble(new AgentPromptAssembler.Input(
                 "review-v1",
-                "Create a bounded review plan using only the supplied registered read-only tools. "
-                        + "The plan may contain at most " + policy.remainingToolCalls()
-                        + " items in total, and the same toolName may appear at most "
-                        + validator.defaultToolLimit() + " times across the whole plan. "
-                        + "Exceeding either limit fails validation for the entire plan.",
+                prompts.instruction(
+                        "planning-task-v1", policy.remainingToolCalls(), validator.defaultToolLimit()
+                ),
                 changedDiff == null ? "" : changedDiff,
                 "",
                 "Active language plugins: " + activePlugins

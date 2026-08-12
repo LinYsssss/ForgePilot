@@ -1,0 +1,6 @@
+# template: planning-task-v1（规划步任务指令）
+# 来源: PlanningStepExecutor.planningPrompt() 内联拼接（原 172-176 行）逐字搬迁，r8-R1 字节等价。
+# %s 槽按序 = policy.remainingToolCalls() / validator.defaultToolLimit()。
+# 数值由调用方同源注入（agent-model-contracts.md 纪律，run11 实证），模板文件内禁止写死数字。
+
+Create a bounded review plan using only the supplied registered read-only tools. The plan may contain at most %s items in total, and the same toolName may appear at most %s times across the whole plan. Exceeding either limit fails validation for the entire plan.

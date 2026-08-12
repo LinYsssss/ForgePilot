@@ -2,7 +2,9 @@ package com.example.codereview.agent.orchestration;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -19,6 +21,7 @@ import com.example.codereview.agent.plan.ReviewPlan;
 import com.example.codereview.agent.plan.ReviewPlanRepository;
 import com.example.codereview.agent.plan.ReviewPlanValidator;
 import com.example.codereview.agent.prompt.AgentPromptAssembler;
+import com.example.codereview.agent.prompt.PromptTemplateRegistry;
 import com.example.codereview.agent.run.AgentRunStatus;
 import com.example.codereview.agent.tool.AgentToolRegistry;
 import com.example.codereview.agent.tool.ToolRiskLevel;
@@ -36,12 +39,14 @@ class PlanningAndToolStepExecutorTest {
     void planningUsesStructuredModelAndPersistsRequestIds() {
         StructuredAgentModelService models = mock(StructuredAgentModelService.class);
         AgentModelClient client = mock(AgentModelClient.class);
-        AgentPromptAssembler prompts = mock(AgentPromptAssembler.class);
+        // r8-R1 后指令文本来自模板注册表:spy 真组装器让 instruction() 走真模板
+        // (内容断言连带钉住模板文件),assemble 仍打桩隔离信封逻辑。
+        AgentPromptAssembler prompts = spy(new AgentPromptAssembler(new PromptTemplateRegistry()));
         ReviewPlanRepository plans = mock(ReviewPlanRepository.class);
         AgentToolRegistry tools = mock(AgentToolRegistry.class);
         PromptEnvelope prompt = new PromptEnvelope("policy", "task", "", "", "", "", "{}",
                 "review-v1", null, "review-plan-v1", List.of(), List.of());
-        when(prompts.assemble(any())).thenReturn(prompt);
+        doReturn(prompt).when(prompts).assemble(any());
         when(tools.descriptors(any())).thenReturn(List.of(
                 new AgentToolRegistry.ToolDescriptor(
                         "git.diff", "Read diff", TestInput.class, ToolRiskLevel.READ_ONLY
@@ -121,11 +126,13 @@ class PlanningAndToolStepExecutorTest {
 
         StructuredAgentModelService models = mock(StructuredAgentModelService.class);
         AgentModelClient client = mock(AgentModelClient.class);
-        AgentPromptAssembler prompts = mock(AgentPromptAssembler.class);
-        when(prompts.assemble(any())).thenReturn(new PromptEnvelope(
+        // r8-R1 后指令文本来自模板注册表:spy 真组装器让 instruction() 走真模板
+        // (内容断言连带钉住模板文件),assemble 仍打桩隔离信封逻辑。
+        AgentPromptAssembler prompts = spy(new AgentPromptAssembler(new PromptTemplateRegistry()));
+        doReturn(new PromptEnvelope(
                 "policy", "final", "", "", "results", "", "{}",
                 "review-v1", null, "review-plan-v1", List.of(), List.of()
-        ));
+        )).when(prompts).assemble(any());
         var finalResponse = new StructuredModelResponse("final plan", List.of(
                 item("git.diff", "call-diff"), searchItem("call-search")
         ));
@@ -193,11 +200,13 @@ class PlanningAndToolStepExecutorTest {
 
         StructuredAgentModelService models = mock(StructuredAgentModelService.class);
         AgentModelClient client = mock(AgentModelClient.class);
-        AgentPromptAssembler prompts = mock(AgentPromptAssembler.class);
-        when(prompts.assemble(any())).thenReturn(new PromptEnvelope(
+        // r8-R1 后指令文本来自模板注册表:spy 真组装器让 instruction() 走真模板
+        // (内容断言连带钉住模板文件),assemble 仍打桩隔离信封逻辑。
+        AgentPromptAssembler prompts = spy(new AgentPromptAssembler(new PromptTemplateRegistry()));
+        doReturn(new PromptEnvelope(
                 "policy", "final", "", "", "results", "", "{}",
                 "review-v1", null, "review-plan-v1", List.of(), List.of()
-        ));
+        )).when(prompts).assemble(any());
         when(models.generateBounded(any(), any(), any(), any(Boolean.class), any()))
                 .thenReturn(new StructuredAgentModelService.ModelGenerationResult(
                         new ModelOutputValidator.ValidationResult(
