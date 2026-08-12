@@ -1,5 +1,7 @@
 # Implement：评测集扩充 6→30-50 例
 
+> **进度快照（2026-08-12）**：语料、工具链、隔离栈基线和人工判分抽查均已完成；当前任务仍为 `in_progress`，仅剩 `trellis-check` / 规范教训沉淀 / 正式收尾。实际交付为 32 例（development 22 / holdout 10），不是设计阶段预估的 42 例；安全类正例配比缺口已如实记录，并转入 r8 回灌候选。
+
 0. [x] `mvn test` 复证裸 ObjectMapper 对 record 未知字段抛异常(design D2 前提;若不炸则简化 schema 方案并回写 design)。(实证:炸——UnrecognizedPropertyException 包装为 IllegalArgumentException 抛出,测试 unknownCaseFieldFailsLoudly* 钉死,无需回写;commit 3f53398)
 1. [x] Schema 扩展(独立提交):`EvaluationReport`(fixtureLayout/lineEnd/categoryEquivalents)+ `EvaluationCorpusService.validate` 新规则 + 测试 fixture;容器 `mvn -s .mvn/settings.xml verify` 绿。(commit 6972a47;后端全量 606/0)
 2. [x] 工具链(独立提交):`evaluation/tools/{build-case-repos.sh,run-baseline.sh,score.py,category-aliases.json}` + `evaluation/README.md`(真实校验入口 + D3 口径成文);score.py 自带单测样例(手工小矩阵可复算)。(commit cf55fb7;--selftest 14 项;隔离栈具体化另行 b894223)
@@ -12,4 +14,4 @@
 
 风险文件:backend evaluation 包(字段扩展)、ai 包(temperature 一行)、evaluation/ 全目录。
 回滚点:每步独立提交;隔离栈无残留。
-产物:42 用例 + 工具三件套 + README 口径 + 基线档案。
+产物:32 用例 + 工具三件套 + README 口径 + 基线档案。

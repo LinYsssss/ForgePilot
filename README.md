@@ -4,6 +4,15 @@ RepoSage 以 Git Commit 的 Diff 为输入，结合项目知识库和大模型�
 
 它包含两条能力线：一是**交互式审查**——手动针对某次 commit / PR 的 Diff 触发审查；二是**事件驱动的 PR 守门 Agent**——由 GitHub/GitLab 的 PR webhook 自动触发一条持久化、可观测、带预算护栏的 Agent 流水线，在签名沙箱里取证，产出带证据的问题与门禁裁决，并可生成经人工审批的修复补丁。
 
+## 当前进度（2026-08-12）
+
+当前研发基线已完成 r1-r6：CI 阻塞与沙箱链路修复、工程口径收敛、规范沉淀、后端重构以及前端 Element Plus / design tokens 升级均已归档。
+
+- **r7 评测地基**：评测语料已扩充到 32 例（development 22 / holdout 10），确定性建仓、隔离栈驱动和两率判分工具已落地；`z-ai/glm-5.2` 在 2026-08-12 的全量基线为漏报率 36.00%（9/25）、误报率 81.82%（72/88）。任务仍处于收尾状态，待执行 `trellis-check` 并处理安全类样本配比缺口。
+- **r8 提示词调优**：R1 分层模板已实现，模板注册表、唯一组装入口和 golden 测试已提交；R2 已完成基于语料背书的清单研究，当前仅 Java / TS 清单具备足够正例依据。R2 清单注入、R3 两段式复核、R4 动态 few-shot、逐项评测门禁和终版对比尚未完成。
+
+详细过程记录见 `.trellis/tasks/08-03-r7-eval-corpus/implement.md`、`.trellis/tasks/08-03-r7-eval-corpus/baseline-glm-2026-08-12.md` 和 `.trellis/tasks/08-03-r8-prompt-tuning/implement.md`。
+
 ---
 
 ## 它能做什么
@@ -86,12 +95,18 @@ Agent 步骤（RabbitMQ 异步，traceId 全程透传）
 - Runner 不接收任何 SCM / LLM / 数据库密钥，只拿到「已脱敏的仓库归档引用 + 签名作业」；Prompt 与工具输出均做密钥脱敏。
 - 单机 Docker Compose 面向**受控演示环境**，不构成对抗恶意多租户的安全隔离边界。
 
-**测试与验证基线**（数据来源：main 分支 CI run [31310489195](https://github.com/LinYsssss/reposage/actions/runs/31310489195) 与本地容器化全量运行，2026-08-09）：
+**工程测试基线**（数据来源：main 分支 CI run [31310489195](https://github.com/LinYsssss/reposage/actions/runs/31310489195) 与本地容器化全量运行，2026-08-09）：
 
 - 后端 `mvn verify`：575 项测试在 CI 全部执行并通过（含 3 项 Testcontainers 集成用例；本地容器化运行中这 3 项明确跳过，其余 572 项通过）。
 - Sandbox Runner：75 项通过；前端：21 项测试通过 + 生产 Vite 构建通过；model-service：9 项通过。
-- 评测语料：6 个版本化用例，确定性输入校验通过；提交进仓库的评测基线是**已知混淆矩阵的计算**，不是真实 Docker 语料跑分。
 - 依赖 Docker 的沙箱链路已实测：2026-08-09 在 Docker 环境把 PR 守门 Agent 全链路（webhook → 沙箱取证 → 门禁裁决）端到端跑至 COMPLETED。
+
+**r7 真实模型评测基线**（隔离栈，2026-08-12）：
+
+- 32 个版本化用例全部跑成，判分工具按 `d3-v1` 口径独立计算漏报率和误报率；未跑成用例数为 0。
+- 模型为 `z-ai/glm-5.2`，temperature 为 `0.0`；全量漏报率为 **36.00%（9/25）**，误报率为 **81.82%（72/88）**。
+- 该基线用于 r8 各轮提示词改动的可比参照；后端 `EvaluationMetrics` 的 `falsePositiveRate` 与此处误报率定义不同，不能直接混用。
+- 当前语料的安全类正例配比低于原计划，Java 越权和 SQL 注入正例尚未补齐；相关缺口已记录为 r8 后续回灌候选。
 
 Demo 与运维细节见 `docs/PR守门Agent SCM与Sandbox运维验收.md`；Agent 运行时间线可在前端「审查工作台」查看，或经下方 `/api/agent-runs/**` 接口访问。
 
