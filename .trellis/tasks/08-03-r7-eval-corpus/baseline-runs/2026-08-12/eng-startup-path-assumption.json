@@ -1,0 +1,90 @@
+{
+  "caseId": "eng-startup-path-assumption",
+  "split": "development",
+  "runDate": "2026-08-12",
+  "capturedAt": "2026-08-12T02:30:28.547660+00:00",
+  "baseSha": "113c70e3d7f28073db6c9b5a049d6cdedc3429ee",
+  "headSha": "f7dabe1df8c6c320d32c88109ed509db3b9e1c05",
+  "projectId": 15,
+  "taskId": 15,
+  "reportId": 15,
+  "task": {
+    "taskId": 15,
+    "pullRequestId": null,
+    "status": "SUCCESS",
+    "commitId": "f7dabe1df8c6c320d32c88109ed509db3b9e1c05",
+    "branch": "main",
+    "retryCount": 1,
+    "errorMessage": null,
+    "createdAt": "2026-08-12T02:27:37.890396Z",
+    "startedAt": "2026-08-12T02:29:34.501973Z",
+    "finishedAt": "2026-08-12T02:30:24.489766Z"
+  },
+  "report": {
+    "reportId": 15,
+    "taskId": 15,
+    "commitId": "f7dabe1df8c6c320d32c88109ed509db3b9e1c05",
+    "overallRisk": "HIGH",
+    "summary": "本次代码审查发现新增的归档存储逻辑存在空指针风险、路径遍历安全漏洞、事务一致性及性能隐患。ExportService 在生成导出结果后同步写入文件系统，若发生 IO 异常将导致业务中断；同时未对 projectCode 进行清理，存在路径遍历风险。此外，大文件写入可能引发性能问题。",
+    "issueCount": 4,
+    "createdAt": "2026-08-12T02:30:24.472813Z",
+    "issues": [
+      {
+        "issueId": 35,
+        "severity": "HIGH",
+        "category": "NULL_POINTER",
+        "filePath": "src/main/java/com/acme/export/ArchiveStorageService.java",
+        "lineStart": 24,
+        "lineEnd": 24,
+        "title": "store方法未对ExportResult及其字段进行空指针校验",
+        "description": "store(ExportResult result)方法直接调用result.projectCode()、result.generatedAt()和result.payload()。如果传入的result为null，或者其内部字段（如payload为字节数组）为null，将直接抛出NullPointerException。",
+        "impact": "在运行期间若传入异常数据，会导致未受控的空指针异常，从而中断导出流程并可能导致服务不稳定。",
+        "evidence": "[{\"sourceName\":\"Git Diff\",\"quote\":\"public Path store(ExportResult result) {\\n        String fileName = result.projectCode() + \\\"-\\\" + result.generatedAt().toEpochMilli() + \\\".csv\\\";\"}]",
+        "suggestion": "在方法入口处添加 Objects.requireNonNull(result, \"ExportResult cannot be null\"); 并根据业务需要校验 result.payload() 等关键字段非空。",
+        "confidence": 0.95
+      },
+      {
+        "issueId": 36,
+        "severity": "HIGH",
+        "category": "AUTH_RISK",
+        "filePath": "src/main/java/com/acme/export/ArchiveStorageService.java",
+        "lineStart": 24,
+        "lineEnd": 25,
+        "title": "文件路径拼接存在路径遍历漏洞",
+        "description": "store方法使用 result.projectCode() 直接拼接到文件路径中（archiveRoot.resolve(fileName)）。如果 projectCode 包含 \"../\" 等恶意字符，攻击者可能会越权访问或覆盖 archiveRoot 之外的任意系统文件。",
+        "impact": "攻击者可通过构造恶意的 projectCode 突破归档目录限制，导致任意文件写入或覆盖，存在严重的安全风险。",
+        "evidence": "[{\"sourceName\":\"Git Diff\",\"quote\":\"String fileName = result.projectCode() + \\\"-\\\" + result.generatedAt().toEpochMilli() + \\\".csv\\\";\\n        Path target = archiveRoot.resolve(fileName);\"}]",
+        "suggestion": "对 projectCode 进行严格的白名单字符校验（如仅允许字母数字下划线），或者在 resolve 后校验 target.startsWith(archiveRoot) 以确保最终路径未逃逸出归档根目录。",
+        "confidence": 0.9
+      },
+      {
+        "issueId": 37,
+        "severity": "MEDIUM",
+        "category": "TRANSACTION_RISK",
+        "filePath": "src/main/java/com/acme/export/ExportService.java",
+        "lineStart": 28,
+        "lineEnd": 30,
+        "title": "同步文件写入与业务逻辑耦合缺乏事务一致性",
+        "description": "export方法在生成ExportResult后，同步调用archiveStorage.store(result)进行文件落盘。如果文件写入抛出UncheckedIOException，export方法将抛出异常，导致调用方获取不到ExportResult。如果调用方存在其他数据库事务，这种非事务性的文件系统副作用会导致状态不一致。",
+        "impact": "文件归档失败会直接阻断正常的导出结果返回，且如果上层有事务，由于文件系统不可回滚，会导致数据不一致。",
+        "evidence": "[{\"sourceName\":\"Git Diff\",\"quote\":\"ExportResult result = new ExportResult(projectCode, generatedAt, payload);\\n        archiveStorage.store(result);\\n        return result;\"}]",
+        "suggestion": "评估归档失败是否应阻断主流程。如果不阻断，应将archiveStorage.store放入异步队列或使用try-catch捕获并记录日志；如果必须阻断，需在文档或接口契约中明确声明其失败行为。",
+        "confidence": 0.85
+      },
+      {
+        "issueId": 38,
+        "severity": "MEDIUM",
+        "category": "PERFORMANCE_RISK",
+        "filePath": "src/main/java/com/acme/export/ArchiveStorageService.java",
+        "lineStart": 26,
+        "lineEnd": 26,
+        "title": "同步阻塞式大文件写入可能引发性能瓶颈",
+        "description": "Files.write(target, result.payload()) 是同步阻塞的 IO 操作。如果导出的 payload 非常大，或者并发导出请求较多，会导致当前线程长时间被 IO 阻塞，可能耗尽服务器线程池。",
+        "impact": "高并发或大数据量导出场景下，同步文件写入会拖慢整体响应时间，甚至引发线程耗尽及服务拒绝。",
+        "evidence": "[{\"sourceName\":\"Git Diff\",\"quote\":\"return Files.write(target, result.payload());\"},{\"sourceName\":\"RAG 项目上下文\",\"quote\":\"riskType: PERFORMANCE_RISK, severity: MEDIUM\"}]",
+        "suggestion": "考虑使用异步线程池或消息队列处理文件归档操作，使主业务线程能够立即返回，提升系统吞吐量。",
+        "confidence": 0.8
+      }
+    ]
+  }
+}

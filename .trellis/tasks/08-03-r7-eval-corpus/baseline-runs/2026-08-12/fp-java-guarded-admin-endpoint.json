@@ -1,0 +1,90 @@
+{
+  "caseId": "fp-java-guarded-admin-endpoint",
+  "split": "holdout",
+  "runDate": "2026-08-12",
+  "capturedAt": "2026-08-12T02:43:55.949443+00:00",
+  "baseSha": "00186279a2b416e18105f02a4600654b6505d117",
+  "headSha": "df4a326feb3c155437373d51d9df9b48959c72ad",
+  "projectId": 24,
+  "taskId": 24,
+  "reportId": 23,
+  "task": {
+    "taskId": 24,
+    "pullRequestId": null,
+    "status": "SUCCESS",
+    "commitId": "df4a326feb3c155437373d51d9df9b48959c72ad",
+    "branch": "main",
+    "retryCount": 0,
+    "errorMessage": null,
+    "createdAt": "2026-08-12T02:43:02.363947Z",
+    "startedAt": "2026-08-12T02:43:02.433353Z",
+    "finishedAt": "2026-08-12T02:43:54.877725Z"
+  },
+  "report": {
+    "reportId": 23,
+    "taskId": 24,
+    "commitId": "df4a326feb3c155437373d51d9df9b48959c72ad",
+    "overallRisk": "MEDIUM",
+    "summary": "本次代码审查基于提供的 Git Diff 和 RAG 项目上下文进行。新增了管理员分页查询和停用成员的接口，代码在租户隔离和分页参数限制方面做了较好的防护。但存在空指针风险、事务一致性风险和潜在的越权风险。",
+    "issueCount": 4,
+    "createdAt": "2026-08-12T02:43:54.867848Z",
+    "issues": [
+      {
+        "issueId": 57,
+        "severity": "HIGH",
+        "category": "NULL_POINTER",
+        "filePath": "src/main/java/com/acme/console/service/MemberAccountService.java",
+        "lineStart": 44,
+        "lineEnd": 44,
+        "title": "disableMember 方法未对 memberId 进行空指针校验",
+        "description": "在 disableMember 方法中，直接对传入的 memberId 参数调用 equals 方法。如果客户端传入的 memberId 为 null，将抛出 NullPointerException，导致接口返回 500 错误。",
+        "impact": "恶意用户或前端错误可通过传入空值导致服务端异常，影响系统可用性。",
+        "evidence": "[{\"sourceName\":\"MemberAccountService.java\",\"quote\":\"if (memberId.equals(operator.getMemberId())) {\"}]",
+        "suggestion": "在方法入口处增加空值校验，例如：if (memberId == null) throw new IllegalArgumentException(\"成员ID不能为空\");",
+        "confidence": 0.95
+      },
+      {
+        "issueId": 58,
+        "severity": "HIGH",
+        "category": "NULL_POINTER",
+        "filePath": "src/main/java/com/acme/console/web/AdminMemberController.java",
+        "lineStart": 35,
+        "lineEnd": 35,
+        "title": "Controller 层未对 OperatorContext 进行空指针校验",
+        "description": "list 和 disable 方法依赖 OperatorContext operator 参数，但未校验其是否为空。若未配置相关的参数解析器或解析失败导致 operator 为 null，后续调用 operator.getTenantId() 等方法会引发 NullPointerException。",
+        "impact": "若上下文解析组件存在缺陷，会导致管理接口崩溃并抛出 500 异常。",
+        "evidence": "[{\"sourceName\":\"AdminMemberController.java\",\"quote\":\"public MemberAccount disable(OperatorContext operator, @PathVariable Long memberId) {\"}]",
+        "suggestion": "确保存在可靠的 OperatorContext 注入机制；或在方法入口处增加 Objects.requireNonNull(operator) 校验。",
+        "confidence": 0.85
+      },
+      {
+        "issueId": 59,
+        "severity": "MEDIUM",
+        "category": "TRANSACTION_RISK",
+        "filePath": "src/main/java/com/acme/console/service/MemberAccountService.java",
+        "lineStart": 52,
+        "lineEnd": 53,
+        "title": "disableMember 方法缺乏事务保证",
+        "description": "disableMember 方法执行了状态变更保存 repository.save(target) 以及审计日志记录 auditTrail.record。这两个操作未包裹在事务中，若审计日志写入失败，账号停用操作已生效，导致数据不一致。",
+        "impact": "账号状态与审计日志脱节，破坏业务操作的可追溯性。",
+        "evidence": "[{\"sourceName\":\"MemberAccountService.java\",\"quote\":\"repository.save(target);\\n        auditTrail.record(operator.getMemberId(), \\\"MEMBER_DISABLE\\\", memberId);\"}]",
+        "suggestion": "在 disableMember 方法上添加 @Transactional 注解，确保状态变更与审计日志的原子性。",
+        "confidence": 0.9
+      },
+      {
+        "issueId": 60,
+        "severity": "MEDIUM",
+        "category": "AUTH_RISK",
+        "filePath": "src/main/java/com/acme/console/web/AdminMemberController.java",
+        "lineStart": 22,
+        "lineEnd": 22,
+        "title": "类级权限校验可能未启用",
+        "description": "Controller 类上声明了 @PreAuthorize(\"hasRole('ADMIN')\")，但若 Spring Security 配置中未全局启用 @EnableGlobalMethodSecurity(prePostEnabled = true)，该注解将不生效，导致任意已登录用户均可访问管理员接口。",
+        "impact": "若未正确启用方法级安全控制，将导致严重的越权访问漏洞，符合 RAG 上下文中提示的 AUTH_RISK 风险。",
+        "evidence": "[{\"sourceName\":\"AdminMemberController.java\",\"quote\":\"@PreAuthorize(\\\"hasRole('ADMIN')\\\")\"}]",
+        "suggestion": "检查 Spring Security 配置类，确保已启用 @EnableGlobalMethodSecurity(prePostEnabled = true) 或 @EnableMethodSecurity。",
+        "confidence": 0.7
+      }
+    ]
+  }
+}

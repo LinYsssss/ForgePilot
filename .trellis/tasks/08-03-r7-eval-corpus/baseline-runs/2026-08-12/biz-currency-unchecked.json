@@ -1,0 +1,62 @@
+{
+  "caseId": "biz-currency-unchecked",
+  "split": "development",
+  "runDate": "2026-08-12",
+  "capturedAt": "2026-08-12T02:22:50.432830+00:00",
+  "baseSha": "230aedf09f9bccb75da86d40e7fea4cc190eb7ca",
+  "headSha": "35306bf63ead6cb15a4d7ce3c3733737bdf9748b",
+  "projectId": 10,
+  "taskId": 10,
+  "reportId": 10,
+  "task": {
+    "taskId": 10,
+    "pullRequestId": null,
+    "status": "SUCCESS",
+    "commitId": "35306bf63ead6cb15a4d7ce3c3733737bdf9748b",
+    "branch": "main",
+    "retryCount": 0,
+    "errorMessage": null,
+    "createdAt": "2026-08-12T02:22:11.888727Z",
+    "startedAt": "2026-08-12T02:22:12.026242Z",
+    "finishedAt": "2026-08-12T02:22:46.032643Z"
+  },
+  "report": {
+    "reportId": 10,
+    "taskId": 10,
+    "commitId": "35306bf63ead6cb15a4d7ce3c3733737bdf9748b",
+    "overallRisk": "HIGH",
+    "summary": "本次改造移除了结算服务中强制为 CNY 的币种常量，将外部传入的 currency 参数直接透传给 SettlementOrder。根据 RAG 检索到的业务规则上下文，当前系统明确仅支持人民币（CNY）结算，任何非 CNY 的结算请求必须在入口处直接拒绝。本次代码变更直接破坏了该业务规则，存在将外币金额按「分」直接入账导致结算金额错误的重大风险。",
+    "issueCount": 2,
+    "createdAt": "2026-08-12T02:22:46.022013Z",
+    "issues": [
+      {
+        "issueId": 20,
+        "severity": "HIGH",
+        "category": "BUSINESS_RULE_RISK",
+        "filePath": "src/main/java/com/acme/clearing/service/SettlementService.java",
+        "lineStart": 28,
+        "lineEnd": 37,
+        "title": "违规放行非 CNY 币种结算请求",
+        "description": "代码删除了原有的 SETTLE_CURRENCY = \"CNY\" 常量及其校验逻辑，将 controller 透传来的 currency 参数未经验证直接传入 SettlementOrder 构造函数。这违反了项目业务规则中关于『当前仅支持人民币（CNY），任何非 CNY 的结算请求必须在入口处直接拒绝』的硬性规定。",
+        "impact": "外币（如 HKD、USD）请求可能会被放行并按 1:1 的金额以「分」为单位直接入账，导致结算金额严重错误，可能重演类似 EVAL-509 的生产事故。",
+        "evidence": "[{\"sourceName\":\"settlement-rules.md#1\",\"quote\":\"当前仅支持人民币（CNY）。**任何非 CNY 的结算请求必须在入口处直接拒绝，不得按 1:1 金额处理**——外币金额按「分」直接入账会造成结算金额错误（事故 EVAL-509：HKD 请求被按 CNY 金额入账）。\"},{\"sourceName\":\"Git Diff: SettlementService.java\",\"quote\":\"-    /** 平台当前唯一支持的结算币种。 */\\n-    private static final String SETTLE_CURRENCY = \\\"CNY\\\";\"}]",
+        "suggestion": "在 SettlementService.submit 方法入口处增加对 currency 参数的校验，若为 null 或不等于 \"CNY\"，则直接抛出异常拒绝结算请求。在汇率折算模块上线并评审通过前，不得以任何形式放行非 CNY 币种。",
+        "confidence": 0.95
+      },
+      {
+        "issueId": 21,
+        "severity": "MEDIUM",
+        "category": "NULL_POINTER",
+        "filePath": "src/main/java/com/acme/clearing/service/SettlementService.java",
+        "lineStart": 28,
+        "lineEnd": 37,
+        "title": "currency 参数存在空指针及大小写不一致风险",
+        "description": "新增的 currency 参数未进行非空校验，若调用方传入 null，后续在 SettlementOrder 对象中使用该字段时可能触发空指针异常。此外，业务规则要求 CNY，但代码未对大小写进行规范化处理，若传入 \"cny\" 或 \"Cny\" 可能导致校验逻辑被绕过或数据不一致。",
+        "impact": "传入 null 可能导致应用抛出非预期的 NullPointerException，掩盖真实的参数缺失问题；大小写不一致可能导致同一币种产生不同的数据处理逻辑。",
+        "evidence": "[{\"sourceName\":\"Git Diff: SettlementService.java\",\"quote\":\"public SettlementOrder submit(Long tenantId, Long merchantId, String idempotencyKey,\\n+                                  long grossAmountFen, String currency) {\"}]",
+        "suggestion": "在方法入口对 currency 进行非空校验，并使用标准化处理（如 currency.trim().toUpperCase()）后再与 \"CNY\" 进行严格比对。",
+        "confidence": 0.85
+      }
+    ]
+  }
+}

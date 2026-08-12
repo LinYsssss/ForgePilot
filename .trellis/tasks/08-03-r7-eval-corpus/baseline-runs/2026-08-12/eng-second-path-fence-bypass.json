@@ -1,0 +1,62 @@
+{
+  "caseId": "eng-second-path-fence-bypass",
+  "split": "holdout",
+  "runDate": "2026-08-12",
+  "capturedAt": "2026-08-12T02:32:56.734253+00:00",
+  "baseSha": "fbf01ca3ddfb18807e0890c40848cd2206801bf4",
+  "headSha": "c062d67c5e87588d5e30f362b48bedf8fb877c4b",
+  "projectId": 17,
+  "taskId": 17,
+  "reportId": 17,
+  "task": {
+    "taskId": 17,
+    "pullRequestId": null,
+    "status": "SUCCESS",
+    "commitId": "c062d67c5e87588d5e30f362b48bedf8fb877c4b",
+    "branch": "main",
+    "retryCount": 0,
+    "errorMessage": null,
+    "createdAt": "2026-08-12T02:32:34.354669Z",
+    "startedAt": "2026-08-12T02:32:34.393092Z",
+    "finishedAt": "2026-08-12T02:32:53.736185Z"
+  },
+  "report": {
+    "reportId": 17,
+    "taskId": 17,
+    "commitId": "c062d67c5e87588d5e30f362b48bedf8fb877c4b",
+    "overallRisk": "MEDIUM",
+    "summary": "本次 Diff 新增了用于解析模型输出的 SummaryResponse 及其解析器，并扩展了 stripCodeFence 方法以支持波浪号代码块。主要风险在于解析器未对输入进行空指针校验，且未复用项目约定的 stripCodeFence 方法，可能导致解析直接失败。",
+    "issueCount": 2,
+    "createdAt": "2026-08-12T02:32:53.725290Z",
+    "issues": [
+      {
+        "issueId": 42,
+        "severity": "MEDIUM",
+        "category": "NULL_POINTER",
+        "filePath": "src/main/java/com/acme/modelio/SummaryResponseParser.java",
+        "lineStart": 16,
+        "lineEnd": 18,
+        "title": "parse 方法未对 null 输入进行防御",
+        "description": "parse(String rawModelOutput) 方法直接将传入的字符串交给 objectMapper.readValue 处理。如果调用方传入 null，Jackson 会抛出 IllegalArgumentException，这会绕过 catch (JsonProcessingException e) 块，导致未预期的异常行为。",
+        "impact": "当模型输出为空或 null 时，应用会抛出未被正确捕获处理的 IllegalArgumentException，可能导致接口报错或流程中断。",
+        "evidence": "[{\"sourceName\":\"src/main/java/com/acme/modelio/SummaryResponseParser.java\",\"quote\":\"return objectMapper.readValue(rawModelOutput, SummaryResponse.class);\"}]",
+        "suggestion": "在方法入口处增加空指针防御，例如：if (rawModelOutput == null || rawModelOutput.isBlank()) throw new IllegalArgumentException(\"model output is empty\");",
+        "confidence": 0.9
+      },
+      {
+        "issueId": 43,
+        "severity": "MEDIUM",
+        "category": "BUSINESS_RULE_RISK",
+        "filePath": "src/main/java/com/acme/modelio/SummaryResponseParser.java",
+        "lineStart": 16,
+        "lineEnd": 18,
+        "title": "解析器未复用 stripCodeFence 方法剥离代码块",
+        "description": "ModelOutputs.stripCodeFence 的注释明确指出：“All model-output parse paths must go through this method before feeding Jackson.” 但新增的 SummaryResponseParser.parse 方法在调用 objectMapper.readValue 前，并未调用 stripCodeFence。",
+        "impact": "如果模型返回了被 Markdown 代码块包裹的 JSON，Jackson 将无法直接解析并抛出 JsonProcessingException，导致解析失败。",
+        "evidence": "[{\"sourceName\":\"src/main/java/com/acme/modelio/ModelOutputs.java\",\"quote\":\"* All model-output parse paths must go through this method before feeding Jackson.\"},{\"sourceName\":\"src/main/java/com/acme/modelio/SummaryResponseParser.java\",\"quote\":\"return objectMapper.readValue(rawModelOutput, SummaryResponse.class);\"}]",
+        "suggestion": "在调用 objectMapper.readValue 前，应先调用 ModelOutputs.stripCodeFence(rawModelOutput) 处理字符串。",
+        "confidence": 0.85
+      }
+    ]
+  }
+}

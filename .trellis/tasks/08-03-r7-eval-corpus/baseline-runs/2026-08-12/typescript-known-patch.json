@@ -1,0 +1,62 @@
+{
+  "caseId": "typescript-known-patch",
+  "split": "holdout",
+  "runDate": "2026-08-12",
+  "capturedAt": "2026-08-12T02:18:31.930334+00:00",
+  "baseSha": "1adcd67b44317cfd4c1b037db923140011843495",
+  "headSha": "40ac26a21c9f8eac65ebf0a97fc309626a79e5a6",
+  "projectId": 6,
+  "taskId": 6,
+  "reportId": 6,
+  "task": {
+    "taskId": 6,
+    "pullRequestId": null,
+    "status": "SUCCESS",
+    "commitId": "40ac26a21c9f8eac65ebf0a97fc309626a79e5a6",
+    "branch": "main",
+    "retryCount": 0,
+    "errorMessage": null,
+    "createdAt": "2026-08-12T02:18:00.042077Z",
+    "startedAt": "2026-08-12T02:18:00.230885Z",
+    "finishedAt": "2026-08-12T02:18:29.785196Z"
+  },
+  "report": {
+    "reportId": 6,
+    "taskId": 6,
+    "commitId": "40ac26a21c9f8eac65ebf0a97fc309626a79e5a6",
+    "overallRisk": "HIGH",
+    "summary": "新增的文件读取功能存在严重的路径遍历漏洞，攻击者可通过构造恶意路径读取系统任意文件。虽然轻量模型预判存在SQL注入风险，但根据实际代码内容，核心风险为路径遍历导致的任意文件读取。",
+    "issueCount": 2,
+    "createdAt": "2026-08-12T02:18:29.773945Z",
+    "issues": [
+      {
+        "issueId": 8,
+        "severity": "HIGH",
+        "category": "SQL_INJECTION",
+        "filePath": "src/files.ts",
+        "lineStart": 4,
+        "lineEnd": 4,
+        "title": "轻量模型预判的SQL注入风险",
+        "description": "根据RAG项目上下文提供的轻量模型风险预判，该代码片段被标记为存在SQL注入风险。虽然当前展示的代码为文件系统操作，但可能由于模型误判或上下文缺失导致。在此作为预判记录保留。",
+        "impact": "若该文件读取操作的数据被用于后续动态拼接SQL语句，可能导致数据库数据泄露或被篡改。",
+        "evidence": "[{\"sourceName\":\"RAG项目上下文-轻量模型风险预判\",\"quote\":\"riskType: SQL_INJECTION, severity: HIGH, confidence: 0.1646\"}]",
+        "suggestion": "检查该函数的返回值是否被用作数据库查询的参数。如果是，请确保使用参数化查询或预编译语句，不要直接拼接SQL字符串。",
+        "confidence": 0.16
+      },
+      {
+        "issueId": 9,
+        "severity": "HIGH",
+        "category": "AUTH_RISK",
+        "filePath": "src/files.ts",
+        "lineStart": 3,
+        "lineEnd": 4,
+        "title": "路径遍历漏洞导致任意文件读取",
+        "description": "read函数直接将用户可控的requested参数与root拼接并读取文件，未对requested进行任何安全校验或过滤。攻击者可通过传入如../../../etc/passwd等恶意路径绕过root目录限制，读取服务器上的任意敏感文件。",
+        "impact": "攻击者可未经授权读取系统任意文件，导致敏感配置信息、密钥、源码等核心资产泄露，造成严重的安全事故。",
+        "evidence": "[{\"sourceName\":\"Git Diff\",\"quote\":\"export function read(root: string, requested: string) { return readFileSync(join(root, requested), 'utf8') }\"}]",
+        "suggestion": "必须对requested参数进行严格的路径遍历字符过滤（如拒绝包含../的请求），或使用path.resolve()解析后校验最终路径是否仍包含在root目录范围内。同时建议增加调用者的权限校验逻辑。",
+        "confidence": 0.95
+      }
+    ]
+  }
+}

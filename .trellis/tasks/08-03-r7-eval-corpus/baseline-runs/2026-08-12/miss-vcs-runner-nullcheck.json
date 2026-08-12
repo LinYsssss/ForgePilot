@@ -1,0 +1,62 @@
+{
+  "caseId": "miss-vcs-runner-nullcheck",
+  "split": "development",
+  "runDate": "2026-08-12",
+  "capturedAt": "2026-08-12T03:09:12.638146+00:00",
+  "baseSha": "0fe384b51798440c88fcc4fc366ecc299c847145",
+  "headSha": "1738f0e2d7077fb2010c38ebb2e89af8530efd93",
+  "projectId": 36,
+  "taskId": 36,
+  "reportId": 30,
+  "task": {
+    "taskId": 36,
+    "pullRequestId": null,
+    "status": "SUCCESS",
+    "commitId": "1738f0e2d7077fb2010c38ebb2e89af8530efd93",
+    "branch": "main",
+    "retryCount": 0,
+    "errorMessage": null,
+    "createdAt": "2026-08-12T03:08:29.682374Z",
+    "startedAt": "2026-08-12T03:08:29.765205Z",
+    "finishedAt": "2026-08-12T03:09:09.009087Z"
+  },
+  "report": {
+    "reportId": 30,
+    "taskId": 36,
+    "commitId": "1738f0e2d7077fb2010c38ebb2e89af8530efd93",
+    "overallRisk": "MEDIUM",
+    "summary": "本次变更将 VcsCliService 中的子进程执行逻辑下沉至新增的 VcsProcessRunner，实现了关注点分离。但在重构过程中，VcsProcessRunner.addTrustedDirectoryOptions 方法引入了空指针解引用风险，且 VcsCliService 中硬编码实例化 VcsProcessRunner 降低了可测试性。",
+    "issueCount": 2,
+    "createdAt": "2026-08-12T03:09:09.002352Z",
+    "issues": [
+      {
+        "issueId": 81,
+        "severity": "HIGH",
+        "category": "NULL_POINTER",
+        "filePath": "src/main/java/com/acme/devhub/vcs/VcsProcessRunner.java",
+        "lineStart": 95,
+        "lineEnd": 102,
+        "title": "addTrustedDirectoryOptions 方法存在空指针解引用风险",
+        "description": "在重构过程中，原本对 remoteUrl 的空指针保护判断被移到了字符串操作之后。当 remoteUrl 为 null 时，首行的 remoteUrl.replace() 将直接抛出 NullPointerException，导致方法中断。",
+        "impact": "当镜像仓库的 remoteUrl 为 null（如仅本地构建的裸镜像）时，调用 git 命令会因未捕获的 NullPointerException 而崩溃，导致同步、diff 导出等核心功能不可用。",
+        "evidence": "[{\"sourceName\":\"Git Diff\",\"quote\":\"+    private void addTrustedDirectoryOptions(List<String> command, String remoteUrl) {\\n+        String normalized = remoteUrl.replace('\\\\\\\\', '/').replaceAll(\\\"/+$\\\", \\\"\\\");\\n+        if (remoteUrl == null || remoteUrl.isBlank()\"},{\"sourceName\":\"RAG 项目上下文\",\"quote\":\"- riskType: NULL_POINTER\\n- severity: MEDIUM\\n- confidence: 0.1501\"}]",
+        "suggestion": "将空值校验提前到字符串操作之前。修改为：\nif (remoteUrl == null || remoteUrl.isBlank() || remoteUrl.toLowerCase().startsWith(\"http\") || remoteUrl.startsWith(\"git@\")) {\n    return;\n}\nString normalized = remoteUrl.replace('\\\\', '/').replaceAll(\"/+$\", \"\");",
+        "confidence": 0.99
+      },
+      {
+        "issueId": 82,
+        "severity": "LOW",
+        "category": "UNKNOWN",
+        "filePath": "src/main/java/com/acme/devhub/vcs/VcsCliService.java",
+        "lineStart": 21,
+        "lineEnd": 22,
+        "title": "VcsProcessRunner 依赖硬编码实例化，降低可测试性",
+        "description": "VcsCliService 在构造函数中通过 new VcsProcessRunner(secretBox, workRoot) 硬编码创建了该类。虽然 VcsProcessRunner 被设计为非容器 Bean，但直接 new 会导致在单元测试 VcsCliService 时无法替换或 Mock 底层的进程执行逻辑。",
+        "impact": "使得 VcsCliService 的单元测试难以隔离底层的进程交互，测试覆盖困难。",
+        "evidence": "[{\"sourceName\":\"Git Diff\",\"quote\":\"+        this.runner = new VcsProcessRunner(secretBox, workRoot);\"}]",
+        "suggestion": "考虑通过构造函数注入 VcsProcessRunner，或提供一个 protected 的 setter/构造函数重载以便在测试中传入 Mock 对象。",
+        "confidence": 0.8
+      }
+    ]
+  }
+}

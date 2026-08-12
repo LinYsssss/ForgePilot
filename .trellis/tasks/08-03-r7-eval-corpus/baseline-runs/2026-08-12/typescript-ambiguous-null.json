@@ -1,0 +1,48 @@
+{
+  "caseId": "typescript-ambiguous-null",
+  "split": "development",
+  "runDate": "2026-08-12",
+  "capturedAt": "2026-08-12T02:17:03.935399+00:00",
+  "baseSha": "1adcd67b44317cfd4c1b037db923140011843495",
+  "headSha": "dc7d6a4c786f35dd1d0663d5706675bc7536c303",
+  "projectId": 3,
+  "taskId": 3,
+  "reportId": 3,
+  "task": {
+    "taskId": 3,
+    "pullRequestId": null,
+    "status": "SUCCESS",
+    "commitId": "dc7d6a4c786f35dd1d0663d5706675bc7536c303",
+    "branch": "main",
+    "retryCount": 0,
+    "errorMessage": null,
+    "createdAt": "2026-08-12T02:16:35.556487Z",
+    "startedAt": "2026-08-12T02:16:35.645201Z",
+    "finishedAt": "2026-08-12T02:17:01.373101Z"
+  },
+  "report": {
+    "reportId": 3,
+    "taskId": 3,
+    "commitId": "dc7d6a4c786f35dd1d0663d5706675bc7536c303",
+    "overallRisk": "MEDIUM",
+    "summary": "新增的 TypeScript 代码片段存在明显的空指针风险。由于函数参数被声明为可选（`user?`），且其属性 `name` 也是可选的，直接调用 `user.name.toUpperCase()` 会在 `user` 为 `undefined` 或 `null`，以及 `name` 为 `undefined` 时抛出运行时错误。",
+    "issueCount": 1,
+    "createdAt": "2026-08-12T02:17:01.364105Z",
+    "issues": [
+      {
+        "issueId": 5,
+        "severity": "MEDIUM",
+        "category": "NULL_POINTER",
+        "filePath": "src/user.ts",
+        "lineStart": 3,
+        "lineEnd": 3,
+        "title": "未处理的空指针风险导致潜在的运行时崩溃",
+        "description": "函数签名 `user?: { name?: string }` 表明 `user` 对象及其 `name` 属性均可能为 `undefined`。代码直接执行 `user.name.toUpperCase()` 而未进行空值校验。如果传入 `undefined` 或 `{}`，将抛出 `TypeError: Cannot read properties of undefined (reading 'name')` 或 `TypeError: Cannot read properties of undefined (reading 'toUpperCase')`。",
+        "impact": "如果调用方未保证传入有效对象，将导致程序运行时崩溃，影响系统稳定性。",
+        "evidence": "[{\"sourceName\":\"Git Diff\",\"quote\":\"+export function displayName(user?: { name?: string }) {\"},{\"sourceName\":\"Git Diff\",\"quote\":\"+  return user.name.toUpperCase()\"},{\"sourceName\":\"RAG 项目上下文 - 轻量模型风险预判\",\"quote\":\"- riskType: NULL_POINTER\\n- severity: MEDIUM\\n- confidence: 0.1867\"}]",
+        "suggestion": "在访问属性前添加空值校验，或使用可选链操作符（?.）。例如：`return user?.name?.toUpperCase() ?? '';`。如果业务规则要求必须有 `user` 和 `name`，建议移除参数和属性中的 `?` 使其成为必填项，从而利用 TypeScript 的静态类型检查在编译期拦截问题。",
+        "confidence": 0.95
+      }
+    ]
+  }
+}

@@ -1,0 +1,62 @@
+{
+  "caseId": "java-sql-resource-leak",
+  "split": "development",
+  "runDate": "2026-08-12",
+  "capturedAt": "2026-08-12T02:16:04.035160+00:00",
+  "baseSha": "1adcd67b44317cfd4c1b037db923140011843495",
+  "headSha": "4225ef585fca4f5ba1909be7fb52e582ef82ef9b",
+  "projectId": 1,
+  "taskId": 1,
+  "reportId": 1,
+  "task": {
+    "taskId": 1,
+    "pullRequestId": null,
+    "status": "SUCCESS",
+    "commitId": "4225ef585fca4f5ba1909be7fb52e582ef82ef9b",
+    "branch": "main",
+    "retryCount": 0,
+    "errorMessage": null,
+    "createdAt": "2026-08-12T02:15:24.353787Z",
+    "startedAt": "2026-08-12T02:15:25.358452Z",
+    "finishedAt": "2026-08-12T02:16:02.274814Z"
+  },
+  "report": {
+    "reportId": 1,
+    "taskId": 1,
+    "commitId": "4225ef585fca4f5ba1909be7fb52e582ef82ef9b",
+    "overallRisk": "MEDIUM",
+    "summary": "新增了一个简单的数据库查询类。代码使用了 PreparedStatement 执行了硬编码的查询语句，不存在 SQL 注入风险。但代码缺乏对 JDBC 资源、空指针以及异常情况的处理，存在资源泄漏和空指针解引用的隐患。",
+    "issueCount": 2,
+    "createdAt": "2026-08-12T02:16:02.247424Z",
+    "issues": [
+      {
+        "issueId": 1,
+        "severity": "MEDIUM",
+        "category": "NULL_POINTER",
+        "filePath": "src/App.java",
+        "lineStart": 4,
+        "lineEnd": 6,
+        "title": "缺少空指针校验可能导致 NullPointerException",
+        "description": "方法接收外部传入的 Connection 对象，但未对其进行非空校验。如果传入的 connection 为 null，在第 4 行调用 prepareStatement 时会抛出 NullPointerException。同理，若 prepareStatement 返回 null（虽然在标准 JDBC 实现中极少发生），第 5 行的 executeQuery 也会引发空指针异常。",
+        "impact": "当传入的数据库连接对象为 null 时，程序会抛出未捕获的 NullPointerException 导致方法调用中断。",
+        "evidence": "[{\"sourceName\":\"Git Diff\",\"quote\":\"void load(Connection connection) throws Exception {\\n    PreparedStatement statement = connection.prepareStatement(\\\"select 1\\\");\"}]",
+        "suggestion": "在方法入口处增加对 connection 参数的非空校验，例如：if (connection == null) throw new IllegalArgumentException(\"Connection cannot be null\");",
+        "confidence": 0.9
+      },
+      {
+        "issueId": 2,
+        "severity": "MEDIUM",
+        "category": "PERFORMANCE_RISK",
+        "filePath": "src/App.java",
+        "lineStart": 4,
+        "lineEnd": 6,
+        "title": "JDBC 资源未关闭可能导致泄漏",
+        "description": "创建了 PreparedStatement 和 ResultSet 对象，但在方法执行完毕后未调用 close() 方法进行关闭，也未使用 try-with-resources 语法。",
+        "impact": "在高频调用场景下，未关闭的 Statement 和 ResultSet 会导致数据库游标和连接资源泄漏，最终可能耗尽连接池引发系统性能下降或服务不可用。",
+        "evidence": "[{\"sourceName\":\"Git Diff\",\"quote\":\"PreparedStatement statement = connection.prepareStatement(\\\"select 1\\\");\\n    ResultSet rows = statement.executeQuery();\"}]",
+        "suggestion": "使用 try-with-resources 语句自动管理资源，确保 PreparedStatement 和 ResultSet 被正确关闭：try (PreparedStatement statement = connection.prepareStatement(\"select 1\"); ResultSet rows = statement.executeQuery()) { ... }",
+        "confidence": 0.95
+      }
+    ]
+  }
+}

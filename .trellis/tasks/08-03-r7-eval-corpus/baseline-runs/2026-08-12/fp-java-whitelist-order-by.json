@@ -1,0 +1,62 @@
+{
+  "caseId": "fp-java-whitelist-order-by",
+  "split": "development",
+  "runDate": "2026-08-12",
+  "capturedAt": "2026-08-12T02:43:01.349609+00:00",
+  "baseSha": "4a6b2986b1ed8e335876b79191e31bbd6e67d2d9",
+  "headSha": "26c2b804141ddb4c27b08c62cde06eafaae3c781",
+  "projectId": 23,
+  "taskId": 23,
+  "reportId": 22,
+  "task": {
+    "taskId": 23,
+    "pullRequestId": null,
+    "status": "SUCCESS",
+    "commitId": "26c2b804141ddb4c27b08c62cde06eafaae3c781",
+    "branch": "main",
+    "retryCount": 0,
+    "errorMessage": null,
+    "createdAt": "2026-08-12T02:41:30.787291Z",
+    "startedAt": "2026-08-12T02:41:30.842419Z",
+    "finishedAt": "2026-08-12T02:42:58.131164Z"
+  },
+  "report": {
+    "reportId": 22,
+    "taskId": 23,
+    "commitId": "26c2b804141ddb4c27b08c62cde06eafaae3c781",
+    "overallRisk": "LOW",
+    "summary": "本次代码审查涵盖了审计事件查询功能的增强，新增了关键字搜索和排序功能。代码在防范 SQL 注入方面表现良好，使用了 PreparedStatement 绑定参数，并通过枚举白名单机制处理 ORDER BY 字段，避免了拼接注入风险。LIKE 查询也进行了通配符转义。然而，代码中存在空指针异常风险，因为 escapeLike 方法未对传入的 null 值进行防御，尽管在 Service 层有非空校验，但 Repository 层作为公共方法仍存在隐患。此外，轻量模型预判的 SQL 注入风险经审查确认为误报。",
+    "issueCount": 2,
+    "createdAt": "2026-08-12T02:42:58.121832Z",
+    "issues": [
+      {
+        "issueId": 55,
+        "severity": "MEDIUM",
+        "category": "NULL_POINTER",
+        "filePath": "src/main/java/com/acme/audit/repository/AuditEventRepository.java",
+        "lineStart": 62,
+        "lineEnd": 64,
+        "title": "escapeLike 方法未对 null 入参进行防御，存在潜在空指针风险",
+        "description": "在 AuditEventRepository.search 方法中，直接将传入的 keyword 参数传递给 escapeLike 方法。该方法内部调用了 keyword.replace，若 keyword 为 null 将抛出 NullPointerException。虽然上层 AuditQueryService.searchEvents 对 keyword 进行了非空校验，但 Repository 作为底层组件，其公共方法缺乏自我保护机制，违反了防御性编程原则。",
+        "impact": "如果未来有其他调用方直接调用 Repository.search 且未校验 keyword，将导致未处理的 NullPointerException，可能中断程序执行。",
+        "evidence": "[{\"sourceName\":\"Git Diff - AuditEventRepository.java\",\"quote\":\"private static String escapeLike(String keyword) {\\n        return keyword.replace(\\\"\\\\\\\\\\\", \\\"\\\\\\\\\\\\\\\\\\\").replace(\\\"%\\\", \\\"\\\\\\\\%\\\").replace(\\\"_\\\", \\\"\\\\\\\\_\\\");\\n    }\"},{\"sourceName\":\"Git Diff - AuditQueryService.java\",\"quote\":\"if (keyword == null || keyword.isBlank()) {\\n            return recentEvents(tenantId, limit);\\n        }\"}]",
+        "suggestion": "在 escapeLike 方法内部增加非空校验，例如：if (keyword == null) return null; 或在 Repository.search 方法入口处校验 keyword 并抛出 IllegalArgumentException。",
+        "confidence": 0.85
+      },
+      {
+        "issueId": 56,
+        "severity": "LOW",
+        "category": "SQL_INJECTION",
+        "filePath": "src/main/java/com/acme/audit/repository/AuditEventRepository.java",
+        "lineStart": 48,
+        "lineEnd": 51,
+        "title": "轻量模型预判的 SQL 注入风险经审查确认为误报",
+        "description": "轻量模型预判此文件存在 SQL 注入风险。经审查，ORDER BY 字段通过 AuditSortField 枚举白名单严格限制，不接受外部原始字符串拼接；LIKE 查询的通配符通过转义并使用占位符绑定。代码实际上是安全的，模型预判为误报。",
+        "impact": "无实际安全影响。",
+        "evidence": "[{\"sourceName\":\"RAG 项目上下文\",\"quote\":\"riskType: SQL_INJECTION\\nseverity: HIGH\\nconfidence: 0.1917\"},{\"sourceName\":\"Git Diff - AuditSortField.java\",\"quote\":\"ORDER BY 的列名无法使用占位符，只能拼接进 SQL 文本；因此列名绝不取自请求原文，只允许取自本枚举携带的常量\"}]",
+        "suggestion": "无需修改，当前实现已有效防御 SQL 注入。",
+        "confidence": 0.95
+      }
+    ]
+  }
+}

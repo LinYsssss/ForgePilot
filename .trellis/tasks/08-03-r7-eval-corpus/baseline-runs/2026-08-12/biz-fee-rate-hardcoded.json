@@ -1,0 +1,76 @@
+{
+  "caseId": "biz-fee-rate-hardcoded",
+  "split": "development",
+  "runDate": "2026-08-12",
+  "capturedAt": "2026-08-12T02:19:24.323759+00:00",
+  "baseSha": "60a2d388be8511ef34389095ce32aa11cf5a79f2",
+  "headSha": "11e90b84b2e8902286dbfa8896e18a74ce39b669",
+  "projectId": 7,
+  "taskId": 7,
+  "reportId": 7,
+  "task": {
+    "taskId": 7,
+    "pullRequestId": null,
+    "status": "SUCCESS",
+    "commitId": "11e90b84b2e8902286dbfa8896e18a74ce39b669",
+    "branch": "main",
+    "retryCount": 0,
+    "errorMessage": null,
+    "createdAt": "2026-08-12T02:18:38.137350Z",
+    "startedAt": "2026-08-12T02:18:38.240439Z",
+    "finishedAt": "2026-08-12T02:19:20.568191Z"
+  },
+  "report": {
+    "reportId": 7,
+    "taskId": 7,
+    "commitId": "11e90b84b2e8902286dbfa8896e18a74ce39b669",
+    "overallRisk": "HIGH",
+    "summary": "新增的即时结算服务存在严重的业务规则破坏问题：硬编码了标准商户费率，违反了项目结算规则中明确要求的“费率不得硬编码在代码中，必须从 fee_rate_config 表读取”的红线规定。此外，该方法缺乏权限校验，未验证调用方是否有权为指定商户发起结算；同时缺少事务一致性保障，未体现幂等控制逻辑，可能导致重复结算。",
+    "issueCount": 3,
+    "createdAt": "2026-08-12T02:19:20.525944Z",
+    "issues": [
+      {
+        "issueId": 10,
+        "severity": "HIGH",
+        "category": "BUSINESS_RULE_RISK",
+        "filePath": "src/main/java/com/acme/clearing/service/InstantSettlementService.java",
+        "lineStart": 14,
+        "lineEnd": 14,
+        "title": "硬编码标准商户费率，违反结算业务红线",
+        "description": "代码中通过常量 STANDARD_FEE_RATE_BP = 80L 硬编码了标准商户的费率（0.8%）。根据项目业务规则，费率不得硬编码在代码中，必须从 fee_rate_config 表读取。此外，规则指出标准商户费率在 2026-05 已由 0.8% 下调至 0.6%，此代码仍使用旧费率，会导致多收商户手续费，引发合规问题。",
+        "impact": "按旧费率（0.8%）多收商户手续费，违反合规要求，重演历史 EVAL-207 事故。",
+        "evidence": "[{\"sourceName\":\"settlement-rules.md#1\",\"quote\":\"标准商户 | 0.6% | 2026-05 由 0.8% 下调\"},{\"sourceName\":\"settlement-rules.md#1\",\"quote\":\"**费率不得硬编码在代码中**，必须从 `fee_rate_config` 表读取，以便运营调整。\"}]",
+        "suggestion": "移除硬编码的费率常量，改造为从数据库的 fee_rate_config 表动态读取费率配置，确保应用最新费率。",
+        "confidence": 0.95
+      },
+      {
+        "issueId": 11,
+        "severity": "HIGH",
+        "category": "AUTH_RISK",
+        "filePath": "src/main/java/com/acme/clearing/service/InstantSettlementService.java",
+        "lineStart": 19,
+        "lineEnd": 32,
+        "title": "缺少商户结算操作权限校验",
+        "description": "submitInstant 方法接收 tenantId 和 merchantId 作为参数，但未校验当前调用方是否有权限代表该商户发起即时结算请求。",
+        "impact": "恶意调用方可能传入任意 merchantId，导致越权操作，为未授权商户发起结算并转移资金。",
+        "evidence": "[{\"sourceName\":\"trained-model\",\"quote\":\"riskType: AUTH_RISK, severity: HIGH\"}]",
+        "suggestion": "在方法入口处增加权限校验逻辑，验证当前请求主体（如操作员或API Token）是否具备对目标 tenantId 和 merchantId 的操作权限。",
+        "confidence": 0.85
+      },
+      {
+        "issueId": 12,
+        "severity": "HIGH",
+        "category": "TRANSACTION_RISK",
+        "filePath": "src/main/java/com/acme/clearing/service/InstantSettlementService.java",
+        "lineStart": 19,
+        "lineEnd": 32,
+        "title": "缺少事务管理与幂等执行保障",
+        "description": "方法虽然校验了幂等键不为空，但既未添加 @Transactional 注解保证数据库操作的事务一致性，也未展示基于 idempotencyKey 的防重提交逻辑。直接 new SettlementOrder 无法保证资金操作的安全性和一致性。",
+        "impact": "在并发或异常重试场景下，可能生成重复的结算订单，导致商户资金被重复结算，造成资金损失。",
+        "evidence": "[]",
+        "suggestion": "为方法添加 @Transactional 注解保证事务原子性，并实现基于 idempotencyKey 的数据库唯一索引或防重表机制，确保真正的幂等性。",
+        "confidence": 0.9
+      }
+    ]
+  }
+}

@@ -1,0 +1,62 @@
+{
+  "caseId": "java-broken-build",
+  "split": "development",
+  "runDate": "2026-08-12",
+  "capturedAt": "2026-08-12T02:17:57.540233+00:00",
+  "baseSha": "1adcd67b44317cfd4c1b037db923140011843495",
+  "headSha": "02010b5062df60c93dc311e396740342f35be324",
+  "projectId": 5,
+  "taskId": 5,
+  "reportId": 5,
+  "task": {
+    "taskId": 5,
+    "pullRequestId": null,
+    "status": "SUCCESS",
+    "commitId": "02010b5062df60c93dc311e396740342f35be324",
+    "branch": "main",
+    "retryCount": 0,
+    "errorMessage": null,
+    "createdAt": "2026-08-12T02:17:25.860097Z",
+    "startedAt": "2026-08-12T02:17:25.956288Z",
+    "finishedAt": "2026-08-12T02:17:52.633490Z"
+  },
+  "report": {
+    "reportId": 5,
+    "taskId": 5,
+    "commitId": "02010b5062df60c93dc311e396740342f35be324",
+    "overallRisk": "HIGH",
+    "summary": "Git Diff 显示新增了一个 Java 文件，但该文件存在严重的语法错误，无法通过编译。由于代码无法编译，无法进行有效的空指针、SQL注入、权限校验等业务逻辑层面的静态分析。轻量模型预判存在权限风险，但当前代码片段中无任何业务逻辑可供佐证。",
+    "issueCount": 2,
+    "createdAt": "2026-08-12T02:17:52.545199Z",
+    "issues": [
+      {
+        "issueId": 6,
+        "severity": "HIGH",
+        "category": "UNKNOWN",
+        "filePath": "src/Broken.java",
+        "lineStart": 1,
+        "lineEnd": 1,
+        "title": "Java 语法错误导致无法编译",
+        "description": "新增的 Broken.java 文件中存在明显的语法错误：方法签名的括号不匹配（`void compile( {`），且类体未正确闭合。这将导致整个文件无法通过 Java 编译器，阻断构建流程。",
+        "impact": "项目构建失败，导致后续所有依赖该模块的代码无法运行或部署。由于代码无法编译，无法进行任何深入的静态分析。",
+        "evidence": "[{\"sourceName\":\"Git Diff\",\"quote\":\"+class Broken { void compile( { }\"}]",
+        "suggestion": "修复语法错误。如果这是一个测试用例，请修正为合法的 Java 语法，例如：`class Broken { void compile() { } }`。",
+        "confidence": 1.0
+      },
+      {
+        "issueId": 7,
+        "severity": "HIGH",
+        "category": "AUTH_RISK",
+        "filePath": "src/Broken.java",
+        "lineStart": 1,
+        "lineEnd": 1,
+        "title": "潜在的权限校验缺失风险",
+        "description": "轻量级模型预判该文件可能存在权限校验缺失风险。然而，由于当前 Git Diff 中的代码存在语法错误且无任何实质性业务逻辑，无法在当前代码片段中找到直接证据支持此风险。",
+        "impact": "如果后续修复语法错误并补充了涉及敏感操作的逻辑，可能会因为缺少权限校验导致越权访问。",
+        "evidence": "[{\"sourceName\":\"RAG 项目上下文 - 轻量模型风险预判\",\"quote\":\"riskType: AUTH_RISK, severity: HIGH, confidence: 0.1629\"}]",
+        "suggestion": "在修复语法错误并完善业务逻辑后，需重新进行权限风险审查，确保涉及敏感操作的方法具备完善的权限校验机制。",
+        "confidence": 0.1629
+      }
+    ]
+  }
+}

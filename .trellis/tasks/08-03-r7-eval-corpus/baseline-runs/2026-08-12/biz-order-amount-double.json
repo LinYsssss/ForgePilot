@@ -1,0 +1,76 @@
+{
+  "caseId": "biz-order-amount-double",
+  "split": "development",
+  "runDate": "2026-08-12",
+  "capturedAt": "2026-08-12T02:26:16.940495+00:00",
+  "baseSha": "47e0adaf19a8efebab9b406a5d8622fdb7bb3cbb",
+  "headSha": "d4b939ba97d85eecbf8a7e6112c6e7be4e7b0984",
+  "projectId": 13,
+  "taskId": 13,
+  "reportId": 13,
+  "task": {
+    "taskId": 13,
+    "pullRequestId": null,
+    "status": "SUCCESS",
+    "commitId": "d4b939ba97d85eecbf8a7e6112c6e7be4e7b0984",
+    "branch": "main",
+    "retryCount": 0,
+    "errorMessage": null,
+    "createdAt": "2026-08-12T02:25:17.034377Z",
+    "startedAt": "2026-08-12T02:25:17.127487Z",
+    "finishedAt": "2026-08-12T02:26:15.590747Z"
+  },
+  "report": {
+    "reportId": 13,
+    "taskId": 13,
+    "commitId": "d4b939ba97d85eecbf8a7e6112c6e7be4e7b0984",
+    "overallRisk": "HIGH",
+    "summary": "新增的促销折扣方法严重违反了项目金额计算规范，使用 double 浮点类型重算实付金额，极易引发分级误差和批量对账事故。此外，新增方法普遍存在空指针风险，且在连续更新实付金额时缺乏事务保证，存在数据不一致隐患。",
+    "issueCount": 3,
+    "createdAt": "2026-08-12T02:26:15.581188Z",
+    "issues": [
+      {
+        "issueId": 29,
+        "severity": "HIGH",
+        "category": "BUSINESS_RULE_RISK",
+        "filePath": "src/main/java/com/acme/shop/service/OrderAmountService.java",
+        "lineStart": 33,
+        "lineEnd": 36,
+        "title": "金额计算违规使用浮点类型",
+        "description": "applyPromotionDiscount 方法将订单金额转换为 double 类型的元，并乘以折扣率后强转回 long（分）。这直接违反了项目上下文中明确禁止使用浮点类型进行金额计算的规范。",
+        "impact": "浮点乘除后强转会产生分级误差，导致订单金额计算不准确，可能引发类似历史事故 EVAL-206 的批量订单对账差异。",
+        "evidence": "[{\"sourceName\":\"order-flow.md#1\",\"quote\":\"任何金额计算禁止使用浮点类型：浮点乘除后强转会产生分级误差，历史事故 EVAL-206 因用 double 重算实付金额造成批量订单对账差异。\"}]",
+        "suggestion": "遵循项目规范，折扣、费率等比例值一律使用基点（万分之一）整数参与运算。例如传入 8500 表示 85 折，使用纯整数乘除法计算：paidFen = amount * discountBps / 10000。",
+        "confidence": 0.98
+      },
+      {
+        "issueId": 30,
+        "severity": "MEDIUM",
+        "category": "NULL_POINTER",
+        "filePath": "src/main/java/com/acme/shop/service/OrderAmountService.java",
+        "lineStart": 33,
+        "lineEnd": 37,
+        "title": "未校验订单查询结果导致的空指针风险",
+        "description": "applyPromotionDiscount 和 applyVoucherDeduction 方法均直接使用 orderMapper.selectById(orderId) 的返回值调用 getter 方法，未检查订单是否存在。若传入不存在的 orderId，将抛出 NullPointerException。",
+        "impact": "在处理无效或异常订单ID时，服务抛出未捕获的空指针异常，导致流程中断且错误信息不明确，增加系统不稳定性。",
+        "evidence": "[{\"sourceName\":\"trained-model\",\"quote\":\"riskType: NULL_POINTER, severity: MEDIUM, confidence: 0.1582\"}]",
+        "suggestion": "在获取 Order 对象后增加空指针校验逻辑，若订单不存在则抛出明确的业务异常（如 OrderNotFoundException）或直接 return。",
+        "confidence": 0.85
+      },
+      {
+        "issueId": 31,
+        "severity": "MEDIUM",
+        "category": "TRANSACTION_RISK",
+        "filePath": "src/main/java/com/acme/shop/service/OrderAmountService.java",
+        "lineStart": 33,
+        "lineEnd": 50,
+        "title": "金额更新操作缺乏事务一致性保证",
+        "description": "applyPromotionDiscount 和 applyVoucherDeduction 方法均执行了先查询后更新的操作，但方法未声明 @Transactional。若在并发场景下，两个操作交叉执行或更新失败，会导致实付金额数据不一致。",
+        "impact": "并发环境下可能发生 Lost Update（丢失更新），例如促销折扣和代金券抵扣同时作用于同一订单时，后执行的更新可能覆盖前者的结果，造成金额计算错误。",
+        "evidence": "[]",
+        "suggestion": "为涉及状态读取和写入的方法添加 @Transactional 注解以保证原子性，必要时结合乐观锁或悲观锁控制并发。",
+        "confidence": 0.75
+      }
+    ]
+  }
+}

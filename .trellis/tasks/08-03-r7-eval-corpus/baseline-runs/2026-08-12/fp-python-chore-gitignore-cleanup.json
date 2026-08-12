@@ -1,0 +1,33 @@
+{
+  "caseId": "fp-python-chore-gitignore-cleanup",
+  "split": "development",
+  "runDate": "2026-08-12",
+  "capturedAt": "2026-08-12T02:44:03.336903+00:00",
+  "baseSha": "d9e93de5ce580b2761c02f17f7a15b1dd1d28d6e",
+  "headSha": "acf42d47808473c89372a5465516fe7d3e285f3a",
+  "projectId": 25,
+  "taskId": 25,
+  "reportId": 24,
+  "task": {
+    "taskId": 25,
+    "pullRequestId": null,
+    "status": "SUCCESS",
+    "commitId": "acf42d47808473c89372a5465516fe7d3e285f3a",
+    "branch": "main",
+    "retryCount": 0,
+    "errorMessage": null,
+    "createdAt": "2026-08-12T02:43:56.960761Z",
+    "startedAt": "2026-08-12T02:43:57.029726Z",
+    "finishedAt": "2026-08-12T02:44:01.130135Z"
+  },
+  "report": {
+    "reportId": 24,
+    "taskId": 25,
+    "commitId": "acf42d47808473c89372a5465516fe7d3e285f3a",
+    "overallRisk": "NONE",
+    "summary": "本次 Git Diff 仅包含对 .gitignore 文件的修改以及删除了一个自动生成的 JSON 报告文件。未涉及任何 Java 代码、SQL 语句、业务逻辑或权限控制相关的变更，因此不存在空指针、SQL注入、权限校验、事务一致性、性能或业务规则破坏的风险。轻量模型预判的 SQL 注入风险在当前 Diff 中无证据支持。",
+    "issueCount": 0,
+    "createdAt": "2026-08-12T02:44:01.127762Z",
+    "issues": []
+  }
+}

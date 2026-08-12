@@ -1,0 +1,90 @@
+{
+  "caseId": "biz-status-machine-bypass",
+  "split": "development",
+  "runDate": "2026-08-12",
+  "capturedAt": "2026-08-12T02:23:55.828999+00:00",
+  "baseSha": "cdc47bc68e340dcedb706652482141cb24287822",
+  "headSha": "9d32d9a7f53ad7b4ef9c0a045572ca79bea5a0ef",
+  "projectId": 11,
+  "taskId": 11,
+  "reportId": 11,
+  "task": {
+    "taskId": 11,
+    "pullRequestId": null,
+    "status": "SUCCESS",
+    "commitId": "9d32d9a7f53ad7b4ef9c0a045572ca79bea5a0ef",
+    "branch": "main",
+    "retryCount": 0,
+    "errorMessage": null,
+    "createdAt": "2026-08-12T02:23:06.263915Z",
+    "startedAt": "2026-08-12T02:23:06.348226Z",
+    "finishedAt": "2026-08-12T02:23:54.673933Z"
+  },
+  "report": {
+    "reportId": 11,
+    "taskId": 11,
+    "commitId": "9d32d9a7f53ad7b4ef9c0a045572ca79bea5a0ef",
+    "overallRisk": "HIGH",
+    "summary": "新增的 ExpressPayoutService 存在严重业务规则破坏风险。代码直接调用网关出款并置为终态，完全绕过了结算状态机要求的 PENDING -> PROCESSING 守卫，极易引发重复放款资损。同时，该方法缺乏事务保证、空指针防护和权限校验。",
+    "issueCount": 4,
+    "createdAt": "2026-08-12T02:23:54.661311Z",
+    "issues": [
+      {
+        "issueId": 22,
+        "severity": "HIGH",
+        "category": "BUSINESS_RULE_RISK",
+        "filePath": "src/main/java/com/acme/clearing/payout/service/ExpressPayoutService.java",
+        "lineStart": 22,
+        "lineEnd": 28,
+        "title": "绕过状态机守卫直达终态，存在重复放款资损风险",
+        "description": "payout 方法在调用 gateway.transfer 后，根据结果直接调用 ticket.markSuccess() 或 ticket.markFailed()。这跳过了业务规则中强制要求的 PROCESSING 中间态，绕过了状态守卫，无法防止重复提交。",
+        "impact": "绕过状态守卫后，同一张结算票据被重复提交会造成多次出款，导致严重资金损失（如历史事故 EVAL-618：重复代付资损）。",
+        "evidence": "[{\"sourceName\":\"settlement-rules.md#3\",\"quote\":\"发起放款必须先置为 PROCESSING；PROCESSING 状态严禁重复发起，重复放款的幂等拦截依赖该状态守卫。\"},{\"sourceName\":\"settlement-rules.md#3\",\"quote\":\"任何跳过 PROCESSING 直达终态的流转都属违规：绕过状态守卫后，同一张结算票据被重复提交会造成多次出款（事故 EVAL-618：重复代付资损）。\"}]",
+        "suggestion": "在调用 gateway.transfer 之前，必须先将票据状态置为 PROCESSING（如调用类似 ticket.markProcessing() 的方法），并确保在处理前校验当前状态必须为 PENDING。",
+        "confidence": 0.95
+      },
+      {
+        "issueId": 23,
+        "severity": "HIGH",
+        "category": "TRANSACTION_RISK",
+        "filePath": "src/main/java/com/acme/clearing/payout/service/ExpressPayoutService.java",
+        "lineStart": 22,
+        "lineEnd": 28,
+        "title": "网关调用与状态更新缺乏事务一致性保证",
+        "description": "gateway.transfer 执行实际出款后，紧接着执行 ticket.markSuccess() 更新状态。这两个操作不在同一个事务中，若网关出款成功但后续状态更新失败，将导致实际已出款但系统状态未更新的数据不一致问题。",
+        "impact": "会导致系统记录与资金实际流向不一致，人工对账困难，且可能触发重复出款。",
+        "evidence": "[{\"sourceName\":\"settlement-rules.md#2\",\"quote\":\"PENDING → PROCESSING → SUCCESS\"}]",
+        "suggestion": "为 payout 方法添加 @Transactional 注解以保证强一致性，或引入可靠消息机制实现最终一致性，确保网关调用与状态变更的原子性。",
+        "confidence": 0.85
+      },
+      {
+        "issueId": 24,
+        "severity": "MEDIUM",
+        "category": "NULL_POINTER",
+        "filePath": "src/main/java/com/acme/clearing/payout/service/ExpressPayoutService.java",
+        "lineStart": 23,
+        "lineEnd": 23,
+        "title": "未对入参 ticket 进行非空校验",
+        "description": "payout(SettlementTicket ticket) 方法未校验 ticket 是否为 null，直接调用 ticket.getNetAmountFen() 会引发 NullPointerException。",
+        "impact": "传入 null 参数会导致程序异常崩溃，影响调用方流程的稳定性。",
+        "evidence": "[]",
+        "suggestion": "在方法入口处添加 Objects.requireNonNull(ticket, \"结算票据不能为空\") 或类似的无参校验逻辑。",
+        "confidence": 0.9
+      },
+      {
+        "issueId": 25,
+        "severity": "MEDIUM",
+        "category": "AUTH_RISK",
+        "filePath": "src/main/java/com/acme/clearing/payout/service/ExpressPayoutService.java",
+        "lineStart": 21,
+        "lineEnd": 21,
+        "title": "极速放款操作缺乏权限及风控校验",
+        "description": "payout 方法作为直接触发放款的接口，未包含任何商户身份鉴权、操作权限校验或风控拦截逻辑。轻量模型预判亦提示存在 AUTH_RISK。",
+        "impact": "非法调用方可能利用该接口对非授权商户发起放款，或绕过风控规则进行违规出款。",
+        "evidence": "[{\"sourceName\":\"trained-model\",\"quote\":\"riskType: AUTH_RISK, severity: HIGH, confidence: 0.1731\"}]",
+        "suggestion": "在执行放款逻辑前，补充调用方的权限校验机制，验证其对目标商户的放款授权，并接入相应的风控检查。",
+        "confidence": 0.75
+      }
+    ]
+  }
+}
