@@ -7,10 +7,11 @@ public record EvaluationReport(String corpusVersion, String schemaVersion, Fixed
     public record FixedRun(String toolImage, String model, String promptVersion, String findingSchemaVersion,
                            double temperature, int maxModelCalls, int maxToolCalls, int maxTokens,
                            int timeoutSeconds) {}
-    public record CaseReport(String id, String split, String language, String fixture,
+    public record CaseReport(String id, String split, String language, String fixture, String fixtureLayout,
                              List<ExpectedFinding> expectedFindings, List<String> nonFindings,
                              ExpectedPatch expectedPatch) {}
-    public record ExpectedFinding(String category, String severity, String path, int line) {}
+    public record ExpectedFinding(String category, String severity, String path, int line,
+                                  Integer lineEnd, List<String> categoryEquivalents) {}
     public record ExpectedPatch(String result, String file) {}
     public boolean valid() { return errors == null || errors.isEmpty(); }
 }

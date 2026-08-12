@@ -33,10 +33,20 @@ public class EvaluationCorpusService {
                 if (!Set.of("development", "holdout").contains(value.split())) errors.add("invalid split: " + value.id());
                 Path fixture = root.resolve(value.fixture()).normalize();
                 if (!fixture.startsWith(root) || !Files.isDirectory(fixture)) errors.add("missing fixture: " + value.id());
+                if (value.fixtureLayout() != null && !Set.of("single", "base-head").contains(value.fixtureLayout()))
+                    errors.add("invalid fixture layout: " + value.id());
+                if ("base-head".equals(value.fixtureLayout())) {
+                    Path base = fixture.resolve("base").normalize(); Path head = fixture.resolve("head").normalize();
+                    if (!base.startsWith(root) || !Files.isDirectory(base)
+                            || !head.startsWith(root) || !Files.isDirectory(head)) errors.add("missing base or head directory: " + value.id());
+                }
                 if (value.expectedFindings() == null || value.nonFindings() == null) errors.add("missing labels: " + value.id());
                 else value.expectedFindings().forEach(f -> {
                     if (blank(f.category()) || blank(f.severity()) || blank(f.path()) || f.line() <= 0)
                         errors.add("invalid expected finding: " + value.id());
+                    if (f.lineEnd() != null && f.lineEnd() < f.line()) errors.add("invalid line range: " + value.id());
+                    if (f.categoryEquivalents() != null && f.categoryEquivalents().stream().anyMatch(EvaluationCorpusService::blank))
+                        errors.add("invalid category equivalents: " + value.id());
                 });
                 if (value.expectedPatch() != null && !blank(value.expectedPatch().file())
                         && !Files.isRegularFile(fixture.resolve(value.expectedPatch().file()))) errors.add("missing patch: " + value.id());
