@@ -1,0 +1,24 @@
+# Trivy 抑制清单。写在这里的每一条都必须带到期日(exp:)与理由——到期后自动恢复拦截,
+# 逼迫复查,避免抑制变成永久的静默。
+#
+# 门禁口径见 deploy/scan-images.sh:HIGH/CRITICAL 且「上游已发布修复版本」才拦截。
+# 下面两条正好卡在该口径的盲区:Go 侧确实已发布修复(1.26.6),但修复尚未流入任何
+# 可拉取的 docker CLI 镜像,于是 Trivy 判定"可修复"而实际上无版本可升——门禁若一直红,
+# 结果是所有人学会忽略这个 job,比一条有到期日的显式抑制更危险。
+#
+# 命中位置:sandbox-runner 镜像内的 /usr/local/bin/docker(gobinary)。
+# 该二进制由 docker:*-cli 提供,sandbox-runner 通过它驱动 docker create/start/wait
+# (见 DockerCliClient),只与本机 docker.sock 通信,不解析外部域名——两条漏洞所在的
+# idna / dnsmessage 代码路径在本项目用法下不可达,实际风险低。
+#
+# 现状(2026-08-14 核实):
+#   docker/cli 29.x 分支 ARG GO_VERSION=1.26.5,最新 tag v29.7.2 仍是 1.26.5;
+#   master 已 bump 到 1.26.6,故修复将随下一个特性版本(v29.8/v30)进入镜像。
+# 解除条件:上游发布带 Go>=1.26.6 的 docker:*-cli 后,升级 sandbox-runner/Dockerfile
+#   的 docker-cli 阶段并删除本文件中的这两行。
+
+# stdlib/x-net idna punycode 提权,修复版 Go 1.26.6 / 1.27.0-rc.3
+CVE-2026-39821 exp:2026-11-01
+
+# x/net dnsmessage 解析 DoS,修复版同上
+CVE-2026-46600 exp:2026-11-01

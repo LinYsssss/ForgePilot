@@ -23,12 +23,17 @@ import org.springframework.web.filter.OncePerRequestFilter;
 public class RateLimitFilter extends OncePerRequestFilter {
 
     private static final int MAX_TRACKED_KEYS = 5000;
-    /** 登录是唯一无需认证即可反复尝试的写端点,按通用额度(默认 120/min)足以爆破弱口令,单独收紧。 */
+    /** 登录是无需认证即可反复尝试的写端点,按通用额度(默认 120/min)足以爆破弱口令,单独收紧。 */
     private static final String LOGIN_PATH = "/api/auth/login";
+    /** 错误上报同为匿名可达的写端点,单独小额度:装得下一次页面崩溃的连环报错,装不下刷日志。 */
+    private static final String CLIENT_ERRORS_PATH = "/api/client-errors";
+    /** 旧构造器的回落值,与 app-boundary.yml 的 client-errors-limit 默认值保持一致。 */
+    private static final int DEFAULT_CLIENT_ERRORS_LIMIT = 10;
 
     private final boolean enabled;
     private final int limit;
     private final int loginLimit;
+    private final int clientErrorsLimit;
     private final long windowMs;
     private final ObjectMapper objectMapper;
     private final ClientIpResolver clientIpResolver;
@@ -44,9 +49,15 @@ public class RateLimitFilter extends OncePerRequestFilter {
 
     public RateLimitFilter(boolean enabled, int limit, int windowSeconds, int loginLimit,
                            ObjectMapper objectMapper, ClientIpResolver clientIpResolver) {
+        this(enabled, limit, windowSeconds, loginLimit, DEFAULT_CLIENT_ERRORS_LIMIT, objectMapper, clientIpResolver);
+    }
+
+    public RateLimitFilter(boolean enabled, int limit, int windowSeconds, int loginLimit, int clientErrorsLimit,
+                           ObjectMapper objectMapper, ClientIpResolver clientIpResolver) {
         this.enabled = enabled;
         this.limit = limit;
         this.loginLimit = loginLimit;
+        this.clientErrorsLimit = clientErrorsLimit;
         this.windowMs = Math.max(1, windowSeconds) * 1000L;
         this.objectMapper = objectMapper;
         this.clientIpResolver = clientIpResolver;
@@ -59,11 +70,19 @@ public class RateLimitFilter extends OncePerRequestFilter {
             filterChain.doFilter(request, response);
             return;
         }
-        boolean login = LOGIN_PATH.equals(request.getRequestURI());
-        int effectiveLimit = login ? loginLimit : limit;
+        String uri = request.getRequestURI();
+        // 特殊端点各配独立预算并单独计数,避免正常读请求把匿名端点的额度顶掉(或反过来)。
+        int effectiveLimit = limit;
+        String bucket = "";
+        if (LOGIN_PATH.equals(uri)) {
+            effectiveLimit = loginLimit;
+            bucket = "login:";
+        } else if (CLIENT_ERRORS_PATH.equals(uri)) {
+            effectiveLimit = clientErrorsLimit;
+            bucket = "client-errors:";
+        }
         long now = System.currentTimeMillis();
-        // 登录单独计数,避免同一 IP 的正常读请求把爆破额度顶掉(或反过来)。
-        Window window = windows.compute((login ? "login:" : "") + resolveKey(request), (key, existing) -> {
+        Window window = windows.compute(bucket + resolveKey(request), (key, existing) -> {
             if (existing == null || now - existing.start >= windowMs) {
                 return new Window(now);
             }

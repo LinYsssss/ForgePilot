@@ -40,6 +40,25 @@ class RateLimitFilterTest {
         assertThat(passes(filter, "/api/projects", "203.0.113.7", 30)).isEqualTo(30);
     }
 
+    /** 错误上报与登录、普通流量三个桶互不侵占:任何一个被打满都不能拖垮另外两个。 */
+    @Test
+    void clientErrorReportsHaveTheirOwnBudgetSeparateFromLoginAndGeneralTraffic() throws Exception {
+        RateLimitFilter filter = new RateLimitFilter(true, 120, 60, 8, 5, objectMapper,
+                new ClientIpResolver(""));
+
+        assertThat(passes(filter, "/api/client-errors", "203.0.113.20", 12)).isEqualTo(5);
+        assertThat(passes(filter, "/api/projects", "203.0.113.20", 30)).isEqualTo(30);
+        assertThat(passes(filter, "/api/auth/login", "203.0.113.20", 12)).isEqualTo(8);
+    }
+
+    /** 旧构造器必须回落到与 app-boundary.yml 相同的默认额度(10/窗口),不许静默为 0 把端点焊死。 */
+    @Test
+    void legacyConstructorsDefaultTheClientErrorBudgetToTen() throws Exception {
+        RateLimitFilter filter = new RateLimitFilter(true, 120, 60, 8, objectMapper);
+
+        assertThat(passes(filter, "/api/client-errors", "203.0.113.21", 15)).isEqualTo(10);
+    }
+
     @Test
     void limitsAreTrackedPerClientIp() throws Exception {
         // MockHttpServletRequest 的 remoteAddr 是 127.0.0.1;把它列为受信代理,

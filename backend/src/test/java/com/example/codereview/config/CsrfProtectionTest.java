@@ -179,6 +179,20 @@ class CsrfProtectionTest {
                 .andExpect(status().isUnauthorized()); // 401 = 走到了验签,而不是被 CSRF 挡在 403
     }
 
+    /**
+     * 错误上报走 sendBeacon,带不了自定义头,必须免 CSRF;该端点匿名可达且不改服务端状态
+     * (只落日志),豁免没有可被跨站利用的对象。若此用例变红,说明有人把豁免清单收窄,
+     * 前端错误上报会在开启 CSRF 的生产部署上整体失效。
+     */
+    @Test
+    void clientErrorReportIsExemptFromCsrf() throws Exception {
+        mockMvc.perform(post("/api/client-errors")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "message", "Uncaught TypeError", "url", "https://x/login", "ts", 1L))))
+                .andExpect(status().isOk());
+    }
+
     private Cookie bootstrapCsrfCookie() throws Exception {
         Cookie cookie = mockMvc.perform(get("/api/auth/csrf"))
                 .andExpect(status().isOk())

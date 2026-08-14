@@ -1,5 +1,5 @@
 # 单机演示宿主没有日志采集侧车,容器日志就地留存。不封顶的话一次崩溃循环
-# 就能刷爆磁盘 —— 每个服务最多 3 个 10m 分片,整栈上限约 270m。
+# 就能刷爆磁盘 —— 每个服务最多 3 个 10m 分片,整栈(11 个服务)上限约 330m。
 x-logging: &default-logging
   driver: json-file
   options:
@@ -34,9 +34,17 @@ services:
     environment:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_USERNAME:?RABBITMQ_USERNAME is required}
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:?RABBITMQ_PASSWORD is required}
+    volumes:
+      # 显式钉死插件清单:management(既有管理台)+ prometheus(15692 指标端点)。
+      # 不依赖镜像默认插件集,防镜像升级悄悄改变启用面;文件是 Erlang term,
+      # 末尾句点必须保留。
+      - ./observability/rabbitmq-enabled-plugins:/etc/rabbitmq/enabled_plugins:ro
     ports:
       - "127.0.0.1:5672:5672"
       - "127.0.0.1:15672:15672"
+    # 指标端口只在容器网内给 Prometheus 抓取(per-object 端点),不发布到宿主。
+    expose:
+      - "15692"
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
       interval: 15s
@@ -174,6 +182,7 @@ services:
     command: ["--config.file=/etc/prometheus/prometheus.yml"]
     volumes:
       - ./observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./observability/alerts.yml:/etc/prometheus/alerts.yml:ro
     depends_on:
       - backend
       - otel-collector
@@ -182,6 +191,45 @@ services:
     restart: unless-stopped
     mem_limit: 512m
     memswap_limit: 768m
+    logging: *default-logging
+
+  alertmanager:
+    image: prom/alertmanager:v0.27.0
+    # 官方镜像不支持配置文件里的环境变量插值,入口包装脚本按 ALERT_WEBHOOK_URL
+    # 生成运行时配置:为空(默认)= 空接收器,告警仅在 UI 可见;非空 = 外发到该
+    # webhook。钉钉需经桥接组件,见 observability/README.md。
+    entrypoint: ["/bin/sh", "/etc/alertmanager/entrypoint.sh"]
+    environment:
+      ALERT_WEBHOOK_URL: ${ALERT_WEBHOOK_URL:-}
+    volumes:
+      - ./observability/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - ./observability/alertmanager-entrypoint.sh:/etc/alertmanager/entrypoint.sh:ro
+    ports:
+      - "127.0.0.1:9093:9093"
+    restart: unless-stopped
+    mem_limit: 128m
+    memswap_limit: 192m
+    logging: *default-logging
+
+  grafana:
+    image: grafana/grafana:11.1.0
+    environment:
+      # 仅绑定 127.0.0.1,远程访问走 SSH 隧道;初始密码用 .env 覆盖,首次登录改掉。
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+    volumes:
+      # 数据源与看板全部由 provisioning 文件装配,不挂持久卷:
+      # UI 改动不落盘,容器重建即回到仓库文件版本(见 observability/README.md)。
+      - ./observability/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./observability/grafana/dashboards:/etc/grafana/dashboards:ro
+    depends_on:
+      - prometheus
+    ports:
+      - "127.0.0.1:3000:3000"
+    restart: unless-stopped
+    mem_limit: 256m
+    memswap_limit: 384m
     logging: *default-logging
 
 volumes:

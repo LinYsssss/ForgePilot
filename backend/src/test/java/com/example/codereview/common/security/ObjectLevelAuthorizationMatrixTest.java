@@ -5,6 +5,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.example.codereview.agent.run.AgentRun;
+import com.example.codereview.agent.run.AgentRunRepository;
 import com.example.codereview.auth.AuthService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.Cookie;
@@ -57,6 +59,9 @@ class ObjectLevelAuthorizationMatrixTest {
 
     @Autowired
     private AuthService authService;
+
+    @Autowired
+    private AgentRunRepository agentRuns;
 
     private Cookie owner;
     private Cookie stranger;
@@ -123,6 +128,30 @@ class ObjectLevelAuthorizationMatrixTest {
                 .toList();
     }
 
+    /**
+     * 反馈提交端点单列:共享的 perform 只发空体 {@code {}},会在进入服务层鉴权前就被
+     * Bean Validation 拦成 400——矩阵会"因错误的原因通过"。这里带合法载荷打到真实存在的
+     * run 上,并显式只接受 403/404:载荷若因契约漂移变回 400,此用例失败而不是假绿,
+     * 保证拒绝确实来自对象级授权而不是参数校验。
+     */
+    @Test
+    void strangerCannotAttachFeedbackToSomeoneElsesRun() throws Exception {
+        Long runId = agentRuns.save(new AgentRun(ownedProjectId, 1L, null,
+                "matrix-feedback-" + System.nanoTime(), "headsha0001")).getId();
+        mockMvc.perform(post("/api/agent-runs/{id}/feedback", runId)
+                        .cookie(stranger)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "type", "MISS_REPORT", "path", "src/A.java", "line", 1, "note", "矩阵探测"))))
+                .andExpect(result -> {
+                    int statusCode = result.getResponse().getStatus();
+                    if (statusCode != 403 && statusCode != 404) {
+                        throw new AssertionError("expected the object-level guard to answer 403/404 but got "
+                                + statusCode + " — a 400 would mean validation fired before authorization");
+                    }
+                });
+    }
+
     @TestFactory
     List<DynamicTest> anonymousCallerIsAlwaysRejected() {
         List<String> paths = List.of(
@@ -132,6 +161,8 @@ class ObjectLevelAuthorizationMatrixTest {
                 "/api/projects/1/knowledge/documents",
                 "/api/agent-runs/1",
                 "/api/agent-runs/project/1",
+                "/api/agent-runs/1/feedback",
+                "/api/feedback/export",
                 "/api/mq/logs?taskId=1",
                 "/api/ai/logs?taskId=1",
                 "/api/review-issues/1/feedback",

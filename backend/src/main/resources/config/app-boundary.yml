@@ -16,6 +16,8 @@ app:
     window-seconds: ${RATE_LIMIT_WINDOW_SECONDS:60}
     # 登录端点单独计数并收紧:通用额度对密码爆破而言过松
     login-limit: ${RATE_LIMIT_LOGIN_REQUESTS:8}
+    # 前端错误上报(/api/client-errors)匿名可达,单独小额度防刷日志;见 RateLimitFilter
+    client-errors-limit: ${RATE_LIMIT_CLIENT_ERRORS:10}
   security:
     # 受信代理网段:只有直连对端落在这里时,才采信它发来的 X-Forwarded-For。
     # 默认覆盖本机与 Docker/内网网段(生产部署里 nginx 与后端同处 compose 网络)。

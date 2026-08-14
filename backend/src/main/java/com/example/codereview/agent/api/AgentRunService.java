@@ -143,7 +143,12 @@ public class AgentRunService {
                 .ifPresent(AgentStep::cancel);
     }
 
-    private AgentRun requireOwnedRun(Long runId, Long userId) {
+    /**
+     * run 级对象授权守卫的唯一实现:先 404 掉不存在的 run(不泄露存在性),再由项目守卫
+     * 按 owner 判 403/404。所有「路径只带 runId」的端点必须走这里而不是各自复刻——
+     * 守卫逻辑一旦分叉,矩阵测试罩不住的新规则会静默漏到副本之外(反馈闭环等跨包调用方复用)。
+     */
+    public AgentRun requireOwnedRun(Long runId, Long userId) {
         AgentRun run = runs.findById(runId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.AGENT_RUN_NOT_FOUND, "Agent 运行不存在"));
         projects.getRequired(run.getProjectId(), userId);

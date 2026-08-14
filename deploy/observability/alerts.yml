@@ -1,0 +1,72 @@
+# =============================================================================
+# Prometheus 告警规则(首批四条)。经 prometheus.yml 的 rule_files 装载,
+# compose 把本文件挂到 prometheus 容器的 /etc/prometheus/alerts.yml。
+#
+# 指标来源依据(2026-08-14 按代码核对):
+# - rabbitmq_queue_*:rabbitmq_prometheus 插件 per-object 端点(抓取作业见
+#   prometheus.yml),queue 标签取值与队列声明常量逐一对应 —— 工作队列与
+#   code.review/agent 死信队列在 backend RabbitMqConfig,sandbox.dead.queue
+#   由 sandbox-runner SandboxRabbitConfig 声明(backend 只配了死信路由)。
+# - resilience4j_circuitbreaker_state:backend 引入 resilience4j-spring-boot3,
+#   经 Micrometer 输出到 /actuator/prometheus;该 gauge 按 state 标签展开成
+#   closed/open/half_open 等多条序列,处于哪个状态哪条为 1;
+#   name="aiReview" 即 backend application.yml 的熔断实例名。
+# - up:Prometheus 内建的抓取目标存活指标,覆盖全部 scrape job。
+#
+# 阈值/持续时间为演示栈保守值;服务器侧先 `promtool check rules alerts.yml`
+# 再上线(本机无 Docker,交付时只做了 YAML 解析与表达式静态审读)。
+# =============================================================================
+groups:
+  - name: reposage-queue
+    rules:
+      # 三条主工作队列(审查任务/Agent 步进/沙箱作业)任意一条就绪消息积压
+      # 超 50 且持续 5 分钟:对应消费者大概率停摆或严重跟不上,人工介入。
+      # 刻意不含 delay/cancel 队列:delay 队列消息按设计就是躺着等 TTL 的。
+      - alert: ReviewQueueBacklog
+        expr: rabbitmq_queue_messages_ready{queue=~"code.review.task.queue|agent.step.queue|sandbox.job.queue"} > 50
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "工作队列积压:{{ $labels.queue }}"
+          description: "队列 {{ $labels.queue }} 就绪消息 {{ $value }} 条,已持续 5 分钟超过 50 条阈值;检查对应消费者(backend 审查消费者 / Agent 步进消费者 / sandbox-runner)是否停摆。"
+
+      # 死信队列出现任何消息都代表有任务耗尽重试彻底失败,必须人工介入。
+      # 覆盖全部三条死信队列:code.review/agent 声明在 backend RabbitMqConfig,
+      # sandbox.dead.queue 声明在 sandbox-runner SandboxRabbitConfig。
+      # 用 messages(ready+unacked)而非 messages_ready:万一有排障用消费者
+      # 挂在死信队列上拉走消息未确认,ready 会归零漏报。
+      - alert: DeadLetterQueueNotEmpty
+        expr: rabbitmq_queue_messages{queue=~"code.review.dead.queue|agent.dead.queue|sandbox.dead.queue"} > 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "死信队列非空:{{ $labels.queue }}"
+          description: "死信队列 {{ $labels.queue }} 当前 {{ $value }} 条消息;死信语义与排查方式见 docs/04_MQ与异步任务设计.md。"
+
+  - name: reposage-ai
+    rules:
+      # 刻意不加 for:开态窗口只有 30 秒(application.yml 的
+      # wait-duration-in-open-state),持续故障时 open/half_open 反复翻转,
+      # for 计时会被不断重置 —— 加了持续时间条件反而永远触发不了。
+      - alert: AiCircuitBreakerOpen
+        expr: resilience4j_circuitbreaker_state{name="aiReview",state="open"} == 1
+        labels:
+          severity: critical
+        annotations:
+          summary: "AI 审查熔断器打开"
+          description: "aiReview 熔断器处于 open 状态,AI 调用正被快速失败;检查大模型服务可用性与 LLM_BASE_URL / 密钥配置,恢复后熔断器经 half_open 自动闭合。"
+
+  - name: reposage-infra
+    rules:
+      # 覆盖全部抓取目标(backend/otel-collector/rabbitmq);2 分钟(8 个抓取
+      # 周期)全部失败才报,滤掉容器重启的抖动。
+      - alert: InstanceDown
+        expr: up == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "抓取目标失联:{{ $labels.job }}"
+          description: "Prometheus 连续 2 分钟抓不到 {{ $labels.job }}({{ $labels.instance }}),目标进程可能已退出;docker compose ps 核实容器状态。"

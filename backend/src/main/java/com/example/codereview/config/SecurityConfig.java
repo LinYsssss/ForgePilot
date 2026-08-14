@@ -32,6 +32,7 @@ public class SecurityConfig {
             @Value("${app.ratelimit.limit:120}") int rateLimit,
             @Value("${app.ratelimit.window-seconds:60}") int rateLimitWindowSeconds,
             @Value("${app.ratelimit.login-limit:8}") int loginRateLimit,
+            @Value("${app.ratelimit.client-errors-limit:10}") int clientErrorsRateLimit,
             @Value("${app.security.trusted-proxies:}") String trustedProxies,
             @Value("${app.security.csrf.enabled:false}") boolean csrfEnabled
     ) throws Exception {
@@ -47,6 +48,12 @@ public class SecurityConfig {
                     // SCM webhooks are unauthenticated at the bearer-token layer; each delivery is
                     // instead gated by per-installation HMAC/token verification in the controller.
                     auth.requestMatchers("/api/webhooks/**").permitAll();
+                    // 前端错误上报匿名可达:JS 报错大多发生在登录前/会话失效后,加认证门槛恰好
+                    // 挡掉最需要的样本。滥用面由专用限流预算(client-errors-limit)+4KB 截断+不入库收口。
+                    auth.requestMatchers("/api/client-errors").permitAll();
+                    // 反馈导出是平台级语料工件(r8 回灌输入,含全部项目的反馈),按平台管理员
+                    // 整体把关,与 SCM onboarding 同模式;服务层不再重复判角色。
+                    auth.requestMatchers("/api/feedback/export").hasRole("ADMIN");
                     // SCM installation onboarding 持有 webhook 验签密钥与回写凭据,仅管理员可操作。
                     auth.requestMatchers("/api/scm/installations/**").hasRole("ADMIN");
                     if (h2ConsoleEnabled) {
@@ -57,13 +64,15 @@ public class SecurityConfig {
                 .addFilterBefore(tokenFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterAfter(
                         new RateLimitFilter(rateLimitEnabled, rateLimit, rateLimitWindowSeconds, loginRateLimit,
-                                objectMapper, new ClientIpResolver(trustedProxies)),
+                                clientErrorsRateLimit, objectMapper, new ClientIpResolver(trustedProxies)),
                         TokenAuthenticationFilter.class
                 );
         if (csrfEnabled) {
             // SPA 模式:令牌走非 HttpOnly Cookie 下发、请求头回传(见 SpaCsrfTokenRequestHandler)。
             // Webhook 免除:它来自 GitHub/GitLab,不可能带我们的 CSRF 令牌,其真实性由每个
             // installation 的 HMAC/令牌验签保证——免 CSRF 不等于免验签。
+            // 错误上报免除:前端用 sendBeacon 上报(页面卸载时也能发出),它无法携带自定义头,
+            // 而该端点匿名可达且不改任何服务端状态(只落日志),CSRF 在此没有可保护的对象。
             http.csrf(csrf -> csrf
                     .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
                     .csrfTokenRequestHandler(new SpaCsrfTokenRequestHandler())
@@ -74,7 +83,7 @@ public class SecurityConfig {
                     // 这里必须换成空策略,否则 SPA 的 CSRF 流程在真实浏览器里根本走不通。
                     .sessionAuthenticationStrategy(
                             new org.springframework.security.web.authentication.session.NullAuthenticatedSessionStrategy())
-                    .ignoringRequestMatchers("/api/webhooks/**"));
+                    .ignoringRequestMatchers("/api/webhooks/**", "/api/client-errors"));
         } else {
             // 关闭路径:部署侧经 SECURITY_CSRF_ENABLED=false 显式回退,或测试经
             // surefire 统一置 false(存量测试不带 token,见 backend/pom.xml)。
