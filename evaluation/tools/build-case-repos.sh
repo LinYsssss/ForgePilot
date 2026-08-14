@@ -160,6 +160,9 @@ BUILT=0
 FAILED=0
 SEEN_ONLY=0
 while IFS="$(printf '\t')" read -r id fixture layout; do
+  # Windows Python writes CRLF to Git Bash stdout; strip the trailing CR so
+  # base-head fixtures are not silently treated as legacy single-layout cases.
+  layout="${layout%$'\r'}"
   [ -n "$id" ] || continue
   wanted "$id" || continue
   SEEN_ONLY=$((SEEN_ONLY + 1))

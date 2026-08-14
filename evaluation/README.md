@@ -1,6 +1,6 @@
 # evaluation/ — PR Gatekeeper 评测语料与判分工具
 
-r7 起,评测集从 6 例扩到 32 例(dev 22 / holdout 10),并配套独立判分工具链(不改造后端评测框架)。
+r7 起,评测集从 6 例扩到 38 例(dev 26 / holdout 12),并配套独立判分工具链(不改造后端评测框架)。
 规格权威:`.trellis/tasks/08-03-r7-eval-corpus/design.md`(D1-D4)。
 
 ## 目录结构
@@ -125,7 +125,7 @@ python3 evaluation/tools/score.py --selftest   # 内置小矩阵自测,必须打
 1. **前置**:r6 归档完成;宿主机有 git/curl/python3。
 2. **构建用例仓库**:`bash evaluation/tools/build-case-repos.sh`,核对 manifest-shas.txt 条数 = 用例数。
 3. **起隔离栈**:`docker compose -p reposage-eval`(独立 project name + 独立卷 + 错开端口,同镜像);
-   环境要点:`GIT_ALLOW_LOCAL_PATH=true`、`AI_PROVIDER=openai-compatible`、MiMo 凭据经环境注入
+   环境要点:`GIT_ALLOW_LOCAL_PATH=true`、`AI_PROVIDER=openai-compatible`、目标模型凭据经环境注入
    (沿用 deploy/.env 变量名,不落盘不打印)、把 `$EVAL_WORK_DIR` 挂载到 backend 容器的
    `$EVAL_REPOS_MOUNT`(只读即可;注意挂载目录对容器用户可读,若 clone 报 dubious ownership,
    在栈内容器加 `git config --global --add safe.directory '*'`)。
@@ -136,6 +136,6 @@ python3 evaluation/tools/score.py --selftest   # 内置小矩阵自测,必须打
 4. **跑分**:设 `EVAL_BASE_URL`/`EVAL_USERNAME`/`EVAL_PASSWORD` 后执行 `run-baseline.sh`;
    失败例用 `--resume` 补跑至清零(或在档案里逐条声明)。
 5. **判分**:`score.py --runs baseline-runs/<date>`,得两率与逐例明细。
-6. **落档**:主会话把结果整理成 `.trellis/tasks/08-03-r7-eval-corpus/baseline-mimo-<date>.{json,md}`
+6. **落档**:主会话把结果整理成 `.trellis/tasks/08-03-r7-eval-corpus/baseline-<model>-<date>.{json,md}`
    (模型名/日期/temperature 实值/调用与 token 实数以 ai_call_log 佐证/QualityGate 不适用声明)。
 7. **收栈**:`docker compose -p reposage-eval down -v`,即弃无残留;演示栈全程零接触。

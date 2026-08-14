@@ -40,11 +40,13 @@ hit(f, e) := samePath(f.filePath, e.path)
 - 基线档案落 `.trellis/tasks/08-03-r7-eval-corpus/baseline-mimo-<date>.{json,md}`:模型名(mimo-v2.5-pro)/日期/两率(全量+分类别+分 split)/调用与 token 实数(ai_call_log 佐证)/temperature 实值/QualityGate 不适用声明。`evaluation/results/` 白名单不动。
 - manifest `fixedRun.model` 更新为 `mimo-v2.5-pro`(manifest 本就因加例必改;"原 6 例零改动"按 PRD 验证命令口径 = `cases/{原6例}` 目录零 diff)。
 
-## D5 用例构成(新增 36 例,总量 42 ≥30;老 6 例不计配额)
+## D5 用例构成（实际新增 32 例，总量 38 ≥30）
+
+> 实施结果：原计划新增 36 / 总量 42，首轮仅落地业务、工程、漏报与误报四批 26 例；收尾阶段再补 6 个安全正例。最终新增 32、总量 38，安全类计入原有 2 例后共 8 例，达到 PRD 下限但未达到设计阶段的目标值 10。
 
 | 类别 | 数 | 素材(全部独立副本改编,详见 research/expansion-readiness.md §2) |
 | --- | --- | --- |
-| 安全 | 10 | demo-repos 缺陷切片(M7/M8/T1/T3/T9 越权、M5/P10/T5 注入、T14/T15 XSS、T13 密钥)+ be59ed8 CSRF 反演 + OWASP 手工构造 |
+| 安全 | 新增 6（总计 8） | 独立脱敏构造：Java IDOR×2、SQL 注入×2、CSRF×1、路径穿越×1；连同原有 AUTH/PATH_TRAVERSAL 两例达到 PRD 下限 |
 | 业务规则 | 8 | payment P1/P3/P4/P6/P14/P15 + mall M1/M4/M10,各带裁剪版规则文档(knowledge/) |
 | 工程质量 | 8 | F-02 启动路径假设、F-03 双实现漂移、fence-stripper 旁路、@Transactional 自调用、资源泄漏/空指针变体 |
 | 漏报专项 | 6 | 大 diff(8k-18k 字符、3-8 文件,单片内完整)埋单一缺陷:payment patch 无害化+单点回植、r5 纯移动重构脱敏载体 |
