@@ -93,9 +93,9 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Scan dependency manifests (Maven + npm + Python)
-        # v0.29.0 及更早版本钉住的 setup-trivy 旧 tag 已被上游删除,永远无法解析;
-        # v0.33.1 起按 commit SHA 钉依赖,故取当前最新稳定版。
-        uses: aquasecurity/trivy-action@v0.36.0
+        # v0.36.0 tag 曾短暂指向已不可下载的提交(ed142...),会导致 Action 拉取失败;
+        # 这里直接钉到当前 v0.36.0 对应的可下载 commit SHA,避免 tag 漂移或失效。
+        uses: aquasecurity/trivy-action@a9c7b0f06e461e9d4b4d1711f154ee024b8d7ab8
         with:
           scan-type: fs
           scan-ref: .
