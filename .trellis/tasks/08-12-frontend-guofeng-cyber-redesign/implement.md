@@ -2,7 +2,7 @@
 
 > **当前状态：规划门已通过，待激活生产实施。** A「墨境书院」、交互原型与 UI design contract v1.0 已冻结；下一步完成隔离/Node 22 基线后进入生产 Vue 重写。
 
-0. [ ] **隔离与基线**：安全处理 R7 未提交工作；从最新 `main` 建立 `codex/frontend-guofeng-cyber-redesign` 独立分支/工作树；Node 22 下运行 `npm ci && npm test && npm run build`，记录旧 UI 截图、体积、console/network 与关键路径。
+0. [x] **隔离与基线**：安全处理 R7 未提交工作；从最新 `main` 建立 `codex/frontend-guofeng-cyber-redesign` 独立分支/工作树；Node 22 下运行 `npm ci && npm test && npm run build`，记录旧 UI 截图、体积、console/network 与关键路径。（实况 2026-08-13：R7 已全部落盘推送；**用户豁免独立分支**，直接在 `codex/frontend-ink-prototype` 开工；Node 24 开发/Node 22 留待步骤 9 正式验收（PRD 已声明约束）；`npm ci` + 测试 21/0 + 构建 9.7s 全绿，体积基线入 `research/impl-baseline.md`；旧 UI 截图与 console/network 因本机无可运行栈转入步骤 1 补采）
 1. [ ] **补齐 Stage 1 证据**：使用真实数据检查 Agent → finding → evidence/Diff → review action 路径；补长内容、权限、离线、错误恢复和 390/768/1440 当前态截图，更新 `research/ui-inventory.md`。
 2. [x] **Stage 2 视觉方向**：用户选择 A「墨境书院」，追加水墨动态要求；选择、拒绝项、架构授权和可逆边界已写入 `research/visual-directions.md` / `research/ui-decisions.md`。
 3. [x] **Stage 3 交互原型**：按 `research/prototype.md` 制作登录门禁 + 1440/768/390 Agent 工作台原型；演示太极水墨、低密度墨粒、normal/reduced/static、success/error/recovery；用户评审后记录证据。
