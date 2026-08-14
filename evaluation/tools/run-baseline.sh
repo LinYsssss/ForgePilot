@@ -325,6 +325,9 @@ OK_LIST=""
 FAIL_LIST=""
 SKIP_LIST=""
 while IFS="$(printf '\t')" read -r id split fixture; do
+  # Windows Python writes CRLF to Git Bash stdout; strip the trailing CR so
+  # the fixture path (last field) does not silently break knowledge/ lookup.
+  fixture="${fixture%$'\r'}"
   [ -n "$id" ] || continue
   wanted "$id" || continue
   if [ "$RESUME" = "1" ] && [ -f "$OUT_DIR/$id.json" ]; then
