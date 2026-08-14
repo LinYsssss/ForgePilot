@@ -108,6 +108,7 @@
   --ink-wash-panel-faint: rgb(255 253 247 / 0.55);
   --ink-wash-field: rgb(255 253 247 / 0.72);
   --ink-wash-scrim: rgb(31 33 29 / 0.22);        /* 抽屉遮罩(ink-strong;原型 .drawer-scrim 逐字值) */
+  --ink-wash-dialog: rgb(31 33 29 / 0.34);       /* 审批确认对话框遮罩(原型 .dialog-backdrop 逐字值;步骤 5 check 记录 §4-8 预留) */
   --ink-wash-overlay: rgb(247 242 231 / 0.9);     /* 反馈层 */
   --ink-wash-login-panel: rgb(255 253 250 / 0.9);
   --ink-wash-login-side: rgb(251 248 240 / 0.58);
@@ -140,5 +141,6 @@
     --ink-wash-login-side: #F7F2E7;
     --ink-wash-login-panel: #FFFDFA;
     --ink-wash-overlay: rgb(247 242 231 / 0.97);
+    --ink-wash-dialog: rgb(247 242 231 / 0.97);
   }
 }

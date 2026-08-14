@@ -76,13 +76,23 @@ test('ink tokens carry the frozen v1.0 contract values verbatim', async () => {
   assert.ok(css.includes('--ink-radius-layer: 6px;'))
   // 阴影只表达层级,上限为合同值
   assert.ok(css.includes('--ink-shadow-layer: 0 12px 36px rgb(46 39 28 / 0.14);'))
+  // 步骤 6 追加的对话框遮罩洗色:已批准原型 .dialog-backdrop 逐字值
+  // (步骤 5 check 记录 §4-8 预留),非新颜色
+  assert.ok(css.includes('--ink-wash-dialog: rgb(31 33 29 / 0.34);'))
 })
 
 test('ink components take colors from tokens only (no hardcoded hex)', async () => {
   const files = [
     '../src/features/shell/InkShell.vue',
     '../src/features/shell/CaseIndex.vue',
+    '../src/features/shell/InkDialog.vue',
     '../src/features/auth/LoginGate.vue',
+    '../src/features/workspace/PaperWorkspace.vue',
+    '../src/features/workspace/FindingLedger.vue',
+    '../src/features/workspace/EvidenceDiff.vue',
+    '../src/features/workspace/ReviewActionBar.vue',
+    '../src/features/workspace/AnnotationRail.vue',
+    '../src/features/workspace/RunCaseList.vue',
     '../src/pages/InkAtelierPage.vue',
     '../src/shared/ui/SealBadge.vue',
     '../src/shared/ui/BrushProgress.vue',
@@ -342,7 +352,19 @@ test('exactly one pointer observer writes the ink pointer vars; only ambient con
     assert.doesNotMatch(source, /margin(-[a-z]+)?\s*:/, `${file} 的环境动效不得动布局属性(margin)`)
   }
   // 信息层不得消费指针变量(装饰与信息隔离)
-  for (const file of ['../src/features/shell/InkShell.vue', '../src/features/shell/CaseIndex.vue', '../src/pages/InkAtelierPage.vue', '../src/features/auth/LoginGate.vue']) {
+  for (const file of [
+    '../src/features/shell/InkShell.vue',
+    '../src/features/shell/CaseIndex.vue',
+    '../src/features/shell/InkDialog.vue',
+    '../src/features/workspace/PaperWorkspace.vue',
+    '../src/features/workspace/FindingLedger.vue',
+    '../src/features/workspace/EvidenceDiff.vue',
+    '../src/features/workspace/ReviewActionBar.vue',
+    '../src/features/workspace/AnnotationRail.vue',
+    '../src/features/workspace/RunCaseList.vue',
+    '../src/pages/InkAtelierPage.vue',
+    '../src/features/auth/LoginGate.vue',
+  ]) {
     const source = await readFile(new URL(file, import.meta.url), 'utf8')
     assert.doesNotMatch(source, /--ink-pointer/, `${file} 不得读写指针变量`)
   }

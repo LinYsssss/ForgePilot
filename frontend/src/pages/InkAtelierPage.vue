@@ -3,132 +3,138 @@
 
   <InkShell
     v-else
+    ref="shellEl"
     :nav-items="navItems"
     active-key="atelier"
     context-label="当前项目"
     :context-title="activeProject ? activeProject.name : '未选择项目'"
+    :rail-badge="railBadge"
+    rail-title="审查批注"
     :user="{ name: me.nickname || me.username, role: me.role }"
     @navigate="onNavigate"
     @logout="logout()"
   >
     <template #case>
-      <section class="case-card" aria-labelledby="ink-case-card-title">
-        <div class="case-card-label"><span id="ink-case-card-title">当前案卷</span><b>骨架</b></div>
-        <h2>墨境书院 · 生产骨架</h2>
-        <dl>
-          <div><dt>阶段</dt><dd>步骤 5 / 隔离入口</dd></div>
-          <div><dt>合同</dt><dd>ui-design v1.0</dd></div>
-        </dl>
-      </section>
+      <RunCaseList
+        :runs="filteredAgentRuns"
+        :counts="agentRunCounts"
+        :total="agentRuns.length"
+        :filter="agentRunFilter"
+        :selected-id="agentRunId"
+        :loading="!!busy.agentRuns"
+        @select="onSelectRun"
+        @filter="onRunFilter"
+      />
     </template>
     <template #index-foot>
       <span>书院守门规则</span>
-      <strong>UI 合同 v1.0 · 已冻结</strong>
+      <strong>仅持久化证据可用于阻断</strong>
     </template>
 
-    <section class="ink-panel workspace-head ink-reveal">
-      <div>
-        <span class="ink-eyebrow">生产骨架 · 隔离入口</span>
-        <h1>墨境书院审查台</h1>
-        <p>
-          新壳层、令牌、动效与门禁已按冻结合同就位。Agent 审查与 Reviews
-          证据主路径将在下一切片迁入本纸面;当前旧页面仍由左侧案卷索引直达。
-        </p>
-      </div>
-      <div class="head-actions">
-        <button class="ink-outline-button" :disabled="busy.refresh" @click="run(refreshAll, 'refresh')">
-          {{ busy.refresh ? '正在刷新…' : '刷新会话数据' }}
-        </button>
-        <button class="ink-primary-button" @click="playStamp">演示落印反馈</button>
-      </div>
-    </section>
+    <PaperWorkspace
+      ref="paperEl"
+      :project-id="activeProject ? activeProject.projectId : null"
+      :run-id="agentRunId"
+      :head-sha="agentHeadSha"
+      :run-detail="agentRunDetail"
+      :timeline="agentTimeline"
+      :findings="agentFindings"
+      :patch="agentPatch"
+      :polling="agentPolling"
+      :loading-workspace="!!busy.agent"
+      :loading-runs="!!busy.agentRuns"
+      :control-busy="!!busy.agentControl"
+      :has-project="!!activeProject"
+      :runs-count="agentRuns.length"
+      :load-state="loadState"
+      :selected-finding-id="selectedFindingId"
+      @refresh="loadCase"
+      @retry="loadCase"
+      @select-finding="onSelectFinding"
+      @locate="onLocateAnchor"
+      @cancel-run="askCancelAgentRun"
+      @retry-run="askRetryAgentRun"
+      @decided="onDecided"
+      @approval-error="onPatchError"
+      @go="onNavigate"
+    />
 
-    <section class="ink-panel ink-reveal" aria-labelledby="ink-seal-demo-title">
-      <div class="section-heading">
-        <div>
-          <span class="ink-eyebrow">印记原语</span>
-          <h2 id="ink-seal-demo-title">SealBadge 状态样例</h2>
-        </div>
-        <span class="section-note">双编码:印记形状 + 印记字 + 文本;朱砂仅属 Critical</span>
-      </div>
-      <div class="seal-row">
-        <SealBadge tone="critical" label="Critical 示例" :stamp="stampTick" />
-        <SealBadge tone="high" label="High 示例" />
-        <SealBadge tone="medium" label="Medium 示例" />
-        <SealBadge tone="low" label="Low 示例" />
-        <SealBadge tone="running" label="运行中示例" />
-        <SealBadge tone="success" label="已通过示例" />
-      </div>
-    </section>
+    <!-- 取消/重试等确认(useConfirm 单例的墨境呈现;语义与旧 AppShell 一致:
+         失败保留模态可重试,错误经 run() 落 toast) -->
+    <InkDialog
+      v-if="confirmModal"
+      glyph="印"
+      :title="confirmModal.title"
+      :body="confirmModal.body"
+      :confirm-label="confirmModal.confirmLabel || '确认'"
+      cancel-label="返回"
+      :busy="!!busy.confirm"
+      @cancel="dismiss"
+      @confirm="run(confirmAction)"
+    />
 
-    <section class="ink-panel ink-reveal" aria-labelledby="ink-brush-demo-title">
-      <div class="section-heading">
-        <div>
-          <span class="ink-eyebrow">笔触原语</span>
-          <h2 id="ink-brush-demo-title">BrushProgress 六步样例</h2>
-        </div>
-        <span class="section-note">{{ demoCurrent }} / {{ demoSteps.length }} 已推进 · 描线仅在阶段变化时过渡一次</span>
-      </div>
-      <BrushProgress :steps="demoSteps" :current="demoCurrent" />
-      <div class="demo-actions">
-        <button class="ink-outline-button" :disabled="demoCurrent <= 0" @click="demoCurrent -= 1">回退一步</button>
-        <button class="ink-outline-button" :disabled="demoCurrent >= demoSteps.length" @click="demoCurrent += 1">推进一步</button>
-      </div>
-    </section>
-
-    <section class="ink-panel ink-reveal" aria-labelledby="ink-skeleton-note-title">
-      <div class="section-heading">
-        <div>
-          <span class="ink-eyebrow">迁移路线</span>
-          <h2 id="ink-skeleton-note-title">此入口的边界</h2>
-        </div>
-      </div>
-      <ul class="note-list">
-        <li>本页是隔离骨架入口:令牌、三层渲染面、抽屉与动效降级在此验证,不承载业务结论。</li>
-        <li>全部既有页面(总览/项目/仓库/PR/审查/Agent/知识库/AI 日志)保持旧壳层可达可用。</li>
-        <li>下一切片将把 Agent → Finding → 证据/Diff → 审批主路径迁入本纸面,并接入真实数据。</li>
-      </ul>
-    </section>
+    <!-- 一次性落印反馈(合同 §7 Seal confirmation;静态/降级即时呈现) -->
+    <div v-if="sealVisible" class="ink-result-layer" aria-live="assertive">
+      <div class="ink-result-seal" :class="{ 'is-static': motionMode !== 'normal' }" aria-hidden="true">准</div>
+      <strong>已批准</strong>
+      <span>审批决定已写入案卷</span>
+    </div>
 
     <template #rail>
-      <ol class="rail-notes">
-        <li class="is-critical">
-          <time>骨架</time>
-          <strong>朱批栏行为已冻结</strong>
-          <p>桌面为常驻列可折叠;平板/手机转抽屉,关闭态移出键盘序,打开态焦点入栏。</p>
-        </li>
-        <li>
-          <time>骨架</time>
-          <strong>批注内容待接入</strong>
-          <p>Agent 批注、来源与定位锚点在下一切片随真实数据迁入。</p>
-        </li>
-      </ol>
-      <blockquote class="rail-quote">"所有阻断结论，必须能回到持久化证据。"<cite>— RepoSage 守门规范</cite></blockquote>
+      <AnnotationRail :notes="railNotesList" :facts="caseFacts" @locate="onLocateNote" />
     </template>
   </InkShell>
 </template>
 
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import LoginGate from '../features/auth/LoginGate.vue'
 import InkShell from '../features/shell/InkShell.vue'
-import SealBadge from '../shared/ui/SealBadge.vue'
-import BrushProgress from '../shared/ui/BrushProgress.vue'
-import { useSession } from '../composables/useSession.js'
+import InkDialog from '../features/shell/InkDialog.vue'
+import AnnotationRail from '../features/workspace/AnnotationRail.vue'
+import PaperWorkspace from '../features/workspace/PaperWorkspace.vue'
+import RunCaseList from '../features/workspace/RunCaseList.vue'
+import { nav } from '../nav.js'
+import { fmtTime, shortCommit } from '../utils/format.js'
+import { useAgentWorkspace } from '../composables/useAgentWorkspace.js'
 import { useBusy } from '../composables/useBusy.js'
+import { useConfirm } from '../composables/useConfirm.js'
+import { useSession } from '../composables/useSession.js'
 import { useToast } from '../composables/useToast.js'
 import { useWorkspace } from '../composables/useWorkspace.js'
+import { useMotionPolicy } from '../shared/motion/useMotionPolicy.js'
+import {
+  classifyLoadError,
+  completedStepCount,
+  defaultSelectedId,
+  findingCounts,
+  railNotes,
+} from '../features/workspace/workspaceModel.js'
 
-// 墨境隔离入口(implement.md 步骤 5 / design.md §8.1):
-// 门禁分流沿用 App.vue 的登录态语义 —— 未认证渲染 LoginGate,认证后
-// 渲染新壳层;认证、401 漏斗、CSRF 引导均复用既有单例,不建第二套。
-// 页面只做路由编排:业务导航映射与 App.vue onNavigate 一致,
-// 保证从墨境入口出发,旧页面的装载行为不变。
+// 墨境书院 · Agent 审查纵向切片(implement.md 步骤 6):
+// 页面只做路由编排与单例接线 —— 门禁沿用登录态分流;Agent 数据
+// (Run 列表 / Timeline / Finding / Patch / SSE+轮询 / 取消重试 / 证据
+// 定位)全部来自 useAgentWorkspace 既有函数,不建第二套数据通道。
+// 呈现由 features/workspace 的展示组件承担,纯派生逻辑在 workspaceModel。
 const { authenticated, me, activeProject } = useSession()
 const { busy, run } = useBusy()
 const { toastMsg } = useToast()
+const { confirmModal, dismiss, confirmAction } = useConfirm()
+const { motionMode } = useMotionPolicy()
 const { goto, goTab, loadMe, refreshAll, logout, openAgentWorkspace, openProjectAiLogs } = useWorkspace()
+const {
+  agentRuns, agentRunId, agentRunFilter, agentHeadSha,
+  agentTimeline, agentFindings, agentPatch, agentRunDetail, agentPolling,
+  filteredAgentRuns, agentRunCounts,
+  loadAgentRuns, loadAgentWorkspace, selectAgentRun,
+  onPatchDecided, onPatchError, askCancelAgentRun, askRetryAgentRun,
+  focusEvidenceAnchor,
+} = useAgentWorkspace()
 
+const shellEl = ref(null)
+const paperEl = ref(null)
+
+/* ---------- 导航(与 App.vue onNavigate 同映射;旧页面由旧壳层接管) ---------- */
 const navItems = computed(() => [
   { key: 'atelier', glyph: '墨', label: '墨境工作台' },
   { key: 'dashboard', glyph: '概', label: '总览' },
@@ -136,7 +142,7 @@ const navItems = computed(() => [
   { key: 'repository', glyph: '仓', label: '仓库', disabled: !activeProject.value },
   { key: 'pullRequests', glyph: '合', label: 'PR 工作流', disabled: !activeProject.value },
   { key: 'reviews', glyph: '审', label: '审查记录', disabled: !activeProject.value },
-  { key: 'agent', glyph: '巡', label: 'Agent 审批', disabled: !activeProject.value },
+  { key: 'agent', glyph: '巡', label: 'Agent 审批(旧版)', disabled: !activeProject.value },
   { key: 'knowledge', glyph: '知', label: '知识库', disabled: !activeProject.value },
   { key: 'aiLogs', glyph: '录', label: 'AI 日志', disabled: !activeProject.value },
 ])
@@ -149,7 +155,8 @@ function onNavigate(name) {
   goTab(name)
 }
 
-// 登录成功:与 afterLogin 同源动作(loadMe + refreshAll),但停留在墨境入口
+// 登录成功:与 afterLogin 同源动作(loadMe + refreshAll),但停留在墨境;
+// refreshAll 会装载项目并选中默认项目,下方 watch 随之装载案卷。
 async function onAuthenticated() {
   await run(async () => {
     await loadMe()
@@ -158,143 +165,154 @@ async function onAuthenticated() {
   }, 'refresh')
 }
 
-/* ---------- 原语演示(仅示例态,不接业务数据) ---------- */
-const demoSteps = [
-  { key: 'intake', label: '接卷', glyph: '接', meta: '示例' },
-  { key: 'index', label: '索引', glyph: '索', meta: '示例' },
-  { key: 'static', label: '静态分析', glyph: '析', meta: '示例' },
-  { key: 'security', label: '安全分析', glyph: '安', meta: '示例' },
-  { key: 'review', label: '复核', glyph: '核', meta: '示例' },
-  { key: 'report', label: '报告', glyph: '报', meta: '示例' },
-]
-const demoCurrent = ref(3)
+/* ---------- 案卷装载(错误按 ApiError 结构化字段分类,401 归全局漏斗) ---------- */
+const loadState = ref(null)
 
-const stampTick = ref(false)
-function playStamp() {
-  stampTick.value = false
-  requestAnimationFrame(() => {
-    stampTick.value = true
-  })
+async function loadCase() {
+  if (!authenticated.value || !activeProject.value) return
+  loadState.value = null
+  try {
+    await loadAgentRuns()
+    if (agentRunId.value) await loadAgentWorkspace()
+  } catch (error) {
+    loadState.value = classifyLoadError(error)
+  }
 }
+
+watch([authenticated, activeProject], ([auth, project]) => {
+  if (auth && project) loadCase()
+}, { immediate: true })
+
+async function onSelectRun(id) {
+  if (agentRunId.value === id) {
+    shellEl.value?.closeDrawer(false)
+    return
+  }
+  agentRunId.value = id
+  loadState.value = null
+  shellEl.value?.closeDrawer(false)
+  try {
+    await selectAgentRun()
+  } catch (error) {
+    loadState.value = classifyLoadError(error)
+  }
+}
+
+function onRunFilter(key) {
+  agentRunFilter.value = key
+}
+
+/* ---------- Finding 选择与证据定位 ---------- */
+const selectedFindingId = ref(null)
+
+watch(agentFindings, (list) => {
+  selectedFindingId.value = defaultSelectedId(list, selectedFindingId.value)
+}, { immediate: true })
+
+function onSelectFinding(id) {
+  selectedFindingId.value = id
+}
+
+// 证据锚点:写入路由 query(evidence=path:line,与旧外链语义同构),
+// 定位本体复用 useAgentWorkspace.focusEvidenceAnchor;同锚点重复点击
+// 时 query 不变、watch 不触发,故补一次直调。
+async function onLocateAnchor(anchor) {
+  if (!anchor) return
+  nav.push({ name: 'inkAtelier', query: { evidence: anchor } })
+  await nextTick()
+  focusEvidenceAnchor()
+}
+
+async function onLocateNote(note) {
+  if (note.findingId) selectedFindingId.value = note.findingId
+  shellEl.value?.closeDrawer(false)
+  await nextTick()
+  if (note.anchor) await onLocateAnchor(note.anchor)
+  paperEl.value?.focusEvidence()
+}
+
+/* ---------- 审批结果:toast+重载复用 onPatchDecided,批准追加一次落印 ---------- */
+const sealVisible = ref(false)
+let sealTimer = null
+
+function onDecided({ decision }) {
+  onPatchDecided().catch(() => {})
+  if (decision === 'APPROVED') {
+    clearTimeout(sealTimer)
+    sealVisible.value = true
+    sealTimer = setTimeout(() => {
+      sealVisible.value = false
+    }, motionMode.value === 'normal' ? 1200 : 500)
+  }
+}
+
+onBeforeUnmount(() => {
+  clearTimeout(sealTimer)
+})
+
+/* ---------- 朱批栏派生数据 ---------- */
+const railNotesList = computed(() =>
+  railNotes({ findings: agentFindings.value, steps: agentTimeline.value, run: agentRunDetail.value }))
+
+const railBadge = computed(() => {
+  const critical = findingCounts(agentFindings.value).bySeverity.CRITICAL
+  return critical ? String(critical) : ''
+})
+
+const caseFacts = computed(() => {
+  const run = agentRunDetail.value
+  if (!run) return []
+  const facts = [
+    { dt: 'Run', dd: `#${run.id}` },
+    { dt: 'Head', dd: shortCommit(run.headSha) },
+    { dt: '步骤', dd: `${completedStepCount(agentTimeline.value)}/${agentTimeline.value.length}` },
+    { dt: '建立', dd: fmtTime(run.createdAt) },
+  ]
+  if (run.pullRequestId) facts.splice(2, 0, { dt: 'PR', dd: `#${run.pullRequestId}` })
+  return facts
+})
 </script>
 
 <style scoped>
-.ink-panel {
+/* 一次性落印反馈层(已批准原型 result-layer;背景走 --ink-wash-overlay,
+   不支持 backdrop-filter 时 token 自动回退近实色) */
+.ink-result-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  color: var(--cinnabar);
+  background: var(--ink-wash-overlay);
+  backdrop-filter: blur(6px);
+}
+.ink-result-seal {
+  display: grid;
+  place-items: center;
+  width: 108px;
+  height: 108px;
+  border: 5px double currentColor;
+  font-family: var(--ink-font-display);
+  font-size: 50px;
+  font-weight: 700;
+  transform: rotate(-7deg);
+  animation: ink-seal-land var(--ink-t-reveal) var(--ink-ease-out) both;
+}
+.ink-result-seal.is-static { animation: none; }
+@keyframes ink-seal-land {
+  from { opacity: 0; transform: scale(1.5) rotate(-12deg); filter: blur(5px); }
+  70% { opacity: 1; transform: scale(0.94) rotate(-7deg); filter: blur(0); }
+}
+.ink-result-layer strong {
   margin-top: var(--ink-sp-16);
-  padding: var(--ink-sp-24);
-  background: var(--ink-wash-panel);
-  border: 1px solid var(--line-soft);
-  border-radius: var(--ink-radius-paper);
-  box-shadow: var(--ink-shadow-panel);
-}
-
-.workspace-head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--ink-sp-24);
-  margin-top: 0;
-}
-.workspace-head h1 {
-  margin: 6px 0;
+  color: var(--ink-strong);
   font-family: var(--ink-font-display);
-  font-size: clamp(24px, 2.2vw, var(--ink-fs-28));
-  letter-spacing: 0.03em;
+  font-size: 24px;
 }
-.workspace-head p { max-width: 60ch; margin: 0; color: var(--ink-muted); font-size: var(--ink-fs-13); line-height: 1.7; }
-.head-actions { display: flex; flex-wrap: wrap; gap: var(--ink-sp-8); }
-
-.section-heading {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: var(--ink-sp-16);
-  margin-bottom: var(--ink-sp-16);
-}
-.section-heading h2 { margin: 5px 0 0; font-family: var(--ink-font-display); font-size: var(--ink-fs-16); letter-spacing: 0.02em; }
-.section-note { color: var(--ink-muted); font-size: var(--ink-fs-12); }
-
-.seal-row { display: flex; flex-wrap: wrap; gap: var(--ink-sp-16) var(--ink-sp-24); }
-
-.demo-actions { display: flex; gap: var(--ink-sp-8); margin-top: var(--ink-sp-16); }
-
-.note-list { margin: 0; padding-left: 1.2em; display: grid; gap: var(--ink-sp-8); color: var(--ink-default); font-size: var(--ink-fs-13); line-height: 1.7; }
-
-/* ---- 案卷卡(CaseIndex slot) ---- */
-.case-card {
-  padding: var(--ink-sp-16);
-  background: var(--ink-wash-panel-faint);
-  border: 1px solid var(--line-soft);
-  border-left: 3px solid var(--cinnabar);
-}
-.case-card-label { display: flex; align-items: center; justify-content: space-between; gap: var(--ink-sp-12); color: var(--ink-muted); font-size: var(--ink-fs-12); }
-.case-card-label b { color: var(--mineral-cyan); font-size: var(--ink-fs-12); }
-.case-card h2 { margin: var(--ink-sp-8) 0 var(--ink-sp-12); font-family: var(--ink-font-display); font-size: var(--ink-fs-15); }
-.case-card dl { margin: 0; }
-.case-card dl div {
-  display: flex;
-  justify-content: space-between;
-  gap: var(--ink-sp-12);
-  padding: 5px 0;
-  border-top: 1px solid var(--line-soft);
-  font-size: var(--ink-fs-12);
-}
-.case-card dt { color: var(--ink-muted); }
-.case-card dd { margin: 0; color: var(--ink-strong); }
-
-/* ---- 朱批栏占位(rail slot) ---- */
-.rail-notes { position: relative; margin: 0; padding: 0 0 0 19px; list-style: none; }
-.rail-notes::before {
-  content: "";
-  position: absolute;
-  top: 8px;
-  bottom: 10px;
-  left: 4px;
-  width: 1px;
-  background: var(--line-strong);
-}
-.rail-notes li {
-  position: relative;
-  margin-bottom: var(--ink-sp-16);
-  padding: var(--ink-sp-12);
-  background: var(--ink-wash-panel-faint);
-  border: 1px solid var(--line-soft);
-}
-.rail-notes li::before {
-  content: "";
-  position: absolute;
-  top: 15px;
-  left: -19px;
-  width: 8px;
-  height: 8px;
-  background: var(--line-strong);
-  border: 3px solid var(--surface-muted);
-  border-radius: 50%;
-}
-.rail-notes li.is-critical { border-left: 2px solid var(--cinnabar); }
-.rail-notes li.is-critical::before { background: var(--cinnabar); }
-.rail-notes time { display: block; color: var(--ink-muted); font-size: var(--ink-fs-12); }
-.rail-notes strong { display: block; margin-top: 5px; color: var(--ink-strong); font-size: var(--ink-fs-13); }
-.rail-notes p { margin: 5px 0 0; color: var(--ink-default); font-size: var(--ink-fs-12); line-height: 1.55; }
-
-.rail-quote {
-  margin: var(--ink-sp-24) 2px 0;
-  padding: var(--ink-sp-12) 0 var(--ink-sp-12) var(--ink-sp-16);
+.ink-result-layer span {
+  margin-top: 6px;
   color: var(--ink-muted);
-  border-left: 2px solid var(--cinnabar);
-  font-family: var(--ink-font-display);
-  font-size: var(--ink-fs-13);
-  line-height: 1.7;
-}
-.rail-quote cite { display: block; margin-top: 5px; font-family: var(--ink-font-body); font-size: var(--ink-fs-12); font-style: normal; }
-
-@media (max-width: 880px) {
-  .workspace-head { display: grid; }
-  .head-actions { width: 100%; }
-}
-@media (max-width: 560px) {
-  .ink-panel { padding: var(--ink-sp-16) var(--ink-sp-12); }
-  .section-heading { display: grid; align-items: start; }
-  .head-actions { display: grid; grid-template-columns: 1fr 1fr; }
+  font-size: var(--ink-fs-12);
 }
 </style>

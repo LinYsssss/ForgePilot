@@ -174,6 +174,15 @@ body.ink-drawer-open { overflow: hidden; }
 }
 .ink-toast.error { border-left-color: var(--cinnabar); }
 .ink-toast.success { border-left-color: var(--success-ink); }
+/* ≤560:审批操作区吸底(合同 §11 冻结:Toast 必须避开 sticky approval
+   safe area;82px 为已批准原型 .toast 的逐字偏移值) */
+@media (max-width: 560px) {
+  .ink-toast {
+    bottom: calc(82px + env(safe-area-inset-bottom, 0px));
+    max-width: calc(100vw - var(--ink-sp-24));
+    text-align: center;
+  }
+}
 
 /* 一次性入场(路由/面板;只在挂载时播放一次,不循环) */
 .ink-reveal { animation: ink-reveal var(--ink-t-reveal) var(--ink-ease-out) both; }

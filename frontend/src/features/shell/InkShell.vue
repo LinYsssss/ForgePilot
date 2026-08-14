@@ -40,6 +40,7 @@
           @click="onRailToggle"
         >
           <span class="rail-toggle-glyph" aria-hidden="true">批</span>
+          <i v-if="railBadge" class="rail-toggle-badge" aria-hidden="true">{{ railBadge }}</i>
         </button>
         <div v-if="user && user.name" class="ink-user">
           <span class="user-avatar" aria-hidden="true">{{ userInitial }}</span>
@@ -120,6 +121,7 @@ const props = defineProps({
   contextLabel: { type: String, default: '当前案卷' },
   contextTitle: { type: String, default: '' },
   railTitle: { type: String, default: '审查批注' },
+  railBadge: { type: String, default: '' }, // 朱批入口角标(如 Critical 数;空则不渲染)
   user: { type: Object, default: () => ({}) },
 })
 const emit = defineEmits(['navigate', 'logout'])
@@ -247,6 +249,10 @@ onBeforeUnmount(() => {
   unbindMotion?.()
   unbindPointer?.()
 })
+
+// 页面级动作(如朱批「定位证据」)完成后需要收起抽屉(与已批准原型
+// closeRail(false) 同义);只暴露既有 closeDrawer,不新增状态入口。
+defineExpose({ closeDrawer })
 </script>
 
 <style scoped>
@@ -328,6 +334,22 @@ onBeforeUnmount(() => {
   padding-right: var(--ink-sp-16);
 }
 .rail-toggle-glyph { font-family: var(--ink-font-display); font-size: var(--ink-fs-14); }
+.rail-toggle-badge {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 4px;
+  display: grid;
+  place-items: center;
+  color: var(--ink-on-accent);
+  background: var(--cinnabar);
+  border-radius: 9px;
+  font-size: 11px;
+  font-style: normal;
+  line-height: 1;
+}
 
 .ink-user { display: flex; align-items: center; gap: var(--ink-sp-8); }
 .user-avatar {

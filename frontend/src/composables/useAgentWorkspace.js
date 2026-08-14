@@ -9,7 +9,8 @@ import { useToast } from './useToast.js'
 
 // Agent 工作台(单例):Run 列表/筛选、Timeline/Finding/Patch 装载、
 // SSE 实时推送 + 轮询兜底(15s 退避)、取消/重试,以及证据锚点定位。
-// 单例位于组件外,页面活跃判断以当前路由是否为 'agent' 为准。
+// 单例位于组件外,页面活跃判断以当前路由是否属 AGENT_WORKSPACE_PAGES
+// (旧 /agent 与墨境 /ink)为准。
 const { activeProject } = useSession()
 const { busy } = useBusy()
 const { ask } = useConfirm()
@@ -48,7 +49,10 @@ const agentRunCounts = computed(() => ({
   done: agentRuns.value.filter(item => ['SUCCEEDED', 'COMPLETED', 'CANCELED'].includes(item.status)).length,
 }))
 
-function onAgentPage() { return nav.name() === 'agent' }
+// 承载本工作台的页面:旧 /agent 视图与墨境 /ink 纸面共用同一单例,
+// SSE/轮询触发的刷新在这两个路由上都要生效(语义不变:仅"页面活跃"判定)。
+const AGENT_WORKSPACE_PAGES = ['agent', 'inkAtelier']
+function onAgentPage() { return AGENT_WORKSPACE_PAGES.includes(nav.name()) }
 
 // 证据定位:外链 /agent?evidence=path:line 进入时,内容可能尚未渲染,
 // 装载完成处会补调一次;query 变化(点击 citation)时也触发。
