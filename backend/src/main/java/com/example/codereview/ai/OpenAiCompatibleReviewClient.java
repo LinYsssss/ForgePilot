@@ -74,11 +74,13 @@ public class OpenAiCompatibleReviewClient implements AiReviewClient {
     @Retry(name = "aiReview")
     @CircuitBreaker(name = "aiReview")
     public AiReviewResult review(String diffText, String ragContext) {
-        // r8-R1 分层模板：系统/项目/任务层出自 PromptTemplateRegistry，组装与旧内联文本字节等价
-        // （golden 测试钉死）。模板版本先落日志留痕；ai_call_log 列扩展留待内容性变更时一并评估。
+        // r8-R1 分层模板：系统/项目/任务层出自 PromptTemplateRegistry，r8-R2 任务层 bump v2 并按
+        // 分片文件类型注入清单（generic 回落与旧内联文本字节等价，golden 测试钉死）。模板与清单
+        // 版本先落日志留痕；ai_call_log 列扩展留待后续内容性变更时一并评估。
         AgentPromptAssembler.ChatReviewPrompt prompt = prompts.assembleChatReview(diffText, ragContext);
-        log.info("chat review prompt assembled: system={}, project={}, task={}",
-                prompt.systemTemplateVersion(), prompt.projectTemplateVersion(), prompt.taskTemplateVersion());
+        log.info("chat review prompt assembled: system={}, project={}, task={}, checklists={}",
+                prompt.systemTemplateVersion(), prompt.projectTemplateVersion(),
+                prompt.taskTemplateVersion(), prompt.checklistTemplateVersions());
         Map<String, Object> request = Map.of(
                 "model", model,
                 "temperature", temperature,

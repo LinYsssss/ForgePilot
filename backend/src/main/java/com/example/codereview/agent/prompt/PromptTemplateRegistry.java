@@ -40,7 +40,12 @@ public final class PromptTemplateRegistry {
             Map.entry("chat-review-system-v1", "prompts/chat/review-system-v1.txt"),
             Map.entry("chat-review-project-v1", "prompts/chat/review-project-v1.txt"),
             Map.entry("chat-review-project-empty-v1", "prompts/chat/review-project-empty-v1.txt"),
-            Map.entry("chat-review-task-v1", "prompts/chat/review-task-v1.txt")
+            Map.entry("chat-review-task-v1", "prompts/chat/review-task-v1.txt"),
+            // r8-R2 类型化清单：任务层 bump v2（清单槽），v1 是行为资产原样保留（防不可比）。
+            Map.entry("chat-review-task-v2", "prompts/chat/review-task-v2.txt"),
+            Map.entry("checklist-java-v1", "prompts/chat/checklist-java-v1.txt"),
+            Map.entry("checklist-ts-v1", "prompts/chat/checklist-ts-v1.txt"),
+            Map.entry("checklist-generic-v1", "prompts/chat/checklist-generic-v1.txt")
     );
 
     public String require(String version) {

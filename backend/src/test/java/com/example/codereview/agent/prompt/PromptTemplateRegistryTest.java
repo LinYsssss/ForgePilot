@@ -25,11 +25,15 @@ class PromptTemplateRegistryTest {
             "chat-review-project-empty-v1"
     );
 
-    /** layer() 口径(逐字节)的模板:chat 三层。 */
+    /** layer() 口径(逐字节)的模板:chat 三层(任务层 v1/v2 双版本在册)+ r8-R2 清单槽模板。 */
     private static final List<String> LAYER_TEMPLATES = List.of(
             "chat-review-system-v1",
             "chat-review-project-v1",
-            "chat-review-task-v1"
+            "chat-review-task-v1",
+            "chat-review-task-v2",
+            "checklist-java-v1",
+            "checklist-ts-v1",
+            "checklist-generic-v1"
     );
 
     private final PromptTemplateRegistry registry = new PromptTemplateRegistry();
@@ -62,10 +66,14 @@ class PromptTemplateRegistryTest {
 
     @Test
     void layerLoadingPreservesStructuralTrailingNewlines() {
-        // 三个 chat 层的末尾换行是最终 prompt 的结构字节(字节等价硬验收),strip 类归一化禁止。
+        // chat 层与清单槽模板的末尾换行是最终 prompt 的结构字节(字节等价/拼接约定),strip 类归一化禁止。
         assertThat(registry.layer("chat-review-system-v1")).endsWith("。\n");
         assertThat(registry.layer("chat-review-project-v1")).endsWith("%s\n");
         assertThat(registry.layer("chat-review-task-v1")).endsWith("%s\n");
+        assertThat(registry.layer("chat-review-task-v2")).endsWith("%s\n");
+        assertThat(registry.layer("checklist-java-v1")).endsWith("线索\n");
+        assertThat(registry.layer("checklist-ts-v1")).endsWith("链式访问\n");
+        assertThat(registry.layer("checklist-generic-v1")).endsWith("业务规则破坏\n");
     }
 
     @Test

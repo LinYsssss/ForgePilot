@@ -1,0 +1,36 @@
+# template: chat-review-task-v2（chat 审查·任务层：任务指令 + 清单槽 + JSON 输出 Schema + 项目层槽 + diff/分片槽）
+# r8-R2: 自 chat-review-task-v1 演进——「审查重点」六大类硬编码块换为清单槽（兑现 v1 头注释预留的拆分，
+# 评测对比按 prompt 规范规则三在服务器执行），其余正文与 v1 一字不差；v1 文件是行为资产，原样保留不动。
+# 第一个 %s = 清单块（checklist-java-v1 / checklist-ts-v1 按当前分片文件类型取有序并集 java > frontend-ts，
+# 无命中回落 checklist-generic-v1——该回落路径的组装产出与 v1 逐字节相同）；
+# 第二个 %s = 已渲染的项目层（chat-review-project-v1）；第三个 %s = 当前分片的 Git Diff
+#（分片由 ReviewProcessor/DiffSplitter 上游完成，任务层按分片逐次实例化，系统/项目层内容跨分片复用）。
+# 经 layer() 加载：正文逐字节保留（末尾换行是原 prompt 的结尾字节）。
+
+请审查下面的 Git Diff。
+
+%s
+输出 JSON Schema：
+{
+  "summary": "string",
+  "overallRisk": "HIGH|MEDIUM|LOW|NONE",
+  "issues": [
+    {
+      "severity": "HIGH|MEDIUM|LOW",
+      "category": "NULL_POINTER|SQL_INJECTION|AUTH_RISK|TRANSACTION_RISK|PERFORMANCE_RISK|BUSINESS_RULE_RISK|UNKNOWN",
+      "filePath": "string",
+      "lineStart": 1,
+      "lineEnd": 1,
+      "title": "string",
+      "description": "string",
+      "impact": "string",
+      "evidenceSources": [{"sourceName":"string","quote":"string"}],
+      "suggestion": "string",
+      "confidence": 0.0
+    }
+  ]
+}
+
+%s
+Git Diff：
+%s

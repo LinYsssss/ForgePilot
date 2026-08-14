@@ -31,11 +31,14 @@ class GitCliServiceProcessTest {
 
     @Test
     void sanitizeRedactsTokenInlineCredentialsAndAskpassPath() {
+        // askpass 路径用平台自身的 Path 渲染拼进模拟输出(Linux 下与原字面量逐字相同):
+        // sanitize 的契约是按 Path.toString() 原文替换,Windows 反斜杠渲染下测试同样成立
+        // (原先硬编码 POSIX 字面量,在 Windows 本机跑 verify 时恒定误报失败)。
+        Path askPass = Path.of("/tmp/.work/repos/git-askpass-123.sh");
         String output = "fatal: unable to access 'https://x-access-token:ghp_supersecret@github.com/a/b.git'"
-                + " askpass=/tmp/.work/repos/git-askpass-123.sh token=ghp_supersecret";
+                + " askpass=" + askPass + " token=ghp_supersecret";
 
-        String cleaned = GitCommandRunner.sanitize(output, "ghp_supersecret",
-                Path.of("/tmp/.work/repos/git-askpass-123.sh"));
+        String cleaned = GitCommandRunner.sanitize(output, "ghp_supersecret", askPass);
 
         assertThat(cleaned).doesNotContain("ghp_supersecret");
         assertThat(cleaned).doesNotContain("git-askpass-123.sh");

@@ -1,0 +1,19 @@
+# template: checklist-java-v1（chat 审查·任务层清单槽：Java 文件类型定制清单，r8-R2）
+# 来源: .trellis/tasks/08-03-r8-prompt-tuning/research/r2-checklist-evidence.md §2.1 十条逐字落地——
+# 条目 1-10 对应研究稿 J1-J10，每条的评测用例背书映射见同表；holdout-only 背书条目为 4、10（§2.4），
+# 按规则四退役追踪时区别对待。措辞不指定输出 category（§3.5：七枚举不扩，判分别名表已容错）。
+# 注入: AgentPromptAssembler 对当前分片 diff 经 DiffSplitter.splitByFile 提取路径，含 .java 扩展名时命中；
+# 作为 chat-review-task-v2 清单槽的槽值注入，不经 formatted() 复扫。
+# 经 layer() 加载：正文逐字节保留（末尾换行是与后续段落拼接的结构字节）。
+
+审查重点（Java）：
+1. 金额运算纪律:金额是否出现 double 中间值、`(long)` 强转截断、`Math.round` 四舍五入;元转分是否用 `BigDecimal.movePointRight(2).longValueExact()` 精确转换
+2. 业务参数硬编码:费率/额度/开关等业务数值是否写死常量,而项目知识文档要求从配置表读取
+3. 新增第二路径的校验完整性:新增批量/即时/极速等旁路业务路径,是否逐项复刻既有单笔路径的全部校验与状态守卫(支付状态、最小净额、币种、`markProcessing` 类状态机唯一拦截点)
+4. 条件更新的字段完整性:UPDATE 改造(如加并发条件)后 SET 字段清单是否与被替换实现一致,有无静默丢字段
+5. 事务边界:`@Transactional` 方法内是否有 `this.` 自调用;新增写路径方法是否缺注解且不经代理调用带注解方法
+6. 资源关闭:JDBC/文件流/HTTP client 等 Closeable 是否 try-with-resources;正常返回、早退 return、异常三类路径是否全部关闭
+7. 空指针三形态:`Optional.get()` 无 isPresent/orElse*;`Map.get()` 返回值直接链式解引用;判空与解引用次序反转(先用后判)
+8. 共享契约第二实现漂移:同一编码/解析契约的内联复制体是否与共享实现同步升级;新增解析/渲染路径是否绕过 javadoc 标明"所有路径必须经过"的共享防御
+9. 启动期环境假设:`@Service`/`@Component` 构造器或 `@PostConstruct` 是否对绝对路径/外部资源做立即 IO(如 `Files.createDirectories`),失败即上下文起不来
+10. "行为零变化"搬移的分支丢失:声称 move-only/纯重构的 diff 中是否有守卫分支被静默删除——孤儿常量、声明未置位字段、javadoc 承诺与实现矛盾为可指认线索
