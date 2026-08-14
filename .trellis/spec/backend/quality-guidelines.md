@@ -52,6 +52,23 @@ path, add the override to the affected context tests in the same change.
 (多测试类共享缓存上下文时不互相耗光限流预算)。优先级:**内联测试属性 > surefire 系统属性 > 配置文件**——
 要验证"开启后"的行为,在测试类用内联属性重新打开(`CsrfProtectionTest` 样式),不要改全局回落。
 
+### 打开后台调度的测试上下文必须 `@DirtiesContext`
+
+`app.agent.scheduling.enabled=true` 的测试类跑完后,Spring **不会**关掉它的上下文——上下文进缓存复用,
+里面的 `@Scheduled` 调度器就一直在后台按原节奏跑。而所有测试类共用同一个库,于是这个"别人家的"调度器
+会持续排空 `agent_outbox_event`:后面任何「存一条事件并断言它保持 PENDING」的用例都在跟它抢,
+断言读到的是被它标掉的 `SENT`。
+
+- 规则:任何把后台调度/watchdog 打开的测试类,一律加 `@DirtiesContext(classMode = AFTER_CLASS)`,用完即拆。
+- 这类缺陷**跟测试执行顺序绑定**,而 surefire 默认 `runOrder=filesystem` 在 Windows 与 Linux 上顺序不同——
+  本机全绿、CI 红是典型症状,别当成偶发 flake 重跑掉。复现方式是把顺序固定成 CI 的那一种:
+  ```bash
+  mvn test -Dtest='<调度类>,<受害类>' -Dsurefire.runOrder=reversealphabetical
+  ```
+  修完再用同一条命令验证,并跑一次全量确认没有别的类依赖那个被缓存的上下文。
+- 泛化:凡是**跨测试类共享的活动物**(调度线程、消息监听器、后台 executor),判据都是「它会不会在本类结束后
+  继续动共享状态」——会,就必须随类销毁。
+
 ---
 
 ## Code Review Checklist

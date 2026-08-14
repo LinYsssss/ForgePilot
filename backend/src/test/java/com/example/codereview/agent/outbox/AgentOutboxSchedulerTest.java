@@ -12,6 +12,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.ApplicationContext;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 /**
@@ -35,6 +36,12 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
         "app.agent.outbox.max-attempts=2"
 })
 @ActiveProfiles("dev")
+// 这是全套测试里唯一真的把后台调度打开的上下文,且 tick 间隔被压到 100ms。Spring 默认会把
+// 上下文留在缓存里复用——本类跑完后调度器仍在后台每 100ms 排空同一张 agent_outbox_event,
+// 于是后续任何"存一条事件并断言它保持 PENDING"的用例都会与它竞态(实测 CI 上
+// AgentOutboxPublisherTest.nackedMessageGoesBackToPending 被它抢先标成 SENT,而本机因文件
+// 系统顺序不同先跑 PublisherTest 才侥幸躲过)。用完即拆,别把活的调度器留给别人。
+@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 class AgentOutboxSchedulerTest {
 
     @Autowired

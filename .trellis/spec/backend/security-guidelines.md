@@ -84,7 +84,8 @@ authenticated.value = true
 
 ### 1. Scope / Trigger
 
-- Trigger: any change to the `supply-chain` job in `.github/workflows/ci.yml`, to `deploy/scan-images.sh`, or any dependency bump made to clear a CVE reported by the gate. The gate blocks on **fixable HIGH/CRITICAL only** (`ignore-unfixed: true` / same policy in `scan-images.sh`), so every red here is actionable by design — never "record and defer" a finding that keeps CI red.
+- Trigger: any change to the `supply-chain` job in `.github/workflows/ci.yml`, to `deploy/scan-images.sh`, to the repo-root `.trivyignore`, or any dependency bump made to clear a CVE reported by the gate. The gate blocks on **fixable HIGH/CRITICAL only** (`ignore-unfixed: true` / same policy in `scan-images.sh`), so every red here is actionable by design — never "record and defer" a finding that keeps CI red.
+- One blind spot sits between "fixable" and "unfixed": upstream has **published** a fix, but **no pullable artifact carries it yet** (typical for base images — the Go toolchain patch lands weeks before any image rebuilt with it). Trivy calls that fixable, so `ignore-unfixed` will not clear it and no version bump can. That, and only that, is what the repo-root `.trivyignore` is for.
 
 ### 2. Signatures
 
@@ -99,24 +100,35 @@ authenticated.value = true
   <spring-data-bom.version>2025.0.12</spring-data-bom.version>
   ```
   Precedents in the same file: `jackson-bom.version`, `spring-framework.version`, `tomcat.version`, `postgresql.version`.
+- Suppression (base-image blind spot only) = repo-root `.trivyignore`, one dated line per CVE:
+  ```
+  # stdlib/x-net idna punycode 提权,修复版 Go 1.26.6 / 1.27.0-rc.3
+  CVE-2026-39821 exp:2026-11-01
+  ```
+  Containerized trivy does **not** see the host file — `scan-images.sh` must mount it and pass `--ignorefile`; the `trivy-action` fs scan picks up the repo-root file on its own.
 
 ### 3. Contracts
 
 - Action pinning: `aquasecurity/trivy-action` release tags are `v`-prefixed. Versions **≤ v0.29.0 are permanently broken** — they pin `aquasecurity/setup-trivy` by old tags that upstream has deleted (`Unable to resolve action ... setup-trivy@v0.2.1`). v0.33.1+ pin setup-trivy by commit SHA; stay on those.
 - A 2-second failure at "Set up job" means action resolution, not scanning — check transitive action refs, not only the top-level tag.
 - CVE comment convention: every override property carries a comment naming the CVE, the Boot-managed version, and the fixed version.
+- Every `.trivyignore` entry carries an `exp:` date — an entry without one is forbidden, because a suppression that never expires is indistinguishable from a forgotten one. The accompanying comment must state (a) where the finding lives, (b) why the code path is unreachable in our usage, and (c) the concrete release condition that lets the line be deleted. Suppress only after checking that no published tag carries the fix; a suppression used in place of an available bump is a defect.
+- A permanently red gate is itself a security failure — it teaches everyone to ignore the job. Prefer a dated, justified suppression over an indefinite red.
 
 ### 4. Validation & Error Matrix
 
 - Fixable HIGH/CRITICAL in any image → `Scan images` fails: `FAIL: 存在已有修复版本的 HIGH/CRITICAL 漏洞,升级依赖或基础镜像后重扫`.
 - Unresolvable action ref → job dies at "Set up job" in ~2 s, nothing scanned (a gate that never ran looks like a gate that passed — verify output exists, not just green).
 - Fixable HIGH/CRITICAL in a manifest → `Scan dependency manifests` step fails (exit-code "1").
+- Gate red on a base-image CVE that no available tag fixes → confirm at the source before suppressing (for `docker:*-cli`: compare `ARG GO_VERSION` in `docker/cli` on the release branch vs. `master`; the newest tag may still trail the fix). Suppressing without that check hides a real, fixable finding.
+- `.trivyignore` entry past its `exp:` date → the finding blocks again automatically. That is the intended forcing function, not a regression.
 
 ### 5. Good/Base/Bad Cases
 
 - Good: bump via BOM property (patch-level), verify resolution, full test suite green, CI image scan returns `Total: 0`.
 - Base: finding has no fixed version → gate ignores it (`ignore-unfixed`), no action needed.
-- Bad: pinning `trivy-action@v0.28.0` (dead transitive tag); hardcoding a version inside `<dependencyManagement>`/`<dependencies>` instead of the property override; "registering the CVE for later" while the gate stays red.
+- Base: fix published but no image carries it yet → verify the claim at the source (e.g. `ARG GO_VERSION` on the upstream release branch vs. `master`), bump to the newest tag anyway for its other fixes, then add a dated `.trivyignore` line.
+- Bad: pinning `trivy-action@v0.28.0` (dead transitive tag); hardcoding a version inside `<dependencyManagement>`/`<dependencies>` instead of the property override; "registering the CVE for later" while the gate stays red; a `.trivyignore` entry with no `exp:` or no reachability argument; assuming a version bump fixes a CVE without checking the toolchain the artifact was actually built with.
 
 ### 6. Tests Required
 

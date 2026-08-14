@@ -20,6 +20,7 @@
 ## 3. ApiResponse 信封(`common/api/ApiResponse.java`)
 
 - `{code, errorCode, message, traceId, data}` 五字段;数字 `code` 是存量前端的分支依据,在有消费者期间不得移除。
+- 绕开信封的端点(报告/语料导出等直接返回正文的)必须**显式定字符集**:按 UTF-8 取字节再把 charset 写进 `Content-Type`(`ReviewController` 报告导出、`ReviewFeedbackController.export` 同口径)。`MediaType.APPLICATION_NDJSON` / `text/markdown` 这类常量本身不带 charset,直接返回 `String` 会落到 `StringHttpMessageConverter` 的兜底编码,中文正文整片变成 `?` ——且响应仍是 200,只有断言到非 ASCII 正文的用例才照得出来。导出类端点的测试必须至少断言一处中文,否则这条缺陷不可见。
 
 ## 4. ProjectAuthorization(`common/security/ProjectAuthorization.java`)
 
@@ -30,7 +31,7 @@
 
 ## 5. Flyway 已执行迁移不可变
 
-- 见 [database-guidelines.md](./database-guidelines.md):历史迁移零改动、新迁移接实测最大版本号(当前 V27)之后、V22–V25 预留不可占用。
+- 见 [database-guidelines.md](./database-guidelines.md):历史迁移零改动、新迁移接实测最大版本号(当前 V28)之后、V22–V25 预留不可占用。
 
 ## 6. REST 路径与字段名
 

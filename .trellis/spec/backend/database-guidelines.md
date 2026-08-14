@@ -8,8 +8,8 @@
 
 迁移文件在 `backend/src/main/resources/db/migration/`,命名 `V<n>__<snake_case_描述>.sql`。
 
-- **已执行过的迁移一个字节都不许改。** 生产库与 dev 库已跑过 V1–V21、V26、V27;修改历史迁移会导致 checksum 校验失败,库直接起不来。要改结构,永远新增迁移。
-- **新迁移接在实测最大版本号之后。** 当前最大是 `V27__review_task_doc_set_key.sql`;V22–V25 已被预约(V22 约束批次见 `docs/数据库完整性预检与约束盘点.md`,V25 归 SCM webhook 唯一键),不要占用这些号。
+- **已执行过的迁移一个字节都不许改。** 生产库与 dev 库已跑过 V1–V21、V26、V27、V28;修改历史迁移会导致 checksum 校验失败,库直接起不来。要改结构,永远新增迁移。
+- **新迁移接在实测最大版本号之后。** 当前最大是 `V28__review_feedback.sql`;V22–V25 已被预约(V22 约束批次见 `docs/数据库完整性预检与约束盘点.md`,V25 归 SCM webhook 唯一键),不要占用这些号。
 - **迁移头部注释写清 why 与失败关闭理由。** 范例 `V26__reject_non_v1_credentials.sql`:说明背景(CryptoService 改为非 v1 即拒)、为什么置空而不是就地加密(密钥只在应用进程,SQL 做不了 AES-GCM)、以及生产库实测影响面("三列均为 0 条非 v1 记录")。涉及存量数据的迁移必须附实测数据量。
 
 ---
