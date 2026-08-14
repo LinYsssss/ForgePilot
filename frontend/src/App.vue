@@ -1,5 +1,9 @@
 <template>
-  <LoginView v-if="!authenticated" @authenticated="afterLogin" />
+  <!-- 墨境隔离入口(meta.shell === 'ink'):页面自带 LoginGate 门禁与新壳层,
+       不经过旧 LoginView/AppShell;会话与 401 漏斗仍是下面同一套单例。 -->
+  <router-view v-if="isInkShell" />
+
+  <LoginView v-else-if="!authenticated" @authenticated="afterLogin" />
 
   <AppShell v-else @navigate="onNavigate" @refresh="run(refreshAll)" @logout="logout">
     <router-view v-slot="{ Component }">
@@ -11,7 +15,8 @@
 </template>
 
 <script setup>
-import { onMounted, onUnmounted } from 'vue'
+import { computed, onMounted, onUnmounted } from 'vue'
+import { useRoute } from 'vue-router'
 import { initCsrf, setUnauthorizedHandler } from './api/client.js'
 import AppShell from './components/AppShell.vue'
 import LoginView from './views/LoginView.vue'
@@ -24,6 +29,8 @@ import { useWorkspace } from './composables/useWorkspace.js'
 
 // App.vue 只负责登录态分流与全局生命周期;
 // 领域状态在 composables/,页面在 views/,跨域动作在 useWorkspace。
+const route = useRoute()
+const isInkShell = computed(() => route.meta.shell === 'ink')
 const { authenticated, me } = useSession()
 const { run } = useBusy()
 const { toastMsg } = useToast()

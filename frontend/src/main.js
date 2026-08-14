@@ -3,5 +3,6 @@ import App from './App.vue'
 import { router } from './router.js'
 import { listNav } from './directives/listNav.js'
 import './tokens.css'
+import './shared/theme/index.js'
 
 createApp(App).use(router).directive('list-nav', listNav).mount('#app')

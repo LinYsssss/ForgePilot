@@ -1,0 +1,215 @@
+/* ============================================================
+   RepoSage · 墨境书院 基座样式
+   仅承载「必须全局(非 scoped)才能工作」的少量规则:
+     - .ink-stage 根容器排版底座与 focus-visible 焦点环(合同 §6)
+     - 抽屉打开时的 body 滚动锁
+     - 一次性入场 ink-reveal(合同 §7:route/panel enter,320–480ms)
+     - 动效降级:用户静态模式(.ink-static)与 reduced-motion /
+       coarse-pointer 媒体查询(合同 §7 降级表)
+   页面/组件样式一律留在各 SFC 的 scoped 块内,颜色只取 ink-tokens。
+   所有选择器都锚定 .ink-stage / .ink-* 前缀,不影响旧壳层页面。
+   ============================================================ */
+
+.ink-stage {
+  min-height: 100vh;
+  position: relative;
+  isolation: isolate;          /* 让 z-index:-1 的 ambient 层留在墨境内部 */
+  color: var(--ink-default);
+  background: var(--canvas);
+  font-family: var(--ink-font-body);
+  font-size: var(--ink-fs-14);
+  line-height: var(--ink-lh-body);
+  font-synthesis: none;
+}
+.ink-stage h1,
+.ink-stage h2,
+.ink-stage h3 { color: var(--ink-strong); line-height: var(--ink-lh-display); }
+.ink-stage button,
+.ink-stage input,
+.ink-stage textarea { font: inherit; color: inherit; }
+.ink-stage button { cursor: pointer; }
+.ink-stage button:disabled { cursor: not-allowed; }
+
+/* 合同 §6 focus-visible:2px mineral-cyan 外环 + 2px 纸面 offset */
+.ink-stage :focus-visible {
+  outline: 2px solid var(--mineral-cyan);
+  outline-offset: 2px;
+}
+
+.ink-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+
+.ink-skip-link {
+  position: fixed;
+  z-index: 100;
+  top: var(--ink-sp-8);
+  left: var(--ink-sp-8);
+  padding: var(--ink-sp-8) var(--ink-sp-12);
+  color: var(--ink-on-accent);
+  background: var(--mineral-cyan);
+  border-radius: var(--ink-radius-control);
+  text-decoration: none;
+  transform: translateY(-150%);
+  transition: transform var(--ink-t-hover) var(--ink-ease-out);
+}
+.ink-skip-link:focus { transform: translateY(0); }
+
+/* 抽屉打开:锁定背景滚动(InkShell 负责加/清该类) */
+body.ink-drawer-open { overflow: hidden; }
+
+/* ============================================================
+   跨 feature 复用的墨境原语(按钮/眉题/反馈条):全部取冻结令牌。
+   仅此处定义,组件内不得复制近似类(合同 §10 drift gate)。
+   ============================================================ */
+.ink-eyebrow {
+  color: var(--ink-muted);
+  font-size: var(--ink-fs-12);
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+/* 主动作:朱砂实底(合同 §5 ReviewActionBar);次动作:墨线描边 */
+.ink-primary-button,
+.ink-outline-button {
+  min-height: 44px;
+  padding: 0 var(--ink-sp-16);
+  border-radius: var(--ink-radius-control);
+  font-weight: 700;
+  font-size: var(--ink-fs-13);
+  transition:
+    color var(--ink-t-hover) var(--ink-ease-out),
+    border-color var(--ink-t-hover) var(--ink-ease-out),
+    background var(--ink-t-hover) var(--ink-ease-out);
+}
+.ink-primary-button {
+  color: var(--ink-on-accent);
+  background: var(--cinnabar);
+  border: 1px solid var(--cinnabar);
+}
+.ink-primary-button:hover:not(:disabled) {
+  background: var(--cinnabar-hover);
+  border-color: var(--cinnabar-hover);
+}
+.ink-outline-button {
+  color: var(--ink-default);
+  background: var(--ink-wash-panel-faint);
+  border: 1px solid var(--line-strong);
+}
+.ink-outline-button:hover:not(:disabled) {
+  color: var(--mineral-cyan);
+  border-color: var(--mineral-cyan);
+  background: var(--mineral-cyan-soft);
+}
+.ink-outline-button.is-danger:hover:not(:disabled) {
+  color: var(--cinnabar);
+  border-color: var(--cinnabar);
+  background: var(--cinnabar-soft);
+}
+/* active:1px 下压,无位移跳动(合同 §6) */
+.ink-primary-button:active:not(:disabled),
+.ink-outline-button:active:not(:disabled) { transform: translateY(1px); }
+/* disabled:降饱和保留标签,不只靠透明度(合同 §6) */
+.ink-primary-button:disabled,
+.ink-outline-button:disabled { opacity: 0.62; filter: saturate(0.4); }
+
+.ink-icon-button {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 1px solid transparent;
+  border-radius: var(--ink-radius-control);
+  background: transparent;
+  color: var(--ink-default);
+  transition: color var(--ink-t-hover) var(--ink-ease-out), background var(--ink-t-hover) var(--ink-ease-out);
+}
+.ink-icon-button:hover:not(:disabled) { color: var(--mineral-cyan); background: var(--mineral-cyan-soft); }
+.ink-icon-button svg {
+  width: 19px;
+  height: 19px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.ink-text-button {
+  min-height: 44px;
+  padding: 0 var(--ink-sp-12);
+  border: 1px solid transparent;
+  border-radius: var(--ink-radius-control);
+  background: transparent;
+  color: var(--ink-muted);
+  font-size: var(--ink-fs-13);
+  transition: color var(--ink-t-hover) var(--ink-ease-out), background var(--ink-t-hover) var(--ink-ease-out);
+}
+.ink-text-button:hover:not(:disabled) { color: var(--mineral-cyan); background: var(--mineral-cyan-soft); }
+
+/* 反馈条(useToast 单例的墨境呈现;避开旧 .toast 类名) */
+.ink-toast {
+  position: fixed;
+  z-index: 80;
+  left: 0;
+  right: 0;
+  bottom: calc(var(--ink-sp-24) + env(safe-area-inset-bottom, 0px));
+  width: fit-content;
+  max-width: calc(100vw - var(--ink-sp-48));
+  margin-inline: auto;
+  padding: var(--ink-sp-12) var(--ink-sp-16);
+  color: var(--ink-on-accent);
+  background: var(--ink-default);
+  border-left: 3px solid var(--mineral-cyan);
+  border-radius: var(--ink-radius-control);
+  box-shadow: var(--ink-shadow-layer);
+  font-size: var(--ink-fs-13);
+}
+.ink-toast.error { border-left-color: var(--cinnabar); }
+.ink-toast.success { border-left-color: var(--success-ink); }
+
+/* 一次性入场(路由/面板;只在挂载时播放一次,不循环) */
+.ink-reveal { animation: ink-reveal var(--ink-t-reveal) var(--ink-ease-out) both; }
+.ink-reveal:nth-of-type(2) { animation-delay: 40ms; }
+.ink-reveal:nth-of-type(3) { animation-delay: 80ms; }
+.ink-reveal:nth-of-type(4) { animation-delay: 120ms; }
+.ink-reveal:nth-of-type(5) { animation-delay: 160ms; }
+@keyframes ink-reveal {
+  from { opacity: 0; transform: translateY(8px); filter: blur(2px); }
+}
+
+/* ============================================================
+   动效降级(合同 §7 降级表)
+   - .ink-static:用户手动「静态墨境」。停止环境循环与视差,保留信息。
+   - reduced-motion / coarse pointer:媒体查询强制静态构图。
+   - hidden / unfocused 由 JS 负责(pointer 归零、粒子 RAF 停止)。
+   .ink-parallax 是唯一承载指针位移的包装层;把 transform 只杀在
+   包装层上,内部元素的居中/旋转 transform 不受影响。
+   ============================================================ */
+.ink-static .ink-parallax { transform: none !important; }
+.ink-static .ink-grain,
+.ink-static .ink-cloud,
+.ink-static .ink-taiji,
+.ink-static .ink-reveal,
+.ink-static .ink-run-pulse,
+.ink-static .ink-seal-stamping { animation: none !important; }
+.ink-static .ink-brush-stroke { transition: none !important; }
+
+@media (prefers-reduced-motion: reduce), (pointer: coarse) {
+  .ink-stage .ink-parallax { transform: none !important; }
+  .ink-stage *,
+  .ink-stage *::before,
+  .ink-stage *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}

@@ -7,7 +7,7 @@
 2. [x] **Stage 2 视觉方向**：用户选择 A「墨境书院」，追加水墨动态要求；选择、拒绝项、架构授权和可逆边界已写入 `research/visual-directions.md` / `research/ui-decisions.md`。
 3. [x] **Stage 3 交互原型**：按 `research/prototype.md` 制作登录门禁 + 1440/768/390 Agent 工作台原型；演示太极水墨、低密度墨粒、normal/reduced/static、success/error/recovery；用户评审后记录证据。
 4. [x] **Stage 4 冻结设计合同**：基于原型校正并批准 `research/ui-design.md` v1.0；测量候选颜色对比度，冻结令牌、布局、组件 anatomy、状态、响应式、水墨动效预算和禁止项。
-5. [ ] **新架构骨架**：建立 feature-first 目录、typed API/entity adapters、`shared/ui`、`shared/theme`、`shared/motion`、新登录门禁与 AppShell 隔离入口；旧认证/API 可通过兼容层工作。
+5. [x] **新架构骨架**：建立 feature-first 目录、typed API/entity adapters、`shared/ui`、`shared/theme`、`shared/motion`、新登录门禁与 AppShell 隔离入口；旧认证/API 可通过兼容层工作。（实况 2026-08-13：`/ink` 隔离入口 + `meta.shell` 分流落地，旧 8 路由零改动并存；合同 §3 令牌逐字落地并有 drift-gate 测试钉死；动效五态降级 + 单指针观察器 + ambient 运行时 8.7KB gzip ≤ 12KB 预算；LoginGate 复用既有会话/401 漏斗；trellis-check 扫出 6 处已全部修复，残留 4 项及理由见 `research/impl-notes-step5.md` §4；npm test 39/0、build 绿）
 6. [ ] **纵向切片**：实现 CaseIndex + PaperWorkspace + Agent/Reviews 主路径，覆盖真实数据、finding、EvidenceDiff、AnnotationRail、ReviewActionBar、success/error/retry；组件和路由测试通过后独立提交。
 7. [ ] **水墨动效与降级**：实现 TaijiAmbientMark、InkParticleField、InkAmbientScene、单一 pointer observer、远山/墨雾/笔触/落印反馈；验证粒子/DPR预算、reduced motion、coarse pointer、page hidden、无 blur、纹理失败和性能降级。
 8. [ ] **逐页扩面**：Dashboard → Projects → Repository → PullRequests → Knowledge → AI Logs；每页迁移后删除对应旧表现层，保持 API/权限和路由语义，禁止长期双份业务逻辑。
