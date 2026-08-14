@@ -58,6 +58,7 @@ These guides help you **ask the right questions before coding**.
 - [ ] You're adding or changing an MQ payload, a shared string reference, or a REST request/response shape
 - [ ] Two deployables each hold a copy (isomorphic mirror) of the same codec/record
 - [ ] A test feeds hand-made fixtures to a consumer instead of the producer's real output
+- [ ] A bash `read` loop consumes python/program stdout (Windows CRLF: strip `\r` from the last field — Cross-Layer Guide Mistake 5)
 
 → Read [Contract Testing Discipline](./contract-testing.md)
 

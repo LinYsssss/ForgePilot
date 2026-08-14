@@ -100,6 +100,51 @@ create one owner for:
 
 Rendering code may format fields, but it must not redefine the payload contract.
 
+### Mistake 5: Bash Consuming Program Stdout Assumes `\n` Line Endings
+
+**Symptom**: A `while IFS=$'\t' read -r a b c` loop over python-generated lines
+works on Linux/CI but silently misbehaves on Windows Git Bash only — equality
+checks never match and path probes fail, with no error anywhere.
+
+**Cause**: On Windows, Python's text-mode stdout translates `\n` to `\r\n`
+(same for many native programs). `read` strips the `\n` but keeps the `\r`,
+which lands on the **last field** of each line as an invisible suffix.
+
+Real incidents (both fixed 2026-08-13):
+
+- `evaluation/tools/build-case-repos.sh`: `layout` read as `base-head\r` →
+  base-head fixtures silently built as legacy single-layout repos (cfb8b4d).
+- `evaluation/tools/run-baseline.sh`: `fixture` read as `cases/x\r` →
+  `knowledge/` dir probe silently failed → cases would have scored **without
+  their rule documents**, corrupting baseline numbers (3ff90bc).
+
+**Bad**:
+
+```bash
+while IFS="$(printf '\t')" read -r id fixture layout; do
+  [ "$layout" = "base-head" ] || build_as_single "$id"  # never matches on Windows
+done <<<"$(python3 emit_list.py)"
+```
+
+**Good**: strip the CR from the last field at the boundary, with a comment saying why:
+
+```bash
+while IFS="$(printf '\t')" read -r id fixture layout; do
+  # Windows Python writes CRLF to Git Bash stdout; strip the trailing CR.
+  layout="${layout%$'\r'}"
+  ...
+done <<<"$(python3 emit_list.py)"
+```
+
+**Rule**: whenever bash `read` consumes another program's stdout (pipe,
+command substitution, heredoc variable), sanitize the last field with
+`${var%$'\r'}` — and when one script in a family gets this fix, grep the
+siblings for the same loop shape before closing the bug:
+
+```bash
+grep -rn "read -r" evaluation/tools/ scripts/
+```
+
 ---
 
 ## Checklist for Cross-Layer Features
