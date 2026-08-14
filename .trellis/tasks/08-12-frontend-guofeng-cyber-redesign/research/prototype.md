@@ -1,6 +1,6 @@
 # Prototype：墨境书院 Agent 审查工作台
 
-> **状态：Stage 3 已实现，待用户视觉/交互评审与浏览器截图补证。** Stage 2 方向选择已完成；UI design contract 仍为 v0.2 草案，尚未冻结。
+> **状态：Stage 3 已通过。** 用户在 2026-08-12 确认继续；真实 Chrome 三档响应式、交互、焦点与降级证据已补齐，UI design contract 已冻结为 v1.0。
 
 ## Artifacts
 
@@ -21,7 +21,7 @@ python -m http.server 4178 --bind 127.0.0.1 --directory .trellis/tasks/08-12-fro
 ## Demonstrated flow
 
 1. 登录页演示空字段错误、组织账号、演示账户和登录→工作台入口。
-3. 案卷索引定位 Agent 审查。
+2. 案卷索引定位 Agent 审查。
 3. 查看风险摘要与六步笔触进度。
 4. 在 Finding Ledger 切换 F-001/F-002/F-003。
 5. Finding 同步更新 evidence 元数据、说明与稳定 Diff 平面。
@@ -38,7 +38,7 @@ python -m http.server 4178 --bind 127.0.0.1 --directory .trellis/tasks/08-12-fro
 - 768：案卷索引 + PaperWorkspace；朱批栏变为可访问抽屉。
 - 390：单卷任务流；案卷与朱批均为抽屉，风险、Finding、Diff、审批按任务顺序重排，操作区进入移动安全区。
 
-CSS 断点使用 1180 / 880 / 560px，分别控制三栏收束、移动壳层和窄屏内容重排；验收仍以 1440 / 768 / 390 三个视口为准。
+CSS 冻结断点使用 1279 / 767 / 560px：1280px 起三栏；768–1279px 保留案卷索引并将朱批转抽屉；≤767px 案卷与朱批均转抽屉；≤560px 进一步压缩内容与固定移动安全操作区。验收以 1440 / 768 / 390 为主，并补 1279px 临界点。
 
 ## Motion modes
 
@@ -73,18 +73,18 @@ CSS 断点使用 1180 / 880 / 560px，分别控制三栏收束、移动壳层和
 - static/reduced/coarse/hidden/unfocused 时停止粒子 RAF，并保留少量静态墨点。
 - 禁止太极和颗粒进入表单、Diff、表格、焦点或状态语义层。
 
-## Pending review / evidence
+## Browser evidence and review result
 
-- 自动浏览器连接在初始化模块时连续超时，因此本轮未生成 1440/768/390 实际截图，也未取得 console、focus order 与点击回放证据。
-- 用户需先评审原型的层级、密度、墨迹强度、交互路径和移动重排。
-- 浏览器恢复后必须补三档截图、normal/static/reduced 对照、键盘焦点、Dialog 焦点归还、console/network 与操作回放。
-- 以上补证与用户评审完成前，不将 Stage 3 标记为通过，也不将 UI design contract 冻结为 v1.0。
+- 用户于 2026-08-12 回复“继续”，视为对当前视觉方向、信息密度和交互路径的继续授权；不重开 Stage 2。
+- Chrome 151.0.7922.109 真实渲染通过 1440×1000、1279×900、768×1024、390×844；所有视口 `documentElement.scrollWidth <= innerWidth`。
+- 1440 实测三栏宽度为 236 / 912 / 292px；1279 与 768 均保留案卷索引并将朱批变为抽屉；390 为双抽屉单卷流。
+- 390 下 Diff 容器宽 336px、内容宽 720px，采用明确的局部横向滚动，不造成页面级横向溢出。
+- 抽屉关闭时使用 `inert` + `aria-hidden` 移出键盘顺序；打开后焦点进入关闭按钮，遮罩点击/Escape 关闭并归还触发器，抽屉内 Tab 循环。
+- Dialog 打开后焦点进入“返回复核”，Escape 关闭并归还“批准并落印”；错误→重试、Finding→Evidence、static/reduced、登录校验与重复提交防护均通过回放。
+- 控制台/页面异常为 0；内联空 favicon 消除了静态服务器 404。
+- 截图与机器可读报告位于 `research/qa/`；结论详见 `research/qa-report.md`。
 
-## User review checklist
+## Stage 3 exit
 
-- 最高风险、证据位置和下一步动作能否在 10 秒内辨认？
-- 宣纸工作面是否足够清爽，水墨是否太淡或太重？
-- 左侧案卷、中央审查、右侧朱批的比重是否合理？
-- Finding → Diff → 审批是否顺手？
-- 朱砂红与冷青是否既有古风感又保留了技术状态感？
-- 移动端是否应进一步减少风险卡片或批注信息？
+- **通过。** 最高风险、证据和主动作在首屏层级明确；水墨未侵入语义平面；三档响应式和 normal/static/reduced 均有证据。
+- 原型阶段未发现 Critical/High 残留问题；UI contract 冻结为 v1.0，后续差异按 drift gate 处理。

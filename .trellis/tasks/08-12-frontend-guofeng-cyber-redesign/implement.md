@@ -1,12 +1,12 @@
 # Implement：墨境书院动态审查台
 
-> **当前状态：planning。** A「墨境书院」已选定；本轮只完成规划和规范。必须先通过交互原型与设计合同冻结门，才能运行 `task.py start` 或修改生产前端。
+> **当前状态：规划门已通过，待激活生产实施。** A「墨境书院」、交互原型与 UI design contract v1.0 已冻结；下一步完成隔离/Node 22 基线后进入生产 Vue 重写。
 
 0. [ ] **隔离与基线**：安全处理 R7 未提交工作；从最新 `main` 建立 `codex/frontend-guofeng-cyber-redesign` 独立分支/工作树；Node 22 下运行 `npm ci && npm test && npm run build`，记录旧 UI 截图、体积、console/network 与关键路径。
 1. [ ] **补齐 Stage 1 证据**：使用真实数据检查 Agent → finding → evidence/Diff → review action 路径；补长内容、权限、离线、错误恢复和 390/768/1440 当前态截图，更新 `research/ui-inventory.md`。
 2. [x] **Stage 2 视觉方向**：用户选择 A「墨境书院」，追加水墨动态要求；选择、拒绝项、架构授权和可逆边界已写入 `research/visual-directions.md` / `research/ui-decisions.md`。
-3. [ ] **Stage 3 交互原型**：按 `research/prototype.md` 制作登录门禁 + 1440/768/390 Agent 工作台原型；演示太极水墨、低密度墨粒、normal/reduced/static、success/error/recovery；用户评审后记录证据。
-4. [ ] **Stage 4 冻结设计合同**：基于原型校正并批准 `research/ui-design.md` v1.0；测量候选颜色对比度，冻结令牌、布局、组件 anatomy、状态、响应式、水墨动效预算和禁止项。
+3. [x] **Stage 3 交互原型**：按 `research/prototype.md` 制作登录门禁 + 1440/768/390 Agent 工作台原型；演示太极水墨、低密度墨粒、normal/reduced/static、success/error/recovery；用户评审后记录证据。
+4. [x] **Stage 4 冻结设计合同**：基于原型校正并批准 `research/ui-design.md` v1.0；测量候选颜色对比度，冻结令牌、布局、组件 anatomy、状态、响应式、水墨动效预算和禁止项。
 5. [ ] **新架构骨架**：建立 feature-first 目录、typed API/entity adapters、`shared/ui`、`shared/theme`、`shared/motion`、新登录门禁与 AppShell 隔离入口；旧认证/API 可通过兼容层工作。
 6. [ ] **纵向切片**：实现 CaseIndex + PaperWorkspace + Agent/Reviews 主路径，覆盖真实数据、finding、EvidenceDiff、AnnotationRail、ReviewActionBar、success/error/retry；组件和路由测试通过后独立提交。
 7. [ ] **水墨动效与降级**：实现 TaijiAmbientMark、InkParticleField、InkAmbientScene、单一 pointer observer、远山/墨雾/笔触/落印反馈；验证粒子/DPR预算、reduced motion、coarse pointer、page hidden、无 blur、纹理失败和性能降级。

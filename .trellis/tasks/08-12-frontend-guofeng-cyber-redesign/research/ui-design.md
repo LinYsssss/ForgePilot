@@ -1,8 +1,8 @@
 # UI design contract：墨境书院
 
-> **版本**：v0.4 可执行草案
-> **阶段**：Stage 2 已批准；Stage 3 原型待验证；Stage 4 尚未冻结。
-> **权威性**：实现可按本文制作原型，但在原型验收前不得批量扩面。
+> **版本**：v1.0 冻结合同
+> **阶段**：Stage 3 原型与三档浏览器 QA 已通过；Stage 4 已冻结。
+> **权威性**：生产 Vue 重写必须遵循本文；任何偏离需先写入 `ui-decisions.md` 并通过 drift gate。
 
 ## 1. Product character
 
@@ -25,7 +25,7 @@ RepoSage 是一间隐于云雾中的“可验证数字书院”：太极表达�
 
 ### 3.1 Color
 
-| Token | Candidate value | Role |
+| Token | Frozen value | Role |
 | --- | --- | --- |
 | `--canvas` | `#F1EDE5` | 页面外层云纸灰 |
 | `--surface-paper` | `#FBF8F0` | 主工作纸面 |
@@ -46,11 +46,11 @@ RepoSage 是一间隐于云雾中的“可验证数字书院”：太极表达�
 
 颜色不能作为唯一状态编码。Critical/High/Medium/Low 同时使用文本、图标和印记形状。
 
-v0.3 淡色纸面候选对比度：strong/paper 15.30:1、default/paper 10.25:1、muted/paper 5.54:1、white/cinnabar 6.88:1、cyan/paper 5.58:1、amber/paper 5.24:1；原型与真实组件仍需在 Stage 4 复测。
+v1.0 冻结纸面对比度：strong/paper 15.30:1、default/paper 10.25:1、muted/paper 5.54:1、white/cinnabar 6.88:1、cyan/paper 5.58:1、amber/paper 5.24:1；生产组件仍须在 Stage 7 逐状态复测。
 
 ### 3.2 Code and evidence
 
-| Token | Candidate value |
+| Token | Frozen value |
 | --- | --- |
 | `--code-surface` | `#F5F0E6` |
 | `--code-text` | `#252720` |
@@ -170,7 +170,8 @@ Diff 行不做透明虚化；行号、增删符号和背景三重编码。
 | Taiji breathing | 平衡/复核品牌符号 | idle | 22–32s opacity/position breathing | static mark |
 | Ink particles | 技术生命感 | idle/pointer | 30–64 particles, DPR ≤ 1.5, slow drift | static sparse dots |
 | Far mountain parallax | 空间层次 | pointer | max 2–3px | static |
-| Cloud veil | 云中雾里氛围 | idle/pointer | 38–54s 漂移，max 2–3px, blur ≤ 32px | static pale `n`n| Ink mist parallax | 环境响应 | pointer | max 6px, blur ≤ 28px | static low-opacity wash |
+| Cloud veil | 云中雾里氛围 | idle/pointer | 38–54s 漂移，max 2–3px, blur ≤ 32px | static pale wash |
+| Ink mist parallax | 环境响应 | pointer | max 6px, blur ≤ 28px | static low-opacity wash |
 | Near brush accent | 局部反馈 | pointer | max 10px | hidden/static |
 | Ink wash reveal | 空间连续 | route/panel enter | 320–480ms, once | 160ms fade |
 | Brush progress | 状态解释 | Agent stage change | 240–420ms SVG stroke | instant line + text |
@@ -205,3 +206,14 @@ Forbidden：太极盖住登录字段；高密度粒子像雪花；颗粒追逐�
 ## 10. Drift gate
 
 任何新颜色、字体、圆角、阴影、模糊值、位移、动效时长、印记形状或主题隐喻，必须先进入本合同或 `ui-decisions.md`。页面局部不得创建近似令牌、复制 AmbientScene 或直接覆盖 Element Plus 内部结构。
+
+
+## 11. Freeze evidence and change control
+
+- 视觉继续授权：用户于 2026-08-12 在原型提交 `366d8e0` / 草稿 PR #4 后回复“继续”。
+- 浏览器证据：Chrome 151.0.7922.109 下 1440/1279/768/390 无页面级横向溢出；截图与报告见 `research/qa/`。
+- 冻结断点：desktop `>=1280px`；tablet `768–1279px`；mobile `<=767px`；narrow-mobile polish `<=560px`。
+- 冻结抽屉合同：关闭态 `inert` + `aria-hidden`；打开态遮罩、body lock、Escape、Tab loop 与触发器焦点归还。
+- 冻结移动入口：朱批入口位于 sticky topbar，44×44px；不得在正文上悬浮游走。Toast 必须避开 sticky approval safe area。
+- 冻结 Diff 合同：窄屏保留语义完整的局部横向滚动，不把页面整体撑宽，不缩放代码字体至不可读。
+- 本合同的颜色、尺寸和动效值不再以“候选”解释。生产实现可用等价技术实现，但不得改变语义层级、响应式变换、动效降级和可访问性行为。

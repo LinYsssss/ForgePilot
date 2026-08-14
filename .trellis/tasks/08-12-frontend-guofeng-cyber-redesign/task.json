@@ -3,7 +3,7 @@
   "name": "frontend-guofeng-cyber-redesign",
   "title": "前端产品重构：墨境书院动态审查台",
   "description": "基于 frontend-product-workflow 重构 RepoSage 前端为墨境书院；加入可降级水墨动效，允许重组前端架构，同时保持业务合同、可读性、无障碍与性能。",
-  "status": "planning",
+  "status": "in_progress",
   "dev_type": null,
   "scope": "frontend",
   "package": null,
@@ -12,7 +12,7 @@
   "assignee": "LinYsssss",
   "createdAt": "2026-08-12",
   "completedAt": null,
-  "branch": null,
+  "branch": "codex/frontend-guofeng-cyber-redesign",
   "base_branch": "main",
   "worktree_path": null,
   "commit": null,
@@ -21,11 +21,11 @@
   "children": [],
   "parent": null,
   "relatedFiles": [],
-  "notes": "",
+  "notes": "Stage 3 browser QA passed on 2026-08-12; UI contract frozen at v1.0. Next: isolated Node 22 baseline and production Vue vertical slice.",
   "meta": {
     "workflow": "frontend-product-workflow",
-    "stage": "planning",
+    "stage": "ready-for-implementation",
     "chosen_direction": "ink-review-atelier",
-    "frontend_stage": "prototype-review"
+    "frontend_stage": "design-contract-frozen"
   }
 }

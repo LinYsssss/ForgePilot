@@ -3,6 +3,8 @@
   const root = document.documentElement
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)')
   const coarse = window.matchMedia('(pointer: coarse)')
+  const mobileLayout = window.matchMedia('(max-width: 767px)')
+  const railDrawerLayout = window.matchMedia('(max-width: 1279px)')
   let raf = 0
   let pointerX = 0
   let pointerY = 0
@@ -109,28 +111,55 @@
     button?.setAttribute('aria-expanded', String(expanded))
   }
 
+  function syncDrawerAccessibility() {
+    const nav = $('#caseIndex')
+    const rail = $('#annotationRail')
+    const navHidden = mobileLayout.matches && !nav.classList.contains('open')
+    const railHidden = railDrawerLayout.matches && !rail.classList.contains('open')
+    ;[[nav, navHidden], [rail, railHidden]].forEach(([drawer, hidden]) => {
+      drawer.toggleAttribute('inert', hidden)
+      if (hidden) drawer.setAttribute('aria-hidden', 'true')
+      else drawer.removeAttribute('aria-hidden')
+    })
+  }
+
+  function setDrawerState(type = null) {
+    const navOpen = type === 'nav'
+    const railOpen = type === 'rail'
+    $('#caseIndex').classList.toggle('open', navOpen)
+    $('#annotationRail').classList.toggle('open', railOpen)
+    setExpanded($('#navToggle'), navOpen)
+    setExpanded($('#railToggle'), railOpen)
+    const anyOpen = navOpen || railOpen
+    $('#drawerScrim').hidden = !anyOpen
+    document.body.classList.toggle('drawer-open', anyOpen)
+    syncDrawerAccessibility()
+  }
+
+  function syncResponsiveDrawers() {
+    if (!mobileLayout.matches && $('#caseIndex').classList.contains('open')) setDrawerState(null)
+    if (!railDrawerLayout.matches && $('#annotationRail').classList.contains('open')) setDrawerState(null)
+    syncDrawerAccessibility()
+  }
+
   function openNav() {
-    $('#caseIndex').classList.add('open')
-    setExpanded($('#navToggle'), true)
+    setDrawerState('nav')
     $('#navClose').focus()
   }
 
   function closeNav(returnFocus = true) {
-    $('#caseIndex').classList.remove('open')
-    setExpanded($('#navToggle'), false)
-    if (returnFocus) $('#navToggle').focus()
+    setDrawerState(null)
+    if (returnFocus && mobileLayout.matches) $('#navToggle').focus()
   }
 
   function openRail() {
-    $('#annotationRail').classList.add('open')
-    setExpanded($('#railToggle'), true)
+    setDrawerState('rail')
     $('#railClose').focus()
   }
 
   function closeRail(returnFocus = true) {
-    $('#annotationRail').classList.remove('open')
-    setExpanded($('#railToggle'), false)
-    if (returnFocus) $('#railToggle').focus()
+    setDrawerState(null)
+    if (returnFocus && railDrawerLayout.matches) $('#railToggle').focus()
   }
 
   function selectFinding(row, scroll = false) {
@@ -192,8 +221,10 @@
   window.addEventListener('pointermove', onPointerMove, { passive: true })
   window.addEventListener('blur', resetPointer)
   document.addEventListener('visibilitychange', () => { resetPointer(); syncParticles() })
-  reduced.addEventListener?.('change', resetPointer)
-  coarse.addEventListener?.('change', resetPointer)
+  reduced.addEventListener?.('change', () => { resetPointer(); syncParticles() })
+  coarse.addEventListener?.('change', () => { resetPointer(); syncParticles() })
+  mobileLayout.addEventListener?.('change', syncResponsiveDrawers)
+  railDrawerLayout.addEventListener?.('change', syncResponsiveDrawers)
 
   $('#motionToggle').addEventListener('click', (event) => {
     const active = app.classList.toggle('static-mode')
@@ -208,6 +239,10 @@
   $('#navClose').addEventListener('click', () => closeNav())
   $('#railToggle').addEventListener('click', openRail)
   $('#railClose').addEventListener('click', () => closeRail())
+  $('#drawerScrim').addEventListener('click', () => {
+    if ($('#annotationRail').classList.contains('open')) closeRail()
+    else closeNav()
+  })
 
   $$('.finding-row').forEach((row) => row.addEventListener('click', () => selectFinding(row)))
   $$('[data-focus]').forEach((button) => button.addEventListener('click', () => {
@@ -217,12 +252,20 @@
   }))
 
   $$('.filter-chips button').forEach((button) => button.addEventListener('click', () => {
-    $$('.filter-chips button').forEach((item) => item.classList.toggle('active', item === button))
+    $$('.filter-chips button').forEach((item) => {
+      const active = item === button
+      item.classList.toggle('active', active)
+      item.setAttribute('aria-pressed', String(active))
+    })
     showToast(`已应用筛选：${button.textContent}`)
   }))
 
   $$('.view-switch button').forEach((button) => button.addEventListener('click', () => {
-    $$('.view-switch button').forEach((item) => item.classList.toggle('active', item === button))
+    $$('.view-switch button').forEach((item) => {
+      const active = item === button
+      item.classList.toggle('active', active)
+      item.setAttribute('aria-pressed', String(active))
+    })
     showToast(`已切换为${button.textContent} Diff（原型示意）`)
   }))
 
@@ -248,10 +291,19 @@
   $('#confirmDialog').addEventListener('click', (event) => { if (event.target === event.currentTarget) closeDialog() })
 
   document.addEventListener('keydown', (event) => {
-    if (event.key !== 'Escape') return
-    if (!$('#confirmDialog').hidden) return closeDialog()
-    if ($('#annotationRail').classList.contains('open')) return closeRail()
-    if ($('#caseIndex').classList.contains('open')) return closeNav()
+    if (event.key === 'Escape') {
+      if (!$('#confirmDialog').hidden) return closeDialog()
+      if ($('#annotationRail').classList.contains('open')) return closeRail()
+      if ($('#caseIndex').classList.contains('open')) return closeNav()
+    }
+    if (event.key !== 'Tab' || !$('#confirmDialog').hidden) return
+    const drawer = $('#annotationRail').classList.contains('open') ? $('#annotationRail') : $('#caseIndex').classList.contains('open') ? $('#caseIndex') : null
+    if (!drawer) return
+    const focusable = [...drawer.querySelectorAll('button:not(:disabled), input:not(:disabled), a[href], [tabindex]:not([tabindex="-1"])')].filter((item) => !item.hidden)
+    const first = focusable[0]
+    const last = focusable.at(-1)
+    if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus() }
+    else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus() }
   })
 
   const dialog = $('.confirm-dialog')
@@ -264,8 +316,9 @@
     else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus() }
   })
 
-  window.addEventListener('resize', resizeParticles, { passive: true })
+  window.addEventListener('resize', () => { resizeParticles(); syncResponsiveDrawers() }, { passive: true })
   resizeParticles()
+  syncResponsiveDrawers()
   syncParticles()
   selectFinding($('.finding-row.selected'))
 })()

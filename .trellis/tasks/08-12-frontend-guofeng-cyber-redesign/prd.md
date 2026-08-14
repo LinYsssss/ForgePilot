@@ -56,11 +56,11 @@
 
 - [ ] `research/ui-inventory.md` 完成页面、组件、状态和响应式缺口审计。
 - [x] `research/visual-directions.md` 已记录三套方向、A 的用户选择、拒绝项与可逆边界。
-- [ ] 选定方向形成可执行的 `research/ui-design.md`、`research/ui-decisions.md` 与原型证据。
-- [ ] 登录门禁与 Agent 工作台纵向切片打通首次进入、真实数据/输入、主动作、成功反馈与失败恢复。
+- [x] 选定方向形成可执行的 `research/ui-design.md`、`research/ui-decisions.md` 与原型证据。
+- [x] 原型登录门禁与 Agent 工作台纵向切片打通首次进入、确定性输入、主动作、成功反馈与失败恢复；生产真实 API 仍在后续切片验收。
 - [ ] 全部主路由完成迁移，关键交互与数据状态覆盖完整。
-- [ ] 鼠标视差不移动信息层；reduced motion、触屏和无模糊环境均有可用降级。
-- [ ] 390px、768px、1440px 浏览器 QA 通过，无阻断性溢出、遮挡、控制台或网络错误。
+- [x] 原型鼠标视差不移动信息层；reduced motion、触屏和无模糊环境均有可用降级。
+- [x] 原型 390px、768px、1440px 浏览器 QA 通过，并补 1279px 临界点；无阻断性溢出、遮挡、控制台或网络错误。
 - [ ] Node 22 下 `npm test`、`npm run build` 通过；性能与体积对比记录在 `research/qa-report.md`。
 - [ ] Trellis Check 无 Critical；任何接受的 High 均记录责任人或明确决策。
 
@@ -69,5 +69,5 @@
 - 当前仓库存在未提交的 R7 评测语料改动；本任务实施必须在 R7 安全落盘后使用独立 `codex/` 分支或工作树，不与其混合提交。
 - 当前前端要求 Node `>=22 <23`；本机审计检测到 Node 24，正式构建与验收使用 Node 22。
 - Element Plus 不再是可见设计语言的强制基础；可保留、包装或替换，但必须通过 `shared/ui` 稳定行为与无障碍合同。
-- A 方向已经批准；交互原型与 v0.2 UI design contract 的冻结仍是阻塞生产扩面的阶段门。
+- A 方向、交互原型与 UI design contract v1.0 已通过并冻结；生产扩面仍必须先完成 Agent + Reviews 纵向切片质量门。
 - 禁止 AI 紫粉渐变、emoji 图标、低对比透明正文、全屏毛玻璃、游戏式 HUD、景区古风、书法正文和无语义故障闪烁。

@@ -13,6 +13,7 @@
   let width = 0
   let height = 0
   let toastTimer = 0
+  let submitting = false
 
   function allowed() { return !app.classList.contains('static-mode') && !reduced.matches && !coarse.matches && !document.hidden && document.hasFocus() }
   function resetPointer() { root.style.setProperty('--pointer-x', 0); root.style.setProperty('--pointer-y', 0) }
@@ -36,7 +37,7 @@
   function animate(){ particleFrame=0; if(!allowed()) return draw(false); draw(true); particleFrame=requestAnimationFrame(animate) }
   function sync(){ if(particleFrame)cancelAnimationFrame(particleFrame);particleFrame=0;if(allowed())particleFrame=requestAnimationFrame(animate);else draw(false) }
   function toast(message){ const el=document.querySelector('#toast');clearTimeout(toastTimer);el.textContent=message;el.hidden=false;toastTimer=setTimeout(()=>el.hidden=true,2200) }
-  function enter(){ document.querySelector('.login-submit').textContent='正在验明身份…'; setTimeout(()=>location.href='./index.html', allowed()?520:80) }
+  function enter(){ const submit=document.querySelector('.login-submit');if(submitting)return;submitting=true;submit.disabled=true;submit.setAttribute('aria-busy','true');submit.textContent='正在验明身份…';setTimeout(()=>location.href='./index.html', allowed()?520:80) }
 
   addEventListener('pointermove', onPointer, {passive:true})
   addEventListener('resize', resize, {passive:true})
@@ -44,7 +45,7 @@
   document.addEventListener('visibilitychange', () => {resetPointer();sync()})
   document.querySelector('#motionToggle').addEventListener('click', e => { const active=app.classList.toggle('static-mode');e.currentTarget.setAttribute('aria-pressed',String(active));e.currentTarget.textContent=active?'启用太极水墨':'静态墨境';if(active)resetPointer();sync();toast(active?'已切换静态墨境':'已启用太极水墨与墨粒') })
   document.querySelector('#demoLogin').addEventListener('click', () => {document.querySelector('#email').value='reviewer@reposage.local';document.querySelector('#password').value='prototype';document.querySelector('#loginError').hidden=true;toast('演示账户已填入')})
-  document.querySelector('#loginForm').addEventListener('submit', e => {e.preventDefault();const valid=e.currentTarget.email.value.trim()&&e.currentTarget.password.value;if(!valid){document.querySelector('#loginError').hidden=false;document.querySelector('#email').focus();return}document.querySelector('#loginError').hidden=true;enter()})
+  document.querySelector('#loginForm').addEventListener('submit', e => {e.preventDefault();if(submitting)return;const email=e.currentTarget.email;const password=e.currentTarget.password;const missing=!email.value.trim()?email:!password.value?password:null;if(missing){document.querySelector('#loginError').hidden=false;email.setAttribute('aria-invalid',String(!email.value.trim()));password.setAttribute('aria-invalid',String(!password.value));missing.focus();return}document.querySelector('#loginError').hidden=true;email.removeAttribute('aria-invalid');password.removeAttribute('aria-invalid');enter()})
   document.querySelector('#forgotLink').addEventListener('click', e => {e.preventDefault();toast('原型：将跳转至组织账号恢复流程')})
   resize();sync()
 })()

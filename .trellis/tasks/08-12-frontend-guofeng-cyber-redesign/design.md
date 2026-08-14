@@ -1,6 +1,6 @@
 # Design：墨境书院前端重构技术方案
 
-> 视觉方向 A 已批准。用户允许较大幅度调整现有前端架构；本方案因此保留业务/API 边界，重建前端表现层和模块边界。完整 UI 规则见 `research/ui-design.md`，目前为待原型验证的 v0.2 草案。
+> 视觉方向 A 已批准。用户允许较大幅度调整现有前端架构；本方案因此保留业务/API 边界，重建前端表现层和模块边界。完整 UI 规则见 `research/ui-design.md`，已由 Stage 3 浏览器 QA 验证并冻结为 v1.0。
 
 ## 1. Architecture decision
 

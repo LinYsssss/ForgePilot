@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="color-scheme" content="light" />
   <title>RepoSage · 墨境书院原型</title>
+  <link rel="icon" href="data:," />
   <link rel="stylesheet" href="./styles.css" />
 </head>
 <body>
@@ -118,7 +119,7 @@
       </section>
 
       <section class="ledger-section ink-reveal" aria-labelledby="findingTitle">
-        <div class="section-heading finding-heading"><div><span class="eyebrow">朱批清单</span><h2 id="findingTitle">发现 12 项 · 3 项需立即处理</h2></div><div class="filter-chips" role="group" aria-label="严重度筛选"><button class="active">全部 12</button><button>Critical 3</button><button>High 7</button></div></div>
+        <div class="section-heading finding-heading"><div><span class="eyebrow">朱批清单</span><h2 id="findingTitle">发现 12 项 · 3 项需立即处理</h2></div><div class="filter-chips" role="group" aria-label="严重度筛选"><button class="active" aria-pressed="true">全部 12</button><button aria-pressed="false">Critical 3</button><button aria-pressed="false">High 7</button></div></div>
         <div class="finding-ledger" role="listbox" aria-label="Finding 列表">
           <button class="finding-row selected" role="option" aria-selected="true" data-id="f001" data-file="src/api/admin.py" data-title="缺少管理员授权校验" data-desc="端点仅验证登录态，普通用户可枚举全部账户。" data-line="139" data-confidence="96%"><span class="severity critical">危</span><span><strong>F-001 · 缺少管理员授权校验</strong><small>src/api/admin.py:139 · 2 条证据</small></span><span class="status">待复核</span></button>
           <button class="finding-row" role="option" aria-selected="false" data-id="f002" data-file="src/services/role.py" data-title="角色参数可被客户端覆盖" data-desc="profile 更新接口接受未过滤的 role 字段。" data-line="84" data-confidence="91%"><span class="severity critical">危</span><span><strong>F-002 · 角色参数可被客户端覆盖</strong><small>src/services/role.py:84 · 3 条证据</small></span><span class="status">待复核</span></button>
@@ -127,7 +128,7 @@
       </section>
 
       <section class="evidence-section ink-reveal" aria-labelledby="evidenceTitle">
-        <div class="section-heading"><div><span class="eyebrow">证据与 Diff</span><h2 id="evidenceTitle"><span id="evidenceId">F-001</span> · <span id="evidenceTitleText">缺少管理员授权校验</span></h2></div><div class="view-switch" role="group" aria-label="Diff 模式"><button class="active">并排</button><button>统一</button></div></div>
+        <div class="section-heading"><div><span class="eyebrow">证据与 Diff</span><h2 id="evidenceTitle"><span id="evidenceId">F-001</span> · <span id="evidenceTitleText">缺少管理员授权校验</span></h2></div><div class="view-switch" role="group" aria-label="Diff 模式"><button class="active" aria-pressed="true">并排</button><button aria-pressed="false">统一</button></div></div>
         <div class="evidence-meta"><code id="evidenceFile">src/api/admin.py:139</code><span>置信度 <strong id="evidenceConfidence">96%</strong></span><span>CVSS 9.1</span><span class="blocking">可阻断</span></div>
         <p class="evidence-description" id="evidenceDescription">端点仅验证登录态，普通用户可枚举全部账户。</p>
         <div class="diff" role="region" aria-label="代码差异" tabindex="0">
@@ -160,6 +161,7 @@
     </aside>
 
     <button class="rail-fab" id="railToggle" aria-label="打开朱批栏" aria-expanded="false" aria-controls="annotationRail">批 <i>3</i></button>
+    <button class="drawer-scrim" id="drawerScrim" type="button" aria-label="关闭当前侧栏" hidden></button>
 
     <div class="dialog-backdrop" id="confirmDialog" hidden>
       <section class="confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="dialogTitle" aria-describedby="dialogDesc">
