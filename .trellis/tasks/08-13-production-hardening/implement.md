@@ -2,6 +2,10 @@
 
 > **▶ 2026-08-14 已恢复并跑完 1-5 阶段**（暂停现场档 `research/handoff-2026-08-14.md` 仅留作过程记录）。恢复时 backend `mvn verify` 先红后绿：修掉测试编译缺口与导出端码编码缺陷各一处，终态 658 通过 / 0 失败 / 6 跳过（既有 Testcontainers 门控）。
 >
+> **落库状态**：`a2f1e0c`（1-5 阶段成果，一批）+ `327920d`（Outbox 调度器上下文泄漏修复 + 规范沉淀），已 ff-only 并入 `main` 并推送；分支 CI 三 job 全绿（verify / supply-chain / nginx-headers），supply-chain 由 `.trivyignore` 转绿已实测生效。§6 分支清理**未执行**（远程删除不可逆，留待确认）。
+>
+> **剩余**：步骤 6（冗余清理）、7（注释中文化 252 文件）、8（尾段，等墨境步骤 6/7）、9（收尾）。服务器侧待验收：V28 真实迁移、TLS 走通、告警触发、grafana 看板（清单见 `research/server-acceptance-checklist.md`）。
+>
 > **CI supply-chain 修法与交接档所述不同**：交接档拟用 `docker:29.6.2-cli → 29.7.2-cli` 修两条 HIGH，实测该前提不成立——docker/cli `29.x` 分支 `ARG GO_VERSION=1.26.5`，最新 tag v29.7.2 仍是 1.26.5，而修复需 ≥1.26.6（master 已 bump，将随下个特性版本进入镜像）。改为：仍升 29.7.2 取其它修复，另加仓库根 `.trivyignore` 以带到期日（exp:2026-11-01）的显式抑制覆盖这两条，并把 `--ignorefile` 挂载接进 `deploy/scan-images.sh`（容器化 trivy 看不见宿主 ignore 文件）。理由：门禁长期红会训练所有人忽略它；且该 CLI 二进制只与本机 docker.sock 通信，idna/dnsmessage 路径不可达。
 
 > 每阶段独立提交=回滚点；提交遵循仓库既有 message 风格、作者本人署名、无 AI 标记。全程硬边界：不触碰受保护资产；墨境步骤 6/7 落库前不触碰 `frontend/`。
