@@ -25,6 +25,8 @@ These guides help you **ask the right questions before coding**.
 | [Cross-Layer Thinking Guide](./cross-layer-thinking-guide.md) | Think through data flow across layers | Features spanning multiple layers |
 | [Contract Testing Discipline](./contract-testing.md) | 跨进程/跨模块数据格式的双向契约测试铁律(F-03 事故固化) | Any change to MQ payloads, shared string references, REST contracts, HMAC canonical forms |
 | [Demo Assets & Honest Claims](./demo-assets-and-claims.md) | demo-repos 故意缺陷保留义务、README 诚实声明不可回退、能力表述以实测为准 | Any task touching demo-repos, README capability claims, or public-facing numbers |
+| [Deployment & Observability](./deployment-and-observability.md) | 可选能力走 overlay 不改基础栈；告警规则对着实测指标名与**跨模块**队列名写；指标标签低基数 | 改 `deploy/`、compose、nginx、告警规则或看板 |
+| [Comment Quality](./comment-quality.md) | 注释写「为什么」；结构自明就豁免且分清「自明」与「未评估」；翻译时复核断言；镜像件译文一致 | 注释治理、大批量翻译/补注释、写完成度声明 |
 
 ---
 
