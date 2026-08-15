@@ -29,8 +29,8 @@ public class AgentStepConsumer {
     }
 
     public AgentStepExecutionService.ExecutionOutcome consume(AgentStepMessage message) {
-        // Carry the correlation id from the message into MDC so step and tool logs produced while this
-        // step runs share the same traceId that started on the inbound HTTP request.
+        // 把消息里的关联 id 灌进 MDC,让本步骤运行期间产生的步骤日志与工具日志,
+        // 与最初那次入站 HTTP 请求共享同一个 traceId。
         String previous = MDC.get(TraceIdFilter.TRACE_ID);
         String correlationId = message.traceId();
         boolean applied = correlationId != null && !correlationId.isBlank();

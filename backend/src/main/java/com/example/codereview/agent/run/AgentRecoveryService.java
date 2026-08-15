@@ -99,13 +99,11 @@ public class AgentRecoveryService {
     }
 
     /**
-     * Recovery cannot only run at startup: a step whose worker dies while the process stays up
-     * would otherwise sit RUNNING until the next restart. Now that steps renew a lease while they
-     * execute, an unrenewed lease is a genuine liveness signal rather than a guess based on how
-     * long the row has been untouched.
+     * 恢复不能只在启动时跑:如果 worker 死了而进程还活着,那个步骤会一直挂在 RUNNING,
+     * 直到下次重启才被发现。如今步骤在执行期间会持续续租,因此「租约没再续」是一个真正的
+     * 存活性信号,而不是「这行多久没被动过」式的猜测。
      *
-     * <p>Only active when {@code app.agent.scheduling.enabled} is on, which is what registers the
-     * scheduling infrastructure.
+     * <p>只有 {@code app.agent.scheduling.enabled} 打开时才生效——正是它注册了调度基础设施。
      */
     @Scheduled(
             fixedDelayString = "${app.agent.recovery.interval-ms:60000}",
@@ -120,8 +118,7 @@ public class AgentRecoveryService {
                 log.warn("Watchdog recovered {} stalled Agent step(s)", recovered);
             }
         } catch (RuntimeException ex) {
-            // Losing the watchdog to one transient error would reintroduce exactly the stuck-run
-            // problem it exists to prevent.
+            // 因为一次瞬时错误就把 watchdog 丢掉,等于把它本来要防的「run 卡死」原样请回来。
             log.warn("Agent step recovery pass failed; will retry on the next tick", ex);
         }
     }

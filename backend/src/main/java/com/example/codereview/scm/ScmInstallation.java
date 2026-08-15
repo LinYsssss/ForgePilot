@@ -14,15 +14,13 @@ import jakarta.persistence.UniqueConstraint;
 import java.time.Instant;
 
 /**
- * A provider binding that lets RepoSage receive webhooks for, and call back to, a single repository
- * host.
+ * 一条 provider 绑定:让 RepoSage 能接收某一个代码托管方的 webhook,并回调它。
  *
- * <p>For GitHub this is a GitHub App installation (App id + encrypted private key + webhook secret);
- * for GitLab v1 it is an encrypted project access token plus webhook secret. Both credential columns
- * are stored encrypted (see {@code CryptoService}) and must never be returned by read APIs. The
- * installation is the <em>only</em> source of secrets and API host — these are resolved from the
- * verified identity in a delivery, never trusted from payload-supplied fields. Rotation is an update
- * of the encrypted columns; {@code updatedAt} records when it last happened.
+ * <p>对 GitHub 而言这是一次 GitHub App 安装(App id + 加密私钥 + webhook 密钥);
+ * 对 GitLab v1 而言是一个加密的项目访问令牌加 webhook 密钥。两个凭据列都加密存储
+ * (见 {@code CryptoService}),且绝不能被任何读接口返回。installation 是密钥与 API host 的
+ * <em>唯一</em>来源——它们只从投递中**已验证的身份**解析得到,绝不信任载荷里自带的字段。
+ * 轮换即更新这些加密列;{@code updatedAt} 记录最近一次轮换时间。
  */
 @Entity
 @Table(name = "scm_installation",
@@ -39,33 +37,33 @@ public class ScmInstallation {
     @Column(name = "provider", nullable = false, length = 32)
     private ScmProviderType provider;
 
-    /** GitHub App installation id, or GitLab project id — the provider's own identifier. */
+    /** GitHub App 的 installation id,或 GitLab 的 project id——即 provider 自己的标识符。 */
     @Column(name = "external_installation_id", nullable = false, length = 255)
     private String externalInstallationId;
 
     @Column(name = "display_name", length = 255)
     private String displayName;
 
-    /** GitHub App id (null for GitLab). */
+    /** GitHub App id(GitLab 场景下为 null)。 */
     @Column(name = "app_id", length = 128)
     private String appId;
 
-    /** Allowed API host for callbacks; resolved here, never from the webhook payload. */
+    /** 回调允许使用的 API host;只在这里解析,绝不取自 webhook 载荷。 */
     @Column(name = "api_base_url", length = 512)
     private String apiBaseUrl;
 
-    /** Internal RepoSage project this installation is bound to, when known. */
+    /** 本 installation 绑定到的 RepoSage 内部项目(已知时)。 */
     @Column(name = "project_id")
     private Long projectId;
 
-    /** Internal RepoSage repository this installation is bound to, when known. */
+    /** 本 installation 绑定到的 RepoSage 内部仓库(已知时)。 */
     @Column(name = "repository_id")
     private Long repositoryId;
 
     @Column(name = "encrypted_webhook_secret", columnDefinition = "TEXT")
     private String encryptedWebhookSecret;
 
-    /** Encrypted GitHub App private key or GitLab access token used for callbacks. */
+    /** 用于回调的 GitHub App 私钥或 GitLab 访问令牌,加密存储。 */
     @Column(name = "encrypted_credential", columnDefinition = "TEXT")
     private String encryptedCredential;
 

@@ -8,8 +8,8 @@ import java.time.Instant;
 import java.util.List;
 
 /**
- * Read models for the Agent Run timeline API. The database is the source of truth; these views are
- * projected from persisted {@link AgentRun}/{@link AgentStep} rows and also carried over SSE.
+ * Agent Run 时间线 API 的读模型。数据库是唯一真源;这些视图由已持久化的
+ * {@link AgentRun}/{@link AgentStep} 行投影而来,同时也通过 SSE 下发。
  */
 public final class AgentRunDtos {
 

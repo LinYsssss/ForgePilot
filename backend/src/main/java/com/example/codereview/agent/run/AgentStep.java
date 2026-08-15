@@ -57,19 +57,18 @@ public class AgentStep {
     private Instant finishedAt;
 
     /**
-     * Identifies the worker currently executing this step. Execution happens outside any
-     * transaction, so by the time a worker reports its result the step may already have been
-     * reclaimed; completion is gated on this token so a late result is dropped rather than
-     * overwriting the newer attempt.
+     * 标识当前正在执行本步骤的 worker。执行发生在任何事务之外,因此等某个 worker 回报结果时,
+     * 该步骤可能早已被回收;完成阶段卡在这个 token 上,好让迟到的结果被丢弃,
+     * 而不是把更新的那次尝试覆盖掉。
      */
     @Column(length = 64)
     private String executionToken;
 
-    /** Diagnostic only: which process held the lease when it expired. */
+    /** 仅用于诊断:租约过期时是哪个进程持有它。 */
     @Column(length = 120)
     private String workerId;
 
-    /** Renewed by a heartbeat while the step runs; the watchdog only reclaims once it lapses. */
+    /** 步骤运行期间由心跳续期;只有等它真正失效,watchdog 才会回收。 */
     private Instant leaseExpiresAt;
 
     @Column(nullable = false, updatable = false)
@@ -137,7 +136,7 @@ public class AgentStep {
         this.updatedAt = this.finishedAt;
     }
 
-    /** Takes the execution lease for {@code token}, held by {@code workerId} until {@code expiry}. */
+    /** 以 {@code token} 拿下执行租约,由 {@code workerId} 持有至 {@code expiry}。 */
     public void leaseTo(String token, String workerId, Instant expiry) {
         this.executionToken = token;
         this.workerId = workerId;
@@ -146,8 +145,8 @@ public class AgentStep {
     }
 
     /**
-     * Whether {@code token} is still the rightful holder. A worker whose lease was reclaimed while
-     * it was busy will fail this check, which is how its stale result gets discarded.
+     * {@code token} 是否仍是正当持有者。忙碌期间租约被回收的 worker 会在这里失败——
+     * 它那份过期结果正是这样被丢弃的。
      */
     public boolean holdsLease(String token) {
         return token != null && token.equals(executionToken);

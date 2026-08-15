@@ -22,9 +22,8 @@ public class MqLogController {
     }
 
     /**
-     * Deliberately routed through {@link MqLogQueryService} rather than the repository: the
-     * ownership check has to live somewhere the controller cannot skip, and hiding the entry point
-     * in the UI is not authorization.
+     * 刻意绕道 {@link MqLogQueryService} 而不直连仓储:归属校验必须待在控制器**跳不过**的地方。
+     * 在 UI 上藏起入口不叫授权。
      */
     @GetMapping
     public ApiResponse<PageResponse<MqLogResponse>> list(

@@ -82,11 +82,10 @@ public interface AgentStepRepository extends JpaRepository<AgentStep, Long> {
     );
 
     /**
-     * Pushes the lease out while a step is still executing. Conditional on the token so a worker
-     * that already lost the step cannot resurrect its claim, and on RUNNING so a completed step is
-     * never re-leased.
+     * 在步骤仍在执行期间把租约往后推。条件里卡了 token,好让一个已经丢掉该步骤的 worker
+     * 无法复活自己的认领;也卡了 RUNNING,好让已完成的步骤绝不会被重新租出去。
      *
-     * @return 1 while this worker still holds the step, 0 once it does not.
+     * @return 本 worker 仍持有该步骤时返回 1,一旦不再持有则返回 0。
      */
     @Transactional
     @Modifying(clearAutomatically = true, flushAutomatically = true)

@@ -53,8 +53,8 @@ public class ReviewReport {
     }
 
     /**
-     * Build a legacy report projected from a completed Agent Run. Such reports have no legacy
-     * {@code taskId}; the unique {@code agentRunId} is the idempotent projection key.
+     * 构造一份由已完成 Agent Run 投影而来的旧版报告。这类报告没有旧的 {@code taskId};
+     * 唯一的 {@code agentRunId} 就是它的幂等投影键。
      */
     public static ReviewReport forAgentRun(Long agentRunId, Long projectId, String commitId, String overallRisk,
                                            int issueCount, String summary, String rawAiResponse) {

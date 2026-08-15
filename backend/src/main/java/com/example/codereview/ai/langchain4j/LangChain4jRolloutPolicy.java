@@ -3,7 +3,7 @@ package com.example.codereview.ai.langchain4j;
 import java.util.Locale;
 import java.util.Set;
 
-/** Deterministic rollout gate; identifiers are configuration values, never metric labels. */
+/** 确定性的灰度放量门;这里的标识符是配置值,绝不用作指标标签(否则会撑爆时间序列基数)。 */
 @org.springframework.stereotype.Component
 public final class LangChain4jRolloutPolicy {
     public enum Stage { DISABLED, SHADOW, SELECTED_PROJECTS, DEFAULT }

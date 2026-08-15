@@ -88,10 +88,10 @@ public class AgentRun {
     }
 
     /**
-     * Operator-initiated recovery of a terminal failure. This is a deliberate action outside the
-     * forward {@link AgentStateMachine} (which keeps {@code FAILED}/{@code TIMED_OUT} terminal): it
-     * re-opens the run into {@code RETRY_WAIT} so the interrupted step can ride the sanctioned
-     * {@code RETRY_WAIT -> step} path again. Callers must first verify the current status is retryable.
+     * 由运维人工发起的终态故障恢复。这是一个**刻意越过**正向 {@link AgentStateMachine} 的动作
+     * (状态机把 {@code FAILED}/{@code TIMED_OUT} 视为终态):它把 run 重新打开成
+     * {@code RETRY_WAIT},好让被中断的步骤再次走已获许可的 {@code RETRY_WAIT -> step} 路径。
+     * 调用方必须先确认当前状态确实可重试。
      */
     public void reopenForRetry() {
         this.status = AgentRunStatus.RETRY_WAIT;

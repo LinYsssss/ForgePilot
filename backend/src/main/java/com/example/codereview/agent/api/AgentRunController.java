@@ -14,9 +14,9 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 /**
- * Agent Run timeline and control API. Reads return persisted state; {@code /events} adds an SSE
- * notification channel that resumes from {@code Last-Event-ID}. Every operation is authorized against
- * the run's owning project inside {@link AgentRunService}/{@link AgentEventService}.
+ * Agent Run 的时间线与控制 API。读接口返回已持久化的状态;{@code /events} 额外提供一条 SSE
+ * 通知通道,支持按 {@code Last-Event-ID} 断点续传。每个操作都在
+ * {@link AgentRunService}/{@link AgentEventService} 内部针对该 run 所属项目做鉴权。
  */
 @RestController
 @RequestMapping("/api/agent-runs")

@@ -1,10 +1,10 @@
 package com.example.codereview.scm;
 
 /**
- * Point-in-time metadata for a pull/merge request, fetched from the provider API after a delivery
- * is verified. Distinct from {@link NormalizedPullRequestEvent}: the event is what the webhook told
- * us, the snapshot is what the provider confirms now (and may include the authoritative head/base
- * SHA used to drive the review). Provider-neutral so the agent pipeline never branches on host.
+ * pull/merge request 的时点元数据,在投递验签通过后从 provider API 取回。
+ * 它与 {@link NormalizedPullRequestEvent} 是两回事:事件是 webhook **当时告诉我们的**,
+ * 快照是 provider **此刻确认的**(并且可能带上驱动本次审查所用的权威 head/base SHA)。
+ * 同样与 provider 无关,因此 agent 流水线永远不必按托管方分支。
  */
 public record PullRequestSnapshot(
         ScmProviderType provider,

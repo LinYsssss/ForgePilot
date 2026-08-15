@@ -2,7 +2,7 @@ package com.example.codereview.language;
 
 import java.util.List;
 
-/** A plugin-declared fixed command ID; it deliberately contains no executable or shell text. */
+/** 插件声明的固定命令 ID;它刻意不包含任何可执行文件路径或 shell 文本。 */
 public record ToolCommand(String commandId, List<String> arguments, String imageDigest, String sourceVersion) {
 
     public ToolCommand {

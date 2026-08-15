@@ -9,7 +9,7 @@ public interface MqTaskLogRepository extends JpaRepository<MqTaskLog, Long> {
 
     List<MqTaskLog> findByTaskIdOrderByCreatedAtDesc(Long taskId);
 
-    /** Paginated variant used by the API; the unbounded one stays for internal callers. */
+    /** 给 API 用的分页版本;无界的那个留给内部调用方。 */
     Page<MqTaskLog> findByTaskIdOrderByCreatedAtDesc(Long taskId, Pageable pageable);
 
     void deleteByTaskId(Long taskId);

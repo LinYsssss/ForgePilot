@@ -6,20 +6,18 @@ import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 
 /**
- * Signs and verifies {@link SandboxJob}s with HMAC-SHA256 over a canonical serialization.
+ * 用 HMAC-SHA256 对 {@link SandboxJob} 的规范序列化做签名与验签。
  *
- * <p>The canonical form is a deterministic JSON string with alphabetically-ordered keys, no
- * whitespace, and explicit string escaping — built by hand (not via a JSON library) so the backend
- * and the sandbox-runner produce byte-identical input regardless of their dependencies. This class
- * is mirrored verbatim in the runner module; a golden-vector test in each module pins cross-module
- * compatibility.
+ * <p>规范形式是一个确定性 JSON 串:键按字母序、无空白、显式转义——**手写**而非借助 JSON 库,
+ * 这样 backend 与 sandbox-runner 无论各自依赖如何,都能产出逐字节一致的输入。
+ * 本类在 runner 模块里有一份逐字镜像;两侧各有一个 golden 向量测试钉住跨模块兼容性。
  *
- * <p>Verification rejects an invalid signature and an expired job. Replay rejection (nonce already
- * seen) is enforced by {@link SandboxReplayGuard}, which the runner consults per delivery.
+ * <p>验签会拒绝无效签名与已过期的 job。重放拒绝(nonce 已见过)由 {@link SandboxReplayGuard}
+ * 负责,runner 每次投递都会查它。
  */
 public final class SandboxJobSigner {
 
-    /** Outcome of {@link #verify}. */
+    /** {@link #verify} 的结果。 */
     public enum Verification {
         VALID,
         INVALID_SIGNATURE,
@@ -47,7 +45,7 @@ public final class SandboxJobSigner {
         return Verification.VALID;
     }
 
-    /** Deterministic, library-independent canonical JSON: sorted keys, no whitespace. */
+    /** 确定性、不依赖任何库的规范 JSON:键有序、无空白。 */
     static String canonicalJson(SandboxJob job) {
         StringBuilder sb = new StringBuilder();
         sb.append("{\"args\":[");

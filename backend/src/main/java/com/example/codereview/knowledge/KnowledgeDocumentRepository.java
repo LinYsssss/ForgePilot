@@ -7,7 +7,7 @@ public interface KnowledgeDocumentRepository extends JpaRepository<KnowledgeDocu
 
     List<KnowledgeDocument> findByProjectIdOrderByCreatedAtDesc(Long projectId);
 
-    /** Paginated variant for the API; the unbounded one stays for internal callers such as reindex. */
+    /** 给 API 用的分页版本;无界的那个留给 reindex 等内部调用方。 */
     org.springframework.data.domain.Page<KnowledgeDocument> findByProjectIdOrderByCreatedAtDesc(
             Long projectId, org.springframework.data.domain.Pageable pageable);
 

@@ -10,11 +10,11 @@ public class NoopVectorIndexService implements VectorIndexService {
 
     @Override
     public void index(KnowledgeChunk chunk) {
-        // Memory mode stores embedding JSON directly in knowledge_chunk.
+        // 内存模式把 embedding JSON 直接存在 knowledge_chunk 上。
     }
 
     @Override
     public void deleteByDocumentId(Long documentId) {
-        // Memory mode stores vectors on knowledge_chunk, so chunk deletion is enough.
+        // 内存模式的向量就挂在 knowledge_chunk 上,删掉分块即可,无需额外清理。
     }
 }

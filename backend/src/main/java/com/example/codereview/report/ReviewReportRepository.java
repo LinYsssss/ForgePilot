@@ -8,7 +8,7 @@ public interface ReviewReportRepository extends JpaRepository<ReviewReport, Long
 
     List<ReviewReport> findByProjectIdOrderByCreatedAtDesc(Long projectId);
 
-    /** Paginated variant for the API; the unbounded one stays for internal callers. */
+    /** 给 API 用的分页版本;无界的那个留给内部调用方。 */
     org.springframework.data.domain.Page<ReviewReport> findByProjectIdOrderByCreatedAtDesc(
             Long projectId, org.springframework.data.domain.Pageable pageable);
 

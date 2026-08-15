@@ -8,15 +8,14 @@ public interface AgentRunRepository extends JpaRepository<AgentRun, Long> {
     Optional<AgentRun> findByTriggerKey(String triggerKey);
 
     /**
-     * All runs whose trigger key shares the given prefix — used to find sibling runs for the same
-     * PR (provider + installation + PR number) across different head SHAs, so an older active run
-     * can be superseded when a newer head arrives.
+     * 所有触发键带指定前缀的 run——用来找出同一个 PR(provider + installation + PR 号)
+     * 在不同 head SHA 下的兄弟 run,好在新 head 到来时把仍在跑的旧 run 顶掉。
      */
     List<AgentRun> findByTriggerKeyStartingWith(String triggerKeyPrefix);
 
     List<AgentRun> findByProjectIdOrderByCreatedAtDesc(Long projectId);
 
-    /** Paginated variant for the API; the unbounded one stays for internal callers. */
+    /** 给 API 用的分页版本;无界的那个留给内部调用方。 */
     org.springframework.data.domain.Page<AgentRun> findByProjectIdOrderByCreatedAtDesc(
             Long projectId, org.springframework.data.domain.Pageable pageable);
 }

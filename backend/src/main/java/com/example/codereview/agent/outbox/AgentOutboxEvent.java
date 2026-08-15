@@ -62,18 +62,18 @@ public class AgentOutboxEvent {
     private Instant claimedAt;
 
     /**
-     * Identifies the worker that currently holds this event. Every write-back is conditional on it,
-     * so a worker whose lease expired cannot overwrite the result of whoever reclaimed the event.
+     * 标识当前持有本事件的 worker。每一次回写都以它为条件,
+     * 因此租约已过期的 worker 无法覆盖掉后来回收者写下的结果。
      */
     @Column(length = 64)
     private String claimToken;
 
-    /** When the current claim stops being valid and the reaper may requeue the event. */
+    /** 当前认领何时失效、回收器可以把事件重新排队的时刻。 */
     private Instant leaseExpiresAt;
 
     private Instant sentAt;
 
-    /** Set when retries were exhausted; the event is terminal from then on. */
+    /** 重试耗尽时置位;此后该事件即为终态。 */
     private Instant failedAt;
 
     @Column(columnDefinition = "text")
@@ -118,9 +118,9 @@ public class AgentOutboxEvent {
         return new AgentOutboxEvent(eventKey, agentRunId, eventType, payload, traceId, now);
     }
 
-    // State transitions deliberately live in AgentOutboxRepository as conditional bulk updates
-    // rather than as entity mutators: every one of them has to be a compare-and-set on
-    // (id, claim_token, status), and a load-mutate-save round trip cannot express that.
+    // 状态流转刻意放在 AgentOutboxRepository 里做成带条件的批量更新,而不是写成实体的 setter:
+    // 每一次流转都必须是针对 (id, claim_token, status) 的 compare-and-set,
+    // 而「读出来—改—存回去」这套往返根本表达不了这个语义。
 
     private static String requireText(String value, String name) {
         if (value == null || value.isBlank()) {

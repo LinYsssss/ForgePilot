@@ -17,6 +17,14 @@ import java.util.Set;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+/**
+ * Agent 可调用工具的唯一入口:按名字查表分发,并在调用前后架住四道闸——
+ * 只认注册表内的工具名(模型编出来的名字一律打不通)、拒绝裸命令形态的入参、
+ * 对入参与出参各自做字节数封顶,以及按 {@link #SECRET_MARKERS} 抹掉疑似凭据字段后再落审计。
+ *
+ * <p>之所以把这些都收在一处而不是散在各个工具里:工具是会不断新增的,闸门一旦分叉,
+ * 新工具就会默认漏掉某几道。这里是模型输出与真实副作用之间的收口点。
+ */
 @Component
 public class AgentToolRegistry {
 

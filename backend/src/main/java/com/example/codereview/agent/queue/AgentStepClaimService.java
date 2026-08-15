@@ -17,11 +17,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Phase one of step execution: decide whether this message may run, and take the lease.
+ * 步骤执行的第一阶段:判定这条消息是否可以执行,并把租约拿下。
  *
- * <p>This is the only place that still takes a pessimistic row lock, and it holds it for the few
- * milliseconds it takes to check the attempt rules and stamp the token — not for the duration of a
- * Git clone or a model call.
+ * <p>这是**唯一**还在用悲观行锁的地方,而且只持有「检查尝试规则 + 盖上 token」那几毫秒——
+ * 绝不会跨越一次 Git clone 或一次模型调用。
  */
 @Service
 public class AgentStepClaimService {
@@ -70,7 +69,7 @@ public class AgentStepClaimService {
             return AgentStepClaim.rejected(ExecutionOutcome.DUPLICATE_IGNORED);
         }
         if (!step.acceptsAttempt(message.attempt())) {
-            // Already RUNNING under somebody else's lease, or the attempt number is stale.
+            // 要么已在别人的租约下 RUNNING,要么这个尝试号已经过期。
             return AgentStepClaim.rejected(ExecutionOutcome.STALE_OR_ACTIVE_IGNORED);
         }
 

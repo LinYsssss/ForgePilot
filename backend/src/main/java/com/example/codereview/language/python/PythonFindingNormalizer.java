@@ -103,6 +103,9 @@ public final class PythonFindingNormalizer {
 
     private static Document parseXml(String xml) {
         try {
+            // 与 JavaFindingNormalizer 同口径:解析的是沙箱工具输出这类不可信 XML,
+            // 必须按 XXE 全关配置(禁 DOCTYPE、禁内外部实体、清空外部 DTD/Schema、
+            // 关 XInclude 与实体展开)。少关一项,构造过的报告即可诱导后端读本地文件或外连。
             DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
             factory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
             factory.setFeature("http://xml.org/sax/features/external-general-entities", false);

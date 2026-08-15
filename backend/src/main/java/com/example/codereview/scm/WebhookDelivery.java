@@ -14,13 +14,13 @@ import jakarta.persistence.UniqueConstraint;
 import java.time.Instant;
 
 /**
- * A single received webhook delivery.
+ * 一次收到的 webhook 投递。
  *
- * <p>Serves two jobs: idempotency (the unique {@code (provider, deliveryId)} key collapses replays)
- * and audit. To keep private repository payloads out of the database, only a SHA-256
- * {@link #payloadHash} and a bounded, sanitized {@link #payloadPreview} are stored — never the
- * unrestricted raw body. The preview is capped at {@link #PREVIEW_MAX_LENGTH} characters by
- * {@link #setPayloadPreview(String)} so an oversized caller value cannot defeat the bound.
+ * <p>承担两件事:幂等(唯一键 {@code (provider, deliveryId)} 把重放收敛成一条)与审计。
+ * 为了不把私有仓库的载荷落进数据库,这里只存 SHA-256 的 {@link #payloadHash} 与一段有界、
+ * 已脱敏的 {@link #payloadPreview}——绝不存未加限制的原始报文。预览长度由
+ * {@link #setPayloadPreview(String)} 截到 {@link #PREVIEW_MAX_LENGTH} 字符,
+ * 因此调用方传入超长值也突破不了这个上界。
  */
 @Entity
 @Table(name = "scm_webhook_delivery",
@@ -29,7 +29,7 @@ import java.time.Instant;
                 columnNames = {"provider", "delivery_id"}))
 public class WebhookDelivery {
 
-    /** Upper bound, in characters, for the stored {@link #payloadPreview}. */
+    /** 落库的 {@link #payloadPreview} 的字符数上界。 */
     public static final int PREVIEW_MAX_LENGTH = 1000;
 
     @Id
@@ -40,11 +40,11 @@ public class WebhookDelivery {
     @Column(name = "provider", nullable = false, length = 32)
     private ScmProviderType provider;
 
-    /** {@code X-GitHub-Delivery}, GitLab event UUID, or a deterministic fallback key. */
+    /** {@code X-GitHub-Delivery}、GitLab 的事件 UUID,或一个确定性的兜底键。 */
     @Column(name = "delivery_id", nullable = false, length = 255)
     private String deliveryId;
 
-    /** Resolved installation; null while {@link WebhookDeliveryStatus#RECEIVED} or when rejected. */
+    /** 解析出的 installation;处于 {@link WebhookDeliveryStatus#RECEIVED} 或被拒时为 null。 */
     @Column(name = "installation_id")
     private Long installationId;
 
@@ -64,7 +64,7 @@ public class WebhookDelivery {
     @Column(name = "payload_preview", length = PREVIEW_MAX_LENGTH)
     private String payloadPreview;
 
-    /** Agent Run produced by this delivery, once processed. */
+    /** 本次投递处理完成后产出的 Agent Run。 */
     @Column(name = "agent_run_id")
     private Long agentRunId;
 
@@ -90,7 +90,7 @@ public class WebhookDelivery {
         updatedAt = Instant.now();
     }
 
-    /** Bounds a raw preview string to {@link #PREVIEW_MAX_LENGTH} characters. */
+    /** 把原始预览串截断到 {@link #PREVIEW_MAX_LENGTH} 字符以内。 */
     public static String boundedPreview(String raw) {
         if (raw == null) {
             return null;

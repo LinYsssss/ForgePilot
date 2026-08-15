@@ -144,6 +144,9 @@ public final class JavaFindingNormalizer {
 
     private static Document parseXml(String xml) {
         try {
+            // 这里解析的是沙箱里跑出来的工具输出,属于不可信输入,必须按 XXE 全关配置:
+            // 禁 DOCTYPE、禁内外部实体、清空外部 DTD/Schema 解析位置、关掉 XInclude 与实体展开。
+            // 少关任何一项,一份构造过的报告就能让后端去读本地文件或发外连请求。
             DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
             factory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
             factory.setFeature("http://xml.org/sax/features/external-general-entities", false);

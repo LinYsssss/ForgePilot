@@ -20,10 +20,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Phase three of step execution: record the outcome, but only if this worker still holds the lease.
+ * 步骤执行的第三阶段:记录结果——但**只有**在这个 worker 仍然持有租约时才记。
  *
- * <p>Enqueueing the follow-up step happens inside the same transaction as the completion, so a run
- * can never be left having succeeded a step without the next one being scheduled.
+ * <p>后继步骤的入队与本次完成写在同一个事务里,因此绝不会出现「某步骤已成功、下一步却没被排上」
+ * 的 run。
  */
 @Service
 public class AgentStepCompletionService {
@@ -135,8 +135,8 @@ public class AgentStepCompletionService {
     }
 
     private ExecutionOutcome leaseLost(AgentStepExecutionContext context) {
-        // The watchdog reclaimed the step while this worker was still busy, and something else has
-        // taken it over. Dropping the result is the entire purpose of the token.
+        // 这个 worker 还在忙的时候,watchdog 已经把步骤回收、并交给了别人。
+        // 丢弃这份结果正是 token 存在的全部意义。
         log.warn("Discarding result for Agent step {}/{}: execution lease no longer held",
                 context.agentRunId(), context.sequenceNo());
         return ExecutionOutcome.LEASE_LOST;

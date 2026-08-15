@@ -61,9 +61,9 @@ public class AgentStepPublisher {
     }
 
     /**
-     * Operator-initiated retry of a previously failed/interrupted step. The run must already have been
-     * re-opened into {@code RETRY_WAIT} in the same transaction; here we only re-enqueue the step for
-     * its next attempt through the outbox (no forward state transition of its own).
+     * 由运维人工发起的重试,针对此前失败/中断的步骤。调用前该 run 必须已在**同一事务内**被重新
+     * 打开为 {@code RETRY_WAIT};这里只负责把步骤经 outbox 重新入队以进行下一次尝试,
+     * 自身不做任何向前的状态流转。
      */
     @Transactional
     public AgentStepMessage republishForRetry(AgentStep step) {

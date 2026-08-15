@@ -29,7 +29,7 @@ public class KnowledgeDocument {
     @Column(nullable = false, length = 32)
     private String status;
 
-    /** Sanitised reason the last indexing attempt failed; null once indexing succeeds. */
+    /** 上次索引尝试失败的原因(已脱敏);一旦索引成功即置为 null。 */
     @Column(columnDefinition = "text")
     private String indexError;
 
