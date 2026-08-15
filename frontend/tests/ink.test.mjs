@@ -230,6 +230,93 @@ test('particles drift slowly and wrap at the edges', () => {
   assert.equal(particles[1].x, 108) // 左侧漂出 → 右侧回绕
 })
 
+/* ---------- 4b. Ambient asset & blur budgets (ui-design.md §7 §197–198) ---------- */
+
+// 合同 §198「不为装饰阻塞首屏;纹理失败时使用纯 CSS 纸面与静态渐变」。
+// 实现比合同更进一步:纸纹由 repeating-linear-gradient 生成,环境层零外部资源,
+// 于是「纹理加载失败」这一失败态根本不存在。本用例钉死这个更强的性质——
+// 一旦有人塞回 url(...) 或 import 图片,降级分支就重新出现而合同的兜底代码并不存在。
+test('ambient layer ships zero external assets, so texture failure cannot occur', async () => {
+  const files = [
+    '../src/shared/motion/InkAmbientScene.vue',
+    '../src/shared/motion/TaijiAmbientMark.vue',
+    '../src/shared/motion/InkParticleField.vue',
+    '../src/shared/theme/ink-base.css',
+    '../src/shared/theme/ink-tokens.css',
+  ]
+  for (const file of files) {
+    const source = await readFile(new URL(file, import.meta.url), 'utf8')
+    const urls = source.match(/url\(\s*['"]?(?!data:)[^)]+\)/g)
+    assert.equal(urls, null, `${file} 引入了外部资源 ${urls};环境层必须纯 CSS 生成`)
+    const assets = source.match(/from\s+['"][^'"]+\.(png|jpe?g|webp|gif|avif|svg)['"]/g)
+    assert.equal(assets, null, `${file} 导入了图片资源 ${assets};装饰不得产生额外请求`)
+  }
+})
+
+// 合同 §7「持续动画的大面积模糊层 ≤3」——原先只写在 InkAmbientScene 的注释里,没有守卫。
+// 判据取真实开销来源:同一元素既落在大面积 blur 规则上、又落在 infinite 动画规则上。
+// 静态模糊(远山/墨雾/笔触)不计,它们不产生逐帧重绘。
+test('at most three continuously animated large-blur layers exist', async () => {
+  const source = await readFile(
+    new URL('../src/shared/motion/InkAmbientScene.vue', import.meta.url), 'utf8')
+  const style = source.slice(source.indexOf('<style'), source.lastIndexOf('</style>'))
+
+  // 收集 { 叶子类名 -> 规则体 };选择器形如 .a / .a .b / .a, .b
+  const blurred = new Set()
+  const animated = new Set()
+  for (const [, selector, body] of style.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+    // 跳过 @规则、关键帧百分比,以及嵌套花括号切剩下的声明碎片(含 ; 或 : 的不是选择器)
+    if (/[@%;:]/.test(selector)) continue
+    const leaves = [...selector.matchAll(/\.([\w-]+)(?![\w-])/g)]
+      .map((m) => m[1])
+      .filter((_, i, all) => i === all.length - 1 || selector.includes(','))
+    const blurPx = body.match(/filter:\s*blur\((\d+(?:\.\d+)?)px\)/)
+    if (blurPx && Number(blurPx[1]) >= 10) leaves.forEach((c) => blurred.add(c))
+    if (/animation:[^;]*infinite/.test(body)) leaves.forEach((c) => animated.add(c))
+  }
+
+  // 模板里逐元素求交:一个元素的 class 同时命中两个集合才算数
+  const template = source.slice(0, source.indexOf('</template>'))
+  let heavy = 0
+  for (const [, classAttr] of template.matchAll(/class="([^"]+)"/g)) {
+    const classes = classAttr.split(/\s+/)
+    if (classes.some((c) => blurred.has(c)) && classes.some((c) => animated.has(c))) heavy += 1
+  }
+  assert.ok(heavy > 0, '未识别到任何持续动画模糊层,判据已失效——先修用例再改实现')
+  assert.ok(heavy <= 3, `持续动画的大面积模糊层有 ${heavy} 个,超出合同 §7 的 ≤3 预算`)
+})
+
+// 合同把模糊按平面分级(§18 语义层禁 blur / §81 内容面恒为 0、shell 局部 ≤12px / §126 主内容纸面自身不模糊)。
+// 这条分级此前只靠人自觉。两半都钉:内容面一处模糊都不许有,shell 允许但不得越过 12px。
+test('blur stays off the content plane and within 12px on the shell', async () => {
+  const contentPlane = [
+    '../src/features/workspace/PaperWorkspace.vue',
+    '../src/features/workspace/FindingLedger.vue',
+    '../src/features/workspace/EvidenceDiff.vue',
+    '../src/features/workspace/ReviewActionBar.vue',
+    '../src/features/workspace/AnnotationRail.vue',
+    '../src/features/workspace/RunCaseList.vue',
+  ]
+  for (const file of contentPlane) {
+    const source = await readFile(new URL(file, import.meta.url), 'utf8')
+    const blur = source.match(/(?:backdrop-)?filter:\s*blur\([^)]*\)/g)
+    assert.equal(blur, null, `${file} 在内容面用了模糊 ${blur};合同 §81 要求内容面恒为 0`)
+  }
+
+  const shell = [
+    '../src/features/shell/InkShell.vue',
+    '../src/features/shell/CaseIndex.vue',
+    '../src/features/shell/InkDialog.vue',
+    '../src/features/auth/LoginGate.vue',
+  ]
+  for (const file of shell) {
+    const source = await readFile(new URL(file, import.meta.url), 'utf8')
+    for (const [, px] of source.matchAll(/(?:backdrop-)?filter:\s*blur\((\d+(?:\.\d+)?)px\)/g)) {
+      assert.ok(Number(px) <= 12, `${file} 的模糊 ${px}px 超出合同 §81 的 shell ≤12px`)
+    }
+  }
+})
+
 /* ---------- 5. Drawer contract (frozen in ui-design.md §11) ---------- */
 
 test('drawer breakpoints match the frozen contract queries', () => {
