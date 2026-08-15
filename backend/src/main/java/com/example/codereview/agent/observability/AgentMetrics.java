@@ -9,12 +9,11 @@ import java.util.concurrent.TimeUnit;
 import org.springframework.stereotype.Component;
 
 /**
- * Micrometer metrics for the Agent control plane, exported via {@code /actuator/prometheus}.
+ * Agent 控制面的 Micrometer 指标,经 {@code /actuator/prometheus} 导出。
  *
- * <p>Meters are tagged only with bounded, low-cardinality values — run lifecycle event, step type,
- * tool name, and outcome/status. Unbounded identifiers (run ids, repository names, error messages)
- * are deliberately never used as tags, since each distinct tag value creates a new time series. The
- * database keeps the per-run audit trail; these meters are the aggregate, scrape-friendly view.
+ * <p>指标只打**有界、低基数**的标签——run 生命周期事件、步骤类型、工具名、结果/状态。
+ * 无界标识(run id、仓库名、错误信息)刻意永不作为标签,因为每一个不同的标签值都会新开一条
+ * 时间序列。逐 run 的审计留痕由数据库负责;这些指标提供的是便于抓取的聚合视图。
  */
 @Component
 public class AgentMetrics {
@@ -29,7 +28,7 @@ public class AgentMetrics {
         this.registry = registry;
     }
 
-    /** A run entered the pipeline (first transition out of {@code RECEIVED}). */
+    /** 一个 run 进入了流水线(首次离开 {@code RECEIVED} 的流转)。 */
     public void runCreated() {
         runCounter("created").increment();
     }
@@ -48,7 +47,7 @@ public class AgentMetrics {
         }
     }
 
-    /** Record one step-execution attempt: its declared type and the resulting outcome. */
+    /** 记录一次步骤执行尝试:它声明的类型与最终结果。 */
     public void recordStep(AgentRunStatus stepType, String outcome, long millis) {
         Timer.builder(STEP_TIMER)
                 .description("Agent step execution latency")
@@ -58,7 +57,7 @@ public class AgentMetrics {
                 .record(Math.max(0, millis), TimeUnit.MILLISECONDS);
     }
 
-    /** Record one tool invocation: the tool name and success/failure. */
+    /** 记录一次工具调用:工具名与成功/失败。 */
     public void recordTool(String toolName, boolean success, long millis) {
         Timer.builder(TOOL_TIMER)
                 .description("Agent tool invocation latency")

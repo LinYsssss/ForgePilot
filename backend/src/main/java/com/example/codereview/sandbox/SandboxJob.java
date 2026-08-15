@@ -3,14 +3,13 @@ package com.example.codereview.sandbox;
 import java.util.List;
 
 /**
- * A signed unit of work handed to the sandbox runner.
+ * 交给 sandbox runner 的一份**已签名**工作单元。
  *
- * <p>Carries everything the runner needs to launch a constrained container and nothing it could use
- * to widen its own trust: a job id, a reference to the workspace archive (never inline secrets or a
- * provider host), the pinned image digest, the whitelisted command id plus its arguments, resource
- * limits, an absolute expiry, and a nonce for replay protection. The job is signed over a canonical
- * serialization by {@link SandboxJobSigner}; the runner verifies signature, expiry, and nonce before
- * acting.
+ * <p>它带齐 runner 启动受限容器所需的一切,同时不带任何能让 runner 自行扩权的东西:
+ * job id、工作区归档引用(绝不内联密钥或 provider host)、钉死的镜像 digest、
+ * 白名单内的命令 id 及其参数、资源上限、绝对过期时刻,以及防重放的 nonce。
+ * 整个 job 由 {@link SandboxJobSigner} 按规范序列化后签名;runner 在动手之前先验签名、
+ * 验过期、验 nonce。
  */
 public record SandboxJob(
         String jobId,
@@ -22,7 +21,7 @@ public record SandboxJob(
         long expiryEpochSeconds,
         String nonce
 ) {
-    /** Hard resource ceilings enforced on the container. */
+    /** 强制施加在容器上的资源硬上限。 */
     public record Limits(int cpuMillis, int memoryMb, int pids, long timeoutMs) {
         public Limits {
             if (cpuMillis <= 0 || memoryMb <= 0 || pids <= 0 || timeoutMs <= 0) {

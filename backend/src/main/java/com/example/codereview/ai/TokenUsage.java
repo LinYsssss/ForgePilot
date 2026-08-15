@@ -1,16 +1,16 @@
 package com.example.codereview.ai;
 
 /**
- * Token usage reported by an OpenAI-compatible chat completion. Captured per AI call so the
- * platform can surface real model cost (tokens), not just character counts. Mock / rule-engine
- * reviews report {@link #none()} because they consume no model tokens.
+ * OpenAI 兼容 chat completion 上报的 token 用量。按每次 AI 调用采集,让平台能暴露真实的
+ * 模型成本(token 数)而不只是字符数。Mock / 规则引擎审查上报 {@link #none()},因为它们
+ * 根本不消耗模型 token。
  */
 public record TokenUsage(int promptTokens, int completionTokens, int totalTokens) {
 
     public TokenUsage {
         promptTokens = Math.max(0, promptTokens);
         completionTokens = Math.max(0, completionTokens);
-        // Some providers omit total_tokens; derive it from the parts when missing.
+        // 有些 provider 不返回 total_tokens;缺失时用两部分相加推导。
         totalTokens = totalTokens > 0 ? totalTokens : promptTokens + completionTokens;
     }
 
@@ -18,7 +18,7 @@ public record TokenUsage(int promptTokens, int completionTokens, int totalTokens
         return new TokenUsage(0, 0, 0);
     }
 
-    /** Sums usage across chunked review calls so a multi-call task reports its total cost. */
+    /** 把分片审查各次调用的用量累加,好让一个多次调用的任务报出总成本。 */
     public TokenUsage plus(TokenUsage other) {
         if (other == null) {
             return this;

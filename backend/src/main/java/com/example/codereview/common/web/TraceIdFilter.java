@@ -13,12 +13,12 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 /**
- * Assigns a short trace id to every request and exposes it in MDC and the {@code X-Trace-Id}
- * response header. An inbound {@code X-Trace-Id} is honoured so a caller (or gateway) can correlate
- * across services. Runs before Spring Security so authentication failures are traceable too.
+ * 给每个请求分配一个短 trace id,并同时暴露在 MDC 与 {@code X-Trace-Id} 响应头上。
+ * 入站的 {@code X-Trace-Id} 会被沿用,好让调用方(或网关)能跨服务串起同一条链路。
+ * 本过滤器排在 Spring Security 之前,因此鉴权失败同样可追踪。
  *
- * <p>The logging pattern ({@code logging.pattern.level}) prints {@code %X{traceId}}, so every log
- * line for a request carries the same id.
+ * <p>日志格式({@code logging.pattern.level})会打印 {@code %X{traceId}},于是一个请求的每一行
+ * 日志都带着同一个 id。
  */
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE)
@@ -49,7 +49,7 @@ public class TraceIdFilter extends OncePerRequestFilter {
             return null;
         }
         String trimmed = inbound.trim();
-        // Guard against header/log injection: only allow safe id characters.
+        // 防住 header/日志注入:只放行安全的 id 字符。
         return trimmed.matches("[A-Za-z0-9._-]+") ? trimmed : null;
     }
 }

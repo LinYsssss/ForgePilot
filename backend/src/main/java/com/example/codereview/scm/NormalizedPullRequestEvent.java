@@ -1,13 +1,13 @@
 package com.example.codereview.scm;
 
 /**
- * Provider-neutral view of a pull/merge request webhook delivery.
+ * pull/merge request webhook 投递的 provider 无关视图。
  *
- * <p>The required components capture everything the control plane needs to start and idempotently
- * key an Agent Run: provider, installation/project identity, repository clone URL, PR number,
- * base/head SHA, source/target branch, and the delivery id. Adapters for every provider populate
- * this same record, so downstream code never branches on the host. {@code title}, {@code author},
- * {@code repositoryFullName}, and {@code action} are best-effort context and may be absent.
+ * <p>必填分量涵盖了控制面启动一次 Agent Run、并为其生成幂等键所需的全部信息:provider、
+ * installation/project 身份、仓库 clone URL、PR 号、base/head SHA、源/目标分支,以及 delivery id。
+ * 所有 provider 的适配器都填同一个 record,因此下游代码永远不必按托管方分支。
+ * {@code title}、{@code author}、{@code repositoryFullName}、{@code action} 属于尽力而为的上下文,
+ * 可能缺失。
  */
 public record NormalizedPullRequestEvent(
         ScmProviderType provider,

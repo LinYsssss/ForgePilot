@@ -16,12 +16,11 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 /**
- * Keeps a step's lease alive for as long as the worker is actually working on it.
+ * 只要 worker 还在真干活,就持续为该步骤的租约续期。
  *
- * <p>A fixed lease with no renewal forces an awkward choice: make it long enough for the slowest
- * possible step and a crashed worker strands the run for that long, or make it short and the
- * watchdog starts reclaiming steps that are merely slow. Renewing on a heartbeat decouples the two
- * — the lease only lapses when the worker genuinely stops.
+ * <p>固定租约且不续期会逼出一个两难:租约长到够最慢的步骤用,那么 worker 一崩,run 就被搁置那么久;
+ * 租约短了,watchdog 又会开始回收那些只是**慢**而已的步骤。靠心跳续期把两者解耦——
+ * 只有 worker 真的停了,租约才会失效。
  */
 @Component
 public class AgentStepLeaseHeartbeat {
@@ -56,7 +55,7 @@ public class AgentStepLeaseHeartbeat {
         });
     }
 
-    /** Runs {@code work} with the lease on {@code stepId} being renewed in the background. */
+    /** 执行 {@code work},期间在后台为 {@code stepId} 的租约持续续期。 */
     public <T> T runWithRenewal(Long stepId, String executionToken, Supplier<T> work) {
         long periodMillis = Math.max(1_000L, interval.toMillis());
         ScheduledFuture<?> renewal = scheduler.scheduleWithFixedDelay(
@@ -72,13 +71,12 @@ public class AgentStepLeaseHeartbeat {
         try {
             Instant now = clock.instant();
             if (steps.renewLease(stepId, executionToken, now.plus(leaseDuration), now) == 0) {
-                // Somebody else owns the step now, or it already finished. Nothing to renew; the
-                // completion CAS will discard this worker's result when it eventually returns.
+                // 步骤现在归别人了,或者它已经结束。没什么可续的;等这个 worker 最终返回时,
+                // 完成阶段的 CAS 会把它的结果丢弃。
                 log.warn("Agent step {} is no longer held by this worker; stopping lease renewal", stepId);
             }
         } catch (RuntimeException ex) {
-            // A failed heartbeat must not kill the executing step: the lease still has time left,
-            // and the next tick may well succeed.
+            // 一次心跳失败不能把正在执行的步骤弄死:租约还有剩余时间,下一个 tick 很可能就成功了。
             log.warn("Failed to renew execution lease for Agent step {}", stepId, ex);
         }
     }

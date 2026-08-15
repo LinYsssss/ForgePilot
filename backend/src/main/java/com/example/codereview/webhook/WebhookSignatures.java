@@ -6,10 +6,10 @@ import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 
 /**
- * Shared HMAC-SHA256 primitive for webhook signature verification.
+ * webhook 验签共用的 HMAC-SHA256 原语。
  *
- * <p>{@link #hmacSha256Hex} is the raw MAC used by the SCM verifiers, which compare it in constant
- * time against the provider's signature header over the exact raw request bytes.
+ * <p>{@link #hmacSha256Hex} 是各 SCM 验签器使用的裸 MAC:它们针对**原始请求字节**算出该值,
+ * 再与 provider 的签名头做常量时间比较。
  */
 public final class WebhookSignatures {
 

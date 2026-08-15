@@ -5,11 +5,10 @@ import java.security.MessageDigest;
 import org.springframework.stereotype.Component;
 
 /**
- * Verifies a GitLab webhook delivery by comparing the {@code X-Gitlab-Token} header against the
- * installation's webhook secret.
+ * 用 {@code X-Gitlab-Token} 头与 installation 的 webhook 密钥比对,校验一次 GitLab webhook 投递。
  *
- * <p>GitLab uses a shared secret token, not an HMAC signature, so this is a direct equality check —
- * done in constant time, and strict: a missing secret or missing token is a hard failure.
+ * <p>GitLab 用的是共享密钥令牌而非 HMAC 签名,所以这里是直接相等比较——同样走常量时间,
+ * 同样从严:缺密钥或缺令牌都是硬失败。
  */
 @Component
 public class GitLabWebhookVerifier {

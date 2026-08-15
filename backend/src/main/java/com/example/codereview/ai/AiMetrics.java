@@ -7,10 +7,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 /**
- * Micrometer metrics for AI review calls, exported via {@code /actuator/prometheus}.
- * Meters are tagged by provider + model + status so a Grafana dashboard can break down
- * throughput, latency and token spend per model. The DB {@code ai_call_log} keeps the
- * per-call audit trail; these meters are the aggregate, scrape-friendly view.
+ * AI 审查调用的 Micrometer 指标,经 {@code /actuator/prometheus} 导出。
+ * 指标按 provider + model + status 打标签,好让 Grafana 看板能按模型拆分吞吐、时延与 token 开销。
+ * 逐次调用的审计留痕由数据库 {@code ai_call_log} 负责;这些指标提供的是便于抓取的聚合视图。
  */
 @Component
 public class AiMetrics {

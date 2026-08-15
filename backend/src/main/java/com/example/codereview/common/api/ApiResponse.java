@@ -4,13 +4,12 @@ import com.example.codereview.common.web.TraceIdFilter;
 import org.slf4j.MDC;
 
 /**
- * Envelope for every JSON endpoint.
+ * 所有 JSON 端点的统一信封。
  *
- * <p>Phase 0 added {@code errorCode} and {@code traceId} alongside the original numeric
- * {@code code}. The numeric field is deliberately left in place: the frontend still branches on
- * {@code code !== 0}, and keeping it means neither workstream has to synchronise a breaking
- * response change with the other. New code should set a stable {@link ErrorCode} and clients should
- * migrate to reading {@code errorCode}; the numeric field can be retired once nothing reads it.
+ * <p>Phase 0 在原有数字 {@code code} 之外补了 {@code errorCode} 与 {@code traceId}。
+ * 数字字段是**刻意留着**的:前端仍然按 {@code code !== 0} 分支,留着它就不必让前后端
+ * 同步做一次破坏性的响应变更。新代码应设置稳定的 {@link ErrorCode},客户端逐步改读
+ * {@code errorCode};等到没有任何消费者再读数字字段时,它才可以退役。
  */
 public record ApiResponse<T>(int code, String errorCode, String message, String traceId, T data) {
 
@@ -31,18 +30,17 @@ public record ApiResponse<T>(int code, String errorCode, String message, String 
     }
 
     /**
-     * Legacy entry point for call sites that still carry a raw numeric code. Derives a best-effort
-     * string code so responses stay uniform during the incremental migration.
+     * 遗留入口,供仍然只持有裸数字码的调用点使用。尽力反推出一个字符串码,
+     * 让增量迁移期间的响应保持一致形状。
      */
     public static <T> ApiResponse<T> error(int code, String message) {
         return new ApiResponse<>(code, ErrorCode.fromLegacy(code).name(), message, currentTraceId(), null);
     }
 
     /**
-     * Keeps an already-decided numeric code while attaching an explicit string identifier. Used by
-     * the exception handler, where the numeric code and HTTP status come from the thrown exception
-     * and must not be re-derived — some legacy codes (6002 and friends) do not map onto their own
-     * HTTP status.
+     * 保留已经决定好的数字码,同时挂上显式的字符串标识。异常处理器用它——那里的数字码与
+     * HTTP 状态都来自抛出的异常,不能再推导一遍:部分遗留码(6002 之流)并不映射到与自己同名的
+     * HTTP 状态。
      */
     public static <T> ApiResponse<T> error(int code, ErrorCode errorCode, String message) {
         return new ApiResponse<>(code, errorCode.name(), message, currentTraceId(), null);

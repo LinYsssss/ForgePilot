@@ -9,8 +9,8 @@ public class BusinessException extends RuntimeException {
     private final ErrorCode errorCode;
 
     /**
-     * Preferred constructor. Carries a stable {@link ErrorCode} so the response can expose an
-     * identifier clients may branch on, and so the HTTP status is decided in one place.
+     * 首选构造器。带上稳定的 {@link ErrorCode},让响应能暴露一个客户端可据以分支的标识,
+     * 同时把 HTTP 状态的决定权收在一处。
      */
     public BusinessException(ErrorCode errorCode) {
         this(errorCode, errorCode.defaultMessage());
@@ -24,8 +24,8 @@ public class BusinessException extends RuntimeException {
     }
 
     /**
-     * Legacy constructor kept so the existing call sites keep compiling while they are migrated
-     * track by track. The string code is derived rather than invented.
+     * 遗留构造器,留着是为了让存量调用点在逐条迁移期间仍能编译。字符串码是**推导**出来的,
+     * 不是随手编的。
      */
     public BusinessException(int code, String message) {
         this(resolveHttpStatus(code), code, message);

@@ -5,13 +5,13 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Commits knowledge document status transitions in their own transactions.
+ * 用独立事务提交知识文档的状态流转。
  *
- * <p>This exists because of a specific bug: upload marked a document FAILED and then rethrew, all
- * inside one transaction. The rollback discarded the status change along with the document row, so
- * a failed upload left no trace at all — the caller got a 500 and the document list stayed empty.
+ * <p>它的存在源于一个具体的 bug:上传流程把文档标成 FAILED 之后又重新抛出,而这两件事在同一个
+ * 事务里。回滚把状态变更连同文档行一起丢掉了,于是一次失败的上传**没留下任何痕迹**——
+ * 调用方拿到 500,文档列表却依然是空的。
  *
- * <p>{@code REQUIRES_NEW} is what makes the outcome survive the caller unwinding.
+ * <p>{@code REQUIRES_NEW} 正是让这个结果能在调用方栈解开时幸存下来的东西。
  */
 @Service
 public class KnowledgeDocumentStateService {

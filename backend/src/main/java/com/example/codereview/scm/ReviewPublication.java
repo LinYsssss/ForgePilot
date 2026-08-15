@@ -3,13 +3,12 @@ package com.example.codereview.scm;
 import java.util.List;
 
 /**
- * Provider-neutral result of an Agent review, ready to be rendered into a GitHub Check / PR comment
- * or a GitLab MR note / commit status by the matching adapter.
+ * 与 provider 无关的 Agent 审查结果,交给对应适配器渲染成 GitHub Check / PR 评论,
+ * 或 GitLab MR note / commit status。
  *
- * <p>Carries the summary, blocking findings, evidence links, the Agent Run URL, and the patch
- * validation state. {@link #exposesPatchContent()} marks publications that would reveal a
- * generated patch — those require explicit approval before they are sent (see Task 11). Findings
- * and evidence lists are defensively copied and never null.
+ * <p>它带着摘要、阻断级问题、证据链接、Agent Run URL,以及补丁校验状态。
+ * {@link #exposesPatchContent()} 标记那些**会泄露生成补丁内容**的发布——这类发布必须先拿到
+ * 显式审批才能发出(见 Task 11)。findings 与 evidence 列表都做了防御性拷贝,且永不为 null。
  */
 public record ReviewPublication(
         Conclusion conclusion,
@@ -20,14 +19,14 @@ public record ReviewPublication(
         PatchValidationState patchValidationState,
         boolean exposesPatchContent
 ) {
-    /** High-level outcome, mapped per provider to a check conclusion / MR status. */
+    /** 高层结论,按 provider 分别映射到 check conclusion / MR 状态。 */
     public enum Conclusion {
         SUCCESS,
         ACTION_REQUIRED,
         NEUTRAL
     }
 
-    /** State of any generated patch's validation, surfaced to reviewers. */
+    /** 生成补丁的校验状态,会呈现给评审者。 */
     public enum PatchValidationState {
         NOT_APPLICABLE,
         PENDING,

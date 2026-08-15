@@ -1,12 +1,11 @@
 package com.example.codereview.scm;
 
 /**
- * Supported source control providers.
+ * 支持的代码托管 provider。
  *
- * <p>Used as the discriminator for {@link ScmInstallation installations}, {@link WebhookDelivery
- * deliveries}, and adapter selection. The provider <em>behaviour</em> (verification, normalization,
- * publication) lives behind the {@code ScmProvider} adapter interface; this enum only identifies the
- * host family so a single secret and API base can be resolved per installation.
+ * <p>用作 {@link ScmInstallation}、{@link WebhookDelivery} 的判别字段,以及适配器选择依据。
+ * provider 的<em>行为</em>(验签、归一化、回写)都藏在 {@code ScmProvider} 适配器接口之后;
+ * 本枚举只负责标识托管方家族,好让每个 installation 能定位到唯一的一份密钥与 API base。
  */
 public enum ScmProviderType {
     GITHUB,

@@ -1,8 +1,8 @@
 package com.example.codereview.sandbox;
 
 /**
- * Result returned by the runner for a {@link SandboxJob}. Output is a bounded preview with a
- * {@code truncated} flag — never an unbounded dump of container output.
+ * runner 针对一个 {@link SandboxJob} 返回的结果。输出是**有界预览**并带 {@code truncated} 标志,
+ * 绝不是容器输出的无界倾倒。
  */
 public record SandboxResult(
         String jobId,
