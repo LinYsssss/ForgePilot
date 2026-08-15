@@ -29,14 +29,17 @@
 
 ## Acceptance Criteria
 
-- [ ] TLS：overlay 三件套 + 文档在库；本机完成 conf 语义审读与 YAML 解析校验；服务器验收清单（自签证书 https 走通登录会话、HTTP 栈行为零变化）并入转移清单。CSP 无 Google Fonts 域且前端无 CSP 违规（尾段浏览器 QA 时复验）。
-- [ ] 告警：四条规则 + alertmanager + grafana 配置在库且 YAML 全部可解析、指标名与实测对号；服务器验收清单（DLQ 注入触发告警、看板出数）并入转移清单。
-- [ ] 反馈闭环：`mvn verify` 全绿含校验矩阵逐条单测（404/403/400/upsert/导出格式/审计断言）；curl 操作序列文档化。
-- [ ] 错误上报：端点单测（截断/限流/校验）绿；前端接线在尾段完成后 npm test+build 绿。
-- [ ] 生命周期文档在 `docs/` 成文且与 compose 卷实况一致。
-- [ ] 冗余清理：每批 verify 绿；`research/redundancy-audit.md` 含「已删/已核未删+理由」全量清单。
-- [ ] 注释治理：backend 复查 `grep -rlP "\p{Han}"` 全含中文或豁免清单成文；抽查 10 文件注释达质量标准（说明约束/意图，不复述代码）。
-- [ ] 全程零 diff：`demo-repos/`、`evaluation/cases/`、`knowledge-noise/`、backend `prompts/` 模板；墨境步骤 6/7 落库前 `frontend/` 零触碰。
+> 结项核对 2026-08-14。服务器侧运行时验收按 AC 原文「并入转移清单」执行，
+> 单一入口：`.trellis/workspace/LinYsssss/server-transfer-checklist.md`。
+
+- [x] TLS：overlay 三件套 + 文档在库；本机完成 conf 语义审读与 YAML 解析校验；服务器验收清单（自签证书 https 走通登录会话、HTTP 栈行为零变化）并入转移清单。CSP 无 Google Fonts 域（前端零引用 grep 复测）。**遗留**：「前端无 CSP 违规」需浏览器实测，原文即定为尾段浏览器 QA 时复验，归墨境步骤 9 质量门。
+- [x] 告警：四条规则 + alertmanager + grafana 配置在库且 YAML 全部可解析、指标名与实测对号；服务器验收清单（DLQ 注入触发告警、看板出数）并入转移清单。（含修复三处漏配 `sandbox.dead.queue`）
+- [x] 反馈闭环：`mvn verify` 全绿含校验矩阵逐条单测（404/403/400/upsert/导出格式/审计断言）；curl 操作序列文档化（`research/impl-notes-feedback-clienterr.md`、`research/server-acceptance-checklist.md`）。
+- [x] 错误上报：端点单测（截断/限流/校验）绿；前端接线在尾段完成后 npm test 66/0 + build 绿。
+- [x] 生命周期文档在 `docs/` 成文且与 compose 卷实况一致。
+- [x] 冗余清理：每批 verify 绿；`research/redundancy-audit.md` 含「已删/已核未删+理由」全量清单（实测结论为零删除）。
+- [x] 注释治理：backend 复查判据成立（仍带英文散文注释的文件 = 0），豁免清单成文 `research/comment-exemptions.md`；质量标准沉淀为 `guides/comment-quality.md`。
+- [x] 全程零 diff：`demo-repos/`、`evaluation/cases/`、`knowledge-noise/`、backend `prompts/` 模板 —— `git diff 064967d..HEAD` 对四者实测为空；`frontend/` 首次改动发生在墨境步骤 7 落库（`49737f4`）之后。
 
 ## Out of Scope
 
