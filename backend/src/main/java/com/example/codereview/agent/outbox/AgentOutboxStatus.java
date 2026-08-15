@@ -4,6 +4,6 @@ public enum AgentOutboxStatus {
     PENDING,
     PROCESSING,
     SENT,
-    /** Terminal: retries were exhausted. Requires operator attention; never republished. */
+    /** 终态:重试已耗尽。需要人工介入,永不再重发。 */
     FAILED
 }

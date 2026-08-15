@@ -1,0 +1,486 @@
+{
+  "totalMainClasses": 358,
+  "zeroRefCount": 30,
+  "frameworkOwned": 30,
+  "frameworkOwnedSample": [
+    {
+      "name": "AgentFindingController",
+      "file": "backend/src/main/java/com/example/codereview/finding/AgentFindingController.java",
+      "reasons": [
+        "MVC endpoint"
+      ]
+    },
+    {
+      "name": "AiCallLogController",
+      "file": "backend/src/main/java/com/example/codereview/ai/AiCallLogController.java",
+      "reasons": [
+        "MVC endpoint"
+      ]
+    },
+    {
+      "name": "AiProviderHealthIndicator",
+      "file": "backend/src/main/java/com/example/codereview/config/AiProviderHealthIndicator.java",
+      "reasons": [
+        "actuator health",
+        "scanned component"
+      ]
+    },
+    {
+      "name": "AuthController",
+      "file": "backend/src/main/java/com/example/codereview/auth/AuthController.java",
+      "reasons": [
+        "MVC endpoint"
+      ]
+    },
+    {
+      "name": "AuthSeedRunner",
+      "file": "backend/src/main/java/com/example/codereview/auth/AuthSeedRunner.java",
+      "reasons": [
+        "scanned component",
+        "startup runner"
+      ]
+    },
+    {
+      "name": "ClientErrorController",
+      "file": "backend/src/main/java/com/example/codereview/clienterror/ClientErrorController.java",
+      "reasons": [
+        "MVC endpoint"
+      ]
+    },
+    {
+      "name": "CodereviewApplication",
+      "file": "backend/src/main/java/com/example/codereview/CodereviewApplication.java",
+      "reasons": [
+        "boot entry point"
+      ]
+    },
+    {
+      "name": "FeedbackController",
+      "file": "backend/src/main/java/com/example/codereview/feedback/FeedbackController.java",
+      "reasons": [
+        "MVC endpoint"
+      ]
+    },
+    {
+      "name": "FindingDomainConfiguration",
+      "file": "backend/src/main/java/com/example/codereview/finding/FindingDomainConfiguration.java",
+      "reasons": [
+        "bean definitions"
+      ]
+    },
+    {
+      "name": "GitHubWebhookController",
+      "file": "backend/src/main/java/com/example/codereview/scm/github/GitHubWebhookController.java",
+      "reasons": [
+        "MVC endpoint"
+      ]
+    },
+    {
+      "name": "GitLabWebhookController",
+      "file": "backend/src/main/java/com/example/codereview/scm/gitlab/GitLabWebhookController.java",
+      "reasons": [
+        "MVC endpoint"
+      ]
+    },
+    {
+      "name": "HttpModelRiskClient",
+      "file": "backend/src/main/java/com/example/codereview/model/HttpModelRiskClient.java",
+      "reasons": [
+        "scanned service"
+      ]
+    },
+    {
+      "name": "KnowledgeController",
+      "file": "backend/src/main/java/com/example/codereview/knowledge/KnowledgeController.java",
+      "reasons": [
+        "MVC endpoint"
+      ]
+    },
+    {
+      "name": "LanguageCommandTool",
+      "file": "backend/src/main/java/com/example/codereview/agent/tool/git/LanguageCommandTool.java",
+      "reasons": [
+        "scanned component"
+      ]
+    },
+    {
+      "name": "LanguagePluginConfiguration",
+      "file": "backend/src/main/java/com/example/codereview/language/LanguagePluginConfiguration.java",
+      "reasons": [
+        "bean definitions"
+      ]
+    },
+    {
+      "name": "MockEmbeddingClient",
+      "file": "backend/src/main/java/com/example/codereview/rag/MockEmbeddingClient.java",
+      "reasons": [
+        "scanned service"
+      ]
+    },
+    {
+      "name": "ModelServiceHealthIndicator",
+      "file": "backend/src/main/java/com/example/codereview/config/ModelServiceHealthIndicator.java",
+      "reasons": [
+        "actuator health",
+        "scanned component"
+      ]
+    },
+    {
+      "name": "MqLogController",
+      "file": "backend/src/main/java/com/example/codereview/mq/MqLogController.java",
+      "reasons": [
+        "MVC endpoint"
+      ]
+    },
+    {
+      "name": "NoopModelRiskClient",
+      "file": "backend/src/main/java/com/example/codereview/model/NoopModelRiskClient.java",
+      "reasons": [
+        "scanned service"
+      ]
+    },
+    {
+      "name": "OpenAiCompatibleEmbeddingClient",
+      "file": "backend/src/main/java/com/example/codereview/rag/OpenAiCompatibleEmbeddingClient.java",
+      "reasons": [
+        "scanned service"
+      ]
+    },
+    {
+      "name": "PatchApprovalController",
+      "file": "backend/src/main/java/com/example/codereview/patch/PatchApprovalController.java",
+      "reasons": [
+        "MVC endpoint"
+      ]
+    },
+    {
+      "name": "PatchValidateTool",
+      "file": "backend/src/main/java/com/example/codereview/agent/tool/git/PatchValidateTool.java",
+      "reasons": [
+        "scanned component"
+      ]
+    },
+    {
+      "name": "PgVectorIndexService",
+      "file": "backend/src/main/java/com/example/codereview/rag/PgVectorIndexService.java",
+      "reasons": [
+        "scanned service"
+      ]
+    },
+    {
+      "name": "ProjectController",
+      "file": "backend/src/main/java/com/example/codereview/project/ProjectController.java",
+      "reasons": [
+        "MVC endpoint"
+      ]
+    },
+    {
+      "name": "PullRequestController",
+      "file": "backend/src/main/java/com/example/codereview/pullrequest/PullRequestController.java",
+      "reasons": [
+        "MVC endpoint"
+      ]
+    },
+    {
+      "name": "RabbitSandboxToolGateway",
+      "file": "backend/src/main/java/com/example/codereview/agent/tool/git/RabbitSandboxToolGateway.java",
+      "reasons": [
+        "scanned component"
+      ]
+    },
+    {
+      "name": "RepositoryController",
+      "file": "backend/src/main/java/com/example/codereview/repo/RepositoryController.java",
+      "reasons": [
+        "MVC endpoint"
+      ]
+    },
+    {
+      "name": "RestClientConfig",
+      "file": "backend/src/main/java/com/example/codereview/config/RestClientConfig.java",
+      "reasons": [
+        "bean definitions"
+      ]
+    },
+    {
+      "name": "ReviewFeedbackController",
+      "file": "backend/src/main/java/com/example/codereview/finding/ReviewFeedbackController.java",
+      "reasons": [
+        "MVC endpoint"
+      ]
+    },
+    {
+      "name": "ScmInstallationController",
+      "file": "backend/src/main/java/com/example/codereview/scm/ScmInstallationController.java",
+      "reasons": [
+        "MVC endpoint"
+      ]
+    }
+  ],
+  "plainUnreferenced": [],
+  "testOnlyReferences": [
+    {
+      "name": "AgentOutboxScheduler",
+      "file": "backend/src/main/java/com/example/codereview/agent/outbox/AgentOutboxScheduler.java",
+      "testRefs": 1,
+      "where": [
+        "backend/src/test/java/com/example/codereview/agent/outbox/AgentOutboxSchedulerTest.java"
+      ]
+    },
+    {
+      "name": "AgentRecoveryService",
+      "file": "backend/src/main/java/com/example/codereview/agent/run/AgentRecoveryService.java",
+      "testRefs": 1,
+      "where": [
+        "backend/src/test/java/com/example/codereview/agent/run/AgentRecoveryServiceTest.java"
+      ]
+    },
+    {
+      "name": "AgentStepConsumer",
+      "file": "backend/src/main/java/com/example/codereview/agent/queue/AgentStepConsumer.java",
+      "testRefs": 3,
+      "where": [
+        "backend/src/test/java/com/example/codereview/agent/queue/AgentStepConsumerCorrelationTest.java",
+        "backend/src/test/java/com/example/codereview/agent/queue/AgentStepConsumerTest.java"
+      ]
+    },
+    {
+      "name": "AnalyzingChangeStepExecutor",
+      "file": "backend/src/main/java/com/example/codereview/agent/orchestration/steps/AnalyzingChangeStepExecutor.java",
+      "testRefs": 5,
+      "where": [
+        "backend/src/test/java/com/example/codereview/agent/orchestration/AgentStepExecutorRegistryTest.java",
+        "backend/src/test/java/com/example/codereview/agent/orchestration/AnalyzingChangeStepExecutorTest.java"
+      ]
+    },
+    {
+      "name": "CodeSearchTool",
+      "file": "backend/src/main/java/com/example/codereview/agent/tool/git/CodeSearchTool.java",
+      "testRefs": 2,
+      "where": [
+        "backend/src/test/java/com/example/codereview/agent/tool/git/GitToolsTest.java"
+      ]
+    },
+    {
+      "name": "DingTalkNotifier",
+      "file": "backend/src/main/java/com/example/codereview/notify/DingTalkNotifier.java",
+      "testRefs": 5,
+      "where": [
+        "backend/src/test/java/com/example/codereview/notify/DingTalkNotifierTest.java"
+      ]
+    },
+    {
+      "name": "EvaluationReportExporter",
+      "file": "backend/src/main/java/com/example/codereview/evaluation/EvaluationReportExporter.java",
+      "testRefs": 1,
+      "where": [
+        "backend/src/test/java/com/example/codereview/evaluation/EvaluationReportExporterTest.java"
+      ]
+    },
+    {
+      "name": "ExecutingToolsStepExecutor",
+      "file": "backend/src/main/java/com/example/codereview/agent/orchestration/steps/ExecutingToolsStepExecutor.java",
+      "testRefs": 6,
+      "where": [
+        "backend/src/test/java/com/example/codereview/agent/orchestration/AgentStepExecutorRegistryTest.java",
+        "backend/src/test/java/com/example/codereview/agent/orchestration/PlanningAndToolStepExecutorTest.java",
+        "backend/src/test/java/com/example/codereview/agent/prompt/StepInstructionGoldenTest.java"
+      ]
+    },
+    {
+      "name": "GeneratingPatchStepExecutor",
+      "file": "backend/src/main/java/com/example/codereview/agent/orchestration/steps/GeneratingPatchStepExecutor.java",
+      "testRefs": 4,
+      "where": [
+        "backend/src/test/java/com/example/codereview/agent/orchestration/AgentStepExecutorRegistryTest.java",
+        "backend/src/test/java/com/example/codereview/agent/orchestration/GeneratingPatchStepExecutorTest.java"
+      ]
+    },
+    {
+      "name": "GitDiffTool",
+      "file": "backend/src/main/java/com/example/codereview/agent/tool/git/GitDiffTool.java",
+      "testRefs": 2,
+      "where": [
+        "backend/src/test/java/com/example/codereview/agent/tool/git/GitToolsTest.java"
+      ]
+    },
+    {
+      "name": "GitFileTool",
+      "file": "backend/src/main/java/com/example/codereview/agent/tool/git/GitFileTool.java",
+      "testRefs": 2,
+      "where": [
+        "backend/src/test/java/com/example/codereview/agent/tool/git/GitToolsTest.java"
+      ]
+    },
+    {
+      "name": "GitHubReviewPublisher",
+      "file": "backend/src/main/java/com/example/codereview/scm/github/GitHubReviewPublisher.java",
+      "testRefs": 2,
+      "where": [
+        "backend/src/test/java/com/example/codereview/scm/github/GitHubReviewPublisherTest.java"
+      ]
+    },
+    {
+      "name": "GitLabReviewPublisher",
+      "file": "backend/src/main/java/com/example/codereview/scm/gitlab/GitLabReviewPublisher.java",
+      "testRefs": 2,
+      "where": [
+        "backend/src/test/java/com/example/codereview/scm/gitlab/GitLabReviewPublisherTest.java"
+      ]
+    },
+    {
+      "name": "GlobalExceptionHandler",
+      "file": "backend/src/main/java/com/example/codereview/common/exception/GlobalExceptionHandler.java",
+      "testRefs": 1,
+      "where": [
+        "backend/src/test/java/com/example/codereview/common/exception/GlobalExceptionHandlerTest.java"
+      ]
+    },
+    {
+      "name": "JavaChangeContextExtractor",
+      "file": "backend/src/main/java/com/example/codereview/language/java/JavaChangeContextExtractor.java",
+      "testRefs": 2,
+      "where": [
+        "backend/src/test/java/com/example/codereview/language/java/JavaChangeContextExtractorTest.java"
+      ]
+    },
+    {
+      "name": "LangChain4jReviewContentRetriever",
+      "file": "backend/src/main/java/com/example/codereview/ai/langchain4j/LangChain4jReviewContentRetriever.java",
+      "testRefs": 10,
+      "where": [
+        "backend/src/test/java/com/example/codereview/ai/langchain4j/LangChain4jReviewContentRetrieverTest.java"
+      ]
+    },
+    {
+      "name": "LangChain4jRuntimeValidator",
+      "file": "backend/src/main/java/com/example/codereview/ai/langchain4j/LangChain4jRuntimeValidator.java",
+      "testRefs": 1,
+      "where": [
+        "backend/src/test/java/com/example/codereview/ai/langchain4j/LangChain4jRuntimeTest.java"
+      ]
+    },
+    {
+      "name": "LegacyReviewProjectionService",
+      "file": "backend/src/main/java/com/example/codereview/agent/compat/LegacyReviewProjectionService.java",
+      "testRefs": 2,
+      "where": [
+        "backend/src/test/java/com/example/codereview/agent/compat/LegacyReviewProjectionServiceTest.java"
+      ]
+    },
+    {
+      "name": "MockAiReviewClient",
+      "file": "backend/src/main/java/com/example/codereview/ai/MockAiReviewClient.java",
+      "testRefs": 2,
+      "where": [
+        "backend/src/test/java/com/example/codereview/ai/MockAiReviewClientTest.java"
+      ]
+    },
+    {
+      "name": "NoopVectorIndexService",
+      "file": "backend/src/main/java/com/example/codereview/rag/NoopVectorIndexService.java",
+      "testRefs": 2,
+      "where": [
+        "backend/src/test/java/com/example/codereview/ai/langchain4j/LangChain4jEmbeddingRagIntegrationTest.java"
+      ]
+    },
+    {
+      "name": "PlanningStepExecutor",
+      "file": "backend/src/main/java/com/example/codereview/agent/orchestration/steps/PlanningStepExecutor.java",
+      "testRefs": 6,
+      "where": [
+        "backend/src/test/java/com/example/codereview/agent/orchestration/AgentStepExecutorRegistryTest.java",
+        "backend/src/test/java/com/example/codereview/agent/orchestration/PlanningAndToolStepExecutorTest.java",
+        "backend/src/test/java/com/example/codereview/agent/prompt/StepInstructionGoldenTest.java"
+      ]
+    },
+    {
+      "name": "PreparingRepositoryStepExecutor",
+      "file": "backend/src/main/java/com/example/codereview/agent/orchestration/steps/PreparingRepositoryStepExecutor.java",
+      "testRefs": 6,
+      "where": [
+        "backend/src/test/java/com/example/codereview/agent/orchestration/AgentStepExecutorRegistryTest.java",
+        "backend/src/test/java/com/example/codereview/agent/orchestration/PreparingRepositoryStepExecutorTest.java"
+      ]
+    },
+    {
+      "name": "ProdSecretValidator",
+      "file": "backend/src/main/java/com/example/codereview/config/ProdSecretValidator.java",
+      "testRefs": 13,
+      "where": [
+        "backend/src/test/java/com/example/codereview/config/InfrastructureIntegrationTest.java",
+        "backend/src/test/java/com/example/codereview/config/ProdSecretValidatorTest.java",
+        "backend/src/test/java/com/example/codereview/scm/github/GitHubWebhookAgentRunIntegrationTest.java",
+        "backend/src/test/java/com/example/codereview/support/IntegrationTestContainers.java"
+      ]
+    },
+    {
+      "name": "PublishingResultStepExecutor",
+      "file": "backend/src/main/java/com/example/codereview/agent/orchestration/steps/PublishingResultStepExecutor.java",
+      "testRefs": 5,
+      "where": [
+        "backend/src/test/java/com/example/codereview/agent/orchestration/AgentStepExecutorRegistryTest.java",
+        "backend/src/test/java/com/example/codereview/agent/orchestration/PublishingResultStepExecutorTest.java"
+      ]
+    },
+    {
+      "name": "PullRequestSnapshot",
+      "file": "backend/src/main/java/com/example/codereview/scm/PullRequestSnapshot.java",
+      "testRefs": 3,
+      "where": [
+        "backend/src/test/java/com/example/codereview/scm/ScmProviderContractTest.java"
+      ]
+    },
+    {
+      "name": "ReviewTaskConsumer",
+      "file": "backend/src/main/java/com/example/codereview/mq/ReviewTaskConsumer.java",
+      "testRefs": 4,
+      "where": [
+        "backend/src/test/java/com/example/codereview/mq/ReviewTaskConsumerTest.java"
+      ]
+    },
+    {
+      "name": "RuntimeComparisonReport",
+      "file": "backend/src/main/java/com/example/codereview/evaluation/RuntimeComparisonReport.java",
+      "testRefs": 2,
+      "where": [
+        "backend/src/test/java/com/example/codereview/evaluation/RuntimeComparisonReportTest.java"
+      ]
+    },
+    {
+      "name": "SecurityAuditFilter",
+      "file": "backend/src/main/java/com/example/codereview/common/web/SecurityAuditFilter.java",
+      "testRefs": 2,
+      "where": [
+        "backend/src/test/java/com/example/codereview/common/web/SecurityAuditFilterTest.java"
+      ]
+    },
+    {
+      "name": "ValidatingPatchStepExecutor",
+      "file": "backend/src/main/java/com/example/codereview/agent/orchestration/steps/ValidatingPatchStepExecutor.java",
+      "testRefs": 4,
+      "where": [
+        "backend/src/test/java/com/example/codereview/agent/orchestration/AgentStepExecutorRegistryTest.java",
+        "backend/src/test/java/com/example/codereview/agent/orchestration/ValidatingPatchStepExecutorTest.java"
+      ]
+    },
+    {
+      "name": "VerifyingFindingsStepExecutor",
+      "file": "backend/src/main/java/com/example/codereview/agent/orchestration/steps/VerifyingFindingsStepExecutor.java",
+      "testRefs": 9,
+      "where": [
+        "backend/src/test/java/com/example/codereview/agent/orchestration/AgentStepExecutorRegistryTest.java",
+        "backend/src/test/java/com/example/codereview/agent/orchestration/VerifyingFindingsStepExecutorTest.java",
+        "backend/src/test/java/com/example/codereview/agent/prompt/StepInstructionGoldenTest.java"
+      ]
+    },
+    {
+      "name": "WaitingApprovalStepExecutor",
+      "file": "backend/src/main/java/com/example/codereview/agent/orchestration/steps/WaitingApprovalStepExecutor.java",
+      "testRefs": 2,
+      "where": [
+        "backend/src/test/java/com/example/codereview/agent/orchestration/AgentStepExecutorRegistryTest.java"
+      ]
+    }
+  ]
+}

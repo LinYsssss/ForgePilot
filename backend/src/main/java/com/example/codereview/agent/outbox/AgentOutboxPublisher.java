@@ -17,16 +17,14 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Component;
 
 /**
- * Drains the outbox in three separate phases: a short transaction claims the event, the broker call
- * happens with no transaction open, and a second short transaction writes the outcome back under a
- * compare-and-set on the claim token.
+ * 分三段排空 outbox:短事务抢占事件 → 不持事务调用 broker → 第二个短事务按 claim token
+ * 做 CAS 写回结果。
  *
- * <p>The important property is that an event is only marked SENT once RabbitMQ has confirmed it and
- * has not returned it as unroutable. Publishing optimistically — send, then immediately mark sent —
- * produces a database that claims delivery for messages the broker never persisted.
+ * <p>关键性质:只有 RabbitMQ 确认过、且没有以 unroutable 退回的事件才会被标成 SENT。
+ * 乐观发布(发完立刻标已发)会造出一个「声称投递成功、而 broker 根本没持久化」的数据库。
  *
- * <p>Delivery is at-least-once by construction: a confirm that times out may still have been
- * persisted by the broker, and the event will be republished. Consumers must stay idempotent.
+ * <p>投递语义天然是 at-least-once:确认超时的消息 broker 仍可能已经落盘,该事件会被重发,
+ * 因此消费侧必须保持幂等。
  */
 @Component
 public class AgentOutboxPublisher {
@@ -82,7 +80,7 @@ public class AgentOutboxPublisher {
         this.confirmTimeout = confirmTimeout;
     }
 
-    /** @return how many events reached the SENT state in this pass. */
+    /** @return 本轮真正进入 SENT 状态的事件数。 */
     public int publishAvailable(int limit) {
         if (limit <= 0) {
             return 0;
@@ -101,7 +99,7 @@ public class AgentOutboxPublisher {
         Instant claimedAt = clock.instant();
         String claimToken = UUID.randomUUID().toString();
         if (repository.claim(id, claimedAt, claimToken, claimedAt.plus(leaseDuration)) != 1) {
-            // Somebody else got there first, or the event is no longer due.
+            // 有人抢先认领了,或这条事件已经不到期。
             return false;
         }
 
@@ -110,8 +108,7 @@ public class AgentOutboxPublisher {
             return false;
         }
 
-        // No transaction is open across this call: the broker round trip can take seconds and must
-        // not hold a database connection or row lock.
+        // 这一段刻意不开事务:broker 往返可能耗时数秒,不能让它占着数据库连接与行锁。
         PublishOutcome outcome = send(event);
         Instant completedAt = clock.instant();
 
@@ -121,8 +118,8 @@ public class AgentOutboxPublisher {
         int updated = repository.markRetry(
                 id, claimToken, completedAt, completedAt.plus(retryDelay), truncate(outcome.error()));
         if (updated == 0) {
-            // The lease was reaped while we were publishing; the reaper already requeued the event
-            // and this result is stale. Dropping it is the whole point of the claim token.
+            // 发布期间租约被回收方抢走:它已经把事件重新排队,这里拿到的结果是过期的。
+            // 丢弃它正是 claim token 存在的意义。
             log.warn("Outbox event {} lost its lease before the failure could be recorded", id);
         }
         return false;
@@ -133,8 +130,7 @@ public class AgentOutboxPublisher {
         try {
             routingKey = routingKey(event.getEventType());
         } catch (IllegalArgumentException ex) {
-            // Nothing will ever route this; let it burn through its retries into FAILED rather than
-            // pretending it was delivered.
+            // 这条永远路由不出去;让它把重试次数耗尽后落进 FAILED,而不是假装投递成功。
             return PublishOutcome.rejected(ex.getMessage());
         }
 
@@ -146,9 +142,8 @@ public class AgentOutboxPublisher {
         }
 
         if (!publisherConfirmsEnabled()) {
-            // Without confirms the broker's acceptance cannot be observed. This is the local
-            // development and unit-test path; production enables confirms (see app-agent.yml) so
-            // the SENT state actually means something.
+            // 没有 publisher confirms 就观测不到 broker 是否真的收下了。这条是本地开发与
+            // 单测路径;生产在 app-agent.yml 里开启 confirms,让 SENT 状态真正有意义。
             return PublishOutcome.acknowledged();
         }
         return awaitConfirmation(event, correlation);
@@ -158,8 +153,8 @@ public class AgentOutboxPublisher {
         try {
             CorrelationData.Confirm confirm =
                     correlation.getFuture().get(confirmTimeout.toMillis(), TimeUnit.MILLISECONDS);
-            // A return always arrives before the confirm for the same message, so checking it here
-            // is safe: an unroutable message is acked by the broker but never reached a queue.
+            // 同一条消息的 return 一定早于 confirm 到达,所以在这里查是安全的:
+            // 路由不到队列的消息 broker 照样会 ack,只是它从未进过任何队列。
             if (correlation.getReturned() != null) {
                 return PublishOutcome.rejected("message returned as unroutable");
             }
@@ -175,8 +170,7 @@ public class AgentOutboxPublisher {
             Thread.currentThread().interrupt();
             return PublishOutcome.rejected("interrupted while waiting for broker confirm");
         } catch (java.util.concurrent.TimeoutException ex) {
-            // The broker may still persist it later, which is exactly why redelivery has to be
-            // idempotent on the consumer side.
+            // broker 之后仍可能把它落盘,这正是消费侧必须幂等的原因。
             log.warn("Outbox event {} timed out waiting for a broker confirm", event.getId());
             return PublishOutcome.rejected("timed out waiting for broker confirm");
         } catch (java.util.concurrent.ExecutionException ex) {

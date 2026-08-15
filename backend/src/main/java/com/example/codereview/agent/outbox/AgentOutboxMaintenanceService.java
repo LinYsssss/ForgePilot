@@ -10,11 +10,10 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 /**
- * Housekeeping that runs before each publish pass: reclaim events whose holder died, and retire the
- * ones that have exhausted their retries.
+ * 每轮发布前的清理:回收持有者已死的事件,并让重试耗尽的事件退场。
  *
- * <p>Kept apart from {@link AgentOutboxPublisher} because these are pure short transactions with no
- * broker involvement, and because a failure here must not stop publishing.
+ * <p>与 {@link AgentOutboxPublisher} 分开,是因为这两件事都是不碰 broker 的纯短事务,
+ * 而且这里失败绝不能把发布也一起拖停。
  */
 @Service
 public class AgentOutboxMaintenanceService {
@@ -44,7 +43,7 @@ public class AgentOutboxMaintenanceService {
         this.maxAttempts = maxAttempts;
     }
 
-    /** @return how many stuck events were handed back to the pending pool. */
+    /** @return 有多少卡住的事件被交回待发池。 */
     public int requeueExpiredLeases() {
         Instant now = clock.instant();
         int requeued = repository.requeueExpiredLeases(now, now.plus(retryDelay), LEASE_EXPIRED_ERROR);
@@ -54,7 +53,7 @@ public class AgentOutboxMaintenanceService {
         return requeued;
     }
 
-    /** @return how many events were moved to the terminal FAILED state. */
+    /** @return 有多少事件被移入终态 FAILED。 */
     public int failExhausted() {
         int failed = repository.failExhausted(clock.instant(), maxAttempts);
         if (failed > 0) {

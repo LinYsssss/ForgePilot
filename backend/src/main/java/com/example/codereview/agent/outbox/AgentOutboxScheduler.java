@@ -8,13 +8,15 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 /**
- * The piece that was missing: something in production that actually drains the outbox.
+ * 补上原先缺的那一环:生产里真正负责排空 outbox 的东西。
  *
- * <p>Without it {@code publishAvailable} was only ever reached from tests, so an Agent run enqueued
- * its first event and then sat in PENDING forever.
+ * <p>没有它时 {@code publishAvailable} 只会被测试调到,于是 Agent run 入队第一条事件后
+ * 就永远停在 PENDING。
  *
- * <p>Scheduling infrastructure comes from {@code AgentSchedulingConfig}, which is gated on the same
- * flag — test contexts leave it off and are completely unaffected.
+ * <p>调度基础设施来自 {@code AgentSchedulingConfig},与本类由同一个开关门控,测试上下文默认关闭。
+ * 注意「关闭」只对没打开它的上下文成立:一旦某个测试类显式打开调度,Spring 会把那个上下文
+ * 留在缓存里,其调度线程在该类结束后仍继续动同一张表——所以打开调度的测试类必须
+ * {@code @DirtiesContext}(见 AgentOutboxSchedulerTest)。
  */
 @Component
 @ConditionalOnProperty(value = "app.agent.scheduling.enabled", havingValue = "true")
@@ -37,12 +39,10 @@ public class AgentOutboxScheduler {
     }
 
     /**
-     * Reclaim first, then publish: an event whose worker died should become eligible again in the
-     * same pass rather than waiting a further tick.
+     * 先回收再发布:worker 死掉的事件应该在同一轮里重新变得可发,而不是再等一个 tick。
      *
-     * <p>The whole tick is guarded — a scheduled method that throws is simply not rescheduled by
-     * some executors, and losing the drain loop to one transient database error would reproduce the
-     * exact failure this class exists to fix.
+     * <p>整个 tick 都被兜住——有些执行器遇到抛异常的定时方法就不再重新调度它,
+     * 为一次瞬时数据库错误丢掉整条排空回路,正好会重演本类要修的那个故障。
      */
     @Scheduled(
             fixedDelayString = "${app.agent.outbox.fixed-delay-ms:1000}",
