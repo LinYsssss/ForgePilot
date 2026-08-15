@@ -22,6 +22,7 @@ import {
   createDrawerController,
   nextTrapIndex,
 } from '../src/features/shell/drawerController.js'
+import { INK_NAV, navItemsFor, resolveNavigation } from '../src/features/shell/inkNav.js'
 import { progressModel } from '../src/shared/ui/progressModel.js'
 import { SEAL_TONES, resolveSealTone } from '../src/shared/ui/sealTone.js'
 
@@ -94,6 +95,9 @@ test('ink components take colors from tokens only (no hardcoded hex)', async () 
     '../src/features/workspace/AnnotationRail.vue',
     '../src/features/workspace/RunCaseList.vue',
     '../src/pages/InkAtelierPage.vue',
+    '../src/pages/InkDashboardPage.vue',
+    '../src/features/shell/InkPageFrame.vue',
+    '../src/features/dashboard/DashboardPaper.vue',
     '../src/shared/ui/SealBadge.vue',
     '../src/shared/ui/BrushProgress.vue',
     '../src/shared/motion/InkAmbientScene.vue',
@@ -464,4 +468,63 @@ test('login gate reuses the existing auth semantics without a second source', as
   assert.match(gate, /useSession/) // 同一会话单例,不建第二套认证源
   assert.doesNotMatch(gate, /localStorage|sessionStorage/)
   assert.doesNotMatch(gate, /ysainlin/)
+})
+
+/* ---------- 8. 逐页扩面(implement.md 步骤 8) ---------- */
+
+test('nav model routes migrated pages by name and leaves the rest on the legacy shell', () => {
+  // 已迁入墨境的按路由名跳,且**路由名不变**——迁移不动路由语义是步骤 8 的硬要求
+  assert.deepEqual(resolveNavigation('dashboard', 'atelier'),
+    { action: 'ink', key: 'dashboard', routeName: 'dashboard' })
+  assert.deepEqual(resolveNavigation('atelier', 'dashboard'),
+    { action: 'ink', key: 'atelier', routeName: 'inkAtelier' })
+
+  // 未迁移的仍交旧壳层,且保留各自既有语义(agent/aiLogs 有预加载动作,projects 是纯跳转)
+  assert.equal(resolveNavigation('agent', 'dashboard').legacy, 'agent')
+  assert.equal(resolveNavigation('aiLogs', 'dashboard').legacy, 'aiLogs')
+  assert.equal(resolveNavigation('projects', 'dashboard').legacy, 'goto')
+  assert.equal(resolveNavigation('repository', 'dashboard').legacy, 'goTab')
+
+  // 点当前页与未知 key 都不动作
+  assert.equal(resolveNavigation('dashboard', 'dashboard').action, 'none')
+  assert.equal(resolveNavigation('nope', 'dashboard').action, 'none')
+
+  // 每个 ink 条目都必须给出 routeName,否则导航会静默失败
+  for (const item of INK_NAV.filter((entry) => entry.ink)) {
+    assert.ok(item.routeName, `${item.key} 标了 ink 却没有 routeName`)
+  }
+})
+
+test('project-scoped nav items are disabled until a project is chosen', () => {
+  const without = navItemsFor(false)
+  const with_ = navItemsFor(true)
+  const gated = ['repository', 'pullRequests', 'reviews', 'agent', 'knowledge', 'aiLogs']
+  for (const key of gated) {
+    assert.equal(without.find((i) => i.key === key).disabled, true, `${key} 无项目时应禁用`)
+    assert.equal(with_.find((i) => i.key === key).disabled, false)
+  }
+  // 总览与项目页在没有项目时也必须可达,否则用户无从选项目
+  for (const key of ['atelier', 'dashboard', 'projects']) {
+    assert.equal(without.find((i) => i.key === key).disabled, false)
+  }
+})
+
+test('dashboard is migrated into the ink shell with its route semantics intact', async () => {
+  const routerSource = await readFile(new URL('../src/router.js', import.meta.url), 'utf8')
+  // 路径与路由名都不变,只换组件并打 shell 标记
+  assert.match(routerSource, /path: '\/dashboard', name: 'dashboard', component: InkDashboardPage, meta: \{ shell: 'ink' \}/)
+  assert.doesNotMatch(routerSource, /DashboardView/, '旧表现层不得再被引用')
+
+  // 旧表现层已删除(步骤 8:每页迁移后删除对应旧表现层,禁止长期双份)
+  for (const gone of ['../src/views/DashboardView.vue', '../src/components/DashboardStats.vue']) {
+    await assert.rejects(() => readFile(new URL(gone, import.meta.url), 'utf8'),
+      `${gone} 应已随迁移删除`)
+  }
+
+  // 数据零复制:墨境页取的是既有 composable,不新建数据通道
+  const page = await readFile(new URL('../src/pages/InkDashboardPage.vue', import.meta.url), 'utf8')
+  assert.match(page, /useSession/)
+  assert.match(page, /useReviews/)
+  assert.match(page, /useWorkspace/)
+  assert.doesNotMatch(page, /from '\.\.\/api\//, '页面不得绕过 composable 直连 api 层')
 })

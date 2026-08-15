@@ -1,6 +1,5 @@
 import { createRouter, createWebHashHistory } from 'vue-router'
 import { registerNav } from './nav.js'
-import DashboardView from './views/DashboardView.vue'
 import ProjectsView from './views/ProjectsView.vue'
 import RepositoryView from './views/RepositoryView.vue'
 import PullRequestsView from './views/PullRequestsView.vue'
@@ -9,13 +8,16 @@ import ReviewsView from './views/ReviewsView.vue'
 import AgentView from './views/AgentView.vue'
 import AiLogsView from './views/AiLogsView.vue'
 import InkAtelierPage from './pages/InkAtelierPage.vue'
+import InkDashboardPage from './pages/InkDashboardPage.vue'
 
 // Hash 模式:生产由 Nginx 托管静态文件,hash 路由无需 history fallback 配置;
 // 且与既有 "#agent-evidence=" 证据锚点(SCM 评论外链)最容易并存。
 export const router = createRouter({
   history: createWebHashHistory(),
   routes: [
-    { path: '/dashboard', name: 'dashboard', component: DashboardView },
+    // 总览已迁入墨境壳层(实施步骤 8):**路径与路由名保持不变**,只换组件并打 shell 标记。
+    // 既有的 goto('dashboard')、兜底重定向、nav 默认值因此全部照常工作,迁移不动路由语义。
+    { path: '/dashboard', name: 'dashboard', component: InkDashboardPage, meta: { shell: 'ink' } },
     { path: '/projects', name: 'projects', component: ProjectsView },
     { path: '/repository', name: 'repository', component: RepositoryView },
     { path: '/pull-requests', name: 'pullRequests', component: PullRequestsView },
