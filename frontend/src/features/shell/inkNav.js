@@ -18,7 +18,7 @@
 export const INK_NAV = [
   { key: 'atelier', glyph: '墨', label: '墨境工作台', ink: true, routeName: 'inkAtelier', needsProject: false },
   { key: 'dashboard', glyph: '概', label: '总览', ink: true, routeName: 'dashboard', needsProject: false },
-  { key: 'projects', glyph: '项', label: '项目', ink: false, needsProject: false },
+  { key: 'projects', glyph: '项', label: '项目', ink: true, routeName: 'projects', needsProject: false },
   { key: 'repository', glyph: '仓', label: '仓库', ink: false, needsProject: true },
   { key: 'pullRequests', glyph: '合', label: 'PR 工作流', ink: false, needsProject: true },
   { key: 'reviews', glyph: '审', label: '审查记录', ink: false, needsProject: true },

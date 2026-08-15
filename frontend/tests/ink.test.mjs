@@ -98,6 +98,8 @@ test('ink components take colors from tokens only (no hardcoded hex)', async () 
     '../src/pages/InkDashboardPage.vue',
     '../src/features/shell/InkPageFrame.vue',
     '../src/features/dashboard/DashboardPaper.vue',
+    '../src/pages/InkProjectsPage.vue',
+    '../src/features/projects/ProjectsPaper.vue',
     '../src/shared/ui/SealBadge.vue',
     '../src/shared/ui/BrushProgress.vue',
     '../src/shared/motion/InkAmbientScene.vue',
@@ -482,8 +484,11 @@ test('nav model routes migrated pages by name and leaves the rest on the legacy 
   // 未迁移的仍交旧壳层,且保留各自既有语义(agent/aiLogs 有预加载动作,projects 是纯跳转)
   assert.equal(resolveNavigation('agent', 'dashboard').legacy, 'agent')
   assert.equal(resolveNavigation('aiLogs', 'dashboard').legacy, 'aiLogs')
-  assert.equal(resolveNavigation('projects', 'dashboard').legacy, 'goto')
   assert.equal(resolveNavigation('repository', 'dashboard').legacy, 'goTab')
+
+  // 已迁移的项目页同样按名跳(路由名保持 'projects')
+  assert.deepEqual(resolveNavigation('projects', 'dashboard'),
+    { action: 'ink', key: 'projects', routeName: 'projects' })
 
   // 点当前页与未知 key 都不动作
   assert.equal(resolveNavigation('dashboard', 'dashboard').action, 'none')
@@ -516,7 +521,8 @@ test('dashboard is migrated into the ink shell with its route semantics intact',
   assert.doesNotMatch(routerSource, /DashboardView/, '旧表现层不得再被引用')
 
   // 旧表现层已删除(步骤 8:每页迁移后删除对应旧表现层,禁止长期双份)
-  for (const gone of ['../src/views/DashboardView.vue', '../src/components/DashboardStats.vue']) {
+  for (const gone of ['../src/views/DashboardView.vue', '../src/components/DashboardStats.vue',
+    '../src/views/ProjectsView.vue']) {
     await assert.rejects(() => readFile(new URL(gone, import.meta.url), 'utf8'),
       `${gone} 应已随迁移删除`)
   }

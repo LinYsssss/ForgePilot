@@ -20,6 +20,21 @@
 
     <slot />
 
+    <!-- 确认弹层由页框统一承载。useConfirm 是单例,而模态此前只有 AppShell 与墨境工作台在渲染:
+         迁移页若不渲染它,askDelete* 之类会「点了没反应」——是静默失败,不是报错。
+         放在这里,后续每迁一页都自动具备,不必逐页记得补。 -->
+    <InkDialog
+      v-if="confirmModal"
+      glyph="印"
+      :title="confirmModal.title"
+      :body="confirmModal.body"
+      :confirm-label="confirmModal.confirmLabel || '确认'"
+      cancel-label="返回"
+      :busy="!!busy.confirm"
+      @cancel="dismiss"
+      @confirm="run(confirmAction)"
+    />
+
     <template #rail><slot name="rail" /></template>
   </InkShell>
 </template>
@@ -28,9 +43,11 @@
 import { computed, ref } from 'vue'
 import LoginGate from '../auth/LoginGate.vue'
 import InkShell from './InkShell.vue'
+import InkDialog from './InkDialog.vue'
 import { navItemsFor, resolveNavigation } from './inkNav.js'
 import { nav } from '../../nav.js'
 import { useBusy } from '../../composables/useBusy.js'
+import { useConfirm } from '../../composables/useConfirm.js'
 import { useSession } from '../../composables/useSession.js'
 import { useToast } from '../../composables/useToast.js'
 import { useWorkspace } from '../../composables/useWorkspace.js'
@@ -51,7 +68,8 @@ const props = defineProps({
 const emit = defineEmits(['authenticated'])
 
 const { authenticated, me, activeProject } = useSession()
-const { run } = useBusy()
+const { busy, run } = useBusy()
+const { confirmModal, dismiss, confirmAction } = useConfirm()
 const { toastMsg } = useToast()
 const { loadMe, refreshAll, logout, goto, goTab, openAgentWorkspace, openProjectAiLogs } = useWorkspace()
 
