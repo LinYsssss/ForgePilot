@@ -3,7 +3,7 @@ package com.example.reposage.sandbox;
 import java.util.List;
 import java.util.Map;
 
-/** Fixed executable catalog shared by the Runner configuration and contract tests. */
+/** 固定可执行文件清单,由 Runner 配置与契约测试共用同一份——两边引用同一常量才不会各自漂移。 */
 public final class SandboxCommandCatalog {
 
     private SandboxCommandCatalog() {

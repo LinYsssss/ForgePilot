@@ -6,18 +6,16 @@ import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 
 /**
- * Signs and verifies {@link SandboxJob}s with HMAC-SHA256 over a canonical serialization.
+ * 用 HMAC-SHA256 对 {@link SandboxJob} 的规范序列化做签名与验签。
  *
- * <p>Mirror of the backend signer — the canonical form (alphabetically-ordered keys, no whitespace,
- * explicit escaping, built by hand rather than via a JSON library) is byte-identical so a signature
- * produced by the backend verifies here. A golden-vector test in each module pins compatibility.
+ * <p>backend 签名器的镜像——规范形式(键按字母序、无空白、显式转义、手写而非借助 JSON 库)
+ * 逐字节一致,因此 backend 产出的签名能在这里验通。两侧各有一个 golden 向量测试钉住兼容性。
  *
- * <p>Verification rejects an invalid signature and an expired job; replay rejection is handled by
- * {@link SandboxReplayGuard}.
+ * <p>验签会拒绝无效签名与已过期的 job;重放拒绝由 {@link SandboxReplayGuard} 负责。
  */
 public final class SandboxJobSigner {
 
-    /** Outcome of {@link #verify}. */
+    /** {@link #verify} 的结果。 */
     public enum Verification {
         VALID,
         INVALID_SIGNATURE,
@@ -45,7 +43,7 @@ public final class SandboxJobSigner {
         return Verification.VALID;
     }
 
-    /** Deterministic, library-independent canonical JSON: sorted keys, no whitespace. */
+    /** 确定性、不依赖任何库的规范 JSON:键有序、无空白。 */
     static String canonicalJson(SandboxJob job) {
         StringBuilder sb = new StringBuilder();
         sb.append("{\"args\":[");

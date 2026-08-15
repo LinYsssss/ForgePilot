@@ -18,7 +18,7 @@ import org.apache.commons.compress.archivers.zip.ZipArchiveInputStream;
 import org.apache.commons.compress.compressors.CompressorInputStream;
 import org.apache.commons.compress.compressors.CompressorStreamFactory;
 
-/** Extracts untrusted repository archives without allowing path or resource escapes. */
+/** 解包不可信的仓库归档,同时不允许任何路径逃逸(zip slip)或资源逃逸(解压炸弹)。 */
 public final class RepositoryArchiveExtractor {
 
     private static final Pattern SUBMODULE_URL = Pattern.compile("(?im)^\\s*url\\s*=\\s*(\\S+)\\s*$");

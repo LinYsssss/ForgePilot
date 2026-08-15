@@ -6,14 +6,13 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 
 /**
- * Signing contract for the runner side of the sandbox protocol. The {@code GOLDEN} signature is the
- * same fixed vector asserted by the backend module's test: identical job + key must yield an
- * identical signature on both sides, so a job signed by the backend verifies in the runner.
+ * 沙箱协议 runner 侧的签名契约。{@code GOLDEN} 与 backend 模块测试断言的是**同一个**固定向量:
+ * 相同 job + 相同密钥必须在两侧算出相同签名,backend 签的 job 才能在 runner 验通。
  */
 class SandboxJobSignerTest {
 
     static final String KEY = "sandbox-signing-key";
-    // Must equal the backend SandboxJobSignerTest GOLDEN.
+    // 必须与 backend SandboxJobSignerTest 里的 GOLDEN 完全相等。
     static final String GOLDEN = "dde08c4962152bb7acf06adea4cb45b30444daa4bbc43c94d09f420bb851c289";
 
     private final SandboxJobSigner signer = new SandboxJobSigner();

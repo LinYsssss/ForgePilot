@@ -2,7 +2,7 @@ package com.example.reposage.sandbox;
 
 import java.util.Set;
 
-/** Security policy for the separate, network-enabled dependency preparation job type. */
+/** 「依赖准备」这一**单独放行网络**的作业类型的安全策略;它与普通断网作业分开正是为了收窄这个例外。 */
 public final class DependencyPreparationPolicy {
 
     private static final int MAX_TIMEOUT_SECONDS = 900;

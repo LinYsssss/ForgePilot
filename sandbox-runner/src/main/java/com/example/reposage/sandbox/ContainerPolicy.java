@@ -9,7 +9,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
-/** Converts a signed job into a fixed, constrained {@code docker create} argument list. */
+/** 把一份已签名的 job 转换成固定且受约束的 {@code docker create} 参数表,参数形状不随输入变化。 */
 public final class ContainerPolicy {
 
     private static final String WORKSPACE_PREFIX = "workspace:";

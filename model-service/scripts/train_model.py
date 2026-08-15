@@ -1,3 +1,12 @@
+"""风险分类器的离线训练脚本。
+
+产物是一个 joblib 包:除 pipeline 本身外,同时写入 modelVersion、metrics、trainedAt 与
+dataset 路径——线上要能回答「这个预测出自哪一版模型、用什么数据训的、当时准确率多少」,
+只存 pipeline 就把这条追溯链断了。
+
+不在此处调参:本脚本要保持可重复(random_state 固定),调参属于评测线的工作。
+"""
+
 import argparse
 import csv
 from datetime import datetime, timezone
@@ -65,6 +74,11 @@ def main() -> None:
 
 
 def load_rows(dataset: Path) -> list[dict[str, str]]:
+    """读取并清洗数据集。空 riskType/text 的行直接丢弃——它们进了向量器只会变成噪声特征。
+
+    少于 8 行就报错而不是照训:样本太少时 train_test_split 会切出空测试集,
+    准确率会显示成一个毫无意义的数字,比训练失败更危险。
+    """
     if not dataset.exists():
         raise FileNotFoundError(f"dataset not found: {dataset}")
     rows: list[dict[str, str]] = []
@@ -84,6 +98,11 @@ def load_rows(dataset: Path) -> list[dict[str, str]]:
 
 
 def split_dataset(texts: list[str], labels: list[str]) -> tuple[list[str], list[str], list[str], list[str]]:
+    """按标签分层切分;但任一类别不足 2 条时必须退回非分层切分。
+
+    sklearn 在最小类别只有 1 条时会直接抛错——演示数据集随时可能出现这种长尾类别,
+    为此让整条训练挂掉不值得,退化成随机切分即可。
+    """
     label_counts = {label: labels.count(label) for label in set(labels)}
     stratify = labels if min(label_counts.values()) >= 2 else None
     return train_test_split(

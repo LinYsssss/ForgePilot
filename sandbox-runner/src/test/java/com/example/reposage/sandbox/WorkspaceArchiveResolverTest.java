@@ -20,7 +20,7 @@ class WorkspaceArchiveResolverTest {
         return new WorkspaceArchiveResolver(root);
     }
 
-    /** Regression pin: the backend's real encoded reference must resolve to the provisioned file. */
+    /** 回归钉:backend 真实编码出的引用必须能解析到那个已预置的文件。 */
     @Test
     void resolvesBackendEncodedReferenceToProvisionedFile() throws Exception {
         Path root = Files.createDirectory(tempDir.resolve("archives"));
@@ -62,7 +62,7 @@ class WorkspaceArchiveResolverTest {
         assertThatThrownBy(() -> resolver.resolve(reference)).isInstanceOf(SecurityException.class);
     }
 
-    /** A syntactically valid but unprovisioned reference is an environment problem, not a breach. */
+    /** 语法合法但未被预置的引用属于**环境问题**,不是入侵——两者的处理方式必须区分开。 */
     @Test
     void missingArchiveSurfacesAsIoException() throws Exception {
         Path root = Files.createDirectory(tempDir.resolve("archives"));
@@ -72,7 +72,7 @@ class WorkspaceArchiveResolverTest {
                 .isInstanceOf(IOException.class);
     }
 
-    /** The real-path fence stays: a symlink inside the root must not lead outside of it. */
+    /** realpath 围栏必须在:根目录内的符号链接不得把人引到根目录之外。 */
     @Test
     void symlinkEscapingArchiveRootIsRejected() throws Exception {
         Path root = Files.createDirectory(tempDir.resolve("archives"));

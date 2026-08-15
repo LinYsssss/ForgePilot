@@ -14,7 +14,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.TreeSet;
 
-/** Computes content-addressed dependency cache keys and resolves completed cache directories. */
+/** 计算内容寻址的依赖缓存键,并解析出已完成的缓存目录(键由内容决定,依赖变了自然换目录)。 */
 public final class DependencyCacheManager {
 
     private static final int MAX_LOCK_FILES = 32;

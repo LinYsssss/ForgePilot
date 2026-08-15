@@ -8,7 +8,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
-/** Fixed read-only repository command handlers. No model-provided executable is accepted. */
+/** 固定的仓库只读命令处理器。**绝不接受模型给出的可执行文件**,只认白名单内的命令 id。 */
 public final class RepositoryReadCommandHandler {
 
     private final int fileOutputBytes;

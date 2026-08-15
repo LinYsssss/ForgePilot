@@ -8,7 +8,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-/** Executes fixed repository read commands after safe archive extraction. */
+/** 在安全解包归档之后,执行**固定的**仓库只读命令;命令集不随输入变化。 */
 @Component
 public final class RepositoryCommandExecutor implements SandboxExecutor {
 
@@ -102,11 +102,11 @@ public final class RepositoryCommandExecutor implements SandboxExecutor {
                 try {
                     Files.deleteIfExists(path);
                 } catch (IOException ignored) {
-                    // Best-effort cleanup.
+                    // 尽力而为的清理,失败不影响主流程。
                 }
             });
         } catch (IOException ignored) {
-            // Best-effort cleanup.
+            // 尽力而为的清理,失败不影响主流程。
         }
     }
 }

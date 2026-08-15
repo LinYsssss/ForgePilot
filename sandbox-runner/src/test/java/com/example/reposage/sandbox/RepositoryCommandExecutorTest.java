@@ -28,10 +28,10 @@ class RepositoryCommandExecutorTest {
     }
 
     /**
-     * Contract case: the job carries the backend encoder's real reference format and the archive
-     * has the backend producer's real layout (tree + prepared {@code .reposage/review.diff}).
-     * The previous suite only ever used bare fixture names like {@code repo.zip}, which is exactly
-     * how the {@code workspace://} drift escaped every test.
+     * 契约用例:job 里带的是 backend 编码器的**真实**引用格式,归档也是 backend 生产方的**真实**
+     * 布局(仓库树 + 已备好的 {@code .reposage/review.diff})。
+     * 旧用例一律只用 {@code repo.zip} 这类裸夹具名——{@code workspace://} 那次漂移能躲过全部测试,
+     * 正是因为这个。
      */
     @Test
     void acceptsBackendEncodedReferenceAndServesPreparedDiff() throws Exception {
@@ -60,7 +60,7 @@ class RepositoryCommandExecutorTest {
         assertThat(fileResult.outputPreview()).contains("class App");
     }
 
-    /** The historical drift format must keep failing loudly, as a rejection rather than an IO error. */
+    /** 那个历史漂移格式必须继续**响亮地**失败:要以「拒绝」的形式,而不是退化成一个 IO 错误。 */
     @Test
     void rejectsLegacyWorkspaceSchemeReference() throws Exception {
         Path archiveRoot = Files.createDirectory(tempDir.resolve("archives"));

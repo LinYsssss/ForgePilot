@@ -8,10 +8,9 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
 /**
- * Runner half of the bidirectional wire-format contract. The literals below are the backend's real
- * encoder output, pinned by the backend's own golden test with the same strings — if either side
- * changes the format unilaterally, its golden test breaks first. This is the guard that was missing
- * when the backend emitted {@code workspace://...} and this module rejected every colon.
+ * 双向线格式契约的 runner 半边。下面的字面量就是 backend 编码器的真实输出,backend 自己的
+ * golden 测试用同样的字符串钉住——任何一侧单方面改格式,它那侧的 golden 测试会先炸。
+ * 当初 backend 发 {@code workspace://...} 而本模块拒收一切冒号时,缺的正是这道闸。
  */
 class WorkspaceArchiveReferenceTest {
 

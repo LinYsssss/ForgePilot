@@ -5,7 +5,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Locale;
 
-/** Rejects submodule URLs that could reach local or link-local services. */
+/** 拒绝可能触达本机或链路本地(link-local)服务的子模块 URL,防 SSRF 经 submodule 绕进内网。 */
 public final class RepositoryUrlPolicy {
 
     public void validateSubmoduleUrl(String value) {

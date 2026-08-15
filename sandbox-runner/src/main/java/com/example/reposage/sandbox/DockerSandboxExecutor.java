@@ -86,7 +86,7 @@ public class DockerSandboxExecutor implements SandboxExecutor {
         try {
             docker.kill(containerId);
         } catch (RuntimeException ignored) {
-            // The container may already have exited or been removed by a concurrent cancellation.
+            // 容器可能已经退出,或被并发的取消操作删掉了。
         }
     }
 
@@ -94,7 +94,7 @@ public class DockerSandboxExecutor implements SandboxExecutor {
         try {
             docker.remove(containerId);
         } catch (RuntimeException ignored) {
-            // Cleanup is idempotent and best-effort; a later janitor can retry daemon failures.
+            // 清理是幂等且尽力而为的;守护进程侧的失败留给后续的清道夫重试。
         }
     }
 
@@ -107,11 +107,11 @@ public class DockerSandboxExecutor implements SandboxExecutor {
                 try {
                     Files.deleteIfExists(path);
                 } catch (IOException ignored) {
-                    // Cleanup is best-effort and idempotent; a later janitor can retry leftovers.
+                    // 清理尽力而为且幂等;残留物留给后续的清道夫重试。
                 }
             });
         } catch (IOException ignored) {
-            // Best-effort cleanup.
+            // 尽力而为的清理,失败不影响主流程。
         }
     }
 

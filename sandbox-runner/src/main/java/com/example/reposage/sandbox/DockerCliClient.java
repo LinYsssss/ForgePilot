@@ -7,7 +7,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
-/** Docker CLI adapter. Every command is assembled from fixed tokens; no shell is involved. */
+/** Docker CLI 适配器。每条命令都由固定 token 拼装,全程不经过 shell——没有可注入的字符串。 */
 public final class DockerCliClient implements DockerClient {
 
     private static final int MAX_OUTPUT_BYTES = 65_536;
