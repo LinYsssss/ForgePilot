@@ -28,3 +28,30 @@
 ### Status
 
 [OK] **Completed**
+
+
+## Session 2: 生产加固收官:步骤6-9 + 墨境步骤7,全部并入 main
+
+**Date**: 2026-08-14
+**Task**: 生产加固收官:步骤6-9 + 墨境步骤7,全部并入 main
+**Branch**: `main`
+
+### Summary
+
+完成 production-hardening 步骤 6-9 并归档:冗余审计结论为零删除(358 类无一可删,零引用不等于死);注释治理 252 个无中文文件中真有英文注释的 59 个全部中文化、192 个成文豁免且区分「结构自明」与「未逐个评估」;补三处关键裸奔逻辑(两个 Normalizer 的 XXE、AgentToolRegistry 四道闸)并订正两处已被证伪的断言。墨境步骤 7 收尾:把环境层零外部资源、持续动画模糊层<=3、模糊分级三条合同约束从注释变成回归测试。步骤 8 尾段:前端错误上报接线(sendBeacon+去重封顶+不抛)、前端注释清零、sandbox 24 文件中文化(镜像件译文与 backend 逐字一致)、model-service 普查精确圈定(污染源是未跟踪的 .python-packages)。沉淀两份共享指南与服务器侧单一转移清单。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `2f44827` | (see git log) |
+| `524a950` | (see git log) |
+| `24b43ec` | (see git log) |
+| `49737f4` | (see git log) |
+| `66e4797` | (see git log) |
+| `af149a9` | (see git log) |
+| `9f5cc49` | (see git log) |
+
+### Status
+
+[OK] **Completed**
