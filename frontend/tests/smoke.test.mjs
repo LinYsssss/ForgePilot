@@ -5,6 +5,10 @@ import config from '../vite.config.js'
 import { canApprovePatch } from '../src/components/agent/patchApprovalPolicy.js'
 import { unwrapPage } from '../src/api/page.js'
 import { ApiError } from '../src/api/apiError.js'
+import {
+  STACK_MAX_CHARS,
+  createClientErrorReporter,
+} from '../src/shared/telemetry/clientErrorReporter.js'
 
 test('frontend declares the supported Node runtime', async () => {
   const packageJson = JSON.parse(
@@ -127,4 +131,79 @@ test('agent SSE and pollers are torn down with the session', async () => {
   const agentReset = agent.slice(agent.indexOf('function reset'))
   assert.match(agentReset, /stopAgentPolling\(\)/)
   assert.match(agentReset, /agentRuns\.value = \[\]/)
+})
+
+/* ---------- 前端错误上报(生产加固 R4 前端侧) ---------- */
+
+test('client error reporter dedupes, caps, and never throws out of the handler', () => {
+  const sent = []
+  const reporter = createClientErrorReporter({
+    send: (payload) => sent.push(payload),
+    now: () => 1_700_000_000_000,
+    currentUrl: () => 'https://example.test/ink',
+    maxReports: 3,
+  })
+
+  const err = new Error('boom')
+  err.stack = 'Error: boom\n    at renderRow (App.vue:12:3)\n    at patch (vue.js:9:1)'
+
+  assert.equal(reporter.report(err.message, err.stack), true)
+  // 同一处反复抛出(渲染循环)必须收敛成一条,否则会打满服务端 10/分 的预算
+  assert.equal(reporter.report(err.message, err.stack), false)
+  assert.equal(sent.length, 1)
+  assert.deepEqual(Object.keys(sent[0]).sort(), ['message', 'stack', 'ts', 'url'])
+  assert.equal(sent[0].ts, 1_700_000_000_000)
+  assert.equal(sent[0].url, 'https://example.test/ink')
+
+  // message 是服务端 @NotBlank 字段:空值本地丢弃,不去换一个 400
+  assert.equal(reporter.report('   '), false)
+  assert.equal(reporter.report(null), false)
+
+  // 单页会话封顶
+  assert.equal(reporter.report('second'), true)
+  assert.equal(reporter.report('third'), true)
+  assert.equal(reporter.report('fourth'), false)
+  assert.equal(reporter.stats().sent, 3)
+})
+
+test('reporter swallows transport failure instead of feeding window.onerror', () => {
+  const reporter = createClientErrorReporter({
+    send: () => { throw new Error('beacon exploded') },
+  })
+  // 若这里抛出,window.onerror 会再次捕获并再次上报,形成自激循环
+  assert.doesNotThrow(() => reporter.report('transport dies'))
+})
+
+test('reporter normalizes both error events and non-Error rejections', () => {
+  const sent = []
+  const reporter = createClientErrorReporter({ send: (p) => sent.push(p), currentUrl: () => '/x' })
+
+  reporter.onError({ message: 'from message', error: undefined })
+  reporter.onRejection({ reason: new Error('rejected error') })
+  reporter.onRejection({ reason: 'plain string reason' })
+  reporter.onRejection({ reason: { code: 500 } })
+
+  assert.deepEqual(sent.map((p) => p.message), [
+    'from message',
+    'rejected error',
+    'plain string reason',
+    'Unhandled rejection: [object Object]',
+  ])
+})
+
+test('long stacks are truncated before they leave the browser', () => {
+  const sent = []
+  const reporter = createClientErrorReporter({ send: (p) => sent.push(p) })
+  reporter.report('huge', 'x'.repeat(STACK_MAX_CHARS + 500))
+  assert.ok(sent[0].stack.length < STACK_MAX_CHARS + 20)
+  assert.match(sent[0].stack, /\[truncated\]$/)
+})
+
+test('the entrypoint installs error reporting before the app mounts', async () => {
+  const main = await readFile(new URL('../src/main.js', import.meta.url), 'utf8')
+  assert.match(main, /installClientErrorReporter\(/)
+  // 必须早于 mount:挂载过程自身抛出的错误也要能被捕获
+  assert.ok(main.indexOf('installClientErrorReporter(`') < main.indexOf('.mount('))
+  // 端点走统一 API_BASE,不得另起一个硬编码地址
+  assert.match(main, /API_BASE/)
 })
