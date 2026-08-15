@@ -102,6 +102,7 @@ import { useConfirm } from '../composables/useConfirm.js'
 import { useSession } from '../composables/useSession.js'
 import { useToast } from '../composables/useToast.js'
 import { useWorkspace } from '../composables/useWorkspace.js'
+import { useInkNavigation } from '../features/shell/useInkNavigation.js'
 import { useMotionPolicy } from '../shared/motion/useMotionPolicy.js'
 import {
   classifyLoadError,
@@ -121,7 +122,7 @@ const { busy, run } = useBusy()
 const { toastMsg } = useToast()
 const { confirmModal, dismiss, confirmAction } = useConfirm()
 const { motionMode } = useMotionPolicy()
-const { goto, goTab, loadMe, refreshAll, logout, openAgentWorkspace, openProjectAiLogs } = useWorkspace()
+const { loadMe, refreshAll, logout } = useWorkspace()
 const {
   agentRuns, agentRunId, agentRunFilter, agentHeadSha,
   agentTimeline, agentFindings, agentPatch, agentRunDetail, agentPolling,
@@ -134,26 +135,8 @@ const {
 const shellEl = ref(null)
 const paperEl = ref(null)
 
-/* ---------- 导航(与 App.vue onNavigate 同映射;旧页面由旧壳层接管) ---------- */
-const navItems = computed(() => [
-  { key: 'atelier', glyph: '墨', label: '墨境工作台' },
-  { key: 'dashboard', glyph: '概', label: '总览' },
-  { key: 'projects', glyph: '项', label: '项目' },
-  { key: 'repository', glyph: '仓', label: '仓库', disabled: !activeProject.value },
-  { key: 'pullRequests', glyph: '合', label: 'PR 工作流', disabled: !activeProject.value },
-  { key: 'reviews', glyph: '审', label: '审查记录', disabled: !activeProject.value },
-  { key: 'agent', glyph: '巡', label: 'Agent 审批(旧版)', disabled: !activeProject.value },
-  { key: 'knowledge', glyph: '知', label: '知识库', disabled: !activeProject.value },
-  { key: 'aiLogs', glyph: '录', label: 'AI 日志', disabled: !activeProject.value },
-])
-
-function onNavigate(name) {
-  if (name === 'atelier') return
-  if (name === 'agent') return openAgentWorkspace()
-  if (name === 'aiLogs') return openProjectAiLogs()
-  if (name === 'dashboard' || name === 'projects') return goto(name)
-  goTab(name)
-}
+/* ---------- 导航(与页框共用同一份条目与执行器,见 useInkNavigation) ---------- */
+const { navItems, onNavigate } = useInkNavigation('atelier')
 
 // 登录成功:与 afterLogin 同源动作(loadMe + refreshAll),但停留在墨境;
 // refreshAll 会装载项目并选中默认项目,下方 watch 随之装载案卷。

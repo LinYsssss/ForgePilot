@@ -40,12 +40,11 @@
 </template>
 
 <script setup>
-import { computed, ref } from 'vue'
+import { ref } from 'vue'
 import LoginGate from '../auth/LoginGate.vue'
 import InkShell from './InkShell.vue'
 import InkDialog from './InkDialog.vue'
-import { navItemsFor, resolveNavigation } from './inkNav.js'
-import { nav } from '../../nav.js'
+import { useInkNavigation } from './useInkNavigation.js'
 import { useBusy } from '../../composables/useBusy.js'
 import { useConfirm } from '../../composables/useConfirm.js'
 import { useSession } from '../../composables/useSession.js'
@@ -71,21 +70,11 @@ const { authenticated, me, activeProject } = useSession()
 const { busy, run } = useBusy()
 const { confirmModal, dismiss, confirmAction } = useConfirm()
 const { toastMsg } = useToast()
-const { loadMe, refreshAll, logout, goto, goTab, openAgentWorkspace, openProjectAiLogs } = useWorkspace()
+const { loadMe, refreshAll, logout } = useWorkspace()
 
 const shellEl = ref(null)
-const navItems = computed(() => navItemsFor(!!activeProject.value))
-
-/** 决策在 inkNav(纯函数、可测),这里只负责按决策执行。 */
-function onNavigate(key) {
-  const decision = resolveNavigation(key, props.activeKey)
-  if (decision.action === 'none') return
-  if (decision.action === 'ink') return nav.push({ name: decision.routeName })
-  if (decision.legacy === 'agent') return openAgentWorkspace()
-  if (decision.legacy === 'aiLogs') return openProjectAiLogs()
-  if (decision.legacy === 'goto') return goto(key)
-  return goTab(key)
-}
+// 侧栏条目与跳转执行都来自共享导航器,墨境工作台用的是同一份。
+const { navItems, onNavigate } = useInkNavigation(() => props.activeKey)
 
 // 登录成功后与旧壳层 afterLogin 同源动作(loadMe + refreshAll),但停留在墨境;
 // refreshAll 会装载项目并选中默认项目,各页据此 watch 装载自己的数据。

@@ -82,35 +82,57 @@ test('ink tokens carry the frozen v1.0 contract values verbatim', async () => {
   assert.ok(css.includes('--ink-wash-dialog: rgb(31 33 29 / 0.34);'))
 })
 
+// 墨境自绘样式的全部 SFC/CSS:颜色与阴影两条 drift gate 共用同一份清单,
+// 新增墨境组件必须登记在此,否则不受 gate 约束。
+const INK_STYLE_FILES = [
+  '../src/features/shell/InkShell.vue',
+  '../src/features/shell/CaseIndex.vue',
+  '../src/features/shell/InkDialog.vue',
+  '../src/features/auth/LoginGate.vue',
+  '../src/features/workspace/PaperWorkspace.vue',
+  '../src/features/workspace/FindingLedger.vue',
+  '../src/features/workspace/EvidenceDiff.vue',
+  '../src/features/workspace/ReviewActionBar.vue',
+  '../src/features/workspace/AnnotationRail.vue',
+  '../src/features/workspace/RunCaseList.vue',
+  '../src/pages/InkAtelierPage.vue',
+  '../src/pages/InkDashboardPage.vue',
+  '../src/features/shell/InkPageFrame.vue',
+  '../src/features/dashboard/DashboardPaper.vue',
+  '../src/pages/InkProjectsPage.vue',
+  '../src/features/projects/ProjectsPaper.vue',
+  '../src/pages/InkRepositoryPage.vue',
+  '../src/features/repository/RepositoryPaper.vue',
+  '../src/shared/ui/SealBadge.vue',
+  '../src/shared/ui/BrushProgress.vue',
+  '../src/shared/motion/InkAmbientScene.vue',
+  '../src/shared/motion/TaijiAmbientMark.vue',
+  '../src/shared/motion/InkParticleField.vue',
+  '../src/shared/theme/ink-base.css',
+]
+
 test('ink components take colors from tokens only (no hardcoded hex)', async () => {
-  const files = [
-    '../src/features/shell/InkShell.vue',
-    '../src/features/shell/CaseIndex.vue',
-    '../src/features/shell/InkDialog.vue',
-    '../src/features/auth/LoginGate.vue',
-    '../src/features/workspace/PaperWorkspace.vue',
-    '../src/features/workspace/FindingLedger.vue',
-    '../src/features/workspace/EvidenceDiff.vue',
-    '../src/features/workspace/ReviewActionBar.vue',
-    '../src/features/workspace/AnnotationRail.vue',
-    '../src/features/workspace/RunCaseList.vue',
-    '../src/pages/InkAtelierPage.vue',
-    '../src/pages/InkDashboardPage.vue',
-    '../src/features/shell/InkPageFrame.vue',
-    '../src/features/dashboard/DashboardPaper.vue',
-    '../src/pages/InkProjectsPage.vue',
-    '../src/features/projects/ProjectsPaper.vue',
-    '../src/shared/ui/SealBadge.vue',
-    '../src/shared/ui/BrushProgress.vue',
-    '../src/shared/motion/InkAmbientScene.vue',
-    '../src/shared/motion/TaijiAmbientMark.vue',
-    '../src/shared/motion/InkParticleField.vue',
-    '../src/shared/theme/ink-base.css',
-  ]
+  const files = INK_STYLE_FILES
   for (const file of files) {
     const source = await readFile(new URL(file, import.meta.url), 'utf8')
     const hex = source.match(/#[0-9a-fA-F]{6}\b|#[0-9a-fA-F]{3}\b/g)
     assert.equal(hex, null, `${file} 含硬编码色值 ${hex},颜色只能经 ink-tokens.css 进入`)
+  }
+})
+
+test('every ink box-shadow is a real shadow, not a bare color token', async () => {
+  // --ink-glow-cyan 之类是颜色令牌;`box-shadow: var(--ink-glow-cyan)` 缺少必需的
+  // <length>{2,4},整条声明被浏览器判无效丢弃——不报错、不构建失败,只是选中/悬浮态
+  // 悄悄少一重编码。两处已经这样写错过,故改成机器判据。
+  for (const file of INK_STYLE_FILES) {
+    const source = await readFile(new URL(file, import.meta.url), 'utf8')
+    for (const match of source.matchAll(/box-shadow:\s*([^;{}]+);/g)) {
+      const value = match[1].trim()
+      assert.ok(
+        /--ink-shadow-|none|\d\s*px|\d\s*rem|\binset\b|\b0\b/.test(value),
+        `${file} 的 box-shadow "${value}" 没有长度值,浏览器会整条丢弃`,
+      )
+    }
   }
 })
 
@@ -484,11 +506,19 @@ test('nav model routes migrated pages by name and leaves the rest on the legacy 
   // 未迁移的仍交旧壳层,且保留各自既有语义(agent/aiLogs 有预加载动作,projects 是纯跳转)
   assert.equal(resolveNavigation('agent', 'dashboard').legacy, 'agent')
   assert.equal(resolveNavigation('aiLogs', 'dashboard').legacy, 'aiLogs')
-  assert.equal(resolveNavigation('repository', 'dashboard').legacy, 'goTab')
+  assert.equal(resolveNavigation('knowledge', 'dashboard').legacy, 'goTab')
 
   // 已迁移的项目页同样按名跳(路由名保持 'projects')
   assert.deepEqual(resolveNavigation('projects', 'dashboard'),
     { action: 'ink', key: 'projects', routeName: 'projects' })
+
+  // 仓库页迁移后仍要带刷新:旧壳层对它走的是 goTab(进入时按当前项目刷新一次),
+  // 只跳路由会让页面停在上一个项目的仓库数据上——是错数据,不是空数据
+  assert.deepEqual(resolveNavigation('repository', 'dashboard'),
+    { action: 'ink', key: 'repository', routeName: 'repository', refresh: true })
+  // 旧壳层对 dashboard/projects 用的是纯 goto,迁移后不得凭空多出刷新
+  assert.equal(resolveNavigation('dashboard', 'atelier').refresh, undefined)
+  assert.equal(resolveNavigation('projects', 'dashboard').refresh, undefined)
 
   // 点当前页与未知 key 都不动作
   assert.equal(resolveNavigation('dashboard', 'dashboard').action, 'none')
@@ -533,4 +563,53 @@ test('dashboard is migrated into the ink shell with its route semantics intact',
   assert.match(page, /useReviews/)
   assert.match(page, /useWorkspace/)
   assert.doesNotMatch(page, /from '\.\.\/api\//, '页面不得绕过 composable 直连 api 层')
+})
+
+test('repository is migrated into the ink shell and keeps its cross-domain wiring', async () => {
+  const routerSource = await readFile(new URL('../src/router.js', import.meta.url), 'utf8')
+  assert.match(routerSource, /path: '\/repository', name: 'repository', component: InkRepositoryPage, meta: \{ shell: 'ink' \}/)
+  assert.doesNotMatch(routerSource, /RepositoryView/, '旧表现层不得再被引用')
+  await assert.rejects(() => readFile(new URL('../src/views/RepositoryView.vue', import.meta.url), 'utf8'),
+    'RepositoryView.vue 应已随迁移删除')
+
+  const page = await readFile(new URL('../src/pages/InkRepositoryPage.vue', import.meta.url), 'utf8')
+  // 选中提交与看 diff 是跨域动作(预填审查表单、diff 基线取自表单),必须走 useWorkspace;
+  // 直接用 useRepository 的同名函数会丢掉这层编排,且不会报错——只会静默少做一半
+  assert.match(page, /useWorkspace/)
+  assert.match(page, /selectCommit/)
+  assert.match(page, /reviewSelectedCommit/)
+  assert.doesNotMatch(page, /from '\.\.\/api\//, '页面不得绕过 composable 直连 api 层')
+
+  // diff 解析沿用既有工具函数,不得出现第二套解析
+  const paper = await readFile(new URL('../src/features/repository/RepositoryPaper.vue', import.meta.url), 'utf8')
+  assert.match(paper, /import \{ diffLines \} from '\.\.\/\.\.\/utils\/labels\.js'/)
+  assert.doesNotMatch(paper, /@@ -/, 'diff 解析应只存在于 utils/labels.js')
+
+  // 提交行必须是按钮:选中提交是发起审查的必经步骤,不可聚焦就等于键盘用户走不通。
+  // [^>]* 卡在同一个开标签内,避免"文件里任意位置有 <button"就算过。
+  assert.match(paper, /<button[^>]*class="commit-row list-row"/)
+  // 最多 100 行的列表走全局 roving focus 指令(component-guidelines:不逐组件手写 keydown)
+  assert.match(paper, /v-list-nav class="commit-list"/)
+})
+
+test('ink page frame executes the refresh the nav model asks for', async () => {
+  const frame = await readFile(new URL('../src/features/shell/InkPageFrame.vue', import.meta.url), 'utf8')
+  // 页框必须真的消费 decision.refresh,否则 inkNav 标了也白标(纯声明、无副作用)
+  const navigator = await readFile(new URL('../src/features/shell/useInkNavigation.js', import.meta.url), 'utf8')
+  assert.match(navigator, /decision\.refresh/)
+  assert.match(navigator, /refreshAll/)
+  assert.match(frame, /useInkNavigation/)
+})
+
+test('both ink shells read one nav table, not two', async () => {
+  // 工作台曾自带一份硬编码 navItems + onNavigate,与 inkNav 并列成第二个真源:
+  // 每迁一页要同步两处,漏同步只在用户从工作台点那一项时才暴露。
+  for (const file of ['../src/pages/InkAtelierPage.vue', '../src/features/shell/InkPageFrame.vue']) {
+    const source = await readFile(new URL(file, import.meta.url), 'utf8')
+    assert.match(source, /useInkNavigation/, `${file} 必须走共享导航器`)
+    assert.doesNotMatch(source, /glyph: '/, `${file} 不得自带侧栏条目表`)
+  }
+  // 侧栏条目只有 inkNav 一处定义
+  const nav = await readFile(new URL('../src/features/shell/inkNav.js', import.meta.url), 'utf8')
+  assert.match(nav, /glyph: '墨'/)
 })

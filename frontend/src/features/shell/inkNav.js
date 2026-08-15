@@ -5,7 +5,8 @@
  * 把「哪些页已经是墨境原生」收在这里单点声明,页面组件只管照着结果跳,
  * 避免每迁一页就去改散落各处的 if 分支——那正是上一轮 onNavigate 里已经开始堆积的形态。
  *
- * 迁移一页的动作因此收敛成两步:把它的 `ink: true` 打开、加一条 `/ink/<key>` 路由。
+ * 迁移一页的动作因此收敛成:把它的 `ink: true` 打开、把路由 component 换成墨境页,
+ * 并按旧壳层的语义决定要不要标 `refreshOnEnter`。
  */
 
 /**
@@ -14,12 +15,16 @@
  *
  * 迁移一页**不改路径也不改路由名**,只把它的 `ink` 打开、把路由的 component 换成墨境页并加
  * `meta.shell`。这样既有的 goto/兜底重定向/外链锚点全都照常工作(步骤 8 要求「保持路由语义」)。
+ *
+ * `refreshOnEnter` 对应旧壳层 onNavigate 里的 goTab(进入时按当前项目刷新一次);
+ * 旧壳层对 dashboard/projects 用的是纯 goto、对项目作用域页用的是 goTab,这里逐条照搬。
+ * 漏标会让页面进入时停在上一个项目的数据上——是错数据,不是空数据,所以必须逐页对齐。
  */
 export const INK_NAV = [
   { key: 'atelier', glyph: '墨', label: '墨境工作台', ink: true, routeName: 'inkAtelier', needsProject: false },
   { key: 'dashboard', glyph: '概', label: '总览', ink: true, routeName: 'dashboard', needsProject: false },
   { key: 'projects', glyph: '项', label: '项目', ink: true, routeName: 'projects', needsProject: false },
-  { key: 'repository', glyph: '仓', label: '仓库', ink: false, needsProject: true },
+  { key: 'repository', glyph: '仓', label: '仓库', ink: true, routeName: 'repository', refreshOnEnter: true, needsProject: true },
   { key: 'pullRequests', glyph: '合', label: 'PR 工作流', ink: false, needsProject: true },
   { key: 'reviews', glyph: '审', label: '审查记录', ink: false, needsProject: true },
   { key: 'agent', glyph: '巡', label: 'Agent 审批(旧版)', ink: false, needsProject: true },
@@ -43,16 +48,21 @@ export function navItemsFor(hasProject) {
 /**
  * 把一次点击解析成「该做什么」,不在这里执行——执行留给页面,便于测试。
  *
- * @returns {{action: 'none'|'ink'|'legacy', key: string, routeName?: string, legacy?: string}}
+ * @returns {{action: 'none'|'ink'|'legacy', key: string, routeName?: string, refresh?: true, legacy?: string}}
  *   - `none`:点的就是当前页,或 key 不存在;
- *   - `ink`:按 `routeName` 跳墨境页;
+ *   - `ink`:按 `routeName` 跳墨境页;带 `refresh` 时进入后还要刷新一次当前项目数据(等价旧 goTab);
  *   - `legacy`:交给旧壳层,`legacy` 标明用哪条既有语义(agent/aiLogs 各有预加载动作)。
  */
 export function resolveNavigation(key, currentKey) {
   if (key === currentKey) return { action: 'none', key }
   const item = INK_NAV.find((entry) => entry.key === key)
   if (!item) return { action: 'none', key }
-  if (item.ink) return { action: 'ink', key, routeName: item.routeName }
+  if (item.ink) {
+    // refresh 只在需要时出现,免得调用方把「有这个键」误当成「要刷新」
+    return item.refreshOnEnter
+      ? { action: 'ink', key, routeName: item.routeName, refresh: true }
+      : { action: 'ink', key, routeName: item.routeName }
+  }
   if (key === 'agent' || key === 'aiLogs') return { action: 'legacy', key, legacy: key }
   if (key === 'projects') return { action: 'legacy', key, legacy: 'goto' }
   return { action: 'legacy', key, legacy: 'goTab' }

@@ -130,7 +130,9 @@ function isActive(project) {
   border: 1px solid var(--line-soft);
   border-radius: var(--ink-radius-control);
 }
-.proj-card.is-active { border-color: var(--mineral-cyan); box-shadow: var(--ink-glow-cyan); }
+/* --ink-glow-cyan 是颜色不是阴影:必须自带偏移/扩散,否则整条 box-shadow 被判无效丢弃,
+   选中态就只剩边框换色这一重编码。 */
+.proj-card.is-active { border-color: var(--mineral-cyan); box-shadow: 0 0 0 3px var(--ink-glow-cyan); }
 
 .proj-open {
   flex: 1;
