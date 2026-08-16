@@ -1,0 +1,12 @@
+{"file": "ForgePilot_最终方案.md", "reason": "源方案 V1.0:产品定位、功能范围、NON-GOALS 与实验设计;与父任务 prd.md 冲突处以 prd.md 为准"}
+{"file": ".trellis/spec/backend/frozen-contracts.md", "reason": "ProjectAuthorization/ErrorCode/PageResponse/Flyway/REST 与 MQ 载荷冻结契约——成员角色与新表全部触碰此边界,只做扩展式演进"}
+{"file": ".trellis/spec/backend/directory-structure.md", "reason": "新增 member/requirement 域包落位与依赖方向、命名约定"}
+{"file": ".trellis/spec/backend/database-guidelines.md", "reason": "Flyway V29+ 不可变迁移纪律、事务边界与 @Transactional 不自调用(REQ 取号、负责人移交单事务)"}
+{"file": ".trellis/spec/backend/error-handling.md", "reason": "需求状态机/成员操作的新 ErrorCode 入词汇表、BusinessException 姿态"}
+{"file": ".trellis/spec/backend/agent-model-contracts.md", "reason": "体检报告与 AC 覆盖结论的结构化输出两级防御、校验不过丢弃不落库"}
+{"file": ".trellis/spec/backend/prompt-management.md", "reason": "REQUIREMENT_CHECK/PR_REVIEW/ASSISTANT 新模板入注册表,遵守宁精勿多、评测门禁、退役、禁承诺红线"}
+{"file": ".trellis/spec/frontend/directory-structure.md", "reason": "新页面(/requirements /quality /metrics)与迁移页在 src 布局、nav 接缝的落位"}
+{"file": ".trellis/spec/frontend/state-management.md", "reason": "模块级单例 composable 划分;助手 SSE 与 401 硬规则"}
+{"file": ".trellis/spec/frontend/component-guidelines.md", "reason": "SFC 写法与设计系统规范,新页面直接按墨境风格建"}
+{"file": ".trellis/spec/guides/contract-testing.md", "reason": "MQ 载荷或跨模块契约(SandboxJob 等)如需增字段,走双向金标流程"}
+{"file": ".trellis/spec/guides/code-reuse-thinking-guide.md", "reason": "优先复用 ReviewContextService/GateDecisionService/模板注册表等既有件,不平行造新"}
