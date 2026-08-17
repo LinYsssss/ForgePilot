@@ -75,7 +75,7 @@ docker compose --env-file deploy/.env -f deploy/docker-compose.yml up -d
 2. `HostConfig.NetworkMode` 为 `none`；容器内访问 RabbitMQ、backend、`169.254.169.254` 等地址失败。
 3. 以恶意命令 ID、未固定 digest、`workspace:../outside`、符号链接和归档遍历样本提交任务，Runner 拒绝任务且没有残留容器/工作目录。
 4. 读取容器环境变量和日志时，只验证不存在 `SANDBOX_SIGNING_SECRET`、SCM token、LLM key、数据库密码；所有输出必须脱敏，禁止把密钥写入 CI 日志。
-5. RabbitMQ、backend、model-service 的宿主端口仅绑定 `127.0.0.1`；对外流量只经 Nginx 暴露的入口。
+5. RabbitMQ、backend 的宿主端口仅绑定 `127.0.0.1`；对外流量只经 Nginx 暴露的入口。
 
 推荐在验收脚本中对每个分析容器执行以下检查，并只输出布尔结果：
 

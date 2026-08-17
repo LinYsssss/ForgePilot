@@ -105,7 +105,7 @@ cp .env.example .env
 docker compose up -d --build
 ```
 
-起 PostgreSQL+pgvector、RabbitMQ、后端、Sandbox Runner、模型服务、前端、Nginx。
+起 PostgreSQL+pgvector、RabbitMQ、后端、Sandbox Runner、前端、Nginx。
 入口 `http://服务器IP/`，健康检查 `/actuator/health`。
 
 数据库结构由 Flyway 管理（当前至 `V28`），`ddl-auto=validate` 校验实体一致性。
@@ -125,7 +125,6 @@ flowchart TB
 
     B --> PG[("PostgreSQL 16<br/>唯一事实源<br/>pgvector 可选")]
     B --> MQ{{"RabbitMQ<br/>异步审查 · Agent 步骤<br/>重试 + 死信"}}
-    B -.可选.-> MS["FastAPI 模型服务<br/>TF-IDF + 逻辑回归<br/>风险预判"]
     B -.可选.-> LLM["大模型 API<br/>OpenAI 兼容"]
     B --> GIT[("Git 仓库<br/>clone 与 diff")]
 
@@ -134,7 +133,7 @@ flowchart TB
 ```
 
 后端按领域分包（`agent` / `review` / `rag` / `sandbox` / `scm` / `patch` / `knowledge` …，共 26 个包、17 个 REST Controller），
-`sandbox-runner` 与 `model-service` 是独立模块。
+`sandbox-runner` 是独立模块。
 
 ---
 
@@ -183,7 +182,6 @@ flowchart TD
 | --- | --- | --- |
 | 后端 `mvn verify` | 575 项通过（含 3 项 Testcontainers 集成用例） | [CI run 31310489195](https://github.com/LinYsssss/reposage/actions/runs/31310489195)（2026-08-09） |
 | Sandbox Runner | 75 项通过 | 同上 |
-| model-service | 9 项通过 | 同上 |
 | 前端 | 73 项通过 + Vite 生产构建通过 | 本地实测（2026-08-15） |
 
 当前状态以顶部 CI 徽章为准。依赖 Docker 的沙箱全链路已于 2026-08-09 端到端跑至 `COMPLETED`；

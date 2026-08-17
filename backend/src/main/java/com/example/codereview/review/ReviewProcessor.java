@@ -7,8 +7,6 @@ import com.example.codereview.ai.AiCallLogService;
 import com.example.codereview.ai.AiMetrics;
 import com.example.codereview.ai.TokenUsage;
 import com.example.codereview.common.exception.BusinessException;
-import com.example.codereview.model.ModelRiskClient;
-import com.example.codereview.model.ModelRiskSignal;
 import com.example.codereview.rag.RagService;
 import java.util.ArrayList;
 import java.util.List;
@@ -27,7 +25,6 @@ public class ReviewProcessor {
     private final AiReviewClient aiReviewClient;
     private final AiCallLogService aiCallLogService;
     private final AiMetrics aiMetrics;
-    private final ModelRiskClient modelRiskClient;
     private final ReviewTaskStatusService taskStatusService;
     private final ReviewResultWriter resultWriter;
     private final int maxPromptChars;
@@ -35,7 +32,7 @@ public class ReviewProcessor {
     private final int maxFiles;
 
     public ReviewProcessor(ReviewTaskRepository tasks, RagService ragService, AiReviewClient aiReviewClient,
-                           AiCallLogService aiCallLogService, AiMetrics aiMetrics, ModelRiskClient modelRiskClient,
+                           AiCallLogService aiCallLogService, AiMetrics aiMetrics,
                            ReviewTaskStatusService taskStatusService, ReviewResultWriter resultWriter,
                            @Value("${app.review.max-prompt-chars:48000}") int maxPromptChars,
                            @Value("${app.review.max-diff-chars:20000}") int maxDiffChars,
@@ -45,7 +42,6 @@ public class ReviewProcessor {
         this.aiReviewClient = aiReviewClient;
         this.aiCallLogService = aiCallLogService;
         this.aiMetrics = aiMetrics;
-        this.modelRiskClient = modelRiskClient;
         this.taskStatusService = taskStatusService;
         this.resultWriter = resultWriter;
         this.maxPromptChars = maxPromptChars;
@@ -61,10 +57,9 @@ public class ReviewProcessor {
         }
         try {
             taskStatusService.markRunning(taskId);
-            ModelRiskSignal riskSignal = modelRiskClient.predict(task.getProjectId(), task.getId(), task.getDiffText()).orElse(null);
             String ragContext = ragService.buildContext(task.getProjectId(), task.getDiffText(), task.getKnowledgeDocIds());
             // The project context is shared across chunks, so reserve one per-chunk diff budget for it.
-            String reviewContext = capContext(buildReviewContext(ragContext, riskSignal), maxDiffChars);
+            String reviewContext = capContext(ragContext, maxDiffChars);
             AiReviewResult result = reviewChunks(task, reviewContext);
             resultWriter.saveSuccess(taskId, result);
         } catch (RuntimeException ex) {
@@ -159,17 +154,6 @@ public class ReviewProcessor {
             sb.append('\n').append(detail);
         }
         return sb.toString();
-    }
-
-    private String buildReviewContext(String ragContext, ModelRiskSignal riskSignal) {
-        if (riskSignal == null) {
-            return ragContext;
-        }
-        String modelContext = riskSignal.toPromptContext();
-        if (ragContext == null || ragContext.isBlank()) {
-            return modelContext;
-        }
-        return modelContext + "\n\nRAG 检索上下文：\n" + ragContext;
     }
 
     private String capContext(String context, int diffReserveChars) {

@@ -66,8 +66,6 @@ services:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
-      model-service:
-        condition: service_started
       otel-collector:
         condition: service_started
     environment:
@@ -120,21 +118,6 @@ services:
     restart: unless-stopped
     mem_limit: 512m
     memswap_limit: 768m
-    logging: *default-logging
-
-  model-service:
-    build:
-      context: ../model-service
-    environment:
-      MODEL_PATH: /app/models/risk_classifier.joblib
-      MODEL_VERSION: docker-demo-v1
-    # 不发布宿主端口:只有 backend 需要访问它,compose 网络内以服务名直连即可。
-    # 发布出去徒增暴露面 —— 该服务没有任何认证。
-    expose:
-      - "8000"
-    restart: unless-stopped
-    mem_limit: 768m
-    memswap_limit: 1280m
     logging: *default-logging
 
   frontend:

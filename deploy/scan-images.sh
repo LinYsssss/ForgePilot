@@ -7,12 +7,12 @@ set -euo pipefail
 # 每条必须带 exp: 到期日,到期自动恢复拦截。
 #
 # 用法: deploy/scan-images.sh [镜像...]
-#   缺省扫描 compose 构建出的四个业务镜像(本机演示环境的真实部署物)。
+#   缺省扫描 compose 构建出的三个业务镜像(本机演示环境的真实部署物)。
 #   CI 里传入刚构建的 :ci 标签即可复用同一门禁。
 
 IMAGES=("$@")
 if [ ${#IMAGES[@]} -eq 0 ]; then
-    IMAGES=(deploy-backend:latest deploy-frontend:latest deploy-sandbox-runner:latest deploy-model-service:latest)
+    IMAGES=(deploy-backend:latest deploy-frontend:latest deploy-sandbox-runner:latest)
 fi
 
 # 固定扫描器版本保证结果可复现;漏洞库仍是联网拉最新的,结论会随时间演进,这是预期行为。

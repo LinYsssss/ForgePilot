@@ -69,12 +69,6 @@ jobs:
         working-directory: frontend
         run: npm run build
 
-      - name: Test model service
-        working-directory: model-service
-        run: |
-          python -m pip install -r requirements.txt
-          python -m pytest tests/ -q
-
   # 边缘代理是浏览器侧安全头的唯一出口(P1-16),配置退化必须挡在合并前。
   nginx-headers:
     runs-on: ubuntu-latest
@@ -84,7 +78,7 @@ jobs:
       - name: Verify edge security headers
         run: deploy/test-nginx-headers.sh
 
-  # 供应链门禁(P1-24):npm audit 只覆盖前端,这里把 Maven、Python 与四个业务镜像补齐。
+  # 供应链门禁(P1-24):npm audit 只覆盖前端,这里把 Maven、Python 与三个业务镜像补齐。
   # 口径与 deploy/scan-images.sh 一致:HIGH/CRITICAL 且已有修复版本才拦,无修复的不空转。
   supply-chain:
     runs-on: ubuntu-latest
@@ -109,7 +103,6 @@ jobs:
           docker build -t reposage-backend:ci backend
           docker build -t reposage-frontend:ci frontend
           docker build -t reposage-sandbox-runner:ci sandbox-runner
-          docker build -t reposage-model-service:ci model-service
 
       - name: Scan images
-        run: deploy/scan-images.sh reposage-backend:ci reposage-frontend:ci reposage-sandbox-runner:ci reposage-model-service:ci
+        run: deploy/scan-images.sh reposage-backend:ci reposage-frontend:ci reposage-sandbox-runner:ci

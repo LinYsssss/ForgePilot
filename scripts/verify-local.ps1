@@ -8,7 +8,6 @@ $ErrorActionPreference = "Stop"
 $Root = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $BackendDir = Join-Path $Root "backend"
 $FrontendDir = Join-Path $Root "frontend"
-$ModelDir = Join-Path $Root "model-service"
 $SmokeScript = Join-Path $PSScriptRoot "smoke-backend.ps1"
 $Results = [ordered]@{}
 
@@ -47,54 +46,6 @@ function Invoke-CommandChecked {
         }
     }
     finally {
-        Pop-Location
-    }
-}
-
-function Invoke-ModelCheck {
-    Push-Location $ModelDir
-    $previousPythonPath = $env:PYTHONPATH
-    try {
-        $localPackages = Join-Path $ModelDir ".python-packages"
-        $requirements = Join-Path $ModelDir "requirements.txt"
-        $dependencyCheck = @'
-import fastapi
-import joblib
-import sklearn
-'@
-
-        $env:PYTHONPATH = $localPackages
-        $dependencyCheck | python -
-        if ($LASTEXITCODE -ne 0) {
-            Write-Host "Model dependencies missing; installing into $localPackages"
-            python -m pip install --disable-pip-version-check --target $localPackages -r $requirements
-            if ($LASTEXITCODE -ne 0) {
-                throw "model dependency installation failed with code $LASTEXITCODE"
-            }
-        }
-
-        $code = @'
-from app.main import PredictRequest, load_model, model_status, predict
-load_model()
-status = model_status().model_dump()
-result = predict(PredictRequest(
-    filePath="AdminOrderController.java",
-    diffText="+@PostMapping(\"/admin/orders/{id}/force-ship\")\n+public void forceShip(Long id){ orderService.forceShip(id); }"
-)).model_dump()
-print(status)
-print(result)
-if not status["modelLoaded"]:
-    raise SystemExit("model not loaded")
-if result["source"] != "trained-model":
-    raise SystemExit("trained model not used")
-'@
-        $code | python -
-        if ($LASTEXITCODE -ne 0) {
-            throw "model check failed with code $LASTEXITCODE"
-        }
-    }
-    finally {
-        $env:PYTHONPATH = $previousPythonPath
         Pop-Location
     }
 }
@@ -164,10 +115,6 @@ try {
 
     Invoke-Step "Frontend build" {
         Invoke-CommandChecked -FilePath "npm" -Arguments @("run", "build") -WorkingDirectory $FrontendDir
-    }
-
-    Invoke-Step "Model service check" {
-        Invoke-ModelCheck
     }
 
     if (-not $SkipSmoke) {

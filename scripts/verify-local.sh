@@ -33,20 +33,11 @@ run_backend() {
     fi
 }
 
-run_model_service() {
-    if python3 -c "import pytest" >/dev/null 2>&1; then
-        ( cd model-service && python3 -m pytest tests/ -q ) && record "model-service pytest" PASS || record "model-service pytest" FAIL
-    else
-        record "model-service pytest" "SKIPPED(no pytest — 未验证)"
-    fi
-}
-
 if [ "${1:-}" = "--frontend-only" ]; then
     run_frontend
 else
     run_backend
     run_frontend
-    run_model_service
 fi
 
 echo

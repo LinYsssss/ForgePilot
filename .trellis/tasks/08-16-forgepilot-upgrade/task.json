@@ -3,7 +3,7 @@
   "name": "forgepilot-upgrade",
   "title": "ForgePilot Upgrade Master Plan",
   "description": "",
-  "status": "planning",
+  "status": "in_progress",
   "dev_type": null,
   "scope": null,
   "package": null,
@@ -18,7 +18,9 @@
   "commit": null,
   "pr_url": null,
   "subtasks": [],
-  "children": [],
+  "children": [
+    "08-16-p0-model-service-removal"
+  ],
   "parent": null,
   "relatedFiles": [],
   "notes": "",

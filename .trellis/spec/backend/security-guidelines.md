@@ -92,7 +92,7 @@ authenticated.value = true
 - Gate = two layers, both must pass:
   ```yaml
   uses: aquasecurity/trivy-action@v0.36.0   # fs scan of Maven/npm/Python manifests, exit-code "1"
-  run: deploy/scan-images.sh reposage-{backend,frontend,sandbox-runner,model-service}:ci
+  run: deploy/scan-images.sh reposage-{backend,frontend,sandbox-runner}:ci
   ```
 - Remediation pattern (backend): override the Boot-managed version via a property in `backend/pom.xml` `<properties>`, never by hardcoding versions in `<dependencies>`:
   ```xml

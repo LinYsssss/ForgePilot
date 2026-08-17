@@ -19,7 +19,6 @@ public class AiCallLogService {
     public static final String REVIEW = "CHAT_REVIEW";
     public static final String EMBEDDING_INDEX = "EMBEDDING_INDEX";
     public static final String EMBEDDING_SEARCH = "EMBEDDING_SEARCH";
-    public static final String MODEL_RISK = "MODEL_RISK";
 
     private final AiCallLogRepository logs;
     private final ProjectService projectService;
@@ -67,16 +66,6 @@ public class AiCallLogService {
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void embeddingFailed(Long projectId, String requestType, int promptChars, long latencyMs, String errorMessage) {
         save(projectId, null, requestType, embeddingProvider, embeddingModel, promptChars, 0, 0, 0, 0, latencyMs, "FAILED", errorMessage);
-    }
-
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void modelRiskSuccess(Long projectId, Long taskId, int promptChars, int responseChars, long latencyMs, String modelVersion) {
-        save(projectId, taskId, MODEL_RISK, "model-service", modelVersion, promptChars, responseChars, 0, 0, 0, latencyMs, "SUCCESS", null);
-    }
-
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void modelRiskFailed(Long projectId, Long taskId, int promptChars, long latencyMs, String errorMessage) {
-        save(projectId, taskId, MODEL_RISK, "model-service", "unknown", promptChars, 0, 0, 0, 0, latencyMs, "FAILED", errorMessage);
     }
 
     @Transactional(readOnly = true)

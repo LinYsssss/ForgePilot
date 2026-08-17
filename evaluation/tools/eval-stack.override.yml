@@ -8,7 +8,7 @@
 #   docker compose -p reposage-eval \
 #     -f deploy/docker-compose.yml -f evaluation/tools/eval-stack.override.yml \
 #     up -d --build backend
-#   # 依赖自动拉起 postgres/rabbitmq/model-service/otel-collector;
+#   # 依赖自动拉起 postgres/rabbitmq/otel-collector;
 #   # frontend/nginx/prometheus/sandbox-runner 不在 backend 依赖树上,不会启动。
 #
 # 端口纪律:演示栈把 5432/5672/15672/4317/4318/9464/8080 全绑在 127.0.0.1,

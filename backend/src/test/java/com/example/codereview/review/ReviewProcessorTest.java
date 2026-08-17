@@ -15,7 +15,6 @@ import com.example.codereview.ai.AiMetrics;
 import com.example.codereview.ai.AiReviewClient;
 import com.example.codereview.ai.AiReviewResult;
 import com.example.codereview.ai.TokenUsage;
-import com.example.codereview.model.ModelRiskClient;
 import com.example.codereview.rag.RagService;
 import java.util.List;
 import java.util.Optional;
@@ -51,7 +50,6 @@ class ReviewProcessorTest {
     @Mock AiReviewClient aiReviewClient;
     @Mock AiCallLogService aiCallLogService;
     @Mock AiMetrics aiMetrics;
-    @Mock ModelRiskClient modelRiskClient;
     @Mock ReviewTaskStatusService taskStatusService;
     @Mock ReviewResultWriter resultWriter;
 
@@ -59,14 +57,13 @@ class ReviewProcessorTest {
     void multiFileDiff_fansOutPerFileAndMergesFindings() {
         ReviewTask task = new ReviewTask(7L, 1L, "abc", null, "main", 9L, THREE_FILE_DIFF);
         when(tasks.findById(1L)).thenReturn(Optional.of(task));
-        when(modelRiskClient.predict(any(), any(), any())).thenReturn(Optional.empty());
         when(ragService.buildContext(any(), any(), any())).thenReturn("");
         when(aiReviewClient.review(anyString(), anyString())).thenReturn(
                 new AiReviewResult("片段问题", "HIGH", List.of(issue("x")), "{}", new TokenUsage(10, 5, 15)));
 
         // maxDiffChars=1 forces one chunk per file; maxFiles=40 keeps all three.
         ReviewProcessor processor = new ReviewProcessor(tasks, ragService, aiReviewClient, aiCallLogService,
-                aiMetrics, modelRiskClient, taskStatusService, resultWriter, 48_000, 1, 40);
+                aiMetrics, taskStatusService, resultWriter, 48_000, 1, 40);
 
         processor.process(1L);
 
@@ -89,11 +86,11 @@ class ReviewProcessorTest {
         task.markCanceled();
         when(tasks.findById(1L)).thenReturn(Optional.of(task));
         ReviewProcessor processor = new ReviewProcessor(tasks, ragService, aiReviewClient, aiCallLogService,
-                aiMetrics, modelRiskClient, taskStatusService, resultWriter, 48_000, 20_000, 40);
+                aiMetrics, taskStatusService, resultWriter, 48_000, 20_000, 40);
 
         processor.process(1L);
 
-        verifyNoInteractions(modelRiskClient, ragService, aiReviewClient, resultWriter);
+        verifyNoInteractions(ragService, aiReviewClient, resultWriter);
     }
 
     private static AiReviewResult.Issue issue(String title) {

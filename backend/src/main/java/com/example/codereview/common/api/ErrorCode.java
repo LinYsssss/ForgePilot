@@ -86,10 +86,9 @@ public enum ErrorCode {
     SCM_PUBLISH_FAILED(503, 503, "回写代码托管平台失败"),
     CREDENTIAL_DECRYPT_FAILED(500, 500, "凭据解密失败"),
 
-    // ------------------------------------------------------------ Track B: Sandbox 与模型服务
+    // ------------------------------------------------------------ Track B: Sandbox
     SANDBOX_SIGNATURE_INVALID(401, 401, "沙箱任务签名无效"),
-    SANDBOX_REPLAY_REJECTED(409, 409, "沙箱任务重复提交已被拒绝"),
-    MODEL_SERVICE_UNAVAILABLE(503, 503, "模型服务不可用");
+    SANDBOX_REPLAY_REJECTED(409, 409, "沙箱任务重复提交已被拒绝");
 
     private final int httpStatus;
     private final int legacyCode;

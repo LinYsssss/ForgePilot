@@ -49,9 +49,6 @@ app:
   http:
     connect-timeout-ms: ${HTTP_CONNECT_TIMEOUT_MS:10000}
     read-timeout-ms: ${HTTP_READ_TIMEOUT_MS:60000}
-  model-service:
-    enabled: ${MODEL_SERVICE_ENABLED:false}
-    base-url: ${MODEL_SERVICE_URL:}
   sandbox:
     signing-secret: ${SANDBOX_SIGNING_SECRET:}
     tool-image: ${SANDBOX_TOOL_IMAGE:}
