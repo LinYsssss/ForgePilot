@@ -45,6 +45,11 @@ public enum ErrorCode {
     FINDING_NOT_FOUND(404, 404, "问题记录不存在"),
     FEEDBACK_NOT_FOUND(404, 404, "反馈记录不存在"),
 
+    // ------------------------------------------------------------ ForgePilot: 项目成员(P1a)
+    MEMBER_NOT_FOUND(404, 404, "成员不存在"),
+    MEMBER_ALREADY_EXISTS(409, 409, "该用户已是项目成员"),
+    MEMBER_OWNER_IMMUTABLE(409, 409, "不能变更或移除项目负责人，请先移交负责人"),
+
     // ------------------------------------------------------------ Track A: Agent 执行闭环
     AGENT_RUN_NOT_FOUND(404, 404, "Agent 运行记录不存在"),
     AGENT_RUN_CONFLICT(409, 409, "Agent 运行状态冲突"),

@@ -2,8 +2,10 @@ package com.example.codereview.review;
 
 import com.example.codereview.common.api.ErrorCode;
 import com.example.codereview.common.exception.BusinessException;
+import com.example.codereview.common.security.ProjectAuthorization;
 import com.example.codereview.ai.AiCallLogRepository;
 import com.example.codereview.feedback.FeedbackRepository;
+import com.example.codereview.member.ProjectRole;
 import com.example.codereview.mq.MqTaskLogRepository;
 import com.example.codereview.mq.ReviewTaskMessage;
 import com.example.codereview.mq.ReviewTaskPublisher;
@@ -23,6 +25,7 @@ import com.example.codereview.review.ReviewDtos.ReviewReportDetail;
 import com.example.codereview.review.ReviewDtos.ReviewReportSummary;
 import com.example.codereview.review.ReviewDtos.ReviewTaskResponse;
 import java.util.List;
+import java.util.Set;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -32,6 +35,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 public class ReviewService {
 
     private final RepositoryService repositoryService;
+    private final ProjectAuthorization projectAuthorization;
     private final ReviewTaskRepository tasks;
     private final ReviewReportRepository reports;
     private final ReviewIssueRepository issues;
@@ -44,13 +48,15 @@ public class ReviewService {
     private final boolean inline;
     private final int maxTotalDiffChars;
 
-    public ReviewService(RepositoryService repositoryService, ReviewTaskRepository tasks, ReviewReportRepository reports,
+    public ReviewService(RepositoryService repositoryService, ProjectAuthorization projectAuthorization,
+                         ReviewTaskRepository tasks, ReviewReportRepository reports,
                          ReviewIssueRepository issues, ReviewProcessor processor, ReviewTaskPublisher publisher,
                          PullRequestRepository pullRequests, FeedbackRepository feedback,
                          MqTaskLogRepository mqLogs, AiCallLogRepository aiCallLogs,
                          @Value("${app.review.inline}") boolean inline,
                          @Value("${app.review.max-total-diff-chars:200000}") int maxTotalDiffChars) {
         this.repositoryService = repositoryService;
+        this.projectAuthorization = projectAuthorization;
         this.tasks = tasks;
         this.reports = reports;
         this.issues = issues;
@@ -65,6 +71,8 @@ public class ReviewService {
     }
 
     public ReviewTaskResponse create(Long projectId, Long userId, CreateReviewTaskRequest request) {
+        // 触发审查对 LEADER/DEVELOPER 开放(P1a 矩阵);REVIEWER 只读报告。
+        projectAuthorization.requireRole(projectId, userId, Set.of(ProjectRole.LEADER, ProjectRole.DEVELOPER));
         CodeRepositoryEntity repository = repositoryService.getRequired(projectId, userId);
         PullRequestEntity pullRequest = resolvePullRequest(projectId, request.pullRequestId());
         if (pullRequest != null && !pullRequest.getRepositoryId().equals(repository.getId())) {
@@ -167,6 +175,7 @@ public class ReviewService {
 
     @Transactional
     public ReviewTaskResponse cancelTask(Long projectId, Long userId, Long taskId) {
+        projectAuthorization.requireRole(projectId, userId, Set.of(ProjectRole.LEADER, ProjectRole.DEVELOPER));
         repositoryService.getRequired(projectId, userId);
         ReviewTask task = requireTask(projectId, taskId);
         if (task.isTerminal()) {
@@ -179,6 +188,8 @@ public class ReviewService {
 
     @Transactional
     public void deleteTask(Long projectId, Long userId, Long taskId) {
+        // 删除是破坏性动作:仅 LEADER。
+        projectAuthorization.requireWrite(projectId, userId);
         repositoryService.getRequired(projectId, userId);
         ReviewTask task = requireTask(projectId, taskId);
         reports.findByTaskId(taskId).ifPresent(report -> purgeReport(report));
@@ -189,6 +200,7 @@ public class ReviewService {
 
     @Transactional
     public void deleteReport(Long projectId, Long userId, Long reportId) {
+        projectAuthorization.requireWrite(projectId, userId);
         repositoryService.getRequired(projectId, userId);
         ReviewReport report = reports.findById(reportId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.REVIEW_REPORT_NOT_FOUND, "审查报告不存在"));

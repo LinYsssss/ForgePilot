@@ -79,4 +79,10 @@ public class ProjectEntity {
         this.defaultBranch = defaultBranch;
         this.updatedAt = Instant.now();
     }
+
+    /** 负责人移交:仅由成员服务在单事务内与成员表同步调用。 */
+    public void transferOwner(Long newOwnerId) {
+        this.ownerId = newOwnerId;
+        this.updatedAt = Instant.now();
+    }
 }

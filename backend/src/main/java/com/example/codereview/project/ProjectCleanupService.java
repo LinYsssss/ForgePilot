@@ -7,6 +7,7 @@ import com.example.codereview.knowledge.KnowledgeDocumentRepository;
 import com.example.codereview.pullrequest.PullRequestRepository;
 import com.example.codereview.pullrequest.ReviewActionRepository;
 import com.example.codereview.git.GitCliService;
+import com.example.codereview.member.ProjectMemberRepository;
 import com.example.codereview.mq.MqTaskLogRepository;
 import com.example.codereview.rag.VectorIndexService;
 import com.example.codereview.report.ReviewIssue;
@@ -37,6 +38,7 @@ public class ProjectCleanupService {
     private final AiCallLogRepository aiCallLogs;
     private final MqTaskLogRepository mqTaskLogs;
     private final GitCliService gitCliService;
+    private final ProjectMemberRepository projectMembers;
 
     public ProjectCleanupService(CodeRepositoryJpaRepository repositories, KnowledgeDocumentRepository documents,
                                  KnowledgeChunkRepository chunks, VectorIndexService vectorIndexService,
@@ -44,7 +46,7 @@ public class ProjectCleanupService {
                                  ReviewIssueRepository issues, FeedbackRepository feedback,
                                  ReviewActionRepository reviewActions, PullRequestRepository pullRequests,
                                  AiCallLogRepository aiCallLogs, MqTaskLogRepository mqTaskLogs,
-                                 GitCliService gitCliService) {
+                                 GitCliService gitCliService, ProjectMemberRepository projectMembers) {
         this.repositories = repositories;
         this.documents = documents;
         this.chunks = chunks;
@@ -58,6 +60,7 @@ public class ProjectCleanupService {
         this.aiCallLogs = aiCallLogs;
         this.mqTaskLogs = mqTaskLogs;
         this.gitCliService = gitCliService;
+        this.projectMembers = projectMembers;
     }
 
     @Transactional
@@ -88,6 +91,8 @@ public class ProjectCleanupService {
         documents.deleteByProjectId(projectId);
 
         aiCallLogs.deleteByProjectId(projectId);
+        // H2 dev 由 ddl-auto 建表、没有 FK 级联,成员行必须应用层删;PG 的级联只是双保险。
+        projectMembers.deleteByProjectId(projectId);
         repositories.findByProjectId(projectId).ifPresent(repository -> {
             gitCliService.deleteWorkingCopy(repository.getId());
             repositories.deleteById(repository.getId());

@@ -4,9 +4,11 @@ import com.example.codereview.common.api.ErrorCode;
 import com.example.codereview.common.api.PageResponse;
 import com.example.codereview.common.exception.BusinessException;
 import com.example.codereview.ai.AiCallLogService;
+import com.example.codereview.common.security.ProjectAuthorization;
 import com.example.codereview.knowledge.KnowledgeDtos.DocumentResponse;
 import com.example.codereview.knowledge.KnowledgeDtos.ReindexResponse;
 import com.example.codereview.knowledge.KnowledgeDtos.SearchResponse;
+import com.example.codereview.member.ProjectRole;
 import com.example.codereview.project.ProjectService;
 import com.example.codereview.rag.EmbeddingClient;
 import com.example.codereview.rag.EmbeddingJson;
@@ -14,6 +16,7 @@ import com.example.codereview.rag.RagService;
 import com.example.codereview.rag.VectorIndexService;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
@@ -27,6 +30,7 @@ import org.springframework.web.multipart.MultipartFile;
 public class KnowledgeService {
 
     private final ProjectService projectService;
+    private final ProjectAuthorization projectAuthorization;
     private final KnowledgeDocumentRepository documents;
     private final KnowledgeChunkRepository chunks;
     private final RagService ragService;
@@ -44,6 +48,7 @@ public class KnowledgeService {
 
     public KnowledgeService(
             ProjectService projectService,
+            ProjectAuthorization projectAuthorization,
             KnowledgeDocumentRepository documents,
             KnowledgeChunkRepository chunks,
             RagService ragService,
@@ -59,6 +64,7 @@ public class KnowledgeService {
             @Value("${app.rag.full-context}") boolean fullContext
     ) {
         this.projectService = projectService;
+        this.projectAuthorization = projectAuthorization;
         this.documents = documents;
         this.chunks = chunks;
         this.ragService = ragService;
@@ -109,7 +115,8 @@ public class KnowledgeService {
      */
     private KnowledgeDocument createPending(Long projectId, Long userId, String docType, MultipartFile file) {
         return uploadTransactions.execute(status -> {
-            projectService.getRequired(projectId, userId);
+            // 上传对 LEADER/DEVELOPER 开放(P1a 矩阵);REVIEWER 只读。
+            projectAuthorization.requireRole(projectId, userId, Set.of(ProjectRole.LEADER, ProjectRole.DEVELOPER));
             String content = uploadValidator.readText(file);
             String fileName = uploadValidator.sanitizeFileName(file.getOriginalFilename());
             KnowledgeDocument document = new KnowledgeDocument(projectId, userId, docType, fileName, content);
@@ -154,7 +161,8 @@ public class KnowledgeService {
     }
 
     public ReindexResponse reindex(Long projectId, Long userId) {
-        projectService.getRequired(projectId, userId);
+        // 全量重建索引是维护类动作:仅 LEADER。
+        projectAuthorization.requireWrite(projectId, userId);
         List<KnowledgeDocument> projectDocuments = documents.findByProjectIdOrderByCreatedAtDesc(projectId);
         if (fullContext) {
             return new ReindexResponse(projectDocuments.size(), 0, projectDocuments.size(), 0);
@@ -190,7 +198,8 @@ public class KnowledgeService {
 
     @Transactional
     public void delete(Long projectId, Long userId, Long documentId) {
-        projectService.getRequired(projectId, userId);
+        // 知识删除仅 LEADER(P1a 矩阵);上传放开到 DEVELOPER,删除保持收口。
+        projectAuthorization.requireWrite(projectId, userId);
         KnowledgeDocument document = documents.findById(documentId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.KNOWLEDGE_DOCUMENT_NOT_FOUND, "文档不存在"));
         if (!document.getProjectId().equals(projectId)) {

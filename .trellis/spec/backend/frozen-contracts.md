@@ -24,8 +24,12 @@
 
 ## 4. ProjectAuthorization(`common/security/ProjectAuthorization.java`)
 
-- 方法面固定:`requireRead(projectId, userId)` / `requireWrite(projectId, userId)`;需要实体的调用点继续用 `ProjectService.getRequired`(同一 404/403 语义的实体版)。
-- 语义固定:项目不存在 → 404 `PROJECT_NOT_FOUND`,不属于当前用户 → 403 `PROJECT_FORBIDDEN`(防枚举)。
+- 方法面:`requireRead(projectId, userId)` / `requireWrite(projectId, userId)` 签名固定;
+  P1a(2026-08-16)按扩展式演进加入 `requireRole(projectId, userId, Set<ProjectRole>)` 与 `roleOf`。
+- 语义(P1a 起):`requireRead` = 任意项目成员(`project_member`,owner 恒兜底为 LEADER);
+  `requireWrite` = LEADER(最高权限动作);细粒度动作走 `requireRole`。
+  `ProjectService.getRequired` 收敛为**读语义**实体版;写路径必须显式调用 requireWrite/requireRole。
+- 口径固定:项目不存在 → 404 `PROJECT_NOT_FOUND`,非成员 → 403 `PROJECT_FORBIDDEN`(防枚举)。
 - **没有管理员旁路**;若将来需要,只能加在这个类里、带显式角色检查与负向测试(类头 Javadoc 明文)。
 - 配套准入规则:新的带 id 端点必须进 `ObjectLevelAuthorizationMatrixTest`(见 [quality-guidelines.md](./quality-guidelines.md))。
 

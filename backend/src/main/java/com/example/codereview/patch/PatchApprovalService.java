@@ -4,6 +4,7 @@ import com.example.codereview.common.api.ErrorCode;
 import com.example.codereview.agent.run.AgentRun;
 import com.example.codereview.agent.run.AgentRunRepository;
 import com.example.codereview.common.exception.BusinessException;
+import com.example.codereview.common.security.ProjectAuthorization;
 import com.example.codereview.project.ProjectService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -14,6 +15,7 @@ import java.util.Objects;
 public class PatchApprovalService {
     private final PatchCandidateRepository patches; private final PatchApprovalRepository approvals;
     private final AgentRunRepository runs; private final ProjectService projects;
+    private final ProjectAuthorization projectAuthorization;
     private final com.example.codereview.agent.queue.AgentStepWakeupService wakeup;
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private com.example.codereview.ai.langchain4j.LangChain4jRolloutPolicy rolloutPolicy;
@@ -21,14 +23,17 @@ public class PatchApprovalService {
     @org.springframework.beans.factory.annotation.Autowired
     public PatchApprovalService(PatchCandidateRepository patches, PatchApprovalRepository approvals,
                                 AgentRunRepository runs, ProjectService projects,
+                                ProjectAuthorization projectAuthorization,
                                 com.example.codereview.agent.queue.AgentStepWakeupService wakeup) {
         this.patches = patches; this.approvals = approvals; this.runs = runs; this.projects = projects;
+        this.projectAuthorization = projectAuthorization;
         this.wakeup = wakeup;
     }
 
     public PatchApprovalService(PatchCandidateRepository patches, PatchApprovalRepository approvals,
-                                AgentRunRepository runs, ProjectService projects) {
-        this(patches, approvals, runs, projects, null);
+                                AgentRunRepository runs, ProjectService projects,
+                                ProjectAuthorization projectAuthorization) {
+        this(patches, approvals, runs, projects, projectAuthorization, null);
     }
     @Transactional
     public PatchApproval decide(Long projectId, Long patchId, Long agentRunId, Long approverId,
@@ -36,7 +41,8 @@ public class PatchApprovalService {
         if (rolloutPolicy != null && rolloutPolicy.shadow()) {
             throw new BusinessException(ErrorCode.SERVICE_UNAVAILABLE, "影子模式下补丁审批已停用");
         }
-        projects.getRequired(projectId, approverId);
+        // 补丁审批是最高权限动作(P1a 矩阵):仅 LEADER。
+        projectAuthorization.requireWrite(projectId, approverId);
         PatchCandidate patch = patches.findById(patchId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.PATCH_NOT_FOUND, "补丁候选不存在"));
         AgentRun run = runs.findById(agentRunId).orElseThrow(() -> new BusinessException(ErrorCode.AGENT_RUN_NOT_FOUND, "Agent Run 不存在"));

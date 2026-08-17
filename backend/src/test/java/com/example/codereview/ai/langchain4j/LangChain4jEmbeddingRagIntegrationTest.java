@@ -88,6 +88,7 @@ class LangChain4jEmbeddingRagIntegrationTest {
         );
         KnowledgeService knowledge = new KnowledgeService(
                 mock(ProjectService.class),
+                mock(com.example.codereview.common.security.ProjectAuthorization.class),
                 documents,
                 chunks,
                 rag,

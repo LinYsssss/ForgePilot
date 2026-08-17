@@ -9,6 +9,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.example.codereview.common.security.CryptoService;
+import com.example.codereview.common.security.ProjectAuthorization;
 import com.example.codereview.git.GitCliService;
 import com.example.codereview.project.ProjectService;
 import com.example.codereview.repo.RepositoryDtos.BindRepositoryRequest;
@@ -24,6 +25,7 @@ class RepositoryServiceTest {
     private static final String URL = "https://github.com/acme/app";
 
     private final ProjectService projectService = mock(ProjectService.class);
+    private final ProjectAuthorization projectAuthorization = mock(ProjectAuthorization.class);
     private final CodeRepositoryJpaRepository repositories = mock(CodeRepositoryJpaRepository.class);
     private final GitCliService gitCliService = mock(GitCliService.class);
     private final CryptoService cryptoService = mock(CryptoService.class);
@@ -31,7 +33,7 @@ class RepositoryServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new RepositoryService(projectService, repositories, gitCliService, cryptoService, false);
+        service = new RepositoryService(projectService, projectAuthorization, repositories, gitCliService, cryptoService, false);
         when(cryptoService.encrypt(anyString())).thenAnswer(inv -> "enc(" + inv.getArgument(0) + ")");
         when(repositories.save(any(CodeRepositoryEntity.class))).thenAnswer(inv -> inv.getArgument(0));
     }

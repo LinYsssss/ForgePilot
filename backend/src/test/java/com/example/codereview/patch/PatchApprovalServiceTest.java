@@ -8,6 +8,7 @@ import static org.mockito.Mockito.when;
 import com.example.codereview.agent.run.AgentRun;
 import com.example.codereview.agent.run.AgentRunRepository;
 import com.example.codereview.common.exception.BusinessException;
+import com.example.codereview.common.security.ProjectAuthorization;
 import com.example.codereview.project.ProjectService;
 import java.util.List;
 import java.util.Optional;
@@ -23,6 +24,7 @@ class PatchApprovalServiceTest {
     @Mock PatchApprovalRepository approvals;
     @Mock AgentRunRepository runs;
     @Mock ProjectService projects;
+    @Mock ProjectAuthorization projectAuthorization;
 
     @Test
     void authorizesProjectAndCreatesImmutableApproval() {
@@ -32,11 +34,11 @@ class PatchApprovalServiceTest {
         when(runs.findById(7L)).thenReturn(Optional.of(run));
         when(approvals.findByPatchCandidateIdAndApproverId(9L, 11L)).thenReturn(Optional.empty());
         when(approvals.save(org.mockito.ArgumentMatchers.any())).thenAnswer(i -> i.getArgument(0));
-        PatchApprovalService service = new PatchApprovalService(patches, approvals, runs, projects);
+        PatchApprovalService service = new PatchApprovalService(patches, approvals, runs, projects, projectAuthorization);
 
         PatchApproval approval = service.decide(5L, 9L, 7L, 11L, "head", PatchApprovalDecision.APPROVED, "looks good");
 
-        verify(projects).getRequired(5L, 11L);
+        verify(projectAuthorization).requireWrite(5L, 11L);
         assertThat(approval.getPatchHash()).isEqualTo(patch.getPatchHash());
         assertThat(approval.getHeadSha()).isEqualTo("head");
         assertThat(approval.getDecision()).isEqualTo(PatchApprovalDecision.APPROVED);
@@ -51,7 +53,7 @@ class PatchApprovalServiceTest {
         when(patches.findById(9L)).thenReturn(Optional.of(patch));
         when(runs.findById(7L)).thenReturn(Optional.of(run));
         when(approvals.findByPatchCandidateIdAndApproverId(9L, 11L)).thenReturn(Optional.of(existing));
-        PatchApprovalService service = new PatchApprovalService(patches, approvals, runs, projects);
+        PatchApprovalService service = new PatchApprovalService(patches, approvals, runs, projects, projectAuthorization);
 
         assertThat(service.decide(5L, 9L, 7L, 11L, "head", PatchApprovalDecision.APPROVED, "again"))
                 .isSameAs(existing);
@@ -65,7 +67,7 @@ class PatchApprovalServiceTest {
     @Test
     void missingPatchOrRunIsNotFoundRatherThanServerError() {
         AgentRun run = new AgentRun(5L, 2L, 3L, "trigger", "head");
-        PatchApprovalService service = new PatchApprovalService(patches, approvals, runs, projects);
+        PatchApprovalService service = new PatchApprovalService(patches, approvals, runs, projects, projectAuthorization);
 
         when(patches.findById(9L)).thenReturn(Optional.empty());
         assertThatThrownBy(() -> service.decide(5L, 9L, 7L, 11L, "head", PatchApprovalDecision.APPROVED, ""))
@@ -90,7 +92,7 @@ class PatchApprovalServiceTest {
         AgentRun run = new AgentRun(5L, 2L, 3L, "trigger", null); // head 未知
         when(patches.findById(9L)).thenReturn(Optional.of(patch));
         when(runs.findById(7L)).thenReturn(Optional.of(run));
-        PatchApprovalService service = new PatchApprovalService(patches, approvals, runs, projects);
+        PatchApprovalService service = new PatchApprovalService(patches, approvals, runs, projects, projectAuthorization);
 
         assertThatThrownBy(() -> service.decide(5L, 9L, 7L, 11L, "head", PatchApprovalDecision.APPROVED, ""))
                 .isInstanceOf(BusinessException.class)

@@ -2,7 +2,9 @@ package com.example.codereview.pullrequest;
 
 import com.example.codereview.common.api.ErrorCode;
 import com.example.codereview.common.exception.BusinessException;
+import com.example.codereview.common.security.ProjectAuthorization;
 import com.example.codereview.git.GitInputValidator;
+import com.example.codereview.member.ProjectRole;
 import com.example.codereview.project.ProjectService;
 import com.example.codereview.pullrequest.PullRequestDtos.CreatePullRequestRequest;
 import com.example.codereview.pullrequest.PullRequestDtos.PullRequestResponse;
@@ -28,16 +30,19 @@ public class PullRequestService {
     private static final Set<String> ALLOWED_STATUSES = Set.of("OPEN", "CLOSED", "MERGED");
 
     private final ProjectService projectService;
+    private final ProjectAuthorization projectAuthorization;
     private final RepositoryService repositoryService;
     private final PullRequestRepository pullRequests;
     private final ReviewActionRepository reviewActions;
     private final ReviewReportRepository reports;
     private final ReviewIssueRepository issues;
 
-    public PullRequestService(ProjectService projectService, RepositoryService repositoryService,
+    public PullRequestService(ProjectService projectService, ProjectAuthorization projectAuthorization,
+                              RepositoryService repositoryService,
                               PullRequestRepository pullRequests, ReviewActionRepository reviewActions,
                               ReviewReportRepository reports, ReviewIssueRepository issues) {
         this.projectService = projectService;
+        this.projectAuthorization = projectAuthorization;
         this.repositoryService = repositoryService;
         this.pullRequests = pullRequests;
         this.reviewActions = reviewActions;
@@ -47,6 +52,8 @@ public class PullRequestService {
 
     @Transactional
     public PullRequestResponse create(Long projectId, Long userId, CreatePullRequestRequest request) {
+        // PR 导入/更新属于开发工作流:LEADER/DEVELOPER(P1a 矩阵);审查意见(action)对全员开放。
+        projectAuthorization.requireRole(projectId, userId, Set.of(ProjectRole.LEADER, ProjectRole.DEVELOPER));
         CodeRepositoryEntity repository = repositoryService.getRequired(projectId, userId);
         validateRefs(request.sourceBranch(), request.targetBranch(), request.baseSha(), request.headSha());
         PullRequestEntity entity = new PullRequestEntity(
@@ -79,6 +86,7 @@ public class PullRequestService {
 
     @Transactional
     public PullRequestResponse update(Long projectId, Long userId, Long pullRequestId, UpdatePullRequestRequest request) {
+        projectAuthorization.requireRole(projectId, userId, Set.of(ProjectRole.LEADER, ProjectRole.DEVELOPER));
         PullRequestEntity pullRequest = requirePullRequest(projectId, userId, pullRequestId);
         validateRefs(request.sourceBranch(), request.targetBranch(), request.baseSha(), request.headSha());
         String status = request.status() == null || request.status().isBlank() ? pullRequest.getStatus() : request.status();

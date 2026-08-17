@@ -3,6 +3,7 @@ package com.example.codereview.repo;
 import com.example.codereview.common.api.ErrorCode;
 import com.example.codereview.common.exception.BusinessException;
 import com.example.codereview.common.security.CryptoService;
+import com.example.codereview.common.security.ProjectAuthorization;
 import com.example.codereview.git.GitCliService;
 import com.example.codereview.git.GitInputValidator;
 import com.example.codereview.project.ProjectService;
@@ -19,15 +20,18 @@ import org.springframework.transaction.annotation.Transactional;
 public class RepositoryService {
 
     private final ProjectService projectService;
+    private final ProjectAuthorization projectAuthorization;
     private final CodeRepositoryJpaRepository repositories;
     private final GitCliService gitCliService;
     private final CryptoService cryptoService;
     private final boolean allowLocalRepoPath;
 
-    public RepositoryService(ProjectService projectService, CodeRepositoryJpaRepository repositories,
+    public RepositoryService(ProjectService projectService, ProjectAuthorization projectAuthorization,
+                             CodeRepositoryJpaRepository repositories,
                              GitCliService gitCliService, CryptoService cryptoService,
                              @Value("${app.git.allow-local-path:false}") boolean allowLocalRepoPath) {
         this.projectService = projectService;
+        this.projectAuthorization = projectAuthorization;
         this.repositories = repositories;
         this.gitCliService = gitCliService;
         this.cryptoService = cryptoService;
@@ -36,7 +40,8 @@ public class RepositoryService {
 
     @Transactional
     public RepositoryResponse bind(Long projectId, Long userId, BindRepositoryRequest request) {
-        projectService.getRequired(projectId, userId);
+        // 仓库绑定属于配置类动作(P1a 矩阵):仅 LEADER。
+        projectAuthorization.requireWrite(projectId, userId);
         GitInputValidator.requireSafeRepoUrl(request.repoUrl(), allowLocalRepoPath);
         if (request.defaultBranch() != null && !request.defaultBranch().isBlank()) {
             GitInputValidator.requireSafeRef(request.defaultBranch(), "默认分支");
@@ -90,6 +95,7 @@ public class RepositoryService {
 
     @Transactional
     public void unbind(Long projectId, Long userId) {
+        projectAuthorization.requireWrite(projectId, userId);
         CodeRepositoryEntity repository = getRequired(projectId, userId);
         repositories.delete(repository);
     }

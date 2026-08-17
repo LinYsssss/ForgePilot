@@ -13,6 +13,7 @@ import com.example.codereview.agent.run.AgentStateMachine;
 import com.example.codereview.agent.run.AgentStep;
 import com.example.codereview.agent.run.AgentStepRepository;
 import com.example.codereview.common.exception.BusinessException;
+import com.example.codereview.common.security.ProjectAuthorization;
 import com.example.codereview.project.ProjectService;
 import java.util.List;
 import java.util.Optional;
@@ -34,6 +35,7 @@ public class AgentRunService {
     private final AgentRunTransitionService transitions;
     private final AgentStepPublisher publisher;
     private final ProjectService projects;
+    private final ProjectAuthorization projectAuthorization;
     private final ApplicationEventPublisher events;
 
     public AgentRunService(
@@ -43,6 +45,7 @@ public class AgentRunService {
             AgentRunTransitionService transitions,
             AgentStepPublisher publisher,
             ProjectService projects,
+            ProjectAuthorization projectAuthorization,
             ApplicationEventPublisher events
     ) {
         this.runs = runs;
@@ -51,6 +54,7 @@ public class AgentRunService {
         this.transitions = transitions;
         this.publisher = publisher;
         this.projects = projects;
+        this.projectAuthorization = projectAuthorization;
         this.events = events;
     }
 
@@ -91,6 +95,8 @@ public class AgentRunService {
     @Transactional
     public AgentRunDetail cancel(Long runId, Long userId) {
         AgentRun run = requireOwnedRun(runId, userId);
+        // 运维类动作(P1a 矩阵):仅 LEADER;成员仍可读 detail/timeline。
+        projectAuthorization.requireWrite(run.getProjectId(), userId);
         if (stateMachine.isTerminal(run.getStatus())) {
             if (run.getStatus() == AgentRunStatus.CANCELED) {
                 return toDetail(run);
@@ -118,6 +124,7 @@ public class AgentRunService {
     @Transactional
     public AgentRunDetail retry(Long runId, Long userId) {
         AgentRun run = requireOwnedRun(runId, userId);
+        projectAuthorization.requireWrite(run.getProjectId(), userId);
         if (run.getStatus() != AgentRunStatus.FAILED && run.getStatus() != AgentRunStatus.TIMED_OUT) {
             throw new BusinessException(ErrorCode.AGENT_RUN_CONFLICT, "只有失败或超时的运行可以重试");
         }

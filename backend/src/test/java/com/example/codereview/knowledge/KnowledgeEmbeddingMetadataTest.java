@@ -47,7 +47,8 @@ class KnowledgeEmbeddingMetadataTest {
         ));
         when(json.write(List.of(0.1, 0.2, 0.3))).thenReturn("[0.1,0.2,0.3]");
         KnowledgeService service = new KnowledgeService(
-                projects, documents, chunks, rag, embeddings, json, vectors, calls,
+                projects, mock(com.example.codereview.common.security.ProjectAuthorization.class),
+                documents, chunks, rag, embeddings, json, vectors, calls,
                 new KnowledgeUploadValidator(2_097_152, 400_000),
                 new KnowledgeDocumentStateService(documents),
                 transactionManager(), 400, 20, false
@@ -105,7 +106,8 @@ class KnowledgeEmbeddingMetadataTest {
             return null;
         }).when(chunks).deleteByDocumentId(10L);
         KnowledgeService service = new KnowledgeService(
-                projects, documents, chunks, rag, embeddings, json, vectors, calls,
+                projects, mock(com.example.codereview.common.security.ProjectAuthorization.class),
+                documents, chunks, rag, embeddings, json, vectors, calls,
                 new KnowledgeUploadValidator(2_097_152, 400_000),
                 new KnowledgeDocumentStateService(documents),
                 transactionManager(), 400, 20, false
@@ -132,7 +134,8 @@ class KnowledgeEmbeddingMetadataTest {
         ReflectionTestUtils.setField(document, "id", 10L);
         when(documents.findById(10L)).thenReturn(java.util.Optional.of(document));
         KnowledgeService service = new KnowledgeService(
-                projects, documents, chunks, mock(RagService.class), mock(EmbeddingClient.class),
+                projects, mock(com.example.codereview.common.security.ProjectAuthorization.class),
+                documents, chunks, mock(RagService.class), mock(EmbeddingClient.class),
                 mock(EmbeddingJson.class), vectors, mock(AiCallLogService.class),
                 new KnowledgeUploadValidator(2_097_152, 400_000),
                 new KnowledgeDocumentStateService(documents),
@@ -200,7 +203,8 @@ class KnowledgeEmbeddingMetadataTest {
             return null;
         }).when(chunks).deleteByDocumentId(11L);
         KnowledgeService service = new KnowledgeService(
-                projects, documents, chunks, mock(RagService.class), embeddings, json, vectors,
+                projects, mock(com.example.codereview.common.security.ProjectAuthorization.class),
+                documents, chunks, mock(RagService.class), embeddings, json, vectors,
                 mock(AiCallLogService.class), new KnowledgeUploadValidator(2_097_152, 400_000), new KnowledgeDocumentStateService(documents), transactionManager(), 400, 20, false
         );
 
