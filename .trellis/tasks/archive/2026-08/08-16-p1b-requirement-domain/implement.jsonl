@@ -1,0 +1,8 @@
+{"file": ".trellis/tasks/08-16-forgepilot-upgrade/design.md", "reason": "父 design §3 Requirement 域数据模型与状态机;§12 前端 IA(/requirements 新建页)"}
+{"file": ".trellis/spec/backend/database-guidelines.md", "reason": "V30 不可变迁移;REQ 取号事务边界与 @Transactional 不自调用"}
+{"file": ".trellis/spec/backend/directory-structure.md", "reason": "requirement 域包落位、DTO 嵌套 record、依赖方向"}
+{"file": ".trellis/spec/backend/error-handling.md", "reason": "新 ErrorCode 入词汇表;BusinessException 姿态"}
+{"file": ".trellis/spec/backend/frozen-contracts.md", "reason": "PageResponse 分页信封沿用;ErrorCode 只增不改"}
+{"file": ".trellis/spec/frontend/directory-structure.md", "reason": "/requirements 新页在 src 布局与 nav 接缝落位"}
+{"file": ".trellis/spec/frontend/component-guidelines.md", "reason": "墨境 SFC 写法;新页直接按设计系统建"}
+{"file": ".trellis/spec/frontend/state-management.md", "reason": "模块级单例 composable 划分"}
