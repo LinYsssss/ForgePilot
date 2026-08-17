@@ -55,3 +55,24 @@
 ### Status
 
 [OK] **Completed**
+
+
+## Session 3: P5 Finding 闭环与三态门禁
+
+**Date**: 2026-08-17
+**Task**: P5 Finding 闭环与三态门禁
+**Branch**: `main`
+
+### Summary
+
+完成 Finding 生命周期 API、指派与 fix commit、跨 run 指纹复审建议、PASS/WARN/BLOCK Run Gate、SCM 回写和墨境 /quality 质量中心；Luna 子代理检查与当前模型复核修复 AgentScmContext PR 身份、pipeline rejected 门禁误报等问题。后端 test-compile、前端 production build、diff-check 通过；按用户要求未运行完整测试套件。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `cb8b96e` | (see git log) |
+
+### Status
+
+[OK] **Completed**
