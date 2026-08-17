@@ -138,6 +138,41 @@
         </div>
       </div>
 
+      <div v-if="assistantEnabled" class="detail-block assistant-panel">
+        <div class="assistant-head">
+          <div>
+            <h3>研发助手</h3>
+            <p class="req-hint">只读回答当前需求、AC、知识库与已关联代码，不会修改仓库。</p>
+          </div>
+          <button v-if="assistantStreaming" class="ink-outline-button" type="button" @click="$emit('assistant-stop')">停止生成</button>
+        </div>
+        <div v-if="!assistantMessages.length" class="assistant-suggestions">
+          <button type="button" class="ink-text-button" @click="$emit('assistant-ask', '这个需求实现时最容易漏掉什么？')">最容易漏掉什么？</button>
+          <button type="button" class="ink-text-button" @click="$emit('assistant-ask', '请按验收标准给出测试清单。')">生成测试清单</button>
+          <button type="button" class="ink-text-button" @click="$emit('assistant-ask', '哪些代码关联最值得先看？')">定位相关代码</button>
+        </div>
+        <div v-else class="assistant-messages" aria-live="polite">
+          <article v-for="(message, index) in assistantMessages" :key="index" class="assistant-message" :data-role="message.role">
+            <strong>{{ message.role === 'USER' ? '你' : '助手' }}</strong>
+            <p>{{ message.content || (message.pending ? '正在思考…' : '') }}</p>
+            <p v-if="message.error" class="assistant-error">{{ message.error }}</p>
+          </article>
+        </div>
+        <ul v-if="assistantWarnings.length || assistantTruncated.length" class="assistant-warnings">
+          <li v-for="warning in assistantWarnings" :key="warning">{{ warning }}</li>
+          <li v-if="assistantTruncated.length">部分上下文已按预算截断：{{ assistantTruncated.join('、') }}</li>
+        </ul>
+        <div v-if="assistantSources.length" class="assistant-sources">
+          <span>本轮已验证来源</span>
+          <code v-for="source in assistantSources" :key="source.id" :title="source.title">{{ source.id }}</code>
+        </div>
+        <form class="assistant-compose" @submit.prevent="submitAssistant">
+          <textarea v-model="assistantQuestion" class="ink-field" rows="2" maxlength="4000" placeholder="询问实现边界、测试点或相关代码…" :disabled="assistantStreaming" />
+          <button class="ink-primary-button" type="submit" :disabled="assistantStreaming || !assistantQuestion.trim()">发送</button>
+          <button v-if="assistantMessages.some(item => item.error)" class="ink-outline-button" type="button" :disabled="assistantStreaming" @click="$emit('assistant-retry')">重试</button>
+        </form>
+      </div>
+
       <div class="detail-block">
         <h3>代码关联</h3>
         <p v-if="!links.length" class="req-hint">
@@ -211,7 +246,7 @@
 </template>
 
 <script setup>
-import { computed, reactive, ref } from 'vue'
+import { computed, reactive, ref, watch } from 'vue'
 import { fmtDate } from '../../utils/format.js'
 import { CHECK_DIMENSION_LABELS, REQUIREMENT_EDGES, REQUIREMENT_STATUS_LABELS } from '../../composables/useRequirements.js'
 
@@ -233,9 +268,16 @@ const props = defineProps({
   checking: { type: Boolean, default: false },
   canTriggerCheck: { type: Boolean, default: false },
   links: { type: Array, default: () => [] },
+  assistantEnabled: { type: Boolean, default: false },
+  assistantMessages: { type: Array, default: () => [] },
+  assistantSources: { type: Array, default: () => [] },
+  assistantWarnings: { type: Array, default: () => [] },
+  assistantTruncated: { type: Array, default: () => [] },
+  assistantStreaming: { type: Boolean, default: false },
 })
 const emit = defineEmits(['open', 'new', 'edit', 'cancel-edit', 'save', 'add-ac', 'remove-ac',
-  'assign', 'transition', 'filter', 'check', 'add-link', 'remove-link'])
+  'assign', 'transition', 'filter', 'check', 'add-link', 'remove-link',
+  'assistant-ask', 'assistant-stop', 'assistant-retry'])
 
 const statusLabels = REQUIREMENT_STATUS_LABELS
 const dimensionLabels = CHECK_DIMENSION_LABELS
@@ -244,6 +286,16 @@ const assignSelect = ref(null)
 const latestReport = computed(() => props.checkReports[0] || null)
 
 const linkForm = reactive({ type: 'BRANCH', ref: '' })
+const assistantQuestion = ref('')
+
+watch(() => props.detail?.requirementId, () => { assistantQuestion.value = '' })
+
+function submitAssistant() {
+  const question = assistantQuestion.value.trim()
+  if (!question) return
+  emit('assistant-ask', question)
+  assistantQuestion.value = ''
+}
 
 function submitLink() {
   emit('add-link', linkForm.type, linkForm.ref)
@@ -394,6 +446,21 @@ textarea.ink-field { resize: vertical; }
 .link-add { display: flex; gap: var(--ink-sp-8); flex-wrap: wrap; align-items: center; margin-top: var(--ink-sp-8); }
 .link-type-select { width: auto; }
 .link-add input { flex: 1; min-width: 200px; }
+
+.assistant-panel { padding: var(--ink-sp-12); border: 1px solid var(--line-soft); border-radius: var(--ink-radius-control); background: var(--surface-paper); }
+.assistant-head { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--ink-sp-12); }
+.assistant-suggestions, .assistant-sources { display: flex; gap: var(--ink-sp-8); flex-wrap: wrap; margin-top: var(--ink-sp-8); }
+.assistant-messages { display: grid; gap: var(--ink-sp-8); margin-top: var(--ink-sp-12); max-height: 360px; overflow: auto; }
+.assistant-message { padding: var(--ink-sp-8) var(--ink-sp-12); border-left: 3px solid var(--line-soft); background: var(--surface-raised); }
+.assistant-message[data-role='ASSISTANT'] { border-left-color: var(--mineral-cyan); }
+.assistant-message strong { color: var(--ink-muted); font-size: var(--ink-fs-12); }
+.assistant-message p { margin: var(--ink-sp-4) 0 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.assistant-error, .assistant-warnings { color: var(--cinnabar); font-size: var(--ink-fs-12); }
+.assistant-warnings { margin: var(--ink-sp-8) 0 0; padding-left: 1.2em; }
+.assistant-sources span { width: 100%; color: var(--ink-muted); font-size: var(--ink-fs-12); }
+.assistant-sources code { padding: 2px var(--ink-sp-8); border: 1px solid var(--line-soft); border-radius: 999px; font-size: var(--ink-fs-12); }
+.assistant-compose { display: flex; align-items: flex-end; gap: var(--ink-sp-8); margin-top: var(--ink-sp-12); }
+.assistant-compose textarea { flex: 1; }
 
 @media (max-width: 1023px) {
   .req-layout { grid-template-columns: 1fr; }

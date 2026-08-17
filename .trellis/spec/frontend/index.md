@@ -14,4 +14,5 @@
 | [Quality Guidelines](./quality-guidelines.md) | lockfile 源纪律、API 边界容错、node --test 测试写法 |
 
 后端契约(分页信封、ErrorCode、REST 字段)见 `.trellis/spec/backend/frozen-contracts.md`;
+| [Streaming API](./streaming-api.md) | 带 JSON body 的 fetch SSE、增量解析、generation guard 与内存会话生命周期 |
 跨包纪律见 `.trellis/spec/guides/`。

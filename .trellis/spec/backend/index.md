@@ -19,4 +19,5 @@
 | [Agent Model Contracts](./agent-model-contracts.md) | 模型输出约束的两级防御、共享防御单源、合法姿态显式降级 |
 | [Prompt Management](./prompt-management.md) | Prompt 资产治理五规则:宁精勿多 / recall-first / 评测门禁 / 退役 / 禁承诺红线 |
 
+| [Assistant Streaming Contracts](./assistant-streaming-contracts.md) | Requirement 内嵌只读助手：POST SSE、上下文来源、Prompt 信任边界、容量与错误矩阵 |
 跨包共享的纪律(契约测试、演示资产口径)见 `.trellis/spec/guides/`。

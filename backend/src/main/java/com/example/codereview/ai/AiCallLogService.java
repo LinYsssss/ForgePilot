@@ -21,6 +21,7 @@ public class AiCallLogService {
     public static final String EMBEDDING_SEARCH = "EMBEDDING_SEARCH";
     public static final String REQUIREMENT_CHECK = "REQUIREMENT_CHECK";
     public static final String COVERAGE_JUDGE = "COVERAGE_JUDGE";
+    public static final String ASSISTANT = "ASSISTANT";
 
     private final AiCallLogRepository logs;
     private final ProjectService projectService;
@@ -90,6 +91,18 @@ public class AiCallLogService {
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void coverageJudgeFailed(Long projectId, Long taskId, int promptChars, long latencyMs, String errorMessage) {
         save(projectId, taskId, COVERAGE_JUDGE, chatModel, promptChars, 0, 0, 0, 0, latencyMs, "FAILED", errorMessage);
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void assistantSuccess(Long projectId, int promptChars, int responseChars, TokenUsage usage, long latencyMs) {
+        TokenUsage u = usage == null ? TokenUsage.none() : usage;
+        save(projectId, null, ASSISTANT, chatModel, promptChars, responseChars,
+                u.promptTokens(), u.completionTokens(), u.totalTokens(), latencyMs, "SUCCESS", null);
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void assistantFailed(Long projectId, int promptChars, long latencyMs, String failureClass) {
+        save(projectId, null, ASSISTANT, chatModel, promptChars, 0, 0, 0, 0, latencyMs, "FAILED", failureClass);
     }
 
     @Transactional(readOnly = true)

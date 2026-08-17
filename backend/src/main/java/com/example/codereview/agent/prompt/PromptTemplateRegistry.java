@@ -49,7 +49,9 @@ public final class PromptTemplateRegistry {
             // ForgePilot P2:需求体检场景(REQUIREMENT_CHECK),经 instruction() 单段组装。
             Map.entry("requirement-check-v1", "prompts/chat/requirement-check-v1.txt"),
             // ForgePilot P4a:AC 覆盖判定(合并阶段单独一次调用),经 instruction() 单段组装。
-            Map.entry("coverage-judge-v1", "prompts/chat/coverage-judge-v1.txt")
+            Map.entry("coverage-judge-v1", "prompts/chat/coverage-judge-v1.txt"),
+            // ForgePilot P6:只读研发助手流式文本回答。
+            Map.entry("assistant-v1", "prompts/chat/assistant-v1.txt")
     );
 
     public String require(String version) {

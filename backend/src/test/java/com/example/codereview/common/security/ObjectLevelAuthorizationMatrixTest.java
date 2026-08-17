@@ -84,6 +84,7 @@ class ObjectLevelAuthorizationMatrixTest {
     private Long projectMemberUserId;
     private Long ownedProjectId;
     private Long ownedFindingId;
+    private Long ownedRequirementId;
 
     @BeforeAll
     void seed() throws Exception {
@@ -99,6 +100,7 @@ class ObjectLevelAuthorizationMatrixTest {
         // return 404 to owner and stranger alike — and the matrix would pass for the wrong reason.
         bindRepository(owner, ownedProjectId);
         ownedFindingId = createFinding();
+        ownedRequirementId = createRequirement(owner, ownedProjectId);
     }
 
     /**
@@ -151,6 +153,15 @@ class ObjectLevelAuthorizationMatrixTest {
                 .map(testCase -> DynamicTest.dynamicTest(testCase.name(), () ->
                         expectDenied(perform(testCase.method(), testCase.path(), stranger))))
                 .toList();
+    }
+
+    @Test
+    void assistantStreamEnforcesRequirementObjectAuthorizationBeforeStartingAsync() throws Exception {
+        String path = "/api/projects/" + ownedProjectId + "/requirements/" + ownedRequirementId
+                + "/assistant/stream";
+        Map<String, Object> body = Map.of("message", "test", "history", List.of());
+        expectForbiddenOrNotFound(postJson(path, stranger, body));
+        postJson(path, null, body).andExpect(status().isUnauthorized());
     }
 
     @Test
@@ -348,6 +359,18 @@ class ObjectLevelAuthorizationMatrixTest {
             }
         }
         throw new IllegalStateException("member not found: " + username);
+    }
+
+    private Long createRequirement(Cookie cookie, Long projectId) throws Exception {
+        MvcResult result = mockMvc.perform(post("/api/projects/{id}/requirements", projectId)
+                        .cookie(cookie).contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "title", "矩阵需求", "background", "", "description", "对象授权",
+                                "priority", "MEDIUM", "acceptanceCriteria",
+                                List.of(Map.of("text", "陌生人不可访问"))))))
+                .andExpect(status().isOk()).andReturn();
+        return objectMapper.readTree(result.getResponse().getContentAsString())
+                .path("data").path("requirementId").asLong();
     }
 
     private Long createFinding() {

@@ -83,6 +83,25 @@ app:
   context:
     knowledge-top-k: ${CONTEXT_KNOWLEDGE_TOP_K:5}
     max-snippet-chars: ${CONTEXT_MAX_SNIPPET_CHARS:1200}
+  # ForgePilot P6:只读研发助手，独立有界执行器，不占用 Agent/MQ 线程。
+  assistant:
+    enabled: ${ASSISTANT_ENABLED:true}
+    max-concurrent: ${ASSISTANT_MAX_CONCURRENT:4}
+    emitter-timeout-ms: ${ASSISTANT_EMITTER_TIMEOUT_MS:300000}
+    executor:
+      core-size: ${ASSISTANT_EXECUTOR_CORE_SIZE:2}
+      max-size: ${ASSISTANT_EXECUTOR_MAX_SIZE:4}
+      queue-capacity: ${ASSISTANT_EXECUTOR_QUEUE_CAPACITY:8}
+    history:
+      max-total-chars: ${ASSISTANT_HISTORY_MAX_TOTAL_CHARS:24000}
+    prompt:
+      max-context-chars: ${ASSISTANT_PROMPT_MAX_CONTEXT_CHARS:30000}
+    context:
+      max-query-chars: ${ASSISTANT_MAX_QUERY_CHARS:4000}
+      max-code-links: ${ASSISTANT_MAX_CODE_LINKS:4}
+      max-code-files: ${ASSISTANT_MAX_CODE_FILES:12}
+      max-code-file-chars: ${ASSISTANT_MAX_CODE_FILE_CHARS:3000}
+      max-code-total-chars: ${ASSISTANT_MAX_CODE_TOTAL_CHARS:12000}
   ai:
     runtime: ${AI_RUNTIME:legacy}
     provider: ${AI_PROVIDER:mock}

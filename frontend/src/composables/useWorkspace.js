@@ -2,6 +2,7 @@ import { api, initCsrf } from '../api/client.js'
 import { nav } from '../nav.js'
 import { useAgentWorkspace } from './useAgentWorkspace.js'
 import { useAiLogs } from './useAiLogs.js'
+import { useRequirementAssistant } from './useRequirementAssistant.js'
 import { useBusy } from './useBusy.js'
 import { useKnowledge } from './useKnowledge.js'
 import { useProjects } from './useProjects.js'
@@ -23,6 +24,7 @@ const pullRequests = usePullRequests()
 const knowledge = useKnowledge()
 const agent = useAgentWorkspace()
 const aiLogs = useAiLogs()
+const requirementAssistant = useRequirementAssistant()
 
 function goto(name) { nav.push({ name }) }
 
@@ -79,6 +81,7 @@ function resetForProject() {
   pullRequests.reset()        // PR 列表/选中/动作 + 表单
   agent.reset()               // 关 SSE、停轮询、清 Run 状态
   knowledge.chosenDocsReset() // 两个文档选择集
+  requirementAssistant.reset() // P6 页面内存会话 + POST 流
 }
 
 function selectProject(p) {

@@ -16,7 +16,13 @@
       :checking="!!busy.requirementCheck"
       :can-trigger-check="canTriggerCheck"
       :links="requirementLinks"
-      @open="item => run(() => openRequirement(item), 'requirementOpen')"
+      :assistant-enabled="assistant.enabled.value"
+      :assistant-messages="assistant.messages.value"
+      :assistant-sources="assistant.sources.value"
+      :assistant-warnings="assistant.warnings.value"
+      :assistant-truncated="assistant.truncatedSections.value"
+      :assistant-streaming="assistant.streaming.value"
+      @open="item => run(() => openRequirementWithAssistant(item), 'requirementOpen')"
       @new="startCreate"
       @edit="startEdit"
       @cancel-edit="cancelEdit"
@@ -29,6 +35,9 @@
       @check="run(runCheck, 'requirementCheck')"
       @add-link="(type, ref) => run(() => addLink(type, ref), 'requirementLink')"
       @remove-link="link => run(() => removeLink(link), 'requirementLink')"
+      @assistant-ask="question => assistant.ask(activeProject.projectId, requirementDetail.requirementId, question)"
+      @assistant-stop="assistant.stop"
+      @assistant-retry="assistant.retry(activeProject.projectId, requirementDetail.requirementId)"
     />
 
     <template #rail>
@@ -43,13 +52,14 @@
 </template>
 
 <script setup>
-import { computed, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import InkPageFrame from '../features/shell/InkPageFrame.vue'
 import RequirementsPaper from '../features/requirements/RequirementsPaper.vue'
 import { useBusy } from '../composables/useBusy.js'
 import { useSession } from '../composables/useSession.js'
 import { useMembers } from '../composables/useMembers.js'
 import { useRequirements } from '../composables/useRequirements.js'
+import { useRequirementAssistant } from '../composables/useRequirementAssistant.js'
 
 // 研发任务页(P1b,墨境原生新页)。列表/详情/表单均出自 useRequirements 单例;
 // 指派下拉复用成员名册(useMembers);editing 是页面局部的视图态,不进全局 store。
@@ -64,10 +74,16 @@ const {
 } = useRequirements()
 
 const editing = ref(false)
+const assistant = useRequirementAssistant()
 const canManage = computed(() => !!activeProject.value && activeProject.value.myRole === 'LEADER')
 // 体检触发对 LEADER/DEVELOPER 开放(P1a 矩阵);REVIEWER 只读报告。
 const canTriggerCheck = computed(() => !!activeProject.value
   && ['LEADER', 'DEVELOPER'].includes(activeProject.value.myRole))
+
+async function openRequirementWithAssistant(item) {
+  assistant.reset(`${activeProject.value?.projectId || ''}:${item.requirementId}`)
+  await openRequirement(item)
+}
 
 function startCreate() {
   resetRequirementForm()
@@ -85,6 +101,7 @@ function cancelEdit() {
 }
 
 watch(() => activeProject.value && activeProject.value.projectId, () => {
+  assistant.reset()
   editing.value = false
   requirementDetail.value = null
   checkReports.value = []
@@ -92,6 +109,9 @@ watch(() => activeProject.value && activeProject.value.projectId, () => {
   run(loadRequirements, 'requirements')
   run(loadMembers, 'members')
 }, { immediate: true })
+
+onMounted(assistant.loadConfig)
+onBeforeUnmount(assistant.reset)
 </script>
 
 <style scoped>

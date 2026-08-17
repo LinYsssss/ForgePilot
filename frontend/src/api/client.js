@@ -105,3 +105,37 @@ export async function apiDownload(path) {
   const match = /filename="?([^";]+)"?/.exec(disposition)
   return { blob: await response.blob(), filename: match ? match[1] : 'reposage-download' }
 }
+
+
+/**
+ * 带 Cookie/CSRF 的 POST 流请求。只负责 HTTP 边界，SSE framing 由 sse.js 纯函数处理。
+ */
+export async function apiStream(path, options = {}) {
+  const headers = { ...(options.headers || {}) }
+  if (!(options.body instanceof FormData)) headers['Content-Type'] = 'application/json'
+  const method = (options.method || 'POST').toUpperCase()
+  if (csrf.enabled && !SAFE_METHODS.has(method)) {
+    const token = readCookie(csrf.cookieName)
+    if (token) headers[csrf.headerName] = token
+  }
+  let response
+  try {
+    response = await fetch(`${API_BASE}${path}`, { ...options, method, headers, credentials: 'include' })
+  } catch {
+    throw new ApiError('网络错误，请确认后端服务已启动', { status: 0 })
+  }
+  if (response.status === 401) {
+    if (onUnauthorized) onUnauthorized()
+    throw new ApiError('登录已过期，请重新登录', { status: 401 })
+  }
+  if (!response.ok) {
+    const traceId = response.headers.get('X-Trace-Id')
+    const json = await response.json().catch(() => null)
+    const base = json?.message || `请求失败: ${response.status}`
+    throw new ApiError(traceId ? `${base}（trace ${traceId}）` : base, {
+      status: response.status, code: json?.code ?? null, traceId,
+    })
+  }
+  if (!response.body) throw new ApiError('流式响应不可用', { status: response.status })
+  return response.body
+}
