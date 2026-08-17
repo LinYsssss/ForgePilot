@@ -1,0 +1,11 @@
+{"file":".trellis/spec/backend/directory-structure.md","reason":"assistant 领域包、Controller→Service→Repository 依赖与配置归属"}
+{"file":".trellis/spec/backend/frozen-contracts.md","reason":"新增流式端点必须保持 ApiResponse/ErrorCode/对象授权等冻结契约"}
+{"file":".trellis/spec/backend/quality-guidelines.md","reason":"带资源 id 端点授权矩阵、Spring/MVC 测试与质量准入"}
+{"file":".trellis/spec/backend/security-guidelines.md","reason":"Cookie 会话、CSRF 与流式 POST 的安全边界"}
+{"file":".trellis/spec/backend/agent-model-contracts.md","reason":"模型输入不可信、秘密脱敏、预算与显式降级纪律"}
+{"file":".trellis/spec/backend/prompt-management.md","reason":"assistant-v1 版本化 Prompt、golden 与评测门禁"}
+{"file":".trellis/spec/frontend/state-management.md","reason":"模块级单例、项目 reset、401 与既有 Agent SSE 硬规则"}
+{"file":".trellis/spec/frontend/component-guidelines.md","reason":"Requirements 墨境面板、props/emits 与安全渲染约定"}
+{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"API 边界容错和 node --test 测试写法"}
+{"file":".trellis/spec/guides/cross-layer-thinking-guide.md","reason":"POST SSE 事件从后端到前端解析器的跨层数据流"}
+{"file":".trellis/spec/guides/contract-testing.md","reason":"新增 text/event-stream 事件类型和字段需双向契约测试"}
