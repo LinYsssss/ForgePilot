@@ -45,6 +45,7 @@ public class ReviewService {
     private final FeedbackRepository feedback;
     private final MqTaskLogRepository mqLogs;
     private final AiCallLogRepository aiCallLogs;
+    private final com.fasterxml.jackson.databind.ObjectMapper coverageObjectMapper;
     private final boolean inline;
     private final int maxTotalDiffChars;
 
@@ -53,11 +54,13 @@ public class ReviewService {
                          ReviewIssueRepository issues, ReviewProcessor processor, ReviewTaskPublisher publisher,
                          PullRequestRepository pullRequests, FeedbackRepository feedback,
                          MqTaskLogRepository mqLogs, AiCallLogRepository aiCallLogs,
+                         com.fasterxml.jackson.databind.ObjectMapper coverageObjectMapper,
                          @Value("${app.review.inline}") boolean inline,
                          @Value("${app.review.max-total-diff-chars:200000}") int maxTotalDiffChars) {
         this.repositoryService = repositoryService;
         this.projectAuthorization = projectAuthorization;
         this.tasks = tasks;
+        this.coverageObjectMapper = coverageObjectMapper;
         this.reports = reports;
         this.issues = issues;
         this.processor = processor;
@@ -104,7 +107,8 @@ public class ReviewService {
                 userId,
                 truncate(diff.rawDiff()),
                 request.documentIds(),
-                pullRequest
+                pullRequest,
+                flagsJson(request)
         );
         if (inline) {
             processor.process(task.getId());
@@ -117,9 +121,21 @@ public class ReviewService {
         return ReviewTaskResponse.from(task);
     }
 
+    /** 五臂 flags(P4a):请求缺省 → null(生产默认全开,行为与引入前一致);显式下发才落快照。 */
+    private String flagsJson(CreateReviewTaskRequest request) {
+        ReviewDtos.FlagsRequest flags = request.flags();
+        if (flags == null) {
+            return null;
+        }
+        return new ReviewFeatureFlags(
+                flags.knowledge() == null || flags.knowledge(),
+                flags.requirementContext() == null || flags.requirementContext(),
+                flags.evidenceVerification() == null || flags.evidenceVerification()).toJson();
+    }
+
     private ReviewTask saveTaskWithRetry(Long projectId, Long repositoryId, String commitId, String baseCommitId,
                                          String branchName, Long userId, String rawDiff, List<Long> documentIds,
-                                         PullRequestEntity pullRequest) {
+                                         PullRequestEntity pullRequest, String flagsJson) {
         ReviewTask task = new ReviewTask(
                 projectId,
                 repositoryId,
@@ -131,6 +147,7 @@ public class ReviewService {
                 documentIds,
                 pullRequest == null ? null : pullRequest.getId()
         );
+        task.applyFlags(flagsJson);
         try {
             return tasks.saveAndFlush(task);
         } catch (DataIntegrityViolationException ex) {
@@ -267,8 +284,21 @@ public class ReviewService {
                 report.getSummary(),
                 report.getIssueCount(),
                 report.getCreatedAt(),
-                issueResponses
+                issueResponses,
+                parseCoverage(report.getCoverageJson())
         );
+    }
+
+    /** coverage_json → 响应结构;历史报告为 null,解析失败按无 coverage 处理(不 500)。 */
+    private CoverageJudgeService.CoverageBlock parseCoverage(String coverageJson) {
+        if (coverageJson == null || coverageJson.isBlank()) {
+            return null;
+        }
+        try {
+            return coverageObjectMapper.readValue(coverageJson, CoverageJudgeService.CoverageBlock.class);
+        } catch (Exception ex) {
+            return null;
+        }
     }
 
     private String resolveCommitId(Long projectId, Long userId, String requestedCommitId) {

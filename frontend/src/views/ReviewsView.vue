@@ -111,6 +111,26 @@
 
         <ReportSummary :report="reportDetail" />
 
+        <!-- P4a:AC 覆盖三态结论区块(有关联需求的任务才有;历史报告无此字段) -->
+        <div v-if="reportDetail.coverage && reportDetail.coverage.coverage && reportDetail.coverage.coverage.length" class="coverage-block">
+          <h3 class="coverage-title">
+            需求一致性:{{ reportDetail.coverage.requirementCode }} {{ reportDetail.coverage.requirementTitle }}
+          </h3>
+          <div v-for="ac in reportDetail.coverage.coverage" :key="ac.acId" class="coverage-row" :class="'cov-' + ac.verdict">
+            <div class="coverage-head">
+              <span class="badge" :class="covBadge(ac.verdict)">{{ covLabel(ac.verdict) }}</span>
+              <b>{{ ac.acId }}</b>
+              <span class="coverage-ac">{{ ac.acText }}</span>
+            </div>
+            <p v-if="ac.rationale" class="coverage-rationale">{{ ac.rationale }}</p>
+            <div v-for="(ev, i) in ac.evidence" :key="i" class="callout co-evidence">
+              <span class="co-tag">证据</span>
+              <span class="co-body mono">{{ ev.filePath }}<template v-if="ev.lineStart">:{{ ev.lineStart }}<template v-if="ev.lineEnd && ev.lineEnd !== ev.lineStart">-{{ ev.lineEnd }}</template></template></span>
+              <span v-if="ev.note" class="co-body">{{ ev.note }}</span>
+            </div>
+          </div>
+        </div>
+
         <el-empty v-if="!reportDetail.issues.length" description="未发现明显风险" :image-size="88" />
         <div v-for="issue in sortedIssues" :key="issue.issueId" class="issue" :class="'sevbar-' + issue.severity">
           <div class="issue-head">
@@ -182,6 +202,14 @@ const { documents, reviewDocs } = useKnowledge()
 const { reviewForm, tasks, reports, activeTask, reportDetail, mqLogs, pollingActive, sortedIssues, createReview, createCompareReview, loadReviews, selectTask, loadMqLogs, cancelTask, askDeleteTask, exportReport, askDeleteReport } = useReviews()
 const { openFeedback, feedbackMap, ensureDraft, myVote, voteClass, feedbackCount, toggleFeedback, vote, submitFeedbackForm, removeMyFeedback } = useFeedback()
 const { openReport, openTaskAiLogs } = useWorkspace()
+
+// P4a coverage 三态标签与徽章(沿用 .badge 的 sev-* 配色语义:风险=红、通过=既有 plain)。
+function covLabel(verdict) {
+  return { COVERED: '已覆盖', NOT_FOUND: '未发现', AT_RISK: '存在风险' }[verdict] || verdict
+}
+function covBadge(verdict) {
+  return { COVERED: 'cov-ok', NOT_FOUND: 'sev-HIGH', AT_RISK: 'sev-MEDIUM' }[verdict] || 'plain'
+}
 </script>
 
 <style scoped>
@@ -211,6 +239,16 @@ const { openReport, openTaskAiLogs } = useWorkspace()
 .card-sub { margin-top: 3px; color: var(--rs-text-dim); font-size: var(--rs-fs-sm); font-weight: 400; }
 .head-actions { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; }
 .head-actions .el-button + .el-button { margin-left: 0; }
+
+/* ---- P4a:需求一致性 coverage 区块 ---- */
+.coverage-block { margin: var(--sp-4) 0; padding: var(--sp-3) var(--sp-4); border: 1px solid var(--rs-line, #e0e0e0); border-radius: 8px; }
+.coverage-title { margin: 0 0 var(--sp-3); font-size: var(--rs-fs-md); color: var(--rs-text); }
+.coverage-row { padding: var(--sp-2) 0; border-top: 1px dashed var(--rs-line, #e0e0e0); }
+.coverage-row:first-of-type { border-top: 0; }
+.coverage-head { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; }
+.coverage-ac { color: var(--rs-text); }
+.coverage-rationale { margin: var(--sp-1) 0 0; color: var(--rs-text-dim); font-size: var(--rs-fs-sm); }
+.badge.cov-ok { background: rgba(64, 160, 112, 0.14); color: #2f7d54; }
 
 .mono { font-family: var(--rs-font-mono); font-feature-settings: "liga" 0; }
 

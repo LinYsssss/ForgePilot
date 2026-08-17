@@ -52,6 +52,7 @@ class ReviewProcessorTest {
     @Mock AiMetrics aiMetrics;
     @Mock ReviewTaskStatusService taskStatusService;
     @Mock ReviewResultWriter resultWriter;
+    @Mock CoverageJudgeService coverageJudgeService;
 
     @Test
     void multiFileDiff_fansOutPerFileAndMergesFindings() {
@@ -63,7 +64,8 @@ class ReviewProcessorTest {
 
         // maxDiffChars=1 forces one chunk per file; maxFiles=40 keeps all three.
         ReviewProcessor processor = new ReviewProcessor(tasks, ragService, aiReviewClient, aiCallLogService,
-                aiMetrics, taskStatusService, resultWriter, 48_000, 1, 40);
+                aiMetrics, taskStatusService, resultWriter, coverageJudgeService,
+                new com.fasterxml.jackson.databind.ObjectMapper(), 48_000, 1, 40);
 
         processor.process(1L);
 
@@ -71,7 +73,7 @@ class ReviewProcessorTest {
         verify(aiReviewClient, times(3)).review(anyString(), anyString());
 
         ArgumentCaptor<AiReviewResult> captor = ArgumentCaptor.forClass(AiReviewResult.class);
-        verify(resultWriter).saveSuccess(eq(1L), captor.capture());
+        verify(resultWriter).saveSuccess(eq(1L), captor.capture(), org.mockito.ArgumentMatchers.isNull());
         AiReviewResult merged = captor.getValue();
 
         assertEquals(3, merged.issues().size(), "issues from every chunk are merged");
@@ -86,7 +88,8 @@ class ReviewProcessorTest {
         task.markCanceled();
         when(tasks.findById(1L)).thenReturn(Optional.of(task));
         ReviewProcessor processor = new ReviewProcessor(tasks, ragService, aiReviewClient, aiCallLogService,
-                aiMetrics, taskStatusService, resultWriter, 48_000, 20_000, 40);
+                aiMetrics, taskStatusService, resultWriter, coverageJudgeService,
+                new com.fasterxml.jackson.databind.ObjectMapper(), 48_000, 20_000, 40);
 
         processor.process(1L);
 

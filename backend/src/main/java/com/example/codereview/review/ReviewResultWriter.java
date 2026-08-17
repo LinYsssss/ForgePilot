@@ -36,6 +36,11 @@ public class ReviewResultWriter {
 
     @Transactional
     public void saveSuccess(Long taskId, AiReviewResult result) {
+        saveSuccess(taskId, result, null);
+    }
+
+    @Transactional
+    public void saveSuccess(Long taskId, AiReviewResult result, String coverageJson) {
         ReviewTask task = tasks.findById(taskId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.REVIEW_TASK_NOT_FOUND, "审查任务不存在"));
         if (task.isCanceled()) {
@@ -50,6 +55,9 @@ public class ReviewResultWriter {
                 result.summary(),
                 result.rawResponse()
         );
+        if (coverageJson != null) {
+            report.attachCoverage(coverageJson);
+        }
         reports.save(report);
         for (AiReviewResult.Issue issue : result.issues()) {
             issues.save(new ReviewIssue(

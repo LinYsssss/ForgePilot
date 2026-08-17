@@ -79,6 +79,10 @@ public class ReviewTask {
     @Column(columnDefinition = "text")
     private String errorMessage;
 
+    /** 五臂实验 flags 快照(P4a);null = 生产默认全开。不入幂等键:同一提交换臂复跑走删任务重建。 */
+    @Column(length = 512)
+    private String flagsJson;
+
     private Instant startedAt;
     private Instant finishedAt;
 
@@ -217,6 +221,15 @@ public class ReviewTask {
 
     public String getErrorMessage() {
         return errorMessage;
+    }
+
+    public String getFlagsJson() {
+        return flagsJson;
+    }
+
+    /** 建任务时写入一次;消费端只读(异步/复跑都按下单时的组合执行)。 */
+    public void applyFlags(String flagsJson) {
+        this.flagsJson = flagsJson;
     }
 
     public Instant getCreatedAt() {

@@ -8,6 +8,7 @@ import com.example.codereview.ai.AiMetrics;
 import com.example.codereview.ai.TokenUsage;
 import com.example.codereview.common.exception.BusinessException;
 import com.example.codereview.rag.RagService;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -27,6 +28,8 @@ public class ReviewProcessor {
     private final AiMetrics aiMetrics;
     private final ReviewTaskStatusService taskStatusService;
     private final ReviewResultWriter resultWriter;
+    private final CoverageJudgeService coverageJudgeService;
+    private final ObjectMapper objectMapper;
     private final int maxPromptChars;
     private final int maxDiffChars;
     private final int maxFiles;
@@ -34,6 +37,7 @@ public class ReviewProcessor {
     public ReviewProcessor(ReviewTaskRepository tasks, RagService ragService, AiReviewClient aiReviewClient,
                            AiCallLogService aiCallLogService, AiMetrics aiMetrics,
                            ReviewTaskStatusService taskStatusService, ReviewResultWriter resultWriter,
+                           CoverageJudgeService coverageJudgeService, ObjectMapper objectMapper,
                            @Value("${app.review.max-prompt-chars:48000}") int maxPromptChars,
                            @Value("${app.review.max-diff-chars:20000}") int maxDiffChars,
                            @Value("${app.review.max-files:40}") int maxFiles) {
@@ -44,6 +48,8 @@ public class ReviewProcessor {
         this.aiMetrics = aiMetrics;
         this.taskStatusService = taskStatusService;
         this.resultWriter = resultWriter;
+        this.coverageJudgeService = coverageJudgeService;
+        this.objectMapper = objectMapper;
         this.maxPromptChars = maxPromptChars;
         this.maxDiffChars = maxDiffChars;
         this.maxFiles = maxFiles;
@@ -57,11 +63,19 @@ public class ReviewProcessor {
         }
         try {
             taskStatusService.markRunning(taskId);
-            String ragContext = ragService.buildContext(task.getProjectId(), task.getDiffText(), task.getKnowledgeDocIds());
+            // 五臂 flags(P4a):按下单时的组合执行;null = 生产默认全开,行为与引入前一致。
+            ReviewFeatureFlags flags = ReviewFeatureFlags.parse(task.getFlagsJson(), objectMapper);
+            String ragContext = flags.knowledge()
+                    ? ragService.buildContext(task.getProjectId(), task.getDiffText(), task.getKnowledgeDocIds())
+                    : "";
             // The project context is shared across chunks, so reserve one per-chunk diff budget for it.
             String reviewContext = capContext(ragContext, maxDiffChars);
             AiReviewResult result = reviewChunks(task, reviewContext);
-            resultWriter.saveSuccess(taskId, result);
+            // 合并阶段单独一次 AC 覆盖判定(design §5):失败不阻塞报告,coverage 缺席即可。
+            String coverageJson = flags.requirementContext()
+                    ? coverageJudgeService.judgeQuietly(task, result.summary(), flags.evidenceVerification())
+                    : null;
+            resultWriter.saveSuccess(taskId, result, coverageJson);
         } catch (RuntimeException ex) {
             taskStatusService.markFailed(taskId, ex.getMessage());
             throw ex;

@@ -15,8 +15,13 @@ public final class ReviewDtos {
             @jakarta.validation.constraints.Size(max = 80) String baseCommitId,
             @jakarta.validation.constraints.Size(max = 200) String branch,
             List<Long> documentIds,
-            Long pullRequestId
+            Long pullRequestId,
+            // 五臂实验 flags(P4a):缺省 null = 生产默认全开;实验按臂组合下发并随任务持久化。
+            FlagsRequest flags
     ) {
+    }
+
+    public record FlagsRequest(Boolean knowledge, Boolean requirementContext, Boolean evidenceVerification) {
     }
 
     public record ReviewTaskResponse(
@@ -107,7 +112,14 @@ public final class ReviewDtos {
             String summary,
             int issueCount,
             Instant createdAt,
-            List<ReviewIssueResponse> issues
+            List<ReviewIssueResponse> issues,
+            CoverageJudgeService.CoverageBlock coverage
     ) {
+        /** 兼容构造:无 coverage 的旧调用点(导出器测试等)不必逐个改。 */
+        public ReviewReportDetail(Long reportId, Long taskId, String commitId, String overallRisk,
+                                  String summary, int issueCount, Instant createdAt,
+                                  List<ReviewIssueResponse> issues) {
+            this(reportId, taskId, commitId, overallRisk, summary, issueCount, createdAt, issues, null);
+        }
     }
 }

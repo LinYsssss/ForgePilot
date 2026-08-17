@@ -35,6 +35,10 @@ public class ReviewReport {
     @Column(columnDefinition = "text")
     private String rawAiResponse;
 
+    /** AC 覆盖三态结论区块(P4a);null = 无关联需求或判定失败,findings 主链路不受影响。 */
+    @Column(columnDefinition = "text")
+    private String coverageJson;
+
     @Column(nullable = false)
     private Instant createdAt;
 
@@ -93,6 +97,14 @@ public class ReviewReport {
 
     public String getSummary() {
         return summary;
+    }
+
+    public String getCoverageJson() {
+        return coverageJson;
+    }
+
+    public void attachCoverage(String coverageJson) {
+        this.coverageJson = coverageJson;
     }
 
     public Instant getCreatedAt() {

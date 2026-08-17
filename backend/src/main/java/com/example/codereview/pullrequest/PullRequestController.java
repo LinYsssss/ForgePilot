@@ -62,7 +62,7 @@ public class PullRequestController {
     public ApiResponse<ReviewTaskResponse> createReviewTask(@PathVariable Long projectId, @PathVariable Long pullRequestId,
                                                             @RequestBody(required = false) CreatePullRequestReviewTaskRequest request) {
         List<Long> documentIds = request == null ? null : request.documentIds();
-        CreateReviewTaskRequest reviewRequest = new CreateReviewTaskRequest(null, null, null, documentIds, pullRequestId);
+        CreateReviewTaskRequest reviewRequest = new CreateReviewTaskRequest(null, null, null, documentIds, pullRequestId, null);
         return ApiResponse.ok(reviewService.create(projectId, currentUserProvider.getRequired().userId(), reviewRequest));
     }
 
