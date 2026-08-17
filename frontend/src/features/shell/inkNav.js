@@ -24,6 +24,8 @@ export const INK_NAV = [
   { key: 'atelier', glyph: '墨', label: '墨境工作台', ink: true, routeName: 'inkAtelier', needsProject: false },
   { key: 'dashboard', glyph: '概', label: '总览', ink: true, routeName: 'dashboard', needsProject: false },
   { key: 'projects', glyph: '项', label: '项目', ink: true, routeName: 'projects', needsProject: false },
+  // P1b 新建页:墨境原生,进入时按当前项目拉取需求列表(页面自身 watch immediate,不依赖 refresh 语义)。
+  { key: 'requirements', glyph: '需', label: '研发任务', ink: true, routeName: 'requirements', needsProject: true },
   { key: 'repository', glyph: '仓', label: '仓库', ink: true, routeName: 'repository', refreshOnEnter: true, needsProject: true },
   { key: 'pullRequests', glyph: '合', label: 'PR 工作流', ink: false, needsProject: true },
   { key: 'reviews', glyph: '审', label: '审查记录', ink: false, needsProject: true },

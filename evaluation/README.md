@@ -139,3 +139,34 @@ python3 evaluation/tools/score.py --selftest   # 内置小矩阵自测,必须打
 6. **落档**:主会话把结果整理成 `.trellis/tasks/08-03-r7-eval-corpus/baseline-<model>-<date>.{json,md}`
    (模型名/日期/temperature 实值/调用与 token 实数以 ai_call_log 佐证/QualityGate 不适用声明)。
 7. **收栈**:`docker compose -p reposage-eval down -v`,即弃无残留;演示栈全程零接触。
+
+## ForgePilot 语料 schema 扩展(v2 定稿,P1b;随首例标注启用)
+
+五臂消融实验(父任务 08-16-forgepilot-upgrade,design §13)要求每例语料补研发上下文标注。
+**字段在此定稿;`schemaVersion` 递增到 `evaluation-manifest-v2` 与首批标注同批落盘,
+此前既有 38 例保持 v1 原样**(判分工具对缺失新字段的 case 按"无需求上下文"处理,向后兼容)。
+
+每个 case 新增三个可选字段:
+
+```jsonc
+{
+  "requirement": {            // 该 diff 对应的需求(人工撰写,与 fixture 业务对齐)
+    "title": "订单取消库存释放",
+    "background": "促销期订单量大,取消不释放会超卖",
+    "description": "用户取消未支付订单时释放占用库存"
+  },
+  "acceptanceCriteria": [      // AC 列表;id 在 case 内唯一且稳定(判分锚点)
+    { "id": "AC1", "text": "取消后 5 分钟内库存回补" },
+    { "id": "AC2", "text": "重复取消不重复回补" }
+  ],
+  "consistencyTruth": [        // AC 级一致性真值:该 diff 对每条 AC 的真实覆盖情况
+    { "acId": "AC1", "verdict": "COVERED" },      // verdict ∈ COVERED | NOT_FOUND | AT_RISK
+    { "acId": "AC2", "verdict": "NOT_FOUND" }
+  ]
+}
+```
+
+标注纪律(L 线,每周 2-4 例、每例 ≤1h):development 集优先(供 prompt 调优),
+holdout 集后补且不用于调优;缺陷标注(expectedFindings/nonFindings)沿用现有格式不动。
+判分新增 AC 级一致性命中率(predicted verdict vs consistencyTruth 的 per-AC P/R),
+与两率并列呈报,禁止合成单一分数(与既有纪律同口径)。

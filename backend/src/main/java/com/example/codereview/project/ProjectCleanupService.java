@@ -16,6 +16,9 @@ import com.example.codereview.report.ReviewReport;
 import com.example.codereview.report.ReviewReportRepository;
 import com.example.codereview.repo.CodeRepositoryEntity;
 import com.example.codereview.repo.CodeRepositoryJpaRepository;
+import com.example.codereview.requirement.AcceptanceCriterionRepository;
+import com.example.codereview.requirement.RequirementEntity;
+import com.example.codereview.requirement.RequirementRepository;
 import com.example.codereview.review.ReviewTask;
 import com.example.codereview.review.ReviewTaskRepository;
 import java.util.List;
@@ -39,6 +42,8 @@ public class ProjectCleanupService {
     private final MqTaskLogRepository mqTaskLogs;
     private final GitCliService gitCliService;
     private final ProjectMemberRepository projectMembers;
+    private final RequirementRepository projectRequirements;
+    private final AcceptanceCriterionRepository acceptanceCriteria;
 
     public ProjectCleanupService(CodeRepositoryJpaRepository repositories, KnowledgeDocumentRepository documents,
                                  KnowledgeChunkRepository chunks, VectorIndexService vectorIndexService,
@@ -46,7 +51,9 @@ public class ProjectCleanupService {
                                  ReviewIssueRepository issues, FeedbackRepository feedback,
                                  ReviewActionRepository reviewActions, PullRequestRepository pullRequests,
                                  AiCallLogRepository aiCallLogs, MqTaskLogRepository mqTaskLogs,
-                                 GitCliService gitCliService, ProjectMemberRepository projectMembers) {
+                                 GitCliService gitCliService, ProjectMemberRepository projectMembers,
+                                 RequirementRepository projectRequirements,
+                                 AcceptanceCriterionRepository acceptanceCriteria) {
         this.repositories = repositories;
         this.documents = documents;
         this.chunks = chunks;
@@ -61,6 +68,8 @@ public class ProjectCleanupService {
         this.mqTaskLogs = mqTaskLogs;
         this.gitCliService = gitCliService;
         this.projectMembers = projectMembers;
+        this.projectRequirements = projectRequirements;
+        this.acceptanceCriteria = acceptanceCriteria;
     }
 
     @Transactional
@@ -93,6 +102,13 @@ public class ProjectCleanupService {
         aiCallLogs.deleteByProjectId(projectId);
         // H2 dev 由 ddl-auto 建表、没有 FK 级联,成员行必须应用层删;PG 的级联只是双保险。
         projectMembers.deleteByProjectId(projectId);
+        List<Long> requirementIds = projectRequirements.findByProjectIdOrderBySeqDesc(projectId).stream()
+                .map(RequirementEntity::getId)
+                .toList();
+        if (!requirementIds.isEmpty()) {
+            acceptanceCriteria.deleteByRequirementIdIn(requirementIds);
+        }
+        projectRequirements.deleteByProjectId(projectId);
         repositories.findByProjectId(projectId).ifPresent(repository -> {
             gitCliService.deleteWorkingCopy(repository.getId());
             repositories.deleteById(repository.getId());

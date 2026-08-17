@@ -20,7 +20,8 @@
   "subtasks": [],
   "children": [
     "08-16-p0-model-service-removal",
-    "08-16-p1a-member-rbac"
+    "08-16-p1a-member-rbac",
+    "08-16-p1b-requirement-domain"
   ],
   "parent": null,
   "relatedFiles": [],

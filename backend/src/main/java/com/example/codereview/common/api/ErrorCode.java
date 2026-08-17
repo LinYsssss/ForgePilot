@@ -50,6 +50,11 @@ public enum ErrorCode {
     MEMBER_ALREADY_EXISTS(409, 409, "该用户已是项目成员"),
     MEMBER_OWNER_IMMUTABLE(409, 409, "不能变更或移除项目负责人，请先移交负责人"),
 
+    // ------------------------------------------------------------ ForgePilot: 需求域(P1b)
+    REQUIREMENT_NOT_FOUND(404, 404, "需求不存在"),
+    REQUIREMENT_TRANSITION_ILLEGAL(409, 409, "当前状态不允许该流转"),
+    REQUIREMENT_LOCKED(409, 409, "需求已进入开发，修改内容请先回退状态"),
+
     // ------------------------------------------------------------ Track A: Agent 执行闭环
     AGENT_RUN_NOT_FOUND(404, 404, "Agent 运行记录不存在"),
     AGENT_RUN_CONFLICT(409, 409, "Agent 运行状态冲突"),

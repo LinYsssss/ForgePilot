@@ -23,7 +23,7 @@ com.example.codereview/
 ├── ai/ rag/ context/ language/     # AI 客户端(langchain4j)、检索、上下文、语言插件(java/javascript/python)
 ├── scm/ webhook/      # GitHub/GitLab 接入、webhook 验签与 Agent Run 触发
 ├── git/ sandbox/      # git CLI 边界、SandboxJob 同构镜像(与 sandbox-runner 对偶)
-├── auth/ config/ mq/ notify/ member/ evaluation/
+├── auth/ config/ mq/ notify/ member/ requirement/ evaluation/
 └── CodereviewApplication.java
 ```
 
