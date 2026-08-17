@@ -76,3 +76,25 @@
 ### Status
 
 [OK] **Completed**
+
+
+## Session 4: P6 研发助手与流式契约
+
+**Date**: 2026-08-17
+**Task**: P6 研发助手与流式契约
+**Branch**: `main`
+
+### Summary
+
+完成 Requirement 详情内嵌只读研发助手：可信 Requirement/AC/知识/代码上下文、POST SSE、OpenAI-compatible 与 mock 流式客户端、内存会话、容量与 AI 日志；修复流式竞态和 P5 Mockito 测试基线，backend 716 tests、frontend 78 tests、verify-local -SkipSmoke 通过。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `1c82594` | (see git log) |
+| `7c69759` | (see git log) |
+
+### Status
+
+[OK] **Completed**
