@@ -1,8 +1,7 @@
 package com.example.codereview.agent.orchestration;
 
 import com.example.codereview.agent.error.AgentFailureType;
-import com.example.codereview.finding.FindingDecisionRepository;
-import com.example.codereview.finding.FindingRepository;
+import com.example.codereview.agent.run.GateVerdict;
 import com.example.codereview.patch.PatchApprovalDecision;
 import com.example.codereview.patch.PatchApprovalRepository;
 import com.example.codereview.patch.PatchCandidate;
@@ -15,7 +14,6 @@ import com.example.codereview.scm.ScmPublicationResult;
 import com.example.codereview.scm.ScmReviewPublisher;
 import com.example.codereview.common.security.CryptoService;
 import com.example.codereview.agent.queue.AgentStepExecutionException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
 import java.util.Optional;
 import org.slf4j.Logger;
@@ -35,41 +33,38 @@ public class AgentPublicationService {
     private final AgentScmContextRepository scmContexts;
     private final ScmInstallationRepository installations;
     private final AgentPublicationRepository publications;
-    private final FindingRepository findings;
-    private final FindingDecisionRepository decisions;
     private final PatchCandidateRepository patches;
     private final PatchApprovalRepository approvals;
     private final CryptoService crypto;
     private final List<ScmReviewPublisher> publishers;
-    private final ObjectMapper mapper;
     private final AgentCoverageService agentCoverage;
+    private final RunGateVerdictService runGateVerdicts;
+    private final FindingResolutionSuggester resolutionSuggester;
     private final String publicUrl;
 
     public AgentPublicationService(
             AgentScmContextRepository scmContexts,
             ScmInstallationRepository installations,
             AgentPublicationRepository publications,
-            FindingRepository findings,
-            FindingDecisionRepository decisions,
             PatchCandidateRepository patches,
             PatchApprovalRepository approvals,
             CryptoService crypto,
             List<ScmReviewPublisher> publishers,
-            ObjectMapper mapper,
             AgentCoverageService agentCoverage,
+            RunGateVerdictService runGateVerdicts,
+            FindingResolutionSuggester resolutionSuggester,
             @Value("${app.agent.public-url:http://localhost:8080}") String publicUrl
     ) {
         this.scmContexts = scmContexts;
         this.installations = installations;
         this.publications = publications;
-        this.findings = findings;
-        this.decisions = decisions;
         this.patches = patches;
         this.approvals = approvals;
         this.crypto = crypto;
         this.publishers = publishers;
-        this.mapper = mapper;
         this.agentCoverage = agentCoverage;
+        this.runGateVerdicts = runGateVerdicts;
+        this.resolutionSuggester = resolutionSuggester;
         this.publicUrl = publicUrl.replaceAll("/+$", "");
     }
 
@@ -95,10 +90,17 @@ public class AgentPublicationService {
                 .anyMatch(value -> value.getDecision() == PatchApprovalDecision.APPROVED
                         && patch.getPatchHash().equals(value.getPatchHash())
                         && headSha.equals(value.getHeadSha()));
-        ReviewPublication publication = publication(runId, patch, patchApproved,
-                // P4b:发布前判定 AC 覆盖(best-effort,失败=无摘要行),摘要并入 notes 内容,
-                // 冻结的载荷结构与 Conclusion 映射不动(门禁语义 P5 才扩展)。
-                agentCoverage.judgeAndAttach(runId, headSha));
+        // Coverage remains best-effort; the run gate consumes persisted coverage and lifecycle state.
+        List<String> coverageLines = agentCoverage.judgeAndAttach(runId, headSha);
+        try {
+            resolutionSuggester.suggest(runId);
+        } catch (RuntimeException failure) {
+            // A REQUIRES_NEW transaction can still surface an unexpected rollback after the
+            // suggester returns; publication must remain best-effort.
+            log.debug("finding resolution suggestion skipped: runId={}", runId, failure);
+        }
+        RunGateVerdictService.GateEvaluation gate = runGateVerdicts.evaluateAndAttach(runId);
+        ReviewPublication publication = publication(runId, patch, patchApproved, coverageLines, gate);
         ScmInstallation installation = installations.findById(context.getInstallationId())
                 .filter(value -> Boolean.TRUE.equals(value.getActive()))
                 .orElseThrow(() -> new IllegalArgumentException("SCM installation is inactive"));
@@ -171,12 +173,9 @@ public class AgentPublicationService {
     }
 
     private ReviewPublication publication(Long runId, PatchCandidate patch, boolean patchApproved,
-                                          List<String> coverageLines) {
-        List<String> blocking = findings.findByAgentRunIdOrderByIdAsc(runId).stream()
-                .filter(value -> "verified".equals(value.getStatus()))
-                .filter(value -> decisions.findByFindingIdOrderByIdAsc(value.getId()).stream()
-                        .reduce((first, second) -> second)
-                        .map(decision -> Boolean.TRUE.equals(decision.getBlocking())).orElse(false))
+                                          List<String> coverageLines,
+                                          RunGateVerdictService.GateEvaluation gate) {
+        List<String> blocking = gate.blockingFindings().stream()
                 .map(value -> value.getTitle() + " (" + value.getFilePath() + ":" + value.getLineStart() + ")")
                 .toList();
         ReviewPublication.PatchValidationState patchState = patch == null
@@ -188,14 +187,21 @@ public class AgentPublicationService {
                                 : "VALIDATION_FAILED".equals(patch.getStatus())
                                         ? ReviewPublication.PatchValidationState.FAILED
                                         : ReviewPublication.PatchValidationState.PENDING;
-        ReviewPublication.Conclusion conclusion = blocking.isEmpty()
-                ? ReviewPublication.Conclusion.SUCCESS : ReviewPublication.Conclusion.ACTION_REQUIRED;
+        ReviewPublication.Conclusion conclusion = gate.verdict() == GateVerdict.BLOCK
+                ? ReviewPublication.Conclusion.ACTION_REQUIRED
+                : ReviewPublication.Conclusion.SUCCESS;
         List<String> notes = new java.util.ArrayList<>();
         notes.add("Agent Run " + runId);
         notes.addAll(coverageLines);
+        notes.add("Run gate: " + gate.verdict());
+        String summary = switch (gate.verdict()) {
+            case BLOCK -> "Verified findings require action";
+            case WARN -> "Review completed with warnings";
+            case PASS -> "No verified blocking findings";
+        };
         return new ReviewPublication(
                 conclusion,
-                blocking.isEmpty() ? "No verified blocking findings" : "Verified findings require action",
+                summary,
                 blocking,
                 List.copyOf(notes),
                 publicUrl + "/api/agent-runs/" + runId,

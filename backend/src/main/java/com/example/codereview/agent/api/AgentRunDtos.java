@@ -2,6 +2,7 @@ package com.example.codereview.agent.api;
 
 import com.example.codereview.agent.run.AgentRun;
 import com.example.codereview.agent.run.AgentRunStatus;
+import com.example.codereview.agent.run.GateVerdict;
 import com.example.codereview.agent.run.AgentStep;
 import com.example.codereview.agent.run.AgentStepStatus;
 import java.time.Instant;
@@ -23,12 +24,22 @@ public final class AgentRunDtos {
             Long pullRequestId,
             String headSha,
             AgentRunStatus status,
+            GateVerdict gateVerdict,
             int currentStepSequence,
             boolean cancellationRequested,
             boolean terminal,
             Instant createdAt,
             Instant updatedAt
     ) {
+        /** Source-compatible constructor for existing clients/tests; gate verdict is additive. */
+        public AgentRunDetail(Long id, Long projectId, Long repositoryId, Long pullRequestId,
+                              String headSha, AgentRunStatus status, int currentStepSequence,
+                              boolean cancellationRequested, boolean terminal, Instant createdAt,
+                              Instant updatedAt) {
+            this(id, projectId, repositoryId, pullRequestId, headSha, status, null,
+                    currentStepSequence, cancellationRequested, terminal, createdAt, updatedAt);
+        }
+
         public static AgentRunDetail from(AgentRun run, boolean terminal) {
             return new AgentRunDetail(
                     run.getId(),
@@ -37,6 +48,7 @@ public final class AgentRunDtos {
                     run.getPullRequestId(),
                     run.getHeadSha(),
                     run.getStatus(),
+                    run.getGateVerdict(),
                     run.getCurrentStepSequence(),
                     run.isCancellationRequested(),
                     terminal,

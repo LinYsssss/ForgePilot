@@ -10,3 +10,34 @@ export function unwrapPage(data) {
   if (data && Array.isArray(data.items)) return data.items
   return []
 }
+
+/**
+ * 读取分页信封的元数据,同时兼容合流前的裸数组。
+ * 列表调用方应先用 unwrapPage 取 items,再用本函数取得可选分页信息。
+ */
+export function pageMeta(data, { page = 0, size = 20 } = {}) {
+  const items = unwrapPage(data)
+  if (Array.isArray(data)) {
+    return {
+      page,
+      size,
+      totalElements: items.length,
+      totalPages: items.length ? 1 : 0,
+    }
+  }
+  const totalElements = Number.isFinite(Number(data?.totalElements))
+    ? Number(data.totalElements)
+    : items.length
+  const safeSize = Number.isFinite(Number(data?.size)) && Number(data.size) > 0
+    ? Number(data.size)
+    : size
+  const totalPages = Number.isFinite(Number(data?.totalPages))
+    ? Number(data.totalPages)
+    : (totalElements ? Math.ceil(totalElements / safeSize) : 0)
+  return {
+    page: Number.isFinite(Number(data?.page)) ? Number(data.page) : page,
+    size: safeSize,
+    totalElements,
+    totalPages,
+  }
+}

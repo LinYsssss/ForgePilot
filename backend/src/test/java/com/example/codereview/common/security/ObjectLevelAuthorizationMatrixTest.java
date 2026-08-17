@@ -5,9 +5,17 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.example.codereview.agent.orchestration.AgentScmContext;
+import com.example.codereview.agent.orchestration.AgentScmContextRepository;
 import com.example.codereview.agent.run.AgentRun;
 import com.example.codereview.agent.run.AgentRunRepository;
 import com.example.codereview.auth.AuthService;
+import com.example.codereview.finding.Finding;
+import com.example.codereview.finding.FindingRepository;
+import com.example.codereview.finding.FindingSeverity;
+import com.example.codereview.scm.NormalizedPullRequestEvent;
+import com.example.codereview.scm.ScmInstallation;
+import com.example.codereview.scm.ScmProviderType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.Cookie;
 import java.util.List;
@@ -63,18 +71,34 @@ class ObjectLevelAuthorizationMatrixTest {
     @Autowired
     private AgentRunRepository agentRuns;
 
+    @Autowired
+    private AgentScmContextRepository scmContexts;
+
+    @Autowired
+    private FindingRepository findings;
+
     private Cookie owner;
     private Cookie stranger;
+    private Cookie projectMember;
+    private String projectMemberUsername;
+    private Long projectMemberUserId;
     private Long ownedProjectId;
+    private Long ownedFindingId;
 
     @BeforeAll
     void seed() throws Exception {
-        owner = login("matrix_owner_" + System.nanoTime());
-        stranger = login("matrix_stranger_" + System.nanoTime());
+        String suffix = String.valueOf(System.nanoTime());
+        owner = login("matrix_owner_" + suffix);
+        stranger = login("matrix_stranger_" + suffix);
+        projectMemberUsername = "matrix_member_" + suffix;
+        projectMember = login(projectMemberUsername);
         ownedProjectId = createProject(owner, "矩阵项目");
+        addMember(owner, ownedProjectId, projectMemberUsername, "DEVELOPER");
+        projectMemberUserId = findMemberUserId(owner, ownedProjectId, projectMemberUsername);
         // The review endpoints resolve the bound repository before authorizing, so without one they
         // return 404 to owner and stranger alike — and the matrix would pass for the wrong reason.
         bindRepository(owner, ownedProjectId);
+        ownedFindingId = createFinding();
     }
 
     /**
@@ -96,7 +120,8 @@ class ObjectLevelAuthorizationMatrixTest {
                 new Case("knowledge documents", "GET", "/api/projects/{id}/knowledge/documents"),
                 new Case("knowledge reindex", "POST", "/api/projects/{id}/knowledge/reindex"),
                 new Case("pull requests", "GET", "/api/projects/{id}/pull-requests"),
-                new Case("agent runs by project", "GET", "/api/agent-runs/project/{id}")
+                new Case("agent runs by project", "GET", "/api/agent-runs/project/{id}"),
+                new Case("project findings", "GET", "/api/projects/{id}/findings")
         );
         return cases.stream()
                 .map(testCase -> DynamicTest.dynamicTest(testCase.name(), () ->
@@ -126,6 +151,32 @@ class ObjectLevelAuthorizationMatrixTest {
                 .map(testCase -> DynamicTest.dynamicTest(testCase.name(), () ->
                         expectDenied(perform(testCase.method(), testCase.path(), stranger))))
                 .toList();
+    }
+
+    @Test
+    void strangerAndProjectMemberCannotMutateSomeoneElsesFinding() throws Exception {
+        String lifecyclePath = "/api/projects/" + ownedProjectId
+                + "/findings/" + ownedFindingId + "/lifecycle";
+        String assignPath = "/api/projects/" + ownedProjectId
+                + "/findings/" + ownedFindingId + "/assign";
+
+        expectForbiddenOrNotFound(postJson(lifecyclePath, stranger, Map.of("action", "CONFIRMED")));
+        expectForbiddenOrNotFound(postJson(assignPath, stranger, Map.of("userId", projectMemberUserId)));
+        expectForbiddenOrNotFound(postJson(lifecyclePath, projectMember, Map.of("action", "CONFIRMED")));
+        expectForbiddenOrNotFound(postJson(assignPath, projectMember, Map.of("userId", projectMemberUserId)));
+    }
+
+    @Test
+    void anonymousFindingMutationsAreAlwaysRejected() throws Exception {
+        String lifecyclePath = "/api/projects/" + ownedProjectId
+                + "/findings/" + ownedFindingId + "/lifecycle";
+        String assignPath = "/api/projects/" + ownedProjectId
+                + "/findings/" + ownedFindingId + "/assign";
+
+        postJson(lifecyclePath, null, Map.of("action", "CONFIRMED"))
+                .andExpect(status().isUnauthorized());
+        postJson(assignPath, null, Map.of("userId", projectMemberUserId))
+                .andExpect(status().isUnauthorized());
     }
 
     /**
@@ -183,6 +234,10 @@ class ObjectLevelAuthorizationMatrixTest {
                 .andExpect(status().isOk());
         perform("GET", "/api/projects/" + ownedProjectId + "/knowledge/documents", owner)
                 .andExpect(status().isOk());
+        perform("GET", "/api/projects/" + ownedProjectId + "/findings", owner)
+                .andExpect(status().isOk());
+        perform("GET", "/api/projects/" + ownedProjectId + "/findings", projectMember)
+                .andExpect(status().isOk());
     }
 
     // ------------------------------------------------------------------ helpers
@@ -198,6 +253,26 @@ class ObjectLevelAuthorizationMatrixTest {
             if (statusCode == 401) {
                 throw new AssertionError(
                         "expected an authorization failure but the caller was treated as anonymous");
+            }
+        });
+    }
+
+    /** Mutation cases use valid JSON so a 400 cannot mask a missing object-level guard. */
+    private ResultActions postJson(String path, Cookie cookie, Map<String, ?> body) throws Exception {
+        var request = post(path)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(body));
+        if (cookie != null) {
+            request = request.cookie(cookie);
+        }
+        return mockMvc.perform(request);
+    }
+
+    private void expectForbiddenOrNotFound(ResultActions actions) throws Exception {
+        actions.andExpect(result -> {
+            int statusCode = result.getResponse().getStatus();
+            if (statusCode != 403 && statusCode != 404) {
+                throw new AssertionError("expected 403/404 from object-level authorization but got " + statusCode);
             }
         });
     }
@@ -252,6 +327,46 @@ class ObjectLevelAuthorizationMatrixTest {
                 .andReturn();
         return objectMapper.readTree(project.getResponse().getContentAsString())
                 .path("data").path("projectId").asLong();
+    }
+
+    private void addMember(Cookie leader, Long projectId, String username, String role) throws Exception {
+        mockMvc.perform(post("/api/projects/{id}/members", projectId)
+                        .cookie(leader)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "username", username, "role", role))))
+                .andExpect(status().isOk());
+    }
+
+    private Long findMemberUserId(Cookie cookie, Long projectId, String username) throws Exception {
+        MvcResult result = mockMvc.perform(get("/api/projects/{id}/members", projectId).cookie(cookie))
+                .andExpect(status().isOk())
+                .andReturn();
+        for (var member : objectMapper.readTree(result.getResponse().getContentAsString()).path("data")) {
+            if (username.equals(member.path("username").asText())) {
+                return member.path("userId").asLong();
+            }
+        }
+        throw new IllegalStateException("member not found: " + username);
+    }
+
+    private Long createFinding() {
+        AgentRun run = agentRuns.saveAndFlush(new AgentRun(ownedProjectId, 1L, 1L,
+                "matrix-finding-" + System.nanoTime(), "headsha0002"));
+        ScmInstallation installation = new ScmInstallation();
+        installation.setId(1L);
+        installation.setProvider(ScmProviderType.GITHUB);
+        installation.setActive(true);
+        NormalizedPullRequestEvent event = new NormalizedPullRequestEvent(
+                ScmProviderType.GITHUB, "matrix-installation", "demo/repo",
+                "https://example.com/demo/repo.git", 1, "matrix finding", "matrix",
+                "feature/matrix", "main", "basesha0001", "headsha0002", "opened",
+                "matrix-delivery-" + System.nanoTime());
+        scmContexts.saveAndFlush(AgentScmContext.from(run.getId(), event, installation));
+        return findings.saveAndFlush(new Finding(
+                run.getId(), FindingSeverity.HIGH, "security.matrix", "Matrix finding",
+                "Finding used by the object-level authorization matrix", "src/Matrix.java",
+                1, 1, "Matrix.check", "candidate")).getId();
     }
 
     private void bindRepository(Cookie cookie, Long projectId) throws Exception {

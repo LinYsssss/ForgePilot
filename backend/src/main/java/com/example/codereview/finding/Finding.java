@@ -56,6 +56,26 @@ public class Finding {
     @Column(name = "rejection_reason", columnDefinition = "text")
     private String rejectionReason;
 
+    // ---- P5 生命周期轴(与上面的 pipeline 校验态 status 正交) ----
+    @Column(name = "lifecycle_status", nullable = false, length = 32)
+    private String lifecycleStatus = "OPEN";
+
+    @Column(name = "assignee_id")
+    private Long assigneeId;
+
+    @Column(name = "fix_commit_sha", length = 80)
+    private String fixCommitSha;
+
+    @Column(name = "verified_by")
+    private Long verifiedBy;
+
+    @Column(name = "verified_at")
+    private Instant verifiedAt;
+
+    /** 自动复审建议(RESOLVED_SUGGESTED/STILL_PRESENT);自动侧只写这里,终态永远人工。 */
+    @Column(name = "resolution_suggestion", length = 32)
+    private String resolutionSuggestion;
+
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
@@ -150,6 +170,52 @@ public class Finding {
 
     public String getFingerprint() {
         return fingerprint;
+    }
+
+    public FindingLifecycle getLifecycle() {
+        FindingLifecycle value = FindingLifecycle.fromName(lifecycleStatus);
+        return value == null ? FindingLifecycle.OPEN : value;
+    }
+
+    public Long getAssigneeId() {
+        return assigneeId;
+    }
+
+    public String getFixCommitSha() {
+        return fixCommitSha;
+    }
+
+    public Long getVerifiedBy() {
+        return verifiedBy;
+    }
+
+    public Instant getVerifiedAt() {
+        return verifiedAt;
+    }
+
+    public String getResolutionSuggestion() {
+        return resolutionSuggestion;
+    }
+
+    public void assignTo(Long assigneeId) {
+        this.assigneeId = assigneeId;
+    }
+
+    /** 流转由 FindingLifecycleService 校验后调用;FIXED 可携带修复 commit。 */
+    public void moveLifecycle(FindingLifecycle next, Long operatorId, String fixCommitSha) {
+        this.lifecycleStatus = next.name();
+        if (next == FindingLifecycle.FIXED && fixCommitSha != null && !fixCommitSha.isBlank()) {
+            this.fixCommitSha = fixCommitSha.trim();
+        }
+        if (next == FindingLifecycle.VERIFIED) {
+            this.verifiedBy = operatorId;
+            this.verifiedAt = Instant.now();
+        }
+    }
+
+    /** 自动复审建议;只写建议位,永不改 lifecycle。 */
+    public void suggestResolution(String suggestion) {
+        this.resolutionSuggestion = suggestion;
     }
 
     public String getRejectionReason() {

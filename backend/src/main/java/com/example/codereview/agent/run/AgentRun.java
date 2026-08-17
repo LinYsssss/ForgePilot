@@ -60,6 +60,10 @@ public class AgentRun {
     @Column(columnDefinition = "text")
     private String coverageJson;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "gate_verdict", length = 16)
+    private GateVerdict gateVerdict;
+
     @Column(nullable = false, updatable = false)
     private Instant createdAt;
 
@@ -134,6 +138,18 @@ public class AgentRun {
     /** 发布前由 AgentCoverageService 写入一次;失败路径不写(保持 null)。 */
     public void attachCoverage(String coverageJson) {
         this.coverageJson = coverageJson;
+        this.updatedAt = Instant.now();
+    }
+
+    public GateVerdict getGateVerdict() {
+        return gateVerdict;
+    }
+
+    public void attachGateVerdict(GateVerdict gateVerdict) {
+        if (gateVerdict == null) {
+            throw new IllegalArgumentException("gateVerdict is required");
+        }
+        this.gateVerdict = gateVerdict;
         this.updatedAt = Instant.now();
     }
 

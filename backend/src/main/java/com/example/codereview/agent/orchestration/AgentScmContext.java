@@ -75,4 +75,5 @@ public class AgentScmContext {
     public int getPullRequestNumber() { return pullRequestNumber; }
     public String getBaseSha() { return baseSha; }
     public String getHeadSha() { return headSha; }
+    public Instant getCreatedAt() { return createdAt; }
 }

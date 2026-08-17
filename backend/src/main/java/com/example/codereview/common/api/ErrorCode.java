@@ -54,6 +54,7 @@ public enum ErrorCode {
     REQUIREMENT_NOT_FOUND(404, 404, "需求不存在"),
     REQUIREMENT_TRANSITION_ILLEGAL(409, 409, "当前状态不允许该流转"),
     REQUIREMENT_LOCKED(409, 409, "需求已进入开发，修改内容请先回退状态"),
+    FINDING_TRANSITION_ILLEGAL(409, 409, "当前状态不允许该处理动作"),
 
     // ------------------------------------------------------------ Track A: Agent 执行闭环
     AGENT_RUN_NOT_FOUND(404, 404, "Agent 运行记录不存在"),

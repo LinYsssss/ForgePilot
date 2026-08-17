@@ -10,6 +10,7 @@ import InkDashboardPage from './pages/InkDashboardPage.vue'
 import InkProjectsPage from './pages/InkProjectsPage.vue'
 import InkRepositoryPage from './pages/InkRepositoryPage.vue'
 import InkRequirementsPage from './pages/InkRequirementsPage.vue'
+import InkQualityPage from './pages/InkQualityPage.vue'
 
 // Hash 模式:生产由 Nginx 托管静态文件,hash 路由无需 history fallback 配置;
 // 且与既有 "#agent-evidence=" 证据锚点(SCM 评论外链)最容易并存。
@@ -23,6 +24,7 @@ export const router = createRouter({
     { path: '/repository', name: 'repository', component: InkRepositoryPage, meta: { shell: 'ink' } },
     // 研发任务(P1b 新建页):墨境原生,无旧壳对应页。
     { path: '/requirements', name: 'requirements', component: InkRequirementsPage, meta: { shell: 'ink' } },
+    { path: '/quality', name: 'quality', component: InkQualityPage, meta: { shell: 'ink' } },
     { path: '/pull-requests', name: 'pullRequests', component: PullRequestsView },
     { path: '/knowledge', name: 'knowledge', component: KnowledgeView },
     { path: '/reviews', name: 'reviews', component: ReviewsView },

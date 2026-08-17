@@ -11,9 +11,8 @@ import static org.mockito.Mockito.when;
 
 import com.example.codereview.agent.error.AgentFailureType;
 import com.example.codereview.agent.queue.AgentStepExecutionException;
+import com.example.codereview.agent.run.GateVerdict;
 import com.example.codereview.common.security.CryptoService;
-import com.example.codereview.finding.FindingDecisionRepository;
-import com.example.codereview.finding.FindingRepository;
 import com.example.codereview.patch.PatchApprovalRepository;
 import com.example.codereview.patch.PatchCandidateRepository;
 import com.example.codereview.scm.NormalizedPullRequestEvent;
@@ -22,7 +21,6 @@ import com.example.codereview.scm.ScmInstallationRepository;
 import com.example.codereview.scm.ScmPublicationResult;
 import com.example.codereview.scm.ScmProviderType;
 import com.example.codereview.scm.ScmReviewPublisher;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.net.SocketTimeoutException;
 import java.util.List;
 import java.util.Optional;
@@ -37,13 +35,18 @@ class AgentPublicationServiceTest {
         return coverage;
     }
 
+    private static RunGateVerdictService quietGate() {
+        RunGateVerdictService gate = mock(RunGateVerdictService.class);
+        when(gate.evaluateAndAttach(any())).thenReturn(
+                new RunGateVerdictService.GateEvaluation(GateVerdict.PASS, List.of()));
+        return gate;
+    }
+
     @Test
     void duplicatePublicationKeyCallsProviderOnlyOnce() {
         AgentScmContextRepository scmContexts = mock(AgentScmContextRepository.class);
         ScmInstallationRepository installations = mock(ScmInstallationRepository.class);
         AgentPublicationRepository publications = mock(AgentPublicationRepository.class);
-        FindingRepository findings = mock(FindingRepository.class);
-        FindingDecisionRepository decisions = mock(FindingDecisionRepository.class);
         PatchCandidateRepository patches = mock(PatchCandidateRepository.class);
         PatchApprovalRepository approvals = mock(PatchApprovalRepository.class);
         CryptoService crypto = mock(CryptoService.class);
@@ -61,8 +64,8 @@ class AgentPublicationServiceTest {
         when(publisher.publish(any(), any())).thenReturn(new ScmPublicationResult(true, List.of(201, 201), "ok"));
 
         AgentPublicationService service = new AgentPublicationService(
-                scmContexts, installations, publications, findings, decisions, patches, approvals,
-                crypto, List.of(publisher), new ObjectMapper(), quietCoverage(), "http://localhost"
+                scmContexts, installations, publications, patches, approvals,
+                crypto, List.of(publisher), quietCoverage(), quietGate(), mock(FindingResolutionSuggester.class), "http://localhost"
         );
 
         assertThat(service.publish(1L, "head").isPublished()).isTrue();
@@ -77,8 +80,6 @@ class AgentPublicationServiceTest {
         AgentScmContextRepository scmContexts = mock(AgentScmContextRepository.class);
         ScmInstallationRepository installations = mock(ScmInstallationRepository.class);
         AgentPublicationRepository publications = mock(AgentPublicationRepository.class);
-        FindingRepository findings = mock(FindingRepository.class);
-        FindingDecisionRepository decisions = mock(FindingDecisionRepository.class);
         PatchCandidateRepository patches = mock(PatchCandidateRepository.class);
         PatchApprovalRepository approvals = mock(PatchApprovalRepository.class);
         CryptoService crypto = mock(CryptoService.class);
@@ -91,8 +92,8 @@ class AgentPublicationServiceTest {
         when(publications.save(any())).thenAnswer(call -> call.getArgument(0));
 
         AgentPublicationService service = new AgentPublicationService(
-                scmContexts, installations, publications, findings, decisions, patches, approvals,
-                crypto, List.of(publisher), new ObjectMapper(), quietCoverage(), "http://localhost"
+                scmContexts, installations, publications, patches, approvals,
+                crypto, List.of(publisher), quietCoverage(), quietGate(), mock(FindingResolutionSuggester.class), "http://localhost"
         );
 
         AgentPublication record = service.publish(1L, "head");
@@ -133,8 +134,6 @@ class AgentPublicationServiceTest {
         AgentScmContextRepository scmContexts = mock(AgentScmContextRepository.class);
         ScmInstallationRepository installations = mock(ScmInstallationRepository.class);
         AgentPublicationRepository publications = mock(AgentPublicationRepository.class);
-        FindingRepository findings = mock(FindingRepository.class);
-        FindingDecisionRepository decisions = mock(FindingDecisionRepository.class);
         PatchCandidateRepository patches = mock(PatchCandidateRepository.class);
         PatchApprovalRepository approvals = mock(PatchApprovalRepository.class);
         CryptoService crypto = mock(CryptoService.class);
@@ -149,8 +148,8 @@ class AgentPublicationServiceTest {
         when(publisher.publish(any(), any())).thenThrow(publisherFailure);
 
         AgentPublicationService service = new AgentPublicationService(
-                scmContexts, installations, publications, findings, decisions, patches, approvals,
-                crypto, List.of(publisher), new ObjectMapper(), quietCoverage(), "http://localhost"
+                scmContexts, installations, publications, patches, approvals,
+                crypto, List.of(publisher), quietCoverage(), quietGate(), mock(FindingResolutionSuggester.class), "http://localhost"
         );
 
         AgentStepExecutionException thrown = catchThrowableOfType(

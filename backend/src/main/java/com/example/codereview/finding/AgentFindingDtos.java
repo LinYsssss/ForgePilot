@@ -1,5 +1,8 @@
 package com.example.codereview.finding;
 
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import java.time.Instant;
 import java.util.List;
 
@@ -10,6 +13,17 @@ import java.util.List;
 public final class AgentFindingDtos {
 
     private AgentFindingDtos() {
+    }
+
+    public record LifecycleRequest(
+            @NotBlank @Size(max = 32) String action,
+            @Size(max = 80) String fixCommitSha
+    ) {
+    }
+
+    public record AssignRequest(
+            @NotNull Long userId
+    ) {
     }
 
     public record EvidenceResponse(
@@ -74,7 +88,13 @@ public final class AgentFindingDtos {
             boolean blocking,
             String decisionReason,
             String weightVersion,
-            List<EvidenceResponse> evidence
+            List<EvidenceResponse> evidence,
+            String lifecycle,
+            Long assigneeId,
+            String fixCommitSha,
+            Long verifiedBy,
+            Instant verifiedAt,
+            String resolutionSuggestion
     ) {
         public static AgentFindingResponse from(Finding finding,
                                                 List<FindingEvidenceEntity> evidence,
@@ -98,7 +118,13 @@ public final class AgentFindingDtos {
                     decision != null && Boolean.TRUE.equals(decision.getBlocking()),
                     decision == null ? null : decision.getReason(),
                     decision == null ? null : decision.getWeightVersion(),
-                    evidence.stream().map(EvidenceResponse::from).toList()
+                    evidence.stream().map(EvidenceResponse::from).toList(),
+                    finding.getLifecycle().name(),
+                    finding.getAssigneeId(),
+                    finding.getFixCommitSha(),
+                    finding.getVerifiedBy(),
+                    finding.getVerifiedAt(),
+                    finding.getResolutionSuggestion()
             );
         }
     }
