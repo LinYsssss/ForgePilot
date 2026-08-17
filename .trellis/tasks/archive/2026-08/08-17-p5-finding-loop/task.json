@@ -1,0 +1,30 @@
+{
+  "id": "p5-finding-loop",
+  "name": "p5-finding-loop",
+  "title": "P5 Finding 闭环与门禁扩展",
+  "description": "finding 状态机/指派/fix commit/指纹身份匹配/自动复审建议/GateDecision 三态扩展/前端质量中心",
+  "status": "completed",
+  "dev_type": null,
+  "scope": null,
+  "package": null,
+  "priority": "P2",
+  "creator": "LinYsssss",
+  "assignee": "LinYsssss",
+  "createdAt": "2026-08-17",
+  "completedAt": "2026-08-17",
+  "branch": null,
+  "base_branch": "main",
+  "worktree_path": null,
+  "commit": "cb8b96e",
+  "pr_url": null,
+  "subtasks": [],
+  "children": [],
+  "parent": "08-16-forgepilot-upgrade",
+  "relatedFiles": [],
+  "notes": "2026-08-17 checkpoint: P5 implementation, full-scope review, spec update and work commit cb8b96e complete. Backend compile/test-compile and frontend production build pass; full mvn verify/npm test deferred per user request. Pending archive only.",
+  "meta": {
+    "checkpoint": "2026-08-17T06:03:00-07:00",
+    "progress_stage": "Phase 3.4 work commit complete; pending archive",
+    "last_verified": "mvn -f backend/pom.xml -DskipTests test-compile: PASS; frontend npm run build: PASS; git diff --check: PASS"
+  }
+}
