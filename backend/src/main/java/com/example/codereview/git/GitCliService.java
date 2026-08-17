@@ -237,8 +237,31 @@ public class GitCliService {
         return commits;
     }
 
-    public CommitDiffResponse diff(CodeRepositoryEntity repository, String commitId, String baseCommitId) {
-        GitInputValidator.requireSafeRef(commitId, "Commit");
+    /**
+     * 远端分支名列表(去 {@code origin/} 前缀,上限 200 条)。P3 需求-代码关联的分支提取器
+     * 数据源:调用点与 {@link #listCommits} 同一交互式同步链路,失败语义也一致(抛业务异常)。
+     */
+    public List<String> listBranches(CodeRepositoryEntity repository) {
+        Path localPath = ensureClone(repository);
+        String output = run(localPath, repository, "branch", "-r", "--format=%(refname:short)");
+        List<String> branches = new ArrayList<>();
+        for (String line : output.split("\\R")) {
+            String name = line.trim();
+            if (name.isEmpty() || name.contains("HEAD")) {
+                continue;
+            }
+            if (name.startsWith("origin/")) {
+                name = name.substring("origin/".length());
+            }
+            branches.add(name);
+            if (branches.size() >= 200) {
+                break;
+            }
+        }
+        return branches;
+    }
+
+    public CommitDiffResponse diff(CodeRepositoryEntity repository, String commitId, String baseCommitId) {        GitInputValidator.requireSafeRef(commitId, "Commit");
         if (baseCommitId != null && !baseCommitId.isBlank()) {
             GitInputValidator.requireSafeRef(baseCommitId, "Base Commit");
         }

@@ -30,6 +30,11 @@ import org.springframework.test.context.TestPropertySource;
 })
 class WebhookAgentRunServiceTest {
 
+    // P3 起 startFromEvent 搭车做需求关联提取;切片测试不拉 requirement 域,mock 即可
+    // (提取是 best-effort,主链路断言与其无关)。
+    @org.springframework.boot.test.mock.mockito.MockBean
+    private com.example.codereview.requirement.RequirementLinkService requirementLinkService;
+
     @Autowired
     private WebhookAgentRunService service;
 

@@ -11,6 +11,7 @@ import com.example.codereview.repo.RepositoryDtos.BindRepositoryRequest;
 import com.example.codereview.repo.RepositoryDtos.CommitDiffResponse;
 import com.example.codereview.repo.RepositoryDtos.CommitResponse;
 import com.example.codereview.repo.RepositoryDtos.RepositoryResponse;
+import com.example.codereview.requirement.RequirementLinkService;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -24,17 +25,20 @@ public class RepositoryService {
     private final CodeRepositoryJpaRepository repositories;
     private final GitCliService gitCliService;
     private final CryptoService cryptoService;
+    private final RequirementLinkService requirementLinkService;
     private final boolean allowLocalRepoPath;
 
     public RepositoryService(ProjectService projectService, ProjectAuthorization projectAuthorization,
                              CodeRepositoryJpaRepository repositories,
                              GitCliService gitCliService, CryptoService cryptoService,
+                             RequirementLinkService requirementLinkService,
                              @Value("${app.git.allow-local-path:false}") boolean allowLocalRepoPath) {
         this.projectService = projectService;
         this.projectAuthorization = projectAuthorization;
         this.repositories = repositories;
         this.gitCliService = gitCliService;
         this.cryptoService = cryptoService;
+        this.requirementLinkService = requirementLinkService;
         this.allowLocalRepoPath = allowLocalRepoPath;
     }
 
@@ -80,7 +84,19 @@ public class RepositoryService {
     }
 
     public List<CommitResponse> commits(Long projectId, Long userId, int limit) {
-        return gitCliService.listCommits(getRequired(projectId, userId), limit);
+        CodeRepositoryEntity repository = getRequired(projectId, userId);
+        List<CommitResponse> commits = gitCliService.listCommits(repository, limit);
+        // P3 提取器搭车点:交互式"加载 Commit"就是事实上的仓库同步时机。
+        // best-effort:提取失败不影响提交列表本身。
+        for (CommitResponse commit : commits) {
+            requirementLinkService.extractQuietly(projectId, "COMMIT", commit.commitId(), commit.message());
+        }
+        try {
+            requirementLinkService.scanBranchesQuietly(projectId, gitCliService.listBranches(repository));
+        } catch (RuntimeException ignored) {
+            // 分支列举失败(裸仓库/权限等)不影响提交列表。
+        }
+        return commits;
     }
 
     public CommitDiffResponse diff(Long projectId, Long userId, String commitId, String baseCommitId) {

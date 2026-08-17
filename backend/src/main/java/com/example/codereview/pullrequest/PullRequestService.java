@@ -17,6 +17,7 @@ import com.example.codereview.report.ReviewIssue;
 import com.example.codereview.report.ReviewIssueRepository;
 import com.example.codereview.report.ReviewReport;
 import com.example.codereview.report.ReviewReportRepository;
+import com.example.codereview.requirement.RequirementLinkService;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -36,13 +37,16 @@ public class PullRequestService {
     private final ReviewActionRepository reviewActions;
     private final ReviewReportRepository reports;
     private final ReviewIssueRepository issues;
+    private final RequirementLinkService requirementLinkService;
 
     public PullRequestService(ProjectService projectService, ProjectAuthorization projectAuthorization,
                               RepositoryService repositoryService,
                               PullRequestRepository pullRequests, ReviewActionRepository reviewActions,
-                              ReviewReportRepository reports, ReviewIssueRepository issues) {
+                              ReviewReportRepository reports, ReviewIssueRepository issues,
+                              RequirementLinkService requirementLinkService) {
         this.projectService = projectService;
         this.projectAuthorization = projectAuthorization;
+        this.requirementLinkService = requirementLinkService;
         this.repositoryService = repositoryService;
         this.pullRequests = pullRequests;
         this.reviewActions = reviewActions;
@@ -69,7 +73,10 @@ public class PullRequestService {
                 request.baseSha(),
                 request.headSha()
         );
-        return PullRequestResponse.from(pullRequests.save(entity));
+        PullRequestResponse created = PullRequestResponse.from(pullRequests.save(entity));
+        // P3 提取器:PR 标题与源分支里的 REQ 号自动挂需求(best-effort,失败不影响导入)。
+        extractRequirementLinks(projectId, entity);
+        return created;
     }
 
     public List<PullRequestResponse> list(Long projectId, Long userId) {
@@ -105,7 +112,16 @@ public class PullRequestService {
                 request.externalPrId(),
                 status
         );
+        extractRequirementLinks(projectId, pullRequest);
         return PullRequestResponse.from(pullRequest);
+    }
+
+    private void extractRequirementLinks(Long projectId, PullRequestEntity pullRequest) {
+        String prRef = "PR#" + pullRequest.getPrNumber();
+        requirementLinkService.extractQuietly(projectId, "PULL_REQUEST", prRef,
+                pullRequest.getTitle(), pullRequest.getSourceBranch());
+        requirementLinkService.extractQuietly(projectId, "BRANCH",
+                pullRequest.getSourceBranch(), pullRequest.getSourceBranch());
     }
 
     @Transactional

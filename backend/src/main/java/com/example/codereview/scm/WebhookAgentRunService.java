@@ -7,6 +7,7 @@ import com.example.codereview.agent.run.AgentRunStatus;
 import com.example.codereview.agent.run.AgentStateMachine;
 import com.example.codereview.agent.orchestration.AgentScmContext;
 import com.example.codereview.agent.orchestration.AgentScmContextRepository;
+import com.example.codereview.requirement.RequirementLinkService;
 import java.util.Optional;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
@@ -38,13 +39,16 @@ public class WebhookAgentRunService {
     private final AgentStateMachine stateMachine;
     private final AgentScmContextRepository scmContexts;
     private final ApplicationEventPublisher events;
+    private final RequirementLinkService requirementLinkService;
 
     public WebhookAgentRunService(AgentRunRepository agentRunRepository, AgentStateMachine stateMachine,
-                                  AgentScmContextRepository scmContexts, ApplicationEventPublisher events) {
+                                  AgentScmContextRepository scmContexts, ApplicationEventPublisher events,
+                                  RequirementLinkService requirementLinkService) {
         this.agentRunRepository = agentRunRepository;
         this.stateMachine = stateMachine;
         this.scmContexts = scmContexts;
         this.events = events;
+        this.requirementLinkService = requirementLinkService;
     }
 
     @Transactional
@@ -69,6 +73,12 @@ public class WebhookAgentRunService {
         scmContexts.save(AgentScmContext.from(run.getId(), event, installation));
 
         supersedeOlderRuns(event, run.getId());
+        // P3 提取器:PR 事件的 title/源分支里的 REQ 号自动挂需求(REQUIRES_NEW 独立小事务 +
+        // 异常内吞,webhook 主链路零影响)。
+        requirementLinkService.extractQuietly(installation.getProjectId(), "PULL_REQUEST",
+                "PR#" + event.pullRequestNumber(), event.title(), event.sourceBranch());
+        requirementLinkService.extractQuietly(installation.getProjectId(), "BRANCH",
+                event.sourceBranch(), event.sourceBranch());
         // 同事务发布创建事件,由队列层的 BEFORE_COMMIT 监听器排入首步——
         // Run 与首步 outbox 事件要么一起提交、要么都不存在。
         events.publishEvent(new AgentRunCreatedEvent(run.getId(), triggerKey));

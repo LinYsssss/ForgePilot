@@ -139,6 +139,34 @@
       </div>
 
       <div class="detail-block">
+        <h3>代码关联</h3>
+        <p v-if="!links.length" class="req-hint">
+          暂无关联——分支/commit/PR 名称或标题里带 REQ 号(如 REQ-{{ detail.code.slice(4) }})会自动挂上;也可手动添加。
+        </p>
+        <ul v-else class="link-list">
+          <li v-for="link in links" :key="link.linkId" class="link-row">
+            <span class="link-type">{{ linkTypeLabel(link.type) }}</span>
+            <code class="link-ref">{{ link.ref }}</code>
+            <span class="link-source">{{ link.source === 'AUTO' ? '自动' : '手动' }}</span>
+            <button
+              v-if="canTriggerCheck"
+              class="ink-text-button is-danger"
+              @click="$emit('remove-link', link)"
+            >移除</button>
+          </li>
+        </ul>
+        <form v-if="canTriggerCheck" class="link-add" @submit.prevent="submitLink">
+          <select v-model="linkForm.type" class="ink-field link-type-select">
+            <option value="BRANCH">分支</option>
+            <option value="COMMIT">Commit</option>
+            <option value="PULL_REQUEST">PR</option>
+          </select>
+          <input v-model="linkForm.ref" class="ink-field" placeholder="分支名 / commit SHA / PR#号" />
+          <button class="ink-outline-button" type="submit">添加关联</button>
+        </form>
+      </div>
+
+      <div class="detail-block">
         <h3>需求体检</h3>
         <div class="check-head">
           <button
@@ -183,7 +211,7 @@
 </template>
 
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, reactive, ref } from 'vue'
 import { fmtDate } from '../../utils/format.js'
 import { CHECK_DIMENSION_LABELS, REQUIREMENT_EDGES, REQUIREMENT_STATUS_LABELS } from '../../composables/useRequirements.js'
 
@@ -204,15 +232,27 @@ const props = defineProps({
   checkReports: { type: Array, default: () => [] },
   checking: { type: Boolean, default: false },
   canTriggerCheck: { type: Boolean, default: false },
+  links: { type: Array, default: () => [] },
 })
 const emit = defineEmits(['open', 'new', 'edit', 'cancel-edit', 'save', 'add-ac', 'remove-ac',
-  'assign', 'transition', 'filter', 'check'])
+  'assign', 'transition', 'filter', 'check', 'add-link', 'remove-link'])
 
 const statusLabels = REQUIREMENT_STATUS_LABELS
 const dimensionLabels = CHECK_DIMENSION_LABELS
 const assignSelect = ref(null)
 
 const latestReport = computed(() => props.checkReports[0] || null)
+
+const linkForm = reactive({ type: 'BRANCH', ref: '' })
+
+function submitLink() {
+  emit('add-link', linkForm.type, linkForm.ref)
+  linkForm.ref = ''
+}
+
+function linkTypeLabel(type) {
+  return { BRANCH: '分支', COMMIT: 'Commit', PULL_REQUEST: 'PR' }[type] || type
+}
 
 const isLocked = computed(() => props.detail
   && ['IN_DEVELOPMENT', 'IN_REVIEW', 'DONE'].includes(props.detail.status))
@@ -345,6 +385,15 @@ textarea.ink-field { resize: vertical; }
 .item-severity { font-family: var(--ink-font-code); }
 .item-message { margin: var(--ink-sp-4) 0 0; color: var(--ink-default); font-size: var(--ink-fs-13); }
 .item-suggestion { margin: var(--ink-sp-4) 0 0; color: var(--ink-muted); font-size: var(--ink-fs-12); }
+
+.link-list { list-style: none; margin: 0 0 var(--ink-sp-8); padding: 0; display: grid; gap: var(--ink-sp-4); }
+.link-row { display: flex; align-items: center; gap: var(--ink-sp-8); flex-wrap: wrap; }
+.link-type { padding: 1px var(--ink-sp-8); border: 1px solid var(--line-soft); border-radius: 999px; color: var(--ink-muted); font-size: var(--ink-fs-12); }
+.link-ref { font-family: var(--ink-font-code); font-size: var(--ink-fs-12); color: var(--ink-default); overflow-wrap: anywhere; }
+.link-source { color: var(--ink-muted); font-size: var(--ink-fs-12); }
+.link-add { display: flex; gap: var(--ink-sp-8); flex-wrap: wrap; align-items: center; margin-top: var(--ink-sp-8); }
+.link-type-select { width: auto; }
+.link-add input { flex: 1; min-width: 200px; }
 
 @media (max-width: 1023px) {
   .req-layout { grid-template-columns: 1fr; }

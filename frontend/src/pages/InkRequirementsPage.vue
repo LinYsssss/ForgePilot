@@ -15,6 +15,7 @@
       :check-reports="checkReports"
       :checking="!!busy.requirementCheck"
       :can-trigger-check="canTriggerCheck"
+      :links="requirementLinks"
       @open="item => run(() => openRequirement(item), 'requirementOpen')"
       @new="startCreate"
       @edit="startEdit"
@@ -26,6 +27,8 @@
       @transition="(detail, status) => run(() => transitionRequirement(detail, status), 'requirementTransition')"
       @filter="value => { requirementFilter = value; run(loadRequirements, 'requirements') }"
       @check="run(runCheck, 'requirementCheck')"
+      @add-link="(type, ref) => run(() => addLink(type, ref), 'requirementLink')"
+      @remove-link="link => run(() => removeLink(link), 'requirementLink')"
     />
 
     <template #rail>
@@ -55,9 +58,9 @@ const { activeProject, me } = useSession()
 const { members, loadMembers } = useMembers()
 const {
   requirements, requirementsTotal, requirementFilter, requirementDetail, requirementForm,
-  checkReports,
+  checkReports, requirementLinks,
   loadRequirements, openRequirement, resetRequirementForm, editRequirement,
-  saveRequirement, assignRequirement, transitionRequirement, runCheck,
+  saveRequirement, assignRequirement, transitionRequirement, runCheck, addLink, removeLink,
 } = useRequirements()
 
 const editing = ref(false)
@@ -85,6 +88,7 @@ watch(() => activeProject.value && activeProject.value.projectId, () => {
   editing.value = false
   requirementDetail.value = null
   checkReports.value = []
+  requirementLinks.value = []
   run(loadRequirements, 'requirements')
   run(loadMembers, 'members')
 }, { immediate: true })

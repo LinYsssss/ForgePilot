@@ -18,6 +18,7 @@ import com.example.codereview.repo.CodeRepositoryEntity;
 import com.example.codereview.repo.CodeRepositoryJpaRepository;
 import com.example.codereview.requirement.AcceptanceCriterionRepository;
 import com.example.codereview.requirement.RequirementEntity;
+import com.example.codereview.requirement.RequirementLinkRepository;
 import com.example.codereview.requirement.RequirementQualityReportRepository;
 import com.example.codereview.requirement.RequirementRepository;
 import com.example.codereview.review.ReviewTask;
@@ -46,6 +47,7 @@ public class ProjectCleanupService {
     private final RequirementRepository projectRequirements;
     private final AcceptanceCriterionRepository acceptanceCriteria;
     private final RequirementQualityReportRepository requirementQualityReports;
+    private final RequirementLinkRepository requirementLinks;
 
     public ProjectCleanupService(CodeRepositoryJpaRepository repositories, KnowledgeDocumentRepository documents,
                                  KnowledgeChunkRepository chunks, VectorIndexService vectorIndexService,
@@ -56,7 +58,8 @@ public class ProjectCleanupService {
                                  GitCliService gitCliService, ProjectMemberRepository projectMembers,
                                  RequirementRepository projectRequirements,
                                  AcceptanceCriterionRepository acceptanceCriteria,
-                                 RequirementQualityReportRepository requirementQualityReports) {
+                                 RequirementQualityReportRepository requirementQualityReports,
+                                 RequirementLinkRepository requirementLinks) {
         this.repositories = repositories;
         this.documents = documents;
         this.chunks = chunks;
@@ -74,6 +77,7 @@ public class ProjectCleanupService {
         this.projectRequirements = projectRequirements;
         this.acceptanceCriteria = acceptanceCriteria;
         this.requirementQualityReports = requirementQualityReports;
+        this.requirementLinks = requirementLinks;
     }
 
     @Transactional
@@ -113,6 +117,7 @@ public class ProjectCleanupService {
             acceptanceCriteria.deleteByRequirementIdIn(requirementIds);
             requirementQualityReports.deleteByRequirementIdIn(requirementIds);
         }
+        requirementLinks.deleteByProjectId(projectId);
         projectRequirements.deleteByProjectId(projectId);
         repositories.findByProjectId(projectId).ifPresent(repository -> {
             gitCliService.deleteWorkingCopy(repository.getId());

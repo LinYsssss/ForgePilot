@@ -22,7 +22,8 @@
     "08-16-p0-model-service-removal",
     "08-16-p1a-member-rbac",
     "08-16-p1b-requirement-domain",
-    "08-16-p2-requirement-check"
+    "08-16-p2-requirement-check",
+    "08-16-p3-requirement-link"
   ],
   "parent": null,
   "relatedFiles": [],

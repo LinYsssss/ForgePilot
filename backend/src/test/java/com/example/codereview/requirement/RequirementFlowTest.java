@@ -157,6 +157,56 @@ class RequirementFlowTest {
                 .andExpect(jsonPath("$.data.length()").value(1));
     }
 
+    @Test
+    @Order(5)
+    void codeLinksAreExtractedFromPrAndManualFallbackIsRoleGuarded() throws Exception {
+        // 绑定假仓库(不触发 git 操作),导入 title/源分支带 REQ-1 的 PR → 自动提取关联
+        mockMvc.perform(post("/api/projects/{id}/repository", projectId).cookie(leader)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "repoUrl", "https://example.com/demo/repo.git", "provider", "GIT",
+                                "defaultBranch", "main", "accessToken", ""))))
+                .andExpect(status().isOk());
+        mockMvc.perform(post("/api/projects/{id}/pull-requests", projectId).cookie(developer)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "provider", "GIT", "externalPrId", "x-1", "prNumber", 12,
+                                "title", "REQ-1 释放占用库存", "authorName", "dev",
+                                "sourceBranch", "REQ-1-cancel-stock", "targetBranch", "main",
+                                "baseSha", "a".repeat(40), "headSha", "b".repeat(40)))))
+                .andExpect(status().isOk());
+        mockMvc.perform(get("/api/projects/{pid}/requirements/{rid}/links", projectId, requirementId)
+                        .cookie(reviewer))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data[?(@.type=='PULL_REQUEST' && @.ref=='PR#12')]").exists())
+                .andExpect(jsonPath("$.data[?(@.type=='BRANCH' && @.ref=='REQ-1-cancel-stock')]").exists());
+        // 反查:分支 → 需求(四问入口)
+        mockMvc.perform(get("/api/projects/{pid}/requirements/links/lookup", projectId)
+                        .param("type", "BRANCH").param("ref", "REQ-1-cancel-stock").cookie(reviewer))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data[0].code").value("REQ-1"));
+        // 手动兜底:REVIEWER 403;DEVELOPER 200;重复添加 409;删除后消失
+        mockMvc.perform(post("/api/projects/{pid}/requirements/{rid}/links", projectId, requirementId)
+                        .cookie(reviewer).contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of("type", "COMMIT", "ref", "c".repeat(40)))))
+                .andExpect(status().isForbidden());
+        MvcResult added = mockMvc.perform(post("/api/projects/{pid}/requirements/{rid}/links", projectId, requirementId)
+                        .cookie(developer).contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of("type", "COMMIT", "ref", "c".repeat(40)))))
+                .andExpect(status().isOk())
+                .andReturn();
+        mockMvc.perform(post("/api/projects/{pid}/requirements/{rid}/links", projectId, requirementId)
+                        .cookie(developer).contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of("type", "COMMIT", "ref", "c".repeat(40)))))
+                .andExpect(status().isConflict());
+        long linkId = objectMapper.readTree(added.getResponse().getContentAsString())
+                .path("data").path("linkId").asLong();
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                        .delete("/api/projects/{pid}/requirements/{rid}/links/{lid}", projectId, requirementId, linkId)
+                        .cookie(developer))
+                .andExpect(status().isOk());
+    }
+
     // ------------------------------------------------------------------ helpers
 
     private org.springframework.test.web.servlet.ResultActions transition(Cookie who, String status) throws Exception {

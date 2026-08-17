@@ -15,6 +15,8 @@ public interface RequirementRepository extends JpaRepository<RequirementEntity, 
 
     Optional<RequirementEntity> findByIdAndProjectId(Long id, Long projectId);
 
+    Optional<RequirementEntity> findByProjectIdAndSeq(Long projectId, Long seq);
+
     @Query("select coalesce(max(r.seq), 0) from RequirementEntity r where r.projectId = :projectId")
     long maxSeq(Long projectId);
 

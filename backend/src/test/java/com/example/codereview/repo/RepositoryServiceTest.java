@@ -33,7 +33,8 @@ class RepositoryServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new RepositoryService(projectService, projectAuthorization, repositories, gitCliService, cryptoService, false);
+        service = new RepositoryService(projectService, projectAuthorization, repositories, gitCliService, cryptoService,
+                mock(com.example.codereview.requirement.RequirementLinkService.class), false);
         when(cryptoService.encrypt(anyString())).thenAnswer(inv -> "enc(" + inv.getArgument(0) + ")");
         when(repositories.save(any(CodeRepositoryEntity.class))).thenAnswer(inv -> inv.getArgument(0));
     }

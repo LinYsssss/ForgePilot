@@ -15,6 +15,7 @@ const requirementFilter = ref('')
 const requirementDetail = ref(null)
 const checkReports = ref([])
 const checkReportsLoading = ref(false)
+const requirementLinks = ref([])
 
 const requirementForm = reactive({
   requirementId: null,
@@ -67,6 +68,35 @@ async function openRequirement(summary) {
   if (!projectId) return
   requirementDetail.value = await api(`/projects/${projectId}/requirements/${summary.requirementId}`)
   await loadCheckReports()
+  await loadLinks()
+}
+
+async function loadLinks() {
+  const projectId = projectIdOrNull()
+  const detail = requirementDetail.value
+  if (!projectId || !detail) { requirementLinks.value = []; return }
+  requirementLinks.value = await api(`/projects/${projectId}/requirements/${detail.requirementId}/links`)
+}
+
+async function addLink(type, ref) {
+  const projectId = projectIdOrNull()
+  const detail = requirementDetail.value
+  if (!projectId || !detail) return
+  if (!ref || !ref.trim()) return toastMsg('请填写关联引用', 'error')
+  await api(`/projects/${projectId}/requirements/${detail.requirementId}/links`, {
+    method: 'POST', body: JSON.stringify({ type, ref: ref.trim() }),
+  })
+  toastMsg('关联已添加', 'success')
+  await loadLinks()
+}
+
+async function removeLink(link) {
+  const projectId = projectIdOrNull()
+  const detail = requirementDetail.value
+  if (!projectId || !detail) return
+  await api(`/projects/${projectId}/requirements/${detail.requirementId}/links/${link.linkId}`, { method: 'DELETE' })
+  toastMsg('关联已移除', 'success')
+  await loadLinks()
 }
 
 async function loadCheckReports() {
@@ -165,9 +195,9 @@ export const CHECK_DIMENSION_LABELS = {
 export function useRequirements() {
   return {
     requirements, requirementsTotal, requirementsLoading, requirementFilter,
-    requirementDetail, requirementForm, checkReports, checkReportsLoading,
+    requirementDetail, requirementForm, checkReports, checkReportsLoading, requirementLinks,
     loadRequirements, openRequirement, resetRequirementForm, editRequirement,
     saveRequirement, assignRequirement, transitionRequirement,
-    loadCheckReports, runCheck,
+    loadCheckReports, runCheck, loadLinks, addLink, removeLink,
   }
 }
