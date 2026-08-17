@@ -58,32 +58,48 @@ public class CoverageJudgeService {
      * 任何失败也返回 null——coverage 是增强信息,不许拖垮审查主链路。
      */
     public String judgeQuietly(ReviewTask task, String shardSummaries, boolean verifyEvidence) {
+        String prRef = null;
+        if (task.getPullRequestId() != null) {
+            prRef = pullRequests.findById(task.getPullRequestId())
+                    .map(pr -> "PR#" + pr.getPrNumber())
+                    .orElse(null);
+        }
+        return judgeForRefs(task.getProjectId(), task.getId(), prRef, task.getBranchName(),
+                task.getDiffText(), shardSummaries, verifyEvidence);
+    }
+
+    /**
+     * 通用判定入口(P4b):交互式(ReviewTask)与 Agent 守门(webhook)两条链路共用,
+     * 判定/解析/证据校验零分叉。prRef 形如 "PR#12";两个引用都解析不到需求 → null。
+     */
+    public String judgeForRefs(Long projectId, Long taskIdForLog, String prRef, String branchName,
+                               String diffText, String shardSummaries, boolean verifyEvidence) {
         try {
-            CoverageInput input = resolveInput(task).orElse(null);
+            CoverageInput input = resolveByRefs(projectId, prRef, branchName).orElse(null);
             if (input == null || input.acs().isEmpty()) {
                 return null;
             }
-            String diffExcerpt = excerpt(task.getDiffText());
+            String diffExcerpt = excerpt(diffText);
             long start = System.nanoTime();
             CoverageResult result;
             try {
                 result = judgeClient.judge(input, shardSummaries, diffExcerpt);
             } catch (RuntimeException ex) {
-                aiCallLogService.coverageJudgeFailed(task.getProjectId(), task.getId(),
+                aiCallLogService.coverageJudgeFailed(projectId, taskIdForLog,
                         diffExcerpt.length(), elapsedMs(start), ex.getMessage());
                 throw ex;
             }
-            aiCallLogService.coverageJudgeSuccess(task.getProjectId(), task.getId(),
+            aiCallLogService.coverageJudgeSuccess(projectId, taskIdForLog,
                     diffExcerpt.length(),
                     result.rawResponse() == null ? 0 : result.rawResponse().length(),
                     result.totalTokens(), elapsedMs(start));
             List<AcCoverage> coverage = verifyEvidence
-                    ? CoverageJudgeParser.verifyEvidence(result.coverage(), task.getDiffText())
+                    ? CoverageJudgeParser.verifyEvidence(result.coverage(), diffText)
                     : result.coverage();
             return objectMapper.writeValueAsString(new CoverageBlock(
                     input.requirementId(), input.requirementCode(), input.requirementTitle(), coverage));
         } catch (Exception ex) {
-            log.warn("coverage judge failed: taskId={}, projectId={}", task.getId(), task.getProjectId(), ex);
+            log.warn("coverage judge failed: refTask={}, projectId={}", taskIdForLog, projectId, ex);
             return null;
         }
     }
@@ -93,15 +109,14 @@ public class CoverageJudgeService {
                                 List<AcCoverage> coverage) {
     }
 
-    /** PR 链接优先(task.pullRequestId → PR#号 反查),分支兜底;命中多条取第一条并记日志。 */
-    private Optional<CoverageInput> resolveInput(ReviewTask task) {
+    /** PR 链接优先,分支兜底;命中多条取第一条并记日志。 */
+    private Optional<CoverageInput> resolveByRefs(Long projectId, String prRef, String branchName) {
         Optional<RequirementEntity> requirement = Optional.empty();
-        if (task.getPullRequestId() != null) {
-            requirement = pullRequests.findById(task.getPullRequestId())
-                    .flatMap(pr -> firstLinked(task.getProjectId(), "PULL_REQUEST", "PR#" + pr.getPrNumber()));
+        if (prRef != null && !prRef.isBlank()) {
+            requirement = firstLinked(projectId, "PULL_REQUEST", prRef);
         }
-        if (requirement.isEmpty() && task.getBranchName() != null) {
-            requirement = firstLinked(task.getProjectId(), "BRANCH", task.getBranchName());
+        if (requirement.isEmpty() && branchName != null && !branchName.isBlank()) {
+            requirement = firstLinked(projectId, "BRANCH", branchName);
         }
         return requirement.map(entity -> {
             List<AcRef> acs = criteria.findByRequirementIdOrderBySeqAsc(entity.getId()).stream()

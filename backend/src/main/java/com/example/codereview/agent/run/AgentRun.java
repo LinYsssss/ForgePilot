@@ -56,6 +56,10 @@ public class AgentRun {
     @Column(nullable = false)
     private long version;
 
+    /** AC 覆盖结论(P4b);发布前判定落库,P5 门禁扩展以此为输入。null=无关联需求或判定失败。 */
+    @Column(columnDefinition = "text")
+    private String coverageJson;
+
     @Column(nullable = false, updatable = false)
     private Instant createdAt;
 
@@ -121,6 +125,16 @@ public class AgentRun {
 
     public String getHeadSha() {
         return headSha;
+    }
+
+    public String getCoverageJson() {
+        return coverageJson;
+    }
+
+    /** 发布前由 AgentCoverageService 写入一次;失败路径不写(保持 null)。 */
+    public void attachCoverage(String coverageJson) {
+        this.coverageJson = coverageJson;
+        this.updatedAt = Instant.now();
     }
 
     public AgentRunStatus getStatus() {

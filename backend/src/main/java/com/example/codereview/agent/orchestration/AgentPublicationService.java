@@ -42,6 +42,7 @@ public class AgentPublicationService {
     private final CryptoService crypto;
     private final List<ScmReviewPublisher> publishers;
     private final ObjectMapper mapper;
+    private final AgentCoverageService agentCoverage;
     private final String publicUrl;
 
     public AgentPublicationService(
@@ -55,6 +56,7 @@ public class AgentPublicationService {
             CryptoService crypto,
             List<ScmReviewPublisher> publishers,
             ObjectMapper mapper,
+            AgentCoverageService agentCoverage,
             @Value("${app.agent.public-url:http://localhost:8080}") String publicUrl
     ) {
         this.scmContexts = scmContexts;
@@ -67,6 +69,7 @@ public class AgentPublicationService {
         this.crypto = crypto;
         this.publishers = publishers;
         this.mapper = mapper;
+        this.agentCoverage = agentCoverage;
         this.publicUrl = publicUrl.replaceAll("/+$", "");
     }
 
@@ -92,7 +95,10 @@ public class AgentPublicationService {
                 .anyMatch(value -> value.getDecision() == PatchApprovalDecision.APPROVED
                         && patch.getPatchHash().equals(value.getPatchHash())
                         && headSha.equals(value.getHeadSha()));
-        ReviewPublication publication = publication(runId, patch, patchApproved);
+        ReviewPublication publication = publication(runId, patch, patchApproved,
+                // P4b:发布前判定 AC 覆盖(best-effort,失败=无摘要行),摘要并入 notes 内容,
+                // 冻结的载荷结构与 Conclusion 映射不动(门禁语义 P5 才扩展)。
+                agentCoverage.judgeAndAttach(runId, headSha));
         ScmInstallation installation = installations.findById(context.getInstallationId())
                 .filter(value -> Boolean.TRUE.equals(value.getActive()))
                 .orElseThrow(() -> new IllegalArgumentException("SCM installation is inactive"));
@@ -164,7 +170,8 @@ public class AgentPublicationService {
         }
     }
 
-    private ReviewPublication publication(Long runId, PatchCandidate patch, boolean patchApproved) {
+    private ReviewPublication publication(Long runId, PatchCandidate patch, boolean patchApproved,
+                                          List<String> coverageLines) {
         List<String> blocking = findings.findByAgentRunIdOrderByIdAsc(runId).stream()
                 .filter(value -> "verified".equals(value.getStatus()))
                 .filter(value -> decisions.findByFindingIdOrderByIdAsc(value.getId()).stream()
@@ -183,11 +190,14 @@ public class AgentPublicationService {
                                         : ReviewPublication.PatchValidationState.PENDING;
         ReviewPublication.Conclusion conclusion = blocking.isEmpty()
                 ? ReviewPublication.Conclusion.SUCCESS : ReviewPublication.Conclusion.ACTION_REQUIRED;
+        List<String> notes = new java.util.ArrayList<>();
+        notes.add("Agent Run " + runId);
+        notes.addAll(coverageLines);
         return new ReviewPublication(
                 conclusion,
                 blocking.isEmpty() ? "No verified blocking findings" : "Verified findings require action",
                 blocking,
-                List.of("Agent Run " + runId),
+                List.copyOf(notes),
                 publicUrl + "/api/agent-runs/" + runId,
                 patchState,
                 false

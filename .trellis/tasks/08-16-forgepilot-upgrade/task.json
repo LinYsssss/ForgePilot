@@ -24,7 +24,8 @@
     "08-16-p1b-requirement-domain",
     "08-16-p2-requirement-check",
     "08-16-p3-requirement-link",
-    "08-16-p4a-consistency-core"
+    "08-16-p4a-consistency-core",
+    "08-17-p4b-agent-coverage"
   ],
   "parent": null,
   "relatedFiles": [],

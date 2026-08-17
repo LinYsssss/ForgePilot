@@ -30,6 +30,13 @@ import org.junit.jupiter.api.Test;
 
 class AgentPublicationServiceTest {
 
+    /** P4b:coverage 是 best-effort 增强,单测里一律置空(空行集 = 无关联需求路径)。 */
+    private static AgentCoverageService quietCoverage() {
+        AgentCoverageService coverage = mock(AgentCoverageService.class);
+        when(coverage.judgeAndAttach(any(), any())).thenReturn(List.of());
+        return coverage;
+    }
+
     @Test
     void duplicatePublicationKeyCallsProviderOnlyOnce() {
         AgentScmContextRepository scmContexts = mock(AgentScmContextRepository.class);
@@ -55,7 +62,7 @@ class AgentPublicationServiceTest {
 
         AgentPublicationService service = new AgentPublicationService(
                 scmContexts, installations, publications, findings, decisions, patches, approvals,
-                crypto, List.of(publisher), new ObjectMapper(), "http://localhost"
+                crypto, List.of(publisher), new ObjectMapper(), quietCoverage(), "http://localhost"
         );
 
         assertThat(service.publish(1L, "head").isPublished()).isTrue();
@@ -85,7 +92,7 @@ class AgentPublicationServiceTest {
 
         AgentPublicationService service = new AgentPublicationService(
                 scmContexts, installations, publications, findings, decisions, patches, approvals,
-                crypto, List.of(publisher), new ObjectMapper(), "http://localhost"
+                crypto, List.of(publisher), new ObjectMapper(), quietCoverage(), "http://localhost"
         );
 
         AgentPublication record = service.publish(1L, "head");
@@ -143,7 +150,7 @@ class AgentPublicationServiceTest {
 
         AgentPublicationService service = new AgentPublicationService(
                 scmContexts, installations, publications, findings, decisions, patches, approvals,
-                crypto, List.of(publisher), new ObjectMapper(), "http://localhost"
+                crypto, List.of(publisher), new ObjectMapper(), quietCoverage(), "http://localhost"
         );
 
         AgentStepExecutionException thrown = catchThrowableOfType(
