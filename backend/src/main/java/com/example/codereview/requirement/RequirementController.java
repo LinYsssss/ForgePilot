@@ -3,12 +3,14 @@ package com.example.codereview.requirement;
 import com.example.codereview.common.api.ApiResponse;
 import com.example.codereview.common.api.PageResponse;
 import com.example.codereview.common.security.CurrentUserProvider;
+import com.example.codereview.requirement.RequirementCheckDtos.CheckReportResponse;
 import com.example.codereview.requirement.RequirementDtos.AssignRequest;
 import com.example.codereview.requirement.RequirementDtos.RequirementDetail;
 import com.example.codereview.requirement.RequirementDtos.RequirementSummary;
 import com.example.codereview.requirement.RequirementDtos.SaveRequirementRequest;
 import com.example.codereview.requirement.RequirementDtos.StatusRequest;
 import jakarta.validation.Valid;
+import java.util.List;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -23,10 +25,14 @@ import org.springframework.web.bind.annotation.RestController;
 public class RequirementController {
 
     private final RequirementService requirementService;
+    private final RequirementCheckService requirementCheckService;
     private final CurrentUserProvider currentUserProvider;
 
-    public RequirementController(RequirementService requirementService, CurrentUserProvider currentUserProvider) {
+    public RequirementController(RequirementService requirementService,
+                                 RequirementCheckService requirementCheckService,
+                                 CurrentUserProvider currentUserProvider) {
         this.requirementService = requirementService;
+        this.requirementCheckService = requirementCheckService;
         this.currentUserProvider = currentUserProvider;
     }
 
@@ -71,5 +77,18 @@ public class RequirementController {
                                                      @Valid @RequestBody StatusRequest request) {
         return ApiResponse.ok(requirementService.transition(
                 projectId, currentUserProvider.getRequired().userId(), requirementId, request));
+    }
+
+    @PostMapping("/{requirementId}/check")
+    public ApiResponse<CheckReportResponse> check(@PathVariable Long projectId, @PathVariable Long requirementId) {
+        return ApiResponse.ok(requirementCheckService.check(
+                projectId, currentUserProvider.getRequired().userId(), requirementId));
+    }
+
+    @GetMapping("/{requirementId}/check-reports")
+    public ApiResponse<List<CheckReportResponse>> checkReports(@PathVariable Long projectId,
+                                                               @PathVariable Long requirementId) {
+        return ApiResponse.ok(requirementCheckService.listReports(
+                projectId, currentUserProvider.getRequired().userId(), requirementId));
     }
 }

@@ -114,7 +114,8 @@ public final class AiTransientFailureClassifier {
      * 永久分支走向);响应体提取阶段的读超时包装为 RestClientException,落兜底永久分支
      * (特征测试 AiReviewFailureClassificationCharacterizationTest 钉死)。
      */
-    static RuntimeException classifyRestClientFailure(Exception failure, String describedFailure) {
+    // P2 起 requirement 包的体检客户端也走此入口,包私有升 public(语义不变)。
+    public static RuntimeException classifyRestClientFailure(Exception failure, String describedFailure) {
         if (failure instanceof HttpClientErrorException client) {
             // 4xx 是确定性的客户端问题(错 key/错请求),重试无益;唯 429 是瞬时限流。
             if (client.getStatusCode().value() == 429) {

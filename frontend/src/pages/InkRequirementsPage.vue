@@ -12,6 +12,9 @@
       :editing="editing"
       :can-manage="canManage"
       :current-user-id="me.userId"
+      :check-reports="checkReports"
+      :checking="!!busy.requirementCheck"
+      :can-trigger-check="canTriggerCheck"
       @open="item => run(() => openRequirement(item), 'requirementOpen')"
       @new="startCreate"
       @edit="startEdit"
@@ -22,6 +25,7 @@
       @assign="(detail, userId) => run(() => assignRequirement(detail, userId), 'requirementAssign')"
       @transition="(detail, status) => run(() => transitionRequirement(detail, status), 'requirementTransition')"
       @filter="value => { requirementFilter = value; run(loadRequirements, 'requirements') }"
+      @check="run(runCheck, 'requirementCheck')"
     />
 
     <template #rail>
@@ -51,12 +55,16 @@ const { activeProject, me } = useSession()
 const { members, loadMembers } = useMembers()
 const {
   requirements, requirementsTotal, requirementFilter, requirementDetail, requirementForm,
+  checkReports,
   loadRequirements, openRequirement, resetRequirementForm, editRequirement,
-  saveRequirement, assignRequirement, transitionRequirement,
+  saveRequirement, assignRequirement, transitionRequirement, runCheck,
 } = useRequirements()
 
 const editing = ref(false)
 const canManage = computed(() => !!activeProject.value && activeProject.value.myRole === 'LEADER')
+// 体检触发对 LEADER/DEVELOPER 开放(P1a 矩阵);REVIEWER 只读报告。
+const canTriggerCheck = computed(() => !!activeProject.value
+  && ['LEADER', 'DEVELOPER'].includes(activeProject.value.myRole))
 
 function startCreate() {
   resetRequirementForm()
@@ -76,6 +84,7 @@ function cancelEdit() {
 watch(() => activeProject.value && activeProject.value.projectId, () => {
   editing.value = false
   requirementDetail.value = null
+  checkReports.value = []
   run(loadRequirements, 'requirements')
   run(loadMembers, 'members')
 }, { immediate: true })

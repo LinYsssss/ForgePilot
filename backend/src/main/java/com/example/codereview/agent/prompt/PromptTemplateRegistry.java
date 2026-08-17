@@ -45,7 +45,9 @@ public final class PromptTemplateRegistry {
             Map.entry("chat-review-task-v2", "prompts/chat/review-task-v2.txt"),
             Map.entry("checklist-java-v1", "prompts/chat/checklist-java-v1.txt"),
             Map.entry("checklist-ts-v1", "prompts/chat/checklist-ts-v1.txt"),
-            Map.entry("checklist-generic-v1", "prompts/chat/checklist-generic-v1.txt")
+            Map.entry("checklist-generic-v1", "prompts/chat/checklist-generic-v1.txt"),
+            // ForgePilot P2:需求体检场景(REQUIREMENT_CHECK),经 instruction() 单段组装。
+            Map.entry("requirement-check-v1", "prompts/chat/requirement-check-v1.txt")
     );
 
     public String require(String version) {

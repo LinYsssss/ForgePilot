@@ -137,6 +137,26 @@ class RequirementFlowTest {
         transition(leader, "CANCELED").andExpect(status().isConflict());
     }
 
+    @Test
+    @Order(4)
+    void qualityCheckRunsForDeveloperAndIsClosedToReviewer() throws Exception {
+        // REVIEWER 触发体检:403(角色矩阵:体检触发 = LEADER/DEVELOPER)
+        mockMvc.perform(post("/api/projects/{pid}/requirements/{rid}/check", projectId, requirementId)
+                        .cookie(reviewer).contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isForbidden());
+        // LEADER 触发:mock provider 路径,返回六维结构化报告(规则层至少能给出条目容器)
+        mockMvc.perform(post("/api/projects/{pid}/requirements/{rid}/check", projectId, requirementId)
+                        .cookie(leader).contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.round").value(1))
+                .andExpect(jsonPath("$.data.dimensions.length()").value(6));
+        // 历史列表:成员可读,已有 1 轮
+        mockMvc.perform(get("/api/projects/{pid}/requirements/{rid}/check-reports", projectId, requirementId)
+                        .cookie(reviewer))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.length()").value(1));
+    }
+
     // ------------------------------------------------------------------ helpers
 
     private org.springframework.test.web.servlet.ResultActions transition(Cookie who, String status) throws Exception {

@@ -79,6 +79,10 @@ app:
     top-k: ${RAG_TOP_K:5}
     full-context: ${RAG_FULL_CONTEXT:false}
     max-context-chars: ${RAG_MAX_CONTEXT_CHARS:6000}
+  # ForgePilot P2:场景化上下文组装(ContextBuilder,REQUIREMENT_CHECK 场景)。
+  context:
+    knowledge-top-k: ${CONTEXT_KNOWLEDGE_TOP_K:5}
+    max-snippet-chars: ${CONTEXT_MAX_SNIPPET_CHARS:1200}
   ai:
     runtime: ${AI_RUNTIME:legacy}
     provider: ${AI_PROVIDER:mock}

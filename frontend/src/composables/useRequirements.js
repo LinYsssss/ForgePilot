@@ -13,6 +13,8 @@ const requirementsTotal = ref(0)
 const requirementsLoading = ref(false)
 const requirementFilter = ref('')
 const requirementDetail = ref(null)
+const checkReports = ref([])
+const checkReportsLoading = ref(false)
 
 const requirementForm = reactive({
   requirementId: null,
@@ -64,6 +66,28 @@ async function openRequirement(summary) {
   const projectId = projectIdOrNull()
   if (!projectId) return
   requirementDetail.value = await api(`/projects/${projectId}/requirements/${summary.requirementId}`)
+  await loadCheckReports()
+}
+
+async function loadCheckReports() {
+  const projectId = projectIdOrNull()
+  const detail = requirementDetail.value
+  if (!projectId || !detail) { checkReports.value = []; return }
+  checkReportsLoading.value = true
+  try {
+    checkReports.value = await api(`/projects/${projectId}/requirements/${detail.requirementId}/check-reports`)
+  } finally { checkReportsLoading.value = false }
+}
+
+async function runCheck() {
+  const projectId = projectIdOrNull()
+  const detail = requirementDetail.value
+  if (!projectId || !detail) return
+  const report = await api(`/projects/${projectId}/requirements/${detail.requirementId}/check`, {
+    method: 'POST', body: '{}',
+  })
+  checkReports.value = [report, ...checkReports.value]
+  toastMsg(`体检完成（第 ${report.round} 轮）`, 'success')
 }
 
 function resetRequirementForm() {
@@ -129,11 +153,21 @@ async function transitionRequirement(detail, status) {
   await loadRequirements()
 }
 
+export const CHECK_DIMENSION_LABELS = {
+  COMPLETENESS: '完整性',
+  CLARITY: '明确性',
+  TESTABILITY: '可测试性',
+  EXCEPTION_COVERAGE: '异常覆盖',
+  RULE_CONFLICT: '规则冲突',
+  RISK: '风险',
+}
+
 export function useRequirements() {
   return {
     requirements, requirementsTotal, requirementsLoading, requirementFilter,
-    requirementDetail, requirementForm,
+    requirementDetail, requirementForm, checkReports, checkReportsLoading,
     loadRequirements, openRequirement, resetRequirementForm, editRequirement,
     saveRequirement, assignRequirement, transitionRequirement,
+    loadCheckReports, runCheck,
   }
 }

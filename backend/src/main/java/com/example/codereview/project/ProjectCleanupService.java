@@ -18,6 +18,7 @@ import com.example.codereview.repo.CodeRepositoryEntity;
 import com.example.codereview.repo.CodeRepositoryJpaRepository;
 import com.example.codereview.requirement.AcceptanceCriterionRepository;
 import com.example.codereview.requirement.RequirementEntity;
+import com.example.codereview.requirement.RequirementQualityReportRepository;
 import com.example.codereview.requirement.RequirementRepository;
 import com.example.codereview.review.ReviewTask;
 import com.example.codereview.review.ReviewTaskRepository;
@@ -44,6 +45,7 @@ public class ProjectCleanupService {
     private final ProjectMemberRepository projectMembers;
     private final RequirementRepository projectRequirements;
     private final AcceptanceCriterionRepository acceptanceCriteria;
+    private final RequirementQualityReportRepository requirementQualityReports;
 
     public ProjectCleanupService(CodeRepositoryJpaRepository repositories, KnowledgeDocumentRepository documents,
                                  KnowledgeChunkRepository chunks, VectorIndexService vectorIndexService,
@@ -53,7 +55,8 @@ public class ProjectCleanupService {
                                  AiCallLogRepository aiCallLogs, MqTaskLogRepository mqTaskLogs,
                                  GitCliService gitCliService, ProjectMemberRepository projectMembers,
                                  RequirementRepository projectRequirements,
-                                 AcceptanceCriterionRepository acceptanceCriteria) {
+                                 AcceptanceCriterionRepository acceptanceCriteria,
+                                 RequirementQualityReportRepository requirementQualityReports) {
         this.repositories = repositories;
         this.documents = documents;
         this.chunks = chunks;
@@ -70,6 +73,7 @@ public class ProjectCleanupService {
         this.projectMembers = projectMembers;
         this.projectRequirements = projectRequirements;
         this.acceptanceCriteria = acceptanceCriteria;
+        this.requirementQualityReports = requirementQualityReports;
     }
 
     @Transactional
@@ -107,6 +111,7 @@ public class ProjectCleanupService {
                 .toList();
         if (!requirementIds.isEmpty()) {
             acceptanceCriteria.deleteByRequirementIdIn(requirementIds);
+            requirementQualityReports.deleteByRequirementIdIn(requirementIds);
         }
         projectRequirements.deleteByProjectId(projectId);
         repositories.findByProjectId(projectId).ifPresent(repository -> {

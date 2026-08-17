@@ -19,6 +19,7 @@ public class AiCallLogService {
     public static final String REVIEW = "CHAT_REVIEW";
     public static final String EMBEDDING_INDEX = "EMBEDDING_INDEX";
     public static final String EMBEDDING_SEARCH = "EMBEDDING_SEARCH";
+    public static final String REQUIREMENT_CHECK = "REQUIREMENT_CHECK";
 
     private final AiCallLogRepository logs;
     private final ProjectService projectService;
@@ -66,6 +67,17 @@ public class AiCallLogService {
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void embeddingFailed(Long projectId, String requestType, int promptChars, long latencyMs, String errorMessage) {
         save(projectId, null, requestType, embeddingProvider, embeddingModel, promptChars, 0, 0, 0, 0, latencyMs, "FAILED", errorMessage);
+    }
+
+    // 体检调用挂 project 不挂 task(需求体检与审查任务无关联);token 只有 total(上游 usage 口径)。
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void requirementCheckSuccess(Long projectId, int promptChars, int responseChars, int totalTokens, long latencyMs) {
+        save(projectId, null, REQUIREMENT_CHECK, chatModel, promptChars, responseChars, 0, 0, totalTokens, latencyMs, "SUCCESS", null);
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void requirementCheckFailed(Long projectId, int promptChars, long latencyMs, String errorMessage) {
+        save(projectId, null, REQUIREMENT_CHECK, chatModel, promptChars, 0, 0, 0, 0, latencyMs, "FAILED", errorMessage);
     }
 
     @Transactional(readOnly = true)

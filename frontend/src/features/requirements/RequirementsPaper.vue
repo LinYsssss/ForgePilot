@@ -137,6 +137,43 @@
           >→ {{ statusLabels[status] || status }}</button>
         </div>
       </div>
+
+      <div class="detail-block">
+        <h3>需求体检</h3>
+        <div class="check-head">
+          <button
+            v-if="canTriggerCheck"
+            class="ink-outline-button"
+            :disabled="checking"
+            @click="$emit('check')"
+          >{{ checking ? '体检中…' : (checkReports.length ? '再体检一轮' : '发起体检') }}</button>
+          <span v-if="checkReports.length" class="check-meta">
+            共 {{ checkReports.length }} 轮 · 最新第 {{ latestReport.round }} 轮
+            <template v-if="latestReport.totalTokens"> · {{ latestReport.totalTokens }} tokens</template>
+          </span>
+        </div>
+        <p v-if="!checkReports.length" class="req-hint">尚未体检——六维检查:完整性/明确性/可测试性/异常覆盖/规则冲突/风险。</p>
+        <ul v-else class="check-dims">
+          <li v-for="dim in latestReport.dimensions" :key="dim.dimension">
+            <div class="dim-head">
+              <span class="dim-name">{{ dimensionLabels[dim.dimension] || dim.dimension }}</span>
+              <span class="dim-count" :class="{ 'is-clean': !dim.items.length }">
+                {{ dim.items.length ? dim.items.length + ' 项' : '通过' }}
+              </span>
+            </div>
+            <ul v-if="dim.items.length" class="check-items">
+              <li v-for="(item, index) in dim.items" :key="index" class="check-item" :data-severity="item.severity">
+                <span class="item-tags">
+                  <span class="item-severity">{{ item.severity }}</span>
+                  <span class="item-source">{{ item.source === 'RULE' ? '规则' : 'AI' }}</span>
+                </span>
+                <p class="item-message">{{ item.message }}</p>
+                <p v-if="item.suggestion" class="item-suggestion">建议:{{ item.suggestion }}</p>
+              </li>
+            </ul>
+          </li>
+        </ul>
+      </div>
     </section>
 
     <section v-else class="ink-panel req-empty ink-reveal">
@@ -148,7 +185,7 @@
 <script setup>
 import { computed, ref } from 'vue'
 import { fmtDate } from '../../utils/format.js'
-import { REQUIREMENT_EDGES, REQUIREMENT_STATUS_LABELS } from '../../composables/useRequirements.js'
+import { CHECK_DIMENSION_LABELS, REQUIREMENT_EDGES, REQUIREMENT_STATUS_LABELS } from '../../composables/useRequirements.js'
 
 // 研发任务页(P1b)。展示 + 事件上抛;可用流转按钮按前端边表裁剪(与后端同图),
 // 角色裁剪:canManage=LEADER 才有新建/编辑/指派;IN_DEVELOPMENT→IN_REVIEW 额外对被指派人开放。
@@ -164,12 +201,18 @@ const props = defineProps({
   editing: { type: Boolean, default: false },
   canManage: { type: Boolean, default: false },
   currentUserId: { type: [Number, String], default: null },
+  checkReports: { type: Array, default: () => [] },
+  checking: { type: Boolean, default: false },
+  canTriggerCheck: { type: Boolean, default: false },
 })
 const emit = defineEmits(['open', 'new', 'edit', 'cancel-edit', 'save', 'add-ac', 'remove-ac',
-  'assign', 'transition', 'filter'])
+  'assign', 'transition', 'filter', 'check'])
 
 const statusLabels = REQUIREMENT_STATUS_LABELS
+const dimensionLabels = CHECK_DIMENSION_LABELS
 const assignSelect = ref(null)
+
+const latestReport = computed(() => props.checkReports[0] || null)
 
 const isLocked = computed(() => props.detail
   && ['IN_DEVELOPMENT', 'IN_REVIEW', 'DONE'].includes(props.detail.status))
@@ -280,6 +323,28 @@ textarea.ink-field { resize: vertical; }
 .assign-select { width: auto; min-width: 200px; }
 .is-danger-outline { color: var(--cinnabar); border-color: var(--cinnabar); }
 .ink-text-button.is-danger { color: var(--cinnabar); }
+
+.check-head { display: flex; align-items: center; gap: var(--ink-sp-12); flex-wrap: wrap; margin-bottom: var(--ink-sp-8); }
+.check-meta { color: var(--ink-muted); font-size: var(--ink-fs-12); }
+.check-dims { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--ink-sp-8); }
+.dim-head { display: flex; justify-content: space-between; align-items: center; gap: var(--ink-sp-8); }
+.dim-name { color: var(--ink-strong); font-size: var(--ink-fs-13); }
+.dim-count { color: var(--cinnabar); font-size: var(--ink-fs-12); }
+.dim-count.is-clean { color: var(--ink-muted); }
+.check-items { list-style: none; margin: var(--ink-sp-4) 0 0; padding: 0; display: grid; gap: var(--ink-sp-8); }
+.check-item {
+  padding: var(--ink-sp-8) var(--ink-sp-12);
+  background: var(--surface-paper);
+  border: 1px solid var(--line-soft);
+  border-left: 3px solid var(--line-soft);
+  border-radius: var(--ink-radius-control);
+}
+.check-item[data-severity='HIGH'] { border-left-color: var(--cinnabar); }
+.check-item[data-severity='MEDIUM'] { border-left-color: var(--mineral-cyan); }
+.item-tags { display: flex; gap: var(--ink-sp-8); font-size: var(--ink-fs-12); color: var(--ink-muted); }
+.item-severity { font-family: var(--ink-font-code); }
+.item-message { margin: var(--ink-sp-4) 0 0; color: var(--ink-default); font-size: var(--ink-fs-13); }
+.item-suggestion { margin: var(--ink-sp-4) 0 0; color: var(--ink-muted); font-size: var(--ink-fs-12); }
 
 @media (max-width: 1023px) {
   .req-layout { grid-template-columns: 1fr; }
