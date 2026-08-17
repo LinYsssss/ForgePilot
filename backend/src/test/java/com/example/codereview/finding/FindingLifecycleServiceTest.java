@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -175,10 +176,13 @@ class FindingLifecycleServiceTest {
     }
 
     private void stubOwnedFinding(Finding finding, Long runProjectId) {
+        Long runId = finding.getAgentRunId();
+        AgentRun run = mock(AgentRun.class);
+        lenient().when(run.getId()).thenReturn(runId);
+        lenient().when(run.getProjectId()).thenReturn(runProjectId);
         when(findings.findById(FINDING_ID)).thenReturn(Optional.of(finding));
-        when(runs.findById(finding.getAgentRunId())).thenReturn(Optional.of(
-                new AgentRun(runProjectId, 2L, 3L, "trigger-" + runProjectId, "abcdef")));
-        when(scmContexts.findByAgentRunId(finding.getAgentRunId())).thenReturn(Optional.of(scmContext));
+        when(runs.findById(runId)).thenReturn(Optional.of(run));
+        lenient().when(scmContexts.findByAgentRunId(runId)).thenReturn(Optional.of(scmContext));
         lenient().when(evidences.findByFindingIdOrderByIdAsc(finding.getId())).thenReturn(List.of());
         lenient().when(decisions.findByFindingIdOrderByIdAsc(finding.getId())).thenReturn(List.of());
     }

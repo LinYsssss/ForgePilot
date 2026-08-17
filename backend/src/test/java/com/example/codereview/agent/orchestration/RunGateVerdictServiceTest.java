@@ -2,6 +2,7 @@ package com.example.codereview.agent.orchestration;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -49,8 +50,8 @@ class RunGateVerdictServiceTest {
     @Test
     void verifiedBlockingDecisionProducesBlock() {
         Finding finding = finding(1L, "verified", FindingSeverity.HIGH, FindingLifecycle.OPEN);
-        when(decisions.findByFindingIdInOrderByIdAsc(any())).thenReturn(
-                List.of(decision(1L, true)));
+        FindingDecisionEntity blockingDecision = decision(1L, true);
+        when(decisions.findByFindingIdInOrderByIdAsc(any())).thenReturn(List.of(blockingDecision));
 
         RunGateVerdictService.GateEvaluation evaluation = evaluate(List.of(finding), null);
 
@@ -113,10 +114,10 @@ class RunGateVerdictServiceTest {
 
     private Finding finding(Long id, String status, FindingSeverity severity, FindingLifecycle lifecycle) {
         Finding finding = mock(Finding.class);
-        when(finding.getId()).thenReturn(id);
-        when(finding.getStatus()).thenReturn(status);
-        when(finding.getSeverity()).thenReturn(severity);
-        when(finding.getLifecycle()).thenReturn(lifecycle);
+        lenient().when(finding.getId()).thenReturn(id);
+        lenient().when(finding.getStatus()).thenReturn(status);
+        lenient().when(finding.getSeverity()).thenReturn(severity);
+        lenient().when(finding.getLifecycle()).thenReturn(lifecycle);
         return finding;
     }
 
