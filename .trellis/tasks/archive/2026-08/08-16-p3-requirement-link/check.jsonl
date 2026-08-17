@@ -1,0 +1,2 @@
+{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "手动端点角色负面用例;宿主链路(commits/webhook)零回归"}
+{"file": ".trellis/spec/guides/code-reuse-thinking-guide.md", "reason": "复用 GitCliService/正则单点,不平行造新扫描器"}
