@@ -1,0 +1,4 @@
+{"file": ".trellis/spec/guides/demo-assets-and-claims.md", "reason": "迁移 README 和公开口径必须保留实测证据、旧仓库历史与诚实限制，不得把迁移写成 P8 完成。"}
+{"file": ".trellis/spec/guides/deployment-and-observability.md", "reason": "当前部署文档的 clone 路径、运行入口与环境说明需要跟随新仓库，同时不改内部运行标识。"}
+{"file": ".trellis/spec/guides/comment-quality.md", "reason": "README 迁移记录和仓库说明应简洁、准确、可长期维护。"}
+{"file": ".trellis/tasks/08-03-r7-eval-corpus/research/expansion-readiness.md", "reason": "保留真实评测未执行的边界，避免新仓库 README 对 P8 数字作超前声明。"}

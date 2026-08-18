@@ -11,7 +11,7 @@ import re
 import sys
 from collections import defaultdict
 
-ROOT = "/root/reposage/backend/src/main/java"
+ROOT = "/root/ForgePilot/backend/src/main/java"
 BASE = "com.example.codereview"
 
 PKG_RE = re.compile(r"^\s*package\s+([\w.]+)\s*;", re.M)

@@ -6,7 +6,7 @@
 
 不是"让大模型看看这段代码"，而是一条以数据库为事实源、模型输出一律先校验后采信的审查流水线。
 
-[![CI](https://github.com/LinYsssss/reposage/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/LinYsssss/reposage/actions/workflows/ci.yml)
+[![CI](https://github.com/LinYsssss/ForgePilot/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/LinYsssss/ForgePilot/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Java](https://img.shields.io/badge/Java-17-orange.svg)](backend/pom.xml)
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.5-6DB33F.svg)](backend/pom.xml)
@@ -15,6 +15,23 @@
 [快速开始](#-60-秒跑起来) · [架构](#-架构) · [PR 守门 Agent](#-pr-守门-agent) · [安全边界](#-安全边界诚实声明) · [文档](docs/README.md)
 
 </div>
+
+## 仓库迁移
+
+自 **2026-08-18** 起，ForgePilot 的主仓库为：
+
+```text
+https://github.com/LinYsssss/ForgePilot
+```
+
+```bash
+git clone https://github.com/LinYsssss/ForgePilot.git
+cd ForgePilot
+```
+
+原仓库 [`LinYsssss/reposage`](https://github.com/LinYsssss/reposage) 继续公开保留，作为重写前 SHA 与历史资料的永久入口。迁移时完整复制了分支、文件内容和提交拓扑，并仅在新仓库中将全部历史提交的 Author/Committer 统一为 `LinYsssss <153968692+LinYsssss@users.noreply.github.com>`；因此新旧仓库的 commit SHA 不同。完整映射与验证结果见 [`MIGRATION.md`](MIGRATION.md)。
+
+---
 
 <!--
 截图版位（待补，需可运行栈；本机跑不起完整栈，不放占位图冒充）
