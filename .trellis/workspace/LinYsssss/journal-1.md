@@ -98,3 +98,39 @@
 ### Status
 
 [OK] **Completed**
+
+
+## Session 5: P7 质量审查、提交与归档
+
+**Date**: 2026-08-17
+**Task**: P7 质量审查、提交与归档
+**Branch**: `main`
+
+### Summary
+
+完成 P7 工作台、研发度量与 Ink 前端收尾。提交三批工作变更：功能代码、任务/QA 记录、规范固化；随后归档 08-17-p7-workbench-metrics-frontend。质量门禁已在 2026-08-18 通过：backend focused 44 tests、frontend 84 tests、frontend build、verify-local -SkipSmoke、git diff --check 均通过；未重新执行视觉 Browser QA，沿用 2026-08-17 的 390/768/1440 结论。未 push。
+
+### Main Changes
+
+- 完成 P7 三批 commit 并保持提交边界清晰
+- 归档 P7 Trellis task，保留 P8/P9 与其他并行 dirty work
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `d3023f6` | (see git log) |
+| `e0ecfef` | (see git log) |
+| `f3e7cf3` | (see git log) |
+
+### Testing
+
+- [OK] Backend focused 44 passed；Frontend 84 passed；build PASS；verify-local -SkipSmoke PASS
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- 继续 P8 实验、答辩与功能冻结；本地仍有其他并行 dirty files，勿误加入 P7 提交
