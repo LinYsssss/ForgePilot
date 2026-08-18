@@ -1,0 +1,9 @@
+{"file": ".trellis/spec/guides/demo-assets-and-claims.md", "reason": "检查品牌、截图、答辩数字是否均有真实证据，是否保留植入缺陷与误报/漏报边界。"}
+{"file": ".trellis/spec/guides/contract-testing.md", "reason": "检查 manifest/coverage/run metadata/HMAC 跨层格式是否具备真实产出驱动的双向契约测试。"}
+{"file": ".trellis/spec/guides/deployment-and-observability.md", "reason": "检查在线 webhook 与离线彩排的健康检查、trace、日志、脱敏和证据记录是否完整。"}
+{"file": ".trellis/spec/guides/cross-layer-thinking-guide.md", "reason": "检查 38 例标注、后端验证、评分器、指标表和用户可见材料的字段/口径一致性。"}
+{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "检查新增 validator/scorer/脚本与既有后端 focused/full 质量门、负面测试和不重复 P7 约束。"}
+{"file": ".trellis/spec/backend/security-guidelines.md", "reason": "检查真实 HMAC、secret 脱敏、webhook 幂等和离线配置没有弱化安全边界。"}
+{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "检查 ForgePilot 展示层变更的 title/API 边界、node test、build 和可回退性。"}
+{"file": ".trellis/tasks/08-03-r7-eval-corpus/research/expansion-readiness.md", "reason": "复核 38 例扩容后的标注/跑分准备状态、历史基线不可比边界和 P8 新基线验收点。"}
+{"file": ".trellis/tasks/08-03-r8-prompt-tuning/research/r2-impl-notes.md", "reason": "复核 R8 五臂相关清单变更的已知漏报风险，避免把实验改动误报为无风险。"}

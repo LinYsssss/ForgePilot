@@ -6,7 +6,7 @@
       <section class="login-story" aria-labelledby="ink-login-story-title">
         <div class="ink-brand">
           <span class="ink-brand-mark" aria-hidden="true">睿</span>
-          <span class="brand-text"><strong>RepoSage</strong><small>墨境审查院</small></span>
+          <span class="brand-text"><strong>{{ PRODUCT_NAME }}</strong><small>{{ PRODUCT_TAGLINE }}</small></span>
         </div>
         <div class="login-story-copy">
           <div class="taiji-anchor"><TaijiAmbientMark variant="anchor" /></div>
@@ -14,7 +14,7 @@
           <h1 id="ink-login-story-title">入境观心<br />落墨有据</h1>
           <p>让每一条风险结论回到可验证证据。太极水墨随环境缓慢流动，真正的审查信息始终清晰、稳定、可追溯。</p>
         </div>
-        <div class="login-story-note">"静处见风险，动处循证据。"<br />RepoSage 将 Agent 过程、Finding 与 Patch 审批收进同一案卷。</div>
+        <div class="login-story-note">"静处见风险，动处循证据。"<br />{{ PRODUCT_NAME }} 将 Agent 过程、Finding 与 Patch 审批收进同一案卷。</div>
       </section>
 
       <section class="login-panel-wrap">
@@ -80,6 +80,7 @@ import { useSession } from '../../composables/useSession.js'
 import { useToast } from '../../composables/useToast.js'
 import { useMotionPolicy } from '../../shared/motion/useMotionPolicy.js'
 import { bindPointerField } from '../../shared/motion/usePointerField.js'
+import { PRODUCT_NAME, PRODUCT_TAGLINE } from '../../shared/brand.js'
 
 // 墨境登录门禁(合同 §5 LoginGate):表单处于稳定近实色纸面,太极/云雾/
 // 墨粒只在背后;错误走朱砂细框 + aria-live,不闪烁。

@@ -140,13 +140,14 @@ python3 evaluation/tools/score.py --selftest   # 内置小矩阵自测,必须打
    (模型名/日期/temperature 实值/调用与 token 实数以 ai_call_log 佐证/QualityGate 不适用声明)。
 7. **收栈**:`docker compose -p reposage-eval down -v`,即弃无残留;演示栈全程零接触。
 
-## ForgePilot 语料 schema 扩展(v2 定稿,P1b;随首例标注启用)
+## ForgePilot 语料 schema 扩展(v2 定稿,P8 已启用)
 
 五臂消融实验(父任务 08-16-forgepilot-upgrade,design §13)要求每例语料补研发上下文标注。
-**字段在此定稿;`schemaVersion` 递增到 `evaluation-manifest-v2` 与首批标注同批落盘,
-此前既有 38 例保持 v1 原样**(判分工具对缺失新字段的 case 按"无需求上下文"处理,向后兼容)。
+**字段在此定稿；`schemaVersion` 已递增到 `evaluation-manifest-v2`，38 例均已补齐
+Requirement/AC/consistency truth。判分工具仍兼容历史缺失新字段的 v1 运行档案，
+但 P8 正式矩阵不得混用旧 schema。
 
-每个 case 新增三个可选字段:
+每个 case 新增三个字段:
 
 ```jsonc
 {
@@ -170,3 +171,29 @@ python3 evaluation/tools/score.py --selftest   # 内置小矩阵自测,必须打
 holdout 集后补且不用于调优;缺陷标注(expectedFindings/nonFindings)沿用现有格式不动。
 判分新增 AC 级一致性命中率(predicted verdict vs consistencyTruth 的 per-AC P/R),
 与两率并列呈报,禁止合成单一分数(与既有纪律同口径)。
+
+## P8 五臂消融与 38 例新基线
+
+父任务已冻结五臂组合，实验只通过生产 `ReviewFeatureFlags` 下发，不复制 prompt/context 组装：
+
+| Arm | `knowledge` | `requirementContext` | `evidenceVerification` |
+|---|---:|---:|---:|
+| Baseline | false | false | false |
+| A | true | false | false |
+| B | false | true | false |
+| C | true | true | false |
+| D | true | true | true |
+
+运行器与编排器：
+
+```bash
+bash evaluation/tools/build-case-repos.sh --work-dir /tmp/reposage-eval-repos
+EVAL_BASE_URL=http://127.0.0.1:18080 EVAL_USERNAME=... EVAL_PASSWORD=... \
+  EVAL_OUT_ROOT=.trellis/tasks/08-17-p8-experiment-defense/eval-runs \
+  EVAL_RUN_PREFIX=2026-08-18-real \
+  bash evaluation/tools/run-ablation.sh --resume
+```
+
+每臂保存 `run-metadata.json`、逐例原始响应、`ai-call-log.json`、`scores-<arm>.json/md`；最后生成 `<prefix>-matrix.json`。`score.py` 除沿用 `d3-v1` 两率外，还输出 AC exact-hit、按 verdict precision/recall、token/耗时日志汇总、`notRun` 和版本一致性检查。非法 verdict 对已识别 AC 计 scored miss；完全缺失 prediction 才计 missing。
+
+P8 真实实验要求 `AI_PROVIDER=openai-compatible`、固定模型与 `temperature=0`；H2/Mock 只用于离线链路彩排，不得进入真实质量数字。

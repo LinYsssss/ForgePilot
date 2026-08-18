@@ -17,7 +17,7 @@
 
       <div class="ink-brand">
         <span class="ink-brand-mark" aria-hidden="true">睿</span>
-        <span class="brand-text"><strong>RepoSage</strong><small>墨境审查院</small></span>
+        <span class="brand-text"><strong>{{ PRODUCT_NAME }}</strong><small>{{ PRODUCT_TAGLINE }}</small></span>
       </div>
 
       <div v-if="contextTitle" class="ink-context">
@@ -102,6 +102,7 @@ import CaseIndex from './CaseIndex.vue'
 import InkAmbientScene from '../../shared/motion/InkAmbientScene.vue'
 import { useMotionPolicy } from '../../shared/motion/useMotionPolicy.js'
 import { bindPointerField } from '../../shared/motion/usePointerField.js'
+import { PRODUCT_NAME, PRODUCT_TAGLINE } from '../../shared/brand.js'
 import { useToast } from '../../composables/useToast.js'
 import {
   MOBILE_LAYOUT_QUERY,

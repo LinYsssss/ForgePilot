@@ -27,12 +27,13 @@
     </section>
 
     <blockquote class="rail-quote">
-      "所有阻断结论，必须能回到持久化证据。"<cite>— RepoSage 守门规范</cite>
+      "所有阻断结论，必须能回到持久化证据。"<cite>— {{ PRODUCT_NAME }} 守门规范</cite>
     </blockquote>
   </div>
 </template>
 
 <script setup>
+import { PRODUCT_NAME } from '../../shared/brand.js'
 // 朱批栏内容(合同 §5 AnnotationRail):来源 + 时间 + 状态 + 定位锚点。
 // 容器/抽屉行为由 InkShell 承担;本组件是纯展示时间线,批注全部由
 // workspaceModel.railNotes 从真实 Finding/Timeline/Run 派生,不虚构事件。

@@ -5,6 +5,7 @@ import config from '../vite.config.js'
 import { canApprovePatch } from '../src/components/agent/patchApprovalPolicy.js'
 import { unwrapPage } from '../src/api/page.js'
 import { ApiError } from '../src/api/apiError.js'
+import { APP_TITLE, DOWNLOAD_FALLBACK_NAME, PRODUCT_NAME, PRODUCT_TAGLINE } from '../src/shared/brand.js'
 import {
   STACK_MAX_CHARS,
   createClientErrorReporter,
@@ -27,6 +28,27 @@ test('index declares the Vue entrypoint', async () => {
   const html = await readFile(new URL('../index.html', import.meta.url), 'utf8')
 
   assert.match(html, /src="\/src\/main\.js"/)
+  assert.match(html, /<title>ForgePilot 智能代码审查平台<\/title>/)
+})
+
+test('ForgePilot branding stays centralized across visible frontend surfaces', async () => {
+  assert.equal(PRODUCT_NAME, 'ForgePilot')
+  assert.equal(PRODUCT_TAGLINE, '墨境审查院')
+  assert.equal(APP_TITLE, 'ForgePilot 智能代码审查平台')
+  assert.equal(DOWNLOAD_FALLBACK_NAME, 'forgepilot-download')
+
+  const main = await readFile(new URL('../src/main.js', import.meta.url), 'utf8')
+  const login = await readFile(new URL('../src/features/auth/LoginGate.vue', import.meta.url), 'utf8')
+  const shell = await readFile(new URL('../src/features/shell/InkShell.vue', import.meta.url), 'utf8')
+  const rail = await readFile(new URL('../src/features/workspace/AnnotationRail.vue', import.meta.url), 'utf8')
+  const client = await readFile(new URL('../src/api/client.js', import.meta.url), 'utf8')
+
+  assert.match(main, /document\.title = APP_TITLE/)
+  assert.match(login, /\{\{ PRODUCT_NAME \}\}/)
+  assert.match(shell, /\{\{ PRODUCT_NAME \}\}/)
+  assert.match(rail, /\{\{ PRODUCT_NAME \}\} 守门规范/)
+  assert.match(client, /DOWNLOAD_FALLBACK_NAME/)
+  assert.doesNotMatch(login + shell + rail + client, /RepoSage/)
 })
 
 test('invalid or stale patches disable human approval', () => {

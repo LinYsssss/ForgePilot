@@ -134,3 +134,29 @@
 ### Next Steps
 
 - 继续 P8 实验、答辩与功能冻结；本地仍有其他并行 dirty files，勿误加入 P7 提交
+
+## Session 6: P8 实验防线实现 checkpoint 与部署交接
+
+**Date**: 2026-08-18
+**Task**: P8 实验、答辩与功能冻结（in_progress handoff）
+**Branch**: `main`
+
+### Summary
+
+完成 P8 本地可验证实现：38 例 manifest v2 Requirement/AC/consistency truth、后端确定性校验、d3-v1 + AC 判分、Baseline/A/B/C/D runner 与 Requirement/BRANCH provisioning、ForgePilot 用户可见品牌切换、HMAC webhook rehearsal，以及诚实的 Docker/真实模型 preflight 记录。P8 不归档、不宣称完成；真实 38 例模型矩阵留待用户在部署环境中执行。
+
+### Testing
+
+- [OK] `Evaluation*Test`: 16 passed
+- [OK] scorer selftest: 30 checks passed
+- [OK] frontend: 85 tests passed
+- [OK] frontend build passed
+- [OK] `pwsh scripts/verify-local.ps1 -SkipSmoke` passed; Docker-dependent portion explicitly skipped because Docker is unavailable
+- [OK] `git diff --check` and task context validation passed
+- [OK] local H2/Mock signed webhook: HTTP 202 / `PROCESSED`; evidence at `.trellis/tasks/08-17-p8-experiment-defense/rehearsal-offline-20260817225246.md`
+
+### Pending external execution
+
+- Docker-enabled isolated stack and real evaluation credentials are required for the five-arm/38-case matrix.
+- Preflight artifact: `.trellis/tasks/08-17-p8-experiment-defense/eval-runs/preflight-2026-08-18/matrix.md`.
+- This checkpoint is intentionally committed and pushed as a handoff; P8 remains `in_progress` and must be resumed after deployment.

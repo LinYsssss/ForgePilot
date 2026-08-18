@@ -1,0 +1,19 @@
+{
+  "runId": "preflight-2026-08-18",
+  "status": "blocked",
+  "generatedAt": "2026-08-18",
+  "corpusVersion": "pr-gatekeeper-eval-v1",
+  "schemaVersion": "evaluation-manifest-v2",
+  "model": "z-ai/glm-5.2",
+  "temperature": 0,
+  "arms": [
+    "Baseline",
+    "A",
+    "B",
+    "C",
+    "D"
+  ],
+  "scoredCases": 0,
+  "notRunCases": 38,
+  "reason": "Docker command unavailable; EVAL_BASE_URL/EVAL_USERNAME/EVAL_PASSWORD/LLM_API_KEY are not configured in this environment. No mock result is substituted."
+}

@@ -11,7 +11,7 @@
 #   POST /api/projects/{pid}/repository                        {repoUrl,provider,defaultBranch}
 #   POST /api/projects/{pid}/knowledge/documents?docType=...   multipart part 名 "file" → data.documentId
 #   GET  /api/projects/{pid}/knowledge/documents?size=100      → data.items[].status (INDEXED/FAILED)
-#   POST /api/projects/{pid}/reviews/tasks                     {commitId,baseCommitId} → data.taskId
+#   POST /api/projects/{pid}/reviews/tasks                     {commitId,baseCommitId,flags} → data.taskId
 #   GET  /api/projects/{pid}/reviews/tasks/{taskId}            → data.status(终态 SUCCESS/DEAD/CANCELED)
 #   GET  /api/projects/{pid}/reviews/reports?size=100          → data.items[] (按 taskId 找 reportId)
 #   GET  /api/projects/{pid}/reviews/reports/{reportId}        → data.issues[](judge 的对照物)
@@ -22,18 +22,21 @@
 #   EVAL_PASSWORD       必填
 #   EVAL_REPOS_MOUNT    用例仓库在 backend 容器内的挂载前缀,默认 /eval-repos
 #   EVAL_WORK_DIR       宿主机工作目录(读 manifest-shas.txt),默认 /tmp/reposage-eval-repos
-#   EVAL_RUN_DATE       输出目录日期,默认今天(YYYY-MM-DD)
+#   EVAL_RUN_DATE       兼容旧日期字段,默认今天(YYYY-MM-DD)
+#   EVAL_RUN_ID         输出 run id;默认 Baseline=日期,其它 arm=日期-arm 小写
+#   EVAL_ARM            默认 Baseline;可由 --arm 覆盖
 #   EVAL_OUT_ROOT       输出根,默认 <repo>/.trellis/tasks/08-03-r7-eval-corpus/baseline-runs
 #   EVAL_TASK_TIMEOUT   单任务轮询上限秒,默认 900(对齐 manifest fixedRun.timeoutSeconds)
 #   EVAL_INDEX_TIMEOUT  知识文档索引等待上限秒,默认 120
 #   EVAL_POLL_INTERVAL  轮询间隔秒,默认 5
 #
 # 用法:
-#   bash evaluation/tools/run-baseline.sh [--resume] [--only <id>]...
-#   --resume  跳过已存在 <id>.json 的用例(失败例写 <id>.error.json,重跑会覆盖重试)
+#   bash evaluation/tools/run-baseline.sh [--arm <Baseline|A|B|C|D>] [--run-id <id>] [--resume] [--only <id>]...
+#   --arm     选择五臂: Baseline(diff), A(+knowledge), B(+requirement/AC), C(A+B), D(C+evidence verification)
+#   --run-id  输出目录标识;缺省时 Baseline 保持旧的日期目录兼容
 # 产物:
-#   $EVAL_OUT_ROOT/$EVAL_RUN_DATE/<id>.json        成功例:原始任务+报告响应包
-#   $EVAL_OUT_ROOT/$EVAL_RUN_DATE/<id>.error.json  失败例:阶段+错误信息(继续跑下一例)
+#   $EVAL_OUT_ROOT/$EVAL_RUN_ID/<id>.json        成功例:原始任务+报告响应包+arm flags
+#   $EVAL_OUT_ROOT/$EVAL_RUN_ID/<id>.error.json  失败例:阶段+错误信息(继续跑下一例)
 # 退出码:全部成功 0,任一失败 1。
 set -euo pipefail
 
@@ -45,6 +48,13 @@ BASE_URL="${EVAL_BASE_URL:-}"
 REPOS_MOUNT="${EVAL_REPOS_MOUNT:-/eval-repos}"
 WORK_DIR="${EVAL_WORK_DIR:-/tmp/reposage-eval-repos}"
 RUN_DATE="${EVAL_RUN_DATE:-$(date +%F)}"
+ARM="${EVAL_ARM:-Baseline}"
+RUN_ID="${EVAL_RUN_ID:-$RUN_DATE}"
+if [ "$ARM" != "Baseline" ] && [ -z "${EVAL_RUN_ID:-}" ]; then
+  RUN_ID="${RUN_DATE}-${ARM,,}"
+fi
+STARTED_AT="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+GIT_COMMIT_SHA="${GIT_COMMIT_SHA:-$(git -C "$ROOT_DIR" rev-parse HEAD 2>/dev/null || echo unknown)}"
 OUT_ROOT="${EVAL_OUT_ROOT:-$ROOT_DIR/.trellis/tasks/08-03-r7-eval-corpus/baseline-runs}"
 TASK_TIMEOUT="${EVAL_TASK_TIMEOUT:-900}"
 INDEX_TIMEOUT="${EVAL_INDEX_TIMEOUT:-120}"
@@ -56,6 +66,12 @@ ONLY_IDS=()
 while [ "$#" -gt 0 ]; do
   case "$1" in
     --resume) RESUME=1; shift ;;
+    --arm)
+      [ "$#" -ge 2 ] || { echo "--arm 需要 Baseline|A|B|C|D" >&2; exit 2; }
+      ARM="$2"; shift 2 ;;
+    --run-id)
+      [ "$#" -ge 2 ] || { echo "--run-id 需要一个标识" >&2; exit 2; }
+      RUN_ID="$2"; shift 2 ;;
     --only)
       [ "$#" -ge 2 ] || { echo "--only 需要一个用例 id" >&2; exit 2; }
       ONLY_IDS+=("$2"); shift 2 ;;
@@ -66,6 +82,13 @@ done
 
 command -v curl >/dev/null || { echo "缺少 curl" >&2; exit 1; }
 command -v python3 >/dev/null || { echo "缺少 python3" >&2; exit 1; }
+case "$ARM" in
+  Baseline|A|B|C|D) ;;
+  *) echo "未知 arm: $ARM(允许 Baseline|A|B|C|D)" >&2; exit 2 ;;
+esac
+if [ -z "${EVAL_RUN_ID:-}" ] && [ "$RUN_ID" = "$RUN_DATE" ] && [ "$ARM" != "Baseline" ]; then
+  RUN_ID="${RUN_DATE}-${ARM,,}"
+fi
 [ -n "$BASE_URL" ] || { echo "必须设置 EVAL_BASE_URL(隔离栈地址;故意无默认值,防止误打演示栈)" >&2; exit 1; }
 [ -n "${EVAL_USERNAME:-}" ] || { echo "必须设置 EVAL_USERNAME" >&2; exit 1; }
 [ -n "${EVAL_PASSWORD:-}" ] || { echo "必须设置 EVAL_PASSWORD" >&2; exit 1; }
@@ -73,8 +96,11 @@ command -v python3 >/dev/null || { echo "缺少 python3" >&2; exit 1; }
 [ -f "$SHA_FILE" ] || { echo "缺少 $SHA_FILE —— 先跑 build-case-repos.sh" >&2; exit 1; }
 BASE_URL="${BASE_URL%/}"
 
-OUT_DIR="$OUT_ROOT/$RUN_DATE"
+OUT_DIR="$OUT_ROOT/$RUN_ID"
+AI_LOG_FILE="$OUT_DIR/ai-call-log.json"
+METADATA_FILE="$OUT_DIR/run-metadata.json"
 mkdir -p "$OUT_DIR"
+[ -f "$AI_LOG_FILE" ] || printf "{\"rows\":[]}\n" > "$AI_LOG_FILE"
 
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
@@ -101,6 +127,17 @@ if node is None:
     sys.exit(0)
 print(node if not isinstance(node, (dict, list)) else json.dumps(node, ensure_ascii=False))
 PY
+}
+
+# arm_flags_json → 生产 ReviewFeatureFlags 的唯一五臂映射
+arm_flags_json() {
+  case "$ARM" in
+    Baseline) printf '{"knowledge":false,"requirementContext":false,"evidenceVerification":false}' ;;
+    A)        printf '{"knowledge":true,"requirementContext":false,"evidenceVerification":false}' ;;
+    B)        printf '{"knowledge":false,"requirementContext":true,"evidenceVerification":false}' ;;
+    C)        printf '{"knowledge":true,"requirementContext":true,"evidenceVerification":false}' ;;
+    D)        printf '{"knowledge":true,"requirementContext":true,"evidenceVerification":true}' ;;
+  esac
 }
 
 # api_ok <file>  响应信封 code==0 才算成功
@@ -157,7 +194,7 @@ fail() { # <stage> <msg>
 
 write_error() { # <id> <out-file>
   local id="$1" out="$2"
-  STAGE="$FAIL_STAGE" MSG="$FAIL_MSG" CASE_ID="$id" RUN_DATE="$RUN_DATE" python3 - "$BODY" > "$out" <<'PY'
+  STAGE="$FAIL_STAGE" MSG="$FAIL_MSG" CASE_ID="$id" RUN_DATE="$RUN_DATE" RUN_ID="$RUN_ID" ARM="$ARM" python3 - "$BODY" > "$out" <<'PY'
 import json, os, sys, datetime
 raw = ""
 try:
@@ -168,6 +205,8 @@ except Exception:
 print(json.dumps({
     "caseId": os.environ["CASE_ID"],
     "runDate": os.environ["RUN_DATE"],
+    "runId": os.environ["RUN_ID"],
+    "arm": os.environ["ARM"],
     "capturedAt": datetime.datetime.now(datetime.timezone.utc).isoformat(),
     "error": {"stage": os.environ["STAGE"], "message": os.environ["MSG"], "lastResponse": raw},
 }, ensure_ascii=False, indent=2))
@@ -194,7 +233,31 @@ run_case() { # <id> <split> <fixture>
   api_post_json "/api/projects/$pid/repository" "$TMP_DIR/req.json"
   api_ok "$BODY" || fail repository "绑定仓库失败: $(json_get "$BODY" message)" || return 1
 
-  # 3) 知识文档(仅当用例带 knowledge/;不传 documentIds ⇒ 审查用全项目文档)
+  # 3) Requirement + AC:从唯一 manifest 事实源创建,并用 main 分支关联供 B/C/D coverage judge 解析
+  python3 - "$MANIFEST" "$id" > "$TMP_DIR/requirement.json" <<'PY'
+import json, sys
+with open(sys.argv[1], encoding="utf-8") as fh:
+    manifest = json.load(fh)
+case_id = sys.argv[2]
+case = next(item for item in manifest.get("cases", []) if item.get("id") == case_id)
+requirement = case["requirement"]
+print(json.dumps({
+    "title": requirement["title"],
+    "background": requirement.get("background", ""),
+    "description": requirement.get("description", ""),
+    "priority": "P1",
+    "acceptanceCriteria": [{"text": item["text"]} for item in case.get("acceptanceCriteria", [])],
+}, ensure_ascii=False))
+PY
+  api_post_json "/api/projects/$pid/requirements" "$TMP_DIR/requirement.json"
+  api_ok "$BODY" || fail requirement "创建 Requirement 失败: $(json_get "$BODY" message)" || return 1
+  local requirement_id
+  requirement_id="$(json_get "$BODY" data.requirementId)"
+  printf '{"type":"BRANCH","ref":"main"}' > "$TMP_DIR/link.json"
+  api_post_json "/api/projects/$pid/requirements/$requirement_id/links" "$TMP_DIR/link.json"
+  api_ok "$BODY" || fail requirement "关联 Requirement 到 main 分支失败: $(json_get "$BODY" message)" || return 1
+
+  # 4) 知识文档(仅当用例带 knowledge/;不传 documentIds ⇒ 审查用全项目文档)
   local kdir="$EVAL_DIR/$fixture/knowledge"
   if [ -d "$kdir" ]; then
     local kfile doc_id
@@ -230,14 +293,23 @@ PY
     done
   fi
 
-  # 4) 审查任务(温度走服务端配置,不在请求侧传)
-  printf '{"commitId":"%s","baseCommitId":"%s"}' "$head_sha" "$base_sha" > "$TMP_DIR/req.json"
+  # 5) 审查任务:温度走服务端配置,五臂只通过生产 flags 下发
+  flags_json="$(arm_flags_json)"
+  python3 - "$head_sha" "$base_sha" "$flags_json" > "$TMP_DIR/req.json" <<'PY'
+import json, sys
+print(json.dumps({
+    "commitId": sys.argv[1],
+    "baseCommitId": sys.argv[2],
+    "branch": "main",
+    "flags": json.loads(sys.argv[3]),
+}, ensure_ascii=False))
+PY
   api_post_json "/api/projects/$pid/reviews/tasks" "$TMP_DIR/req.json"
   api_ok "$BODY" || fail task "建任务失败: $(json_get "$BODY" message)" || return 1
   local task_id
   task_id="$(json_get "$BODY" data.taskId)"
 
-  # 5) 轮询终态(SUCCESS/DEAD/CANCELED;FAILED 会被 MQ 重试,不算终态)
+  # 6) 轮询终态(SUCCESS/DEAD/CANCELED;FAILED 会被 MQ 重试,不算终态)
   local waited=0 status=""
   while :; do
     api_get "/api/projects/$pid/reviews/tasks/$task_id"
@@ -253,7 +325,7 @@ PY
   done
   cp "$BODY" "$TMP_DIR/task.json"
 
-  # 6) 找报告(按 taskId 匹配)→ 取明细
+  # 7) 找报告(按 taskId 匹配)→ 取明细
   api_get "/api/projects/$pid/reviews/reports?size=100"
   local report_id
   report_id="$(TASK_ID="$task_id" python3 - "$BODY" <<'PY'
@@ -271,8 +343,9 @@ PY
   api_get "/api/projects/$pid/reviews/reports/$report_id"
   api_ok "$BODY" || fail report "取报告失败: $(json_get "$BODY" message)" || return 1
 
-  # 7) 组装原始响应包(score.py 的输入)
-  CASE_ID="$id" SPLIT="$split" RUN_DATE="$RUN_DATE" BASE_SHA="$base_sha" HEAD_SHA="$head_sha" \
+  # 8) 组装原始响应包(score.py 的输入)
+  CASE_ID="$id" SPLIT="$split" RUN_DATE="$RUN_DATE" RUN_ID="$RUN_ID" ARM="$ARM" \
+    REQUIREMENT_ID="$requirement_id" BASE_SHA="$base_sha" HEAD_SHA="$head_sha" FLAGS_JSON="$flags_json" \
     PID="$pid" TASK_ID="$task_id" REPORT_ID="$report_id" \
     python3 - "$TMP_DIR/task.json" "$BODY" > "$OUT_DIR/$id.json" <<'PY'
 import json, os, sys, datetime
@@ -284,6 +357,10 @@ print(json.dumps({
     "caseId": os.environ["CASE_ID"],
     "split": os.environ["SPLIT"],
     "runDate": os.environ["RUN_DATE"],
+    "runId": os.environ["RUN_ID"],
+    "arm": os.environ["ARM"],
+    "requirementId": int(os.environ["REQUIREMENT_ID"]),
+    "flags": json.loads(os.environ["FLAGS_JSON"]),
     "capturedAt": datetime.datetime.now(datetime.timezone.utc).isoformat(),
     "baseSha": os.environ["BASE_SHA"],
     "headSha": os.environ["HEAD_SHA"],
@@ -294,8 +371,70 @@ print(json.dumps({
     "report": report,
 }, ensure_ascii=False, indent=2))
 PY
+  # 9) 导出本项目 AI 日志并附 caseId,缺日志由 scorer 如实标记。
+  api_get "/api/ai/logs?projectId=$pid&limit=1000"
+  if api_ok "$BODY"; then
+    CASE_ID="$id" TASK_ID="$task_id" python3 - "$BODY" "$AI_LOG_FILE" <<'PY'
+import json, os, sys
+from pathlib import Path
+body_path, out_path = sys.argv[1], sys.argv[2]
+try:
+    payload = json.loads(Path(body_path).read_text(encoding="utf-8"))
+except Exception:
+    payload = {}
+rows = payload.get("data", []) if isinstance(payload, dict) else []
+if isinstance(rows, dict):
+    rows = rows.get("items", rows.get("rows", []))
+if not isinstance(rows, list):
+    rows = []
+try:
+    existing = json.loads(Path(out_path).read_text(encoding="utf-8"))
+except Exception:
+    existing = {"rows": []}
+all_rows = existing.get("rows", []) if isinstance(existing, dict) else []
+for row in rows:
+    if isinstance(row, dict):
+        row = dict(row)
+        row["caseId"] = os.environ["CASE_ID"]
+        row.setdefault("taskId", int(os.environ["TASK_ID"]))
+        all_rows.append(row)
+Path(out_path).write_text(json.dumps({"rows": all_rows}, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+PY
+  fi
   rm -f "$OUT_DIR/$id.error.json"
   return 0
+}
+
+write_metadata() {
+  OK_COUNT="$(echo "$OK_LIST" | wc -w | tr -d ' ')"
+  FAIL_COUNT="$(echo "$FAIL_LIST" | wc -w | tr -d ' ')"
+  SKIP_COUNT="$(echo "$SKIP_LIST" | wc -w | tr -d ' ')"
+  FINISHED_AT="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  RUN_ID="$RUN_ID" ARM="$ARM" RUN_DATE="$RUN_DATE" GIT_COMMIT_SHA="$GIT_COMMIT_SHA" STARTED_AT="$STARTED_AT" FINISHED_AT="$FINISHED_AT" \
+    OK_COUNT="$OK_COUNT" FAIL_COUNT="$FAIL_COUNT" SKIP_COUNT="$SKIP_COUNT" python3 - "$MANIFEST" "$METADATA_FILE" <<'PY'
+import json, os, sys
+from pathlib import Path
+manifest = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+fixed = manifest.get("fixedRun", {})
+metadata = {
+    "runId": os.environ["RUN_ID"],
+    "arm": os.environ["ARM"],
+    "startedAt": os.environ["STARTED_AT"],
+    "finishedAt": os.environ["FINISHED_AT"],
+    "commitSha": os.environ.get("GIT_COMMIT_SHA", ""),
+    "corpusVersion": manifest.get("corpusVersion"),
+    "schemaVersion": manifest.get("schemaVersion"),
+    "model": fixed.get("model"),
+    "temperature": fixed.get("temperature"),
+    "toolImage": fixed.get("toolImage"),
+    "promptVersion": fixed.get("promptVersion"),
+    "findingSchemaVersion": fixed.get("findingSchemaVersion"),
+    "scoredCases": int(os.environ["OK_COUNT"]) + int(os.environ["SKIP_COUNT"]),
+    "notRunCases": int(os.environ["FAIL_COUNT"]),
+    "fixedRun": fixed,
+}
+Path(sys.argv[2]).write_text(json.dumps(metadata, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+PY
 }
 
 # ---------- 主流程 ----------
@@ -354,4 +493,5 @@ echo "输出目录: $OUT_DIR"
 echo "成功:$(echo "$OK_LIST" | wc -w)${OK_LIST:+ →$OK_LIST}"
 echo "跳过:$(echo "$SKIP_LIST" | wc -w)${SKIP_LIST:+ →$SKIP_LIST}"
 echo "失败:$(echo "$FAIL_LIST" | wc -w)${FAIL_LIST:+ →$FAIL_LIST}"
+write_metadata
 [ -z "$FAIL_LIST" ] || exit 1

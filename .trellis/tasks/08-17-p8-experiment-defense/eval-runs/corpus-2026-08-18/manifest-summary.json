@@ -1,0 +1,35 @@
+{
+  "generatedAt": "2026-08-18",
+  "source": "evaluation/manifest.json",
+  "corpusVersion": "pr-gatekeeper-eval-v1",
+  "schemaVersion": "evaluation-manifest-v2",
+  "caseCount": 38,
+  "bySplit": {
+    "development": 26,
+    "holdout": 12
+  },
+  "byLanguage": {
+    "JAVA": 32,
+    "PYTHON": 2,
+    "TYPESCRIPT": 4
+  },
+  "acceptanceCriteriaCount": 83,
+  "consistencyTruthCount": 83,
+  "truthByVerdict": {
+    "AT_RISK": 31,
+    "COVERED": 52
+  },
+  "expectedFindingCount": 31,
+  "nonFindingCount": 52,
+  "fixedRun": {
+    "toolImage": "reposage-tools@sha256:abcdef",
+    "model": "z-ai/glm-5.2",
+    "promptVersion": "pr-gatekeeper-v1",
+    "findingSchemaVersion": "finding-v1",
+    "temperature": 0,
+    "maxModelCalls": 8,
+    "maxToolCalls": 32,
+    "maxTokens": 24000,
+    "timeoutSeconds": 900
+  }
+}
