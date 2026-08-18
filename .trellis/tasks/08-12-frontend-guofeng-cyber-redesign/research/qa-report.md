@@ -69,3 +69,41 @@
 - Stage 4 UI design contract: **Frozen at v1.0**.
 - Residual Critical/High: **None for the prototype scope**.
 - Production Stage 7: **Not started**; must rerun under Node 22 against the Vue implementation, real API states, route guards, permissions, long content, performance and bundle budgets.
+
+## 2026-08-17 — P7 production consolidation QA
+
+### Scope and environment
+
+- Production Vue implementation served by Vite on `127.0.0.1:4177`.
+- Browser: installed Google Chrome controlled through Playwright, with deterministic API fixtures matching the P7 workbench/metrics contracts.
+- Viewports: 1440×1000, 768×1024, 390×844.
+- Canonical pages exercised: Dashboard workbench, Metrics/AI logs, Knowledge, Repository/PR, Agent/Reviews.
+- Compatibility links exercised directly: `/pull-requests`, `/reviews`, `/ai-logs`, `/ink`, and `/agent-evidence=...`.
+
+### Results
+
+| Check | Result |
+| --- | --- |
+| 1440 / 768 / 390 page-level horizontal overflow | Pass; `documentElement.scrollWidth === innerWidth` on tested pages |
+| Eight-zone nav and canonical route activation | Pass |
+| `/ink` strict redirect | Pass; final URL `#/dashboard` |
+| Query-preserving PR / Reviews / AI redirects | Pass |
+| Agent evidence deep link | Pass; final URL `#/agent?section=agent&evidence=...` |
+| Keyboard entry | Pass; first Tab reaches the visible skip link with focus outline |
+| Mobile touch target | Pass after fixing `.ink-icon-button` flex shrink; nav toggle measured 44×44px |
+| Reduced motion | Pass; no persistent running animation after reduced-motion stabilization |
+| Console / page errors | Pass on the clean route sweep |
+| Workbench and metrics long labels / responsive cards | Pass with bounded local overflow only |
+
+### Evidence
+
+- `../08-17-p7-workbench-metrics-frontend/research/qa/dashboard-1440.png`
+- `../08-17-p7-workbench-metrics-frontend/research/qa/dashboard-768.png`
+- `../08-17-p7-workbench-metrics-frontend/research/qa/dashboard-390.png`
+- `../08-17-p7-workbench-metrics-frontend/research/qa/metrics-ai-390.png`
+- `../08-17-p7-workbench-metrics-frontend/research/qa/knowledge-768.png`
+- `../08-17-p7-workbench-metrics-frontend/research/qa/agent-reviews-1440.png`
+
+### Finding fixed during QA
+
+At 390px the mobile navigation button rendered at roughly 41×44px because the fixed-width icon button was allowed to shrink inside the topbar flex row. `ink-base.css` now pins `min-width` and `flex-basis` to 44px; re-measurement is exactly 44×44px.

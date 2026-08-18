@@ -1,0 +1,15 @@
+{"file":".trellis/spec/backend/directory-structure.md","reason":"dashboard 聚合领域包、Controller→Service→Repository 依赖和 DTO 结构"}
+{"file":".trellis/spec/backend/frozen-contracts.md","reason":"新增 workbench/metrics API、授权、PageResponse 与 Flyway 兼容"}
+{"file":".trellis/spec/backend/database-guidelines.md","reason":"V36 索引、只读事务、聚合查询和迁移纪律"}
+{"file":".trellis/spec/backend/quality-guidelines.md","reason":"对象级授权矩阵、聚合/迁移测试与全量验证"}
+{"file":".trellis/spec/backend/security-guidelines.md","reason":"项目成员读权限和旧 URL/前端请求安全边界"}
+{"file":".trellis/spec/backend/assistant-streaming-contracts.md","reason":"P7 路由/壳层收尾不得回归 P6 POST SSE 生命周期"}
+{"file":".trellis/spec/frontend/directory-structure.md","reason":"feature-first 页面/Paper/composable 边界与路由页面组织"}
+{"file":".trellis/spec/frontend/state-management.md","reason":"模块级单例、project reset 顺序、Agent SSE/Review polling 硬规则"}
+{"file":".trellis/spec/frontend/component-guidelines.md","reason":"Paper 展示组件、emits、列表键盘和墨境设计系统"}
+{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"API 容错、分页、node tests、旧壳删除与构建准入"}
+{"file":".trellis/spec/frontend/streaming-api.md","reason":"App/route 收尾不得破坏 P6 assistant 流与内存状态"}
+{"file":".trellis/spec/guides/cross-layer-thinking-guide.md","reason":"workbench/metrics 聚合 DTO 到多页面深链的跨层一致性"}
+{"file":".trellis/spec/guides/contract-testing.md","reason":"新增聚合 API、query/redirect 和历史 JSON 解析契约"}
+{"file":".trellis/spec/guides/deployment-and-observability.md","reason":"AI 指标 UI 与 Prometheus 运维口径分工、低基数与真实指标名"}
+{"file":".trellis/tasks/08-17-p7-workbench-metrics-frontend/research/current-state-audit.md","reason":"P7 当前路由、数据可行性、指标边界和严格原计划决策依据"}
