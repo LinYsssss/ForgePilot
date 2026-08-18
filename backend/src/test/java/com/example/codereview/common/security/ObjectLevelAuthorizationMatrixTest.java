@@ -123,7 +123,9 @@ class ObjectLevelAuthorizationMatrixTest {
                 new Case("knowledge reindex", "POST", "/api/projects/{id}/knowledge/reindex"),
                 new Case("pull requests", "GET", "/api/projects/{id}/pull-requests"),
                 new Case("agent runs by project", "GET", "/api/agent-runs/project/{id}"),
-                new Case("project findings", "GET", "/api/projects/{id}/findings")
+                new Case("project findings", "GET", "/api/projects/{id}/findings"),
+                new Case("workbench projection", "GET", "/api/projects/{id}/workbench"),
+                new Case("metrics projection", "GET", "/api/projects/{id}/metrics")
         );
         return cases.stream()
                 .map(testCase -> DynamicTest.dynamicTest(testCase.name(), () ->
@@ -221,6 +223,8 @@ class ObjectLevelAuthorizationMatrixTest {
                 "/api/projects/1",
                 "/api/projects/1/reviews/tasks",
                 "/api/projects/1/knowledge/documents",
+                "/api/projects/1/workbench",
+                "/api/projects/1/metrics",
                 "/api/agent-runs/1",
                 "/api/agent-runs/project/1",
                 "/api/agent-runs/1/feedback",
@@ -248,6 +252,10 @@ class ObjectLevelAuthorizationMatrixTest {
         perform("GET", "/api/projects/" + ownedProjectId + "/findings", owner)
                 .andExpect(status().isOk());
         perform("GET", "/api/projects/" + ownedProjectId + "/findings", projectMember)
+                .andExpect(status().isOk());
+        perform("GET", "/api/projects/" + ownedProjectId + "/workbench", owner)
+                .andExpect(status().isOk());
+        perform("GET", "/api/projects/" + ownedProjectId + "/metrics", owner)
                 .andExpect(status().isOk());
     }
 

@@ -1,0 +1,10 @@
+<template><InkPageFrame active-key="knowledge" context-label="当前项目" rail-title="知识权限"><KnowledgePaper :documents="documents" :doc-type="docType" :query="searchQuery" :matches="searchMatches" :searched="searched" :loading="!!busy.knowledge" :busy="!!busy.upload || !!busy.search" :can-upload="canUpload" :can-reindex="canReindex" :can-delete="canDelete" @doc-type="value => docType = value" @file="onFileChange" @upload="run(uploadDocument,'upload')" @reindex="run(reindexKnowledge,'knowledge')" @delete="id => askDelete(id)" @refresh="run(loadDocuments,'knowledge')" @query="value => searchQuery = value" @search="run(searchKnowledge,'search')"/><template #rail><p class="rail-note">LEADER / DEVELOPER 可上传；重建索引与删除仅 LEADER；所有项目成员可读取和检索。</p></template></InkPageFrame></template>
+<script setup>
+import { computed, watch } from 'vue'
+import InkPageFrame from '../features/shell/InkPageFrame.vue';import KnowledgePaper from '../features/knowledge/KnowledgePaper.vue';import { useBusy } from '../composables/useBusy.js';import { useConfirm } from '../composables/useConfirm.js';import { useKnowledge } from '../composables/useKnowledge.js';import { useSession } from '../composables/useSession.js'
+const {busy,run}=useBusy();const {ask}=useConfirm();const {activeProject}=useSession();const {documents,docType,searchQuery,searchMatches,searched,onFileChange,uploadDocument,loadDocuments,reindexKnowledge,deleteDocument,searchKnowledge,reset}=useKnowledge()
+const role=computed(()=>activeProject.value?.myRole||'');const canUpload=computed(()=>['LEADER','DEVELOPER'].includes(role.value));const canReindex=computed(()=>role.value==='LEADER');const canDelete=canReindex
+function askDelete(id){ask({title:`删除知识文档 #${id}？`,body:'文档与索引片段将被删除，操作不可恢复。',onConfirm:()=>deleteDocument(id)})}
+watch(()=>activeProject.value?.projectId,()=>{reset();if(activeProject.value)run(loadDocuments,'knowledge')},{immediate:true})
+</script>
+<style scoped>.rail-note{margin:0;color:var(--ink-muted);line-height:var(--ink-lh-body)}</style>

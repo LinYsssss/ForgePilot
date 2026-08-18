@@ -87,7 +87,7 @@ test('the four paginated endpoints go through the envelope adapter', async () =>
 })
 
 test('no hardcoded demo account and no token in web storage', async () => {
-  const login = await readFile(new URL('../src/views/LoginView.vue', import.meta.url), 'utf8')
+  const login = await readFile(new URL('../src/features/auth/LoginGate.vue', import.meta.url), 'utf8')
   const client = await readFile(new URL('../src/api/client.js', import.meta.url), 'utf8')
   const session = await readFile(new URL('../src/composables/useSession.js', import.meta.url), 'utf8')
   assert.doesNotMatch(login, /ysainlin/)

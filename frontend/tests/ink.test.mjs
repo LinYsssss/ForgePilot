@@ -95,7 +95,14 @@ const INK_STYLE_FILES = [
   '../src/features/workspace/ReviewActionBar.vue',
   '../src/features/workspace/AnnotationRail.vue',
   '../src/features/workspace/RunCaseList.vue',
-  '../src/pages/InkAtelierPage.vue',
+  '../src/pages/InkAgentPage.vue',
+  '../src/pages/InkKnowledgePage.vue',
+  '../src/pages/InkMetricsPage.vue',
+  '../src/features/dashboard/QueueCard.vue',
+  '../src/features/knowledge/KnowledgePaper.vue',
+  '../src/features/metrics/MetricsPaper.vue',
+  '../src/features/metrics/MetricCard.vue',
+  '../src/features/metrics/AiLogsPaper.vue',
   '../src/pages/InkDashboardPage.vue',
   '../src/features/shell/InkPageFrame.vue',
   '../src/features/dashboard/DashboardPaper.vue',
@@ -437,20 +444,19 @@ test('seal tones stay dual-encoded and cinnabar stays exclusive to critical', ()
 
 /* ---------- 7. Route integration and auth-semantics anchors ---------- */
 
-test('ink entry is isolated by route meta while every legacy route survives', async () => {
+test('all canonical routes use the ink shell and compatibility URLs redirect', async () => {
   const routerSource = await readFile(new URL('../src/router.js', import.meta.url), 'utf8')
-  assert.match(routerSource, /name: 'inkAtelier'/)
-  assert.match(routerSource, /meta: \{ shell: 'ink' \}/)
-  for (const name of ['dashboard', 'projects', 'repository', 'pullRequests', 'knowledge', 'reviews', 'agent', 'aiLogs']) {
-    assert.match(routerSource, new RegExp(`name: '${name}'`), `旧路由 ${name} 必须保留`)
+  for (const name of ['dashboard', 'projects', 'requirements', 'repository', 'agent', 'quality', 'knowledge', 'metrics']) {
+    assert.match(routerSource, new RegExp(`name: '${name}'.*meta: \\{ shell: 'ink' \\}`), `${name} 必须进入 Ink shell`)
   }
-  assert.match(routerSource, /agent-evidence=/) // 证据外链重定向不动
-
+  assert.match(routerSource, /path: '\/ink', redirect: \{ name: 'dashboard' \}/)
+  assert.match(routerSource, /path: '\/reviews'.*section: 'reviews'/)
+  assert.match(routerSource, /path: '\/pull-requests'.*section: 'pull-requests'/)
+  assert.match(routerSource, /path: '\/ai-logs'.*section: 'ai'/)
+  assert.match(routerSource, /agent-evidence=/)
   const app = await readFile(new URL('../src/App.vue', import.meta.url), 'utf8')
-  assert.match(app, /isInkShell/)
-  assert.match(app, /meta\.shell === 'ink'/)
-  assert.match(app, /LoginView v-else-if/) // 旧登录/壳层分流原样保留
-  assert.match(app, /AppShell v-else/)
+  assert.match(app, /<router-view \/>/)
+  assert.doesNotMatch(app, /AppShell|LoginView|isInkShell/)
 })
 
 test('exactly one pointer observer writes the ink pointer vars; only ambient consumes them', async () => {
@@ -477,7 +483,7 @@ test('exactly one pointer observer writes the ink pointer vars; only ambient con
     '../src/features/workspace/ReviewActionBar.vue',
     '../src/features/workspace/AnnotationRail.vue',
     '../src/features/workspace/RunCaseList.vue',
-    '../src/pages/InkAtelierPage.vue',
+    '../src/pages/InkAgentPage.vue',
     '../src/features/auth/LoginGate.vue',
   ]) {
     const source = await readFile(new URL(file, import.meta.url), 'utf8')
@@ -496,52 +502,24 @@ test('login gate reuses the existing auth semantics without a second source', as
 
 /* ---------- 8. 逐页扩面(implement.md 步骤 8) ---------- */
 
-test('nav model routes migrated pages by name and leaves the rest on the legacy shell', () => {
-  // 已迁入墨境的按路由名跳,且**路由名不变**——迁移不动路由语义是步骤 8 的硬要求
-  assert.deepEqual(resolveNavigation('dashboard', 'atelier'),
-    { action: 'ink', key: 'dashboard', routeName: 'dashboard' })
-  assert.deepEqual(resolveNavigation('atelier', 'dashboard'),
-    { action: 'ink', key: 'atelier', routeName: 'inkAtelier' })
-
-  // 未迁移的仍交旧壳层,且保留各自既有语义(agent/aiLogs 有预加载动作,projects 是纯跳转)
-  assert.equal(resolveNavigation('agent', 'dashboard').legacy, 'agent')
-  assert.equal(resolveNavigation('aiLogs', 'dashboard').legacy, 'aiLogs')
-  assert.equal(resolveNavigation('knowledge', 'dashboard').legacy, 'goTab')
-
-  // 已迁移的项目页同样按名跳(路由名保持 'projects')
-  assert.deepEqual(resolveNavigation('projects', 'dashboard'),
-    { action: 'ink', key: 'projects', routeName: 'projects' })
-
-  // 仓库页迁移后仍要带刷新:旧壳层对它走的是 goTab(进入时按当前项目刷新一次),
-  // 只跳路由会让页面停在上一个项目的仓库数据上——是错数据,不是空数据
-  assert.deepEqual(resolveNavigation('repository', 'dashboard'),
-    { action: 'ink', key: 'repository', routeName: 'repository', refresh: true })
-  // 旧壳层对 dashboard/projects 用的是纯 goto,迁移后不得凭空多出刷新
-  assert.equal(resolveNavigation('dashboard', 'atelier').refresh, undefined)
-  assert.equal(resolveNavigation('projects', 'dashboard').refresh, undefined)
-
-  // 点当前页与未知 key 都不动作
+test('nav model exposes the final eight canonical routes from one source', () => {
+  assert.equal(INK_NAV.length, 8)
+  assert.deepEqual(INK_NAV.map(item => item.key), ['dashboard','projects','requirements','repository','agent','quality','knowledge','metrics'])
+  for (const item of INK_NAV) {
+    assert.deepEqual(resolveNavigation(item.key, 'other'), { action: 'ink', key: item.key, routeName: item.routeName })
+  }
   assert.equal(resolveNavigation('dashboard', 'dashboard').action, 'none')
   assert.equal(resolveNavigation('nope', 'dashboard').action, 'none')
-
-  // 每个 ink 条目都必须给出 routeName,否则导航会静默失败
-  for (const item of INK_NAV.filter((entry) => entry.ink)) {
-    assert.ok(item.routeName, `${item.key} 标了 ink 却没有 routeName`)
-  }
 })
 
 test('project-scoped nav items are disabled until a project is chosen', () => {
   const without = navItemsFor(false)
   const with_ = navItemsFor(true)
-  const gated = ['repository', 'pullRequests', 'reviews', 'agent', 'knowledge', 'aiLogs']
-  for (const key of gated) {
-    assert.equal(without.find((i) => i.key === key).disabled, true, `${key} 无项目时应禁用`)
-    assert.equal(with_.find((i) => i.key === key).disabled, false)
+  for (const key of ['requirements','repository','agent','quality','knowledge','metrics']) {
+    assert.equal(without.find(item => item.key === key).disabled, true)
+    assert.equal(with_.find(item => item.key === key).disabled, false)
   }
-  // 总览与项目页在没有项目时也必须可达,否则用户无从选项目
-  for (const key of ['atelier', 'dashboard', 'projects']) {
-    assert.equal(without.find((i) => i.key === key).disabled, false)
-  }
+  for (const key of ['dashboard','projects']) assert.equal(without.find(item => item.key === key).disabled, false)
 })
 
 test('dashboard is migrated into the ink shell with its route semantics intact', async () => {
@@ -560,7 +538,7 @@ test('dashboard is migrated into the ink shell with its route semantics intact',
   // 数据零复制:墨境页取的是既有 composable,不新建数据通道
   const page = await readFile(new URL('../src/pages/InkDashboardPage.vue', import.meta.url), 'utf8')
   assert.match(page, /useSession/)
-  assert.match(page, /useReviews/)
+  assert.match(page, /useWorkbench/)
   assert.match(page, /useWorkspace/)
   assert.doesNotMatch(page, /from '\.\.\/api\//, '页面不得绕过 composable 直连 api 层')
 })
@@ -592,24 +570,23 @@ test('repository is migrated into the ink shell and keeps its cross-domain wirin
   assert.match(paper, /v-list-nav class="commit-list"/)
 })
 
-test('ink page frame executes the refresh the nav model asks for', async () => {
+test('ink page frame delegates every navigation click to the single nav model', async () => {
   const frame = await readFile(new URL('../src/features/shell/InkPageFrame.vue', import.meta.url), 'utf8')
-  // 页框必须真的消费 decision.refresh,否则 inkNav 标了也白标(纯声明、无副作用)
   const navigator = await readFile(new URL('../src/features/shell/useInkNavigation.js', import.meta.url), 'utf8')
-  assert.match(navigator, /decision\.refresh/)
-  assert.match(navigator, /refreshAll/)
+  assert.match(navigator, /resolveNavigation/)
+  assert.match(navigator, /nav\.push/)
   assert.match(frame, /useInkNavigation/)
 })
 
 test('both ink shells read one nav table, not two', async () => {
   // 工作台曾自带一份硬编码 navItems + onNavigate,与 inkNav 并列成第二个真源:
   // 每迁一页要同步两处,漏同步只在用户从工作台点那一项时才暴露。
-  for (const file of ['../src/pages/InkAtelierPage.vue', '../src/features/shell/InkPageFrame.vue']) {
+  for (const file of ['../src/pages/InkAgentPage.vue', '../src/features/shell/InkPageFrame.vue']) {
     const source = await readFile(new URL(file, import.meta.url), 'utf8')
     assert.match(source, /useInkNavigation/, `${file} 必须走共享导航器`)
     assert.doesNotMatch(source, /glyph: '/, `${file} 不得自带侧栏条目表`)
   }
   // 侧栏条目只有 inkNav 一处定义
   const nav = await readFile(new URL('../src/features/shell/inkNav.js', import.meta.url), 'utf8')
-  assert.match(nav, /glyph: '墨'/)
+  assert.equal((nav.match(/glyph:/g) || []).length, 8)
 })

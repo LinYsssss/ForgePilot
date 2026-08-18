@@ -294,9 +294,9 @@ test('splitRows pairs deletion/addition runs and carries anchors on the new side
 
 /* ---------- 8. Wiring anchors (source assertions) ---------- */
 
-test('the ink page is a recognized agent-workspace host for SSE/poll refresh', async () => {
+test('the canonical agent page is the only agent-workspace host for SSE/poll refresh', async () => {
   const agent = await readFile(new URL('../src/composables/useAgentWorkspace.js', import.meta.url), 'utf8')
-  assert.match(agent, /AGENT_WORKSPACE_PAGES = \['agent', 'inkAtelier'\]/)
+  assert.match(agent, /AGENT_WORKSPACE_PAGES = \['agent'\]/)
 })
 
 test('ink evidence components keep the frozen citation anchors verbatim', async () => {
@@ -306,13 +306,13 @@ test('ink evidence components keep the frozen citation anchors verbatim', async 
   assert.match(evidenceDiff, /data-evidence-path/)
   assert.match(evidenceDiff, /evidence-focus/) // focusEvidenceAnchor 的高亮钩子
 
-  const page = await readFile(new URL('../src/pages/InkAtelierPage.vue', import.meta.url), 'utf8')
+  const page = await readFile(new URL('../src/pages/InkAgentPage.vue', import.meta.url), 'utf8')
   assert.match(page, /focusEvidenceAnchor/)
-  assert.match(page, /query: \{ evidence: anchor \}/) // 与旧 #/agent?evidence= 同构的定位 query
+  assert.match(page, /section: 'agent', evidence: anchor/) // 与旧 #/agent?evidence= 同构的定位 query
 
   // 数据接线纪律:工作台组件不得绕过 composable/api 模块直发请求
   for (const file of [
-    '../src/pages/InkAtelierPage.vue',
+    '../src/pages/InkAgentPage.vue',
     '../src/features/workspace/PaperWorkspace.vue',
     '../src/features/workspace/ReviewActionBar.vue',
     '../src/features/workspace/EvidenceDiff.vue',
@@ -332,7 +332,7 @@ test('ink evidence components keep the frozen citation anchors verbatim', async 
 // /ink 两个宿主上都生效,且在其它路由上保持拒绝(谓词仍然守门)。
 // 桩(document/fetch/EventSource/nav)按 quality-guidelines 规则在
 // import 业务单例之前就位;本文件独立进程,不污染其它测试文件。
-test('SSE/poll refresh gate admits both /agent and /ink and rejects other routes', async (ctx) => {
+test('SSE/poll refresh gate admits canonical /agent and rejects other routes', async (ctx) => {
   const fakeEl = () => ({
     style: {}, children: [], firstChild: null, innerHTML: '',
     setAttribute() {}, removeAttribute() {}, appendChild() {}, remove() {},
@@ -364,7 +364,7 @@ test('SSE/poll refresh gate admits both /agent and /ink and rejects other routes
   globalThis.EventSource = FakeEventSource
 
   const { registerNav } = await import('../src/nav.js')
-  let route = 'inkAtelier'
+  let route = 'agent'
   registerNav({ name: () => route, query: () => ({}) })
 
   const { useSession } = await import('../src/composables/useSession.js')
@@ -383,25 +383,20 @@ test('SSE/poll refresh gate admits both /agent and /ink and rejects other routes
   const es = FakeEventSource.instances.at(-1)
   assert.match(es.url, /\/agent-runs\/31\/events$/)
 
-  ctx.mock.timers.tick(8000) // /ink 是活跃宿主:轮询兜底照常刷新
+  ctx.mock.timers.tick(8000) // canonical /agent:轮询兜底照常刷新
   await drain()
   assert.equal(workspaceLoads(), 1)
-
-  route = 'agent' // 旧 /agent 行为零变化
-  ctx.mock.timers.tick(8000)
-  await drain()
-  assert.equal(workspaceLoads(), 2)
 
   route = 'dashboard' // 谓词仍守门:其它路由不产生后台拉取
   ctx.mock.timers.tick(8000)
   await drain()
-  assert.equal(workspaceLoads(), 2)
+  assert.equal(workspaceLoads(), 1)
 
-  route = 'inkAtelier' // SSE 推送在 /ink 上同样经 300ms 防抖触发装载
+  route = 'agent' // SSE 推送仅在 canonical /agent 经 300ms 防抖触发装载
   es.listeners['agent-step']()
   ctx.mock.timers.tick(300)
   await drain()
-  assert.equal(workspaceLoads(), 3)
+  assert.equal(workspaceLoads(), 2)
 
   reset()
   assert.equal(es.closed, true)

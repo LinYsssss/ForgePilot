@@ -3,6 +3,9 @@ import { nav } from '../nav.js'
 import { useAgentWorkspace } from './useAgentWorkspace.js'
 import { useAiLogs } from './useAiLogs.js'
 import { useRequirementAssistant } from './useRequirementAssistant.js'
+import { useWorkbench } from './useWorkbench.js'
+import { useDevelopmentMetrics } from './useDevelopmentMetrics.js'
+import { workbenchTarget } from '../features/dashboard/workbenchTarget.js'
 import { useBusy } from './useBusy.js'
 import { useKnowledge } from './useKnowledge.js'
 import { useProjects } from './useProjects.js'
@@ -25,8 +28,11 @@ const knowledge = useKnowledge()
 const agent = useAgentWorkspace()
 const aiLogs = useAiLogs()
 const requirementAssistant = useRequirementAssistant()
+const workbench = useWorkbench()
+const developmentMetrics = useDevelopmentMetrics()
 
 function goto(name) { nav.push({ name }) }
+function gotoRoute(route) { nav.push(route) }
 
 /* ---------- 会话 ---------- */
 async function loadMe() {
@@ -81,7 +87,10 @@ function resetForProject() {
   pullRequests.reset()        // PR 列表/选中/动作 + 表单
   agent.reset()               // 关 SSE、停轮询、清 Run 状态
   knowledge.chosenDocsReset() // 两个文档选择集
+  aiLogs.reset()              // AI 日志分页/任务维度，避免项目切换残留
   requirementAssistant.reset() // P6 页面内存会话 + POST 流
+  workbench.reset()            // P7 服务端工作台 projection
+  developmentMetrics.reset()   // P7 固定窗口研发度量
 }
 
 function selectProject(p) {
@@ -106,29 +115,29 @@ function loadDiff() { return repository.loadDiff(reviews.reviewForm.baseCommitId
 
 function reviewSelectedCommit() {
   reviews.reviewForm.commitId = repository.selectedCommit.value.commitId
-  goto('reviews')
+  gotoRoute({ name: 'agent', query: { section: 'reviews' } })
 }
 
 function fillPrFromSelectedCommit() {
   if (!repository.selectedCommit.value) return
   pullRequests.fillPrFromCommit(repository.selectedCommit.value, reviews.reviewForm.branch)
-  goto('pullRequests')
+  gotoRoute({ name: 'repository', query: { section: 'pull-requests' } })
 }
 
 async function openReport(reportId) {
   await reviews.loadReport(reportId)
-  goto('reviews')
+  gotoRoute({ name: 'agent', query: { section: 'reviews', reportId: String(reportId) } })
 }
 
 async function openAgentWorkspace() {
-  goto('agent')
+  gotoRoute({ name: 'agent', query: { section: 'agent' } })
   await run(agent.loadAgentRuns)
   if (agent.agentRunId.value) await run(agent.loadAgentWorkspace)
 }
 
 // PR 行直达对应 Agent Run:按 head SHA 匹配(Webhook 创建的 Run 与 PR 以 head 对齐)。
 async function openAgentRunForPr(pr) {
-  goto('agent')
+  gotoRoute({ name: 'agent', query: { section: 'agent' } })
   await run(agent.loadAgentRuns)
   const match = agent.agentRuns.value.find(item => item.headSha && item.headSha === pr.headSha)
   if (!match) {
@@ -143,12 +152,17 @@ async function openAgentRunForPr(pr) {
 async function openProjectAiLogs() {
   if (!activeProject.value) return
   await aiLogs.loadAiLogs()
-  goto('aiLogs')
+  gotoRoute({ name: 'metrics', query: { section: 'ai' } })
 }
 
 async function openTaskAiLogs(taskId) {
   await aiLogs.loadAiLogs(taskId)
-  goto('aiLogs')
+  gotoRoute({ name: 'metrics', query: { section: 'ai', taskId: String(taskId) } })
+}
+
+function openWorkbenchTarget(item) {
+  const target = workbenchTarget(item)
+  if (target) gotoRoute(target)
 }
 
 // 审查轮询完成 → 打开最新报告(依赖注入,避免 reviews → workspace 反向引用)。
@@ -156,8 +170,8 @@ reviews.setCompletionHandler(openReport)
 
 export function useWorkspace() {
   return {
-    goto, loadMe, afterLogin, logout, refreshAll, goTab, resetForProject, selectProject,
+    goto, gotoRoute, loadMe, afterLogin, logout, refreshAll, goTab, resetForProject, selectProject,
     selectCommit, loadDiff, reviewSelectedCommit, fillPrFromSelectedCommit,
-    openReport, openAgentWorkspace, openAgentRunForPr, openProjectAiLogs, openTaskAiLogs,
+    openReport, openAgentWorkspace, openAgentRunForPr, openProjectAiLogs, openTaskAiLogs, openWorkbenchTarget,
   }
 }

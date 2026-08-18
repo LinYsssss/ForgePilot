@@ -51,7 +51,7 @@ const agentRunCounts = computed(() => ({
 
 // 承载本工作台的页面:旧 /agent 视图与墨境 /ink 纸面共用同一单例,
 // SSE/轮询触发的刷新在这两个路由上都要生效(语义不变:仅"页面活跃"判定)。
-const AGENT_WORKSPACE_PAGES = ['agent', 'inkAtelier']
+const AGENT_WORKSPACE_PAGES = ['agent']
 function onAgentPage() { return AGENT_WORKSPACE_PAGES.includes(nav.name()) }
 
 // 证据定位:外链 /agent?evidence=path:line 进入时,内容可能尚未渲染,

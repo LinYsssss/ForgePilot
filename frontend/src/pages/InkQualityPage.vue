@@ -42,6 +42,7 @@ import { useBusy } from '../composables/useBusy.js'
 import { useMembers } from '../composables/useMembers.js'
 import { useQualityFindings } from '../composables/useQualityFindings.js'
 import { useSession } from '../composables/useSession.js'
+import { nav } from '../nav.js'
 
 const { busy, run } = useBusy()
 const { activeProject, me } = useSession()
@@ -65,9 +66,10 @@ const activeFindingCount = computed(() => findings.value.filter(
   finding => !['CLOSED', 'REJECTED'].includes(finding.lifecycle),
 ).length)
 
-watch(() => activeProject.value?.projectId, () => {
+watch(() => [activeProject.value?.projectId, nav.query().findingId], async () => {
   resetQualityFindings()
-  run(loadQualityFindings, 'qualityFindings')
+  const requestedId = Number(nav.query().findingId) || null
+  await run(() => loadQualityFindings({ preferredId: requestedId }), 'qualityFindings')
   run(loadMembers, 'members')
 }, { immediate: true })
 </script>

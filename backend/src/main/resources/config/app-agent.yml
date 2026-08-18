@@ -49,6 +49,9 @@ app:
       batch-size: ${AGENT_OUTBOX_BATCH_SIZE:50}
       fixed-delay-ms: ${AGENT_OUTBOX_FIXED_DELAY_MS:1000}
       initial-delay-ms: ${AGENT_OUTBOX_INITIAL_DELAY_MS:5000}
+  metrics:
+    # 每类 duration/AI 分布的服务端样本上限;超过时响应显式标 truncated。
+    max-samples: ${METRICS_MAX_SAMPLES:5000}
   notify:
     # 报告链接前缀,填了会在通知里附「查看完整报告」
     base-url: ${NOTIFY_BASE_URL:}

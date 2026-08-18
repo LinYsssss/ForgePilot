@@ -5,7 +5,7 @@
     v-else
     ref="shellEl"
     :nav-items="navItems"
-    active-key="atelier"
+    active-key="agent"
     context-label="当前项目"
     :context-title="activeProject ? activeProject.name : '未选择项目'"
     :rail-badge="railBadge"
@@ -16,6 +16,7 @@
   >
     <template #case>
       <RunCaseList
+        v-if="section === 'agent'"
         :runs="filteredAgentRuns"
         :counts="agentRunCounts"
         :total="agentRuns.length"
@@ -31,7 +32,13 @@
       <strong>仅持久化证据可用于阻断</strong>
     </template>
 
+    <nav class="review-sections" aria-label="智能审查分区">
+      <button :class="{ active: section === 'agent' }" @click="setSection('agent')">Agent Run</button>
+      <button :class="{ active: section === 'reviews' }" @click="setSection('reviews')">交互式审查与报告</button>
+    </nav>
+
     <PaperWorkspace
+      v-if="section === 'agent'"
       ref="paperEl"
       :project-id="activeProject ? activeProject.projectId : null"
       :run-id="agentRunId"
@@ -58,6 +65,7 @@
       @approval-error="onPatchError"
       @go="onNavigate"
     />
+    <ReviewsPaper v-else />
 
     <!-- 取消/重试等确认(useConfirm 单例的墨境呈现;语义与旧 AppShell 一致:
          失败保留模态可重试,错误经 run() 落 toast) -->
@@ -81,7 +89,8 @@
     </div>
 
     <template #rail>
-      <AnnotationRail :notes="railNotesList" :facts="caseFacts" @locate="onLocateNote" />
+      <AnnotationRail v-if="section === 'agent'" :notes="railNotesList" :facts="caseFacts" @locate="onLocateNote" />
+      <p v-else class="reviews-rail-note">交互式 Review 任务、报告、Coverage 与 AI 日志入口复用原有轮询和业务动作。</p>
     </template>
   </InkShell>
 </template>
@@ -94,6 +103,7 @@ import InkDialog from '../features/shell/InkDialog.vue'
 import AnnotationRail from '../features/workspace/AnnotationRail.vue'
 import PaperWorkspace from '../features/workspace/PaperWorkspace.vue'
 import RunCaseList from '../features/workspace/RunCaseList.vue'
+import ReviewsPaper from '../features/workspace/ReviewsPaper.vue'
 import { nav } from '../nav.js'
 import { fmtTime, shortCommit } from '../utils/format.js'
 import { useAgentWorkspace } from '../composables/useAgentWorkspace.js'
@@ -102,6 +112,7 @@ import { useConfirm } from '../composables/useConfirm.js'
 import { useSession } from '../composables/useSession.js'
 import { useToast } from '../composables/useToast.js'
 import { useWorkspace } from '../composables/useWorkspace.js'
+import { useReviews } from '../composables/useReviews.js'
 import { useInkNavigation } from '../features/shell/useInkNavigation.js'
 import { useMotionPolicy } from '../shared/motion/useMotionPolicy.js'
 import {
@@ -123,6 +134,7 @@ const { toastMsg } = useToast()
 const { confirmModal, dismiss, confirmAction } = useConfirm()
 const { motionMode } = useMotionPolicy()
 const { loadMe, refreshAll, logout } = useWorkspace()
+const { tasks: reviewTasks, loadReviews, selectTask: selectReviewTask, loadReport: loadReviewReport } = useReviews()
 const {
   agentRuns, agentRunId, agentRunFilter, agentHeadSha,
   agentTimeline, agentFindings, agentPatch, agentRunDetail, agentPolling,
@@ -134,9 +146,17 @@ const {
 
 const shellEl = ref(null)
 const paperEl = ref(null)
+const section = ref('agent')
+function normalizedSection() {
+  const query = nav.query()
+  return query.section === 'reviews' || query.reviewTaskId || query.reportId ? 'reviews' : 'agent'
+}
+function setSection(value) {
+  nav.push({ name: 'agent', query: { ...nav.query(), section: value } })
+}
 
 /* ---------- 导航(与页框共用同一份条目与执行器,见 useInkNavigation) ---------- */
-const { navItems, onNavigate } = useInkNavigation('atelier')
+const { navItems, onNavigate } = useInkNavigation('agent')
 
 // 登录成功:与 afterLogin 同源动作(loadMe + refreshAll),但停留在墨境;
 // refreshAll 会装载项目并选中默认项目,下方 watch 随之装载案卷。
@@ -201,7 +221,7 @@ function onSelectFinding(id) {
 // 时 query 不变、watch 不触发,故补一次直调。
 async function onLocateAnchor(anchor) {
   if (!anchor) return
-  nav.push({ name: 'inkAtelier', query: { evidence: anchor } })
+  nav.push({ name: 'agent', query: { ...nav.query(), section: 'agent', evidence: anchor } })
   await nextTick()
   focusEvidenceAnchor()
 }
@@ -213,6 +233,29 @@ async function onLocateNote(note) {
   if (note.anchor) await onLocateAnchor(note.anchor)
   paperEl.value?.focusEvidence()
 }
+
+
+watch(() => [nav.query().section, nav.query().runId, nav.query().evidence, nav.query().reviewTaskId, nav.query().reportId], async () => {
+  section.value = normalizedSection()
+  if (section.value === 'reviews') {
+    await loadReviews().catch(() => {})
+    const taskId = Number(nav.query().reviewTaskId)
+    if (taskId) {
+      const task = reviewTasks.value.find(item => Number(item.taskId) === taskId)
+      if (task) await selectReviewTask(task).catch(() => {})
+    }
+    const reportId = Number(nav.query().reportId)
+    if (reportId) await loadReviewReport(reportId).catch(() => {})
+    return
+  }
+  const requestedRunId = Number(nav.query().runId)
+  if (requestedRunId && requestedRunId !== Number(agentRunId.value)) {
+    agentRunId.value = requestedRunId
+    await selectAgentRun().catch(() => {})
+  }
+  await nextTick()
+  focusEvidenceAnchor()
+}, { immediate: true })
 
 /* ---------- 审批结果:toast+重载复用 onPatchDecided,批准追加一次落印 ---------- */
 const sealVisible = ref(false)
@@ -298,4 +341,8 @@ const caseFacts = computed(() => {
   color: var(--ink-muted);
   font-size: var(--ink-fs-12);
 }
+.review-sections { display: flex; gap: var(--ink-sp-4); margin-bottom: var(--ink-sp-16); }
+.review-sections button { min-height: 44px; padding: var(--ink-sp-8) var(--ink-sp-16); border: 1px solid var(--line-soft); background: var(--surface-paper); color: var(--ink-default); }
+.review-sections button.active { border-color: var(--cinnabar); color: var(--cinnabar); font-weight: 700; }
+.reviews-rail-note { margin: 0; color: var(--ink-muted); line-height: var(--ink-lh-body); }
 </style>

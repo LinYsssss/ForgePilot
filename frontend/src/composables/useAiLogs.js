@@ -13,7 +13,10 @@ const selectedAiLog = ref(null)
 const collapsedDates = reactive({})
 const aiLogPage = ref(0)
 const aiLogTotalPages = ref(1)
+const aiLogsLoading = ref(false)
+const aiLogsError = ref('')
 let currentTaskId = null // 翻页时沿用当前维度
+let requestGeneration = 0
 
 const groupedAiLogs = computed(() => {
   const byDate = new Map()
@@ -34,22 +37,39 @@ const groupedAiLogs = computed(() => {
   })
 })
 
+function isCurrentRequest(generation, projectId) {
+  return generation === requestGeneration && activeProject.value?.projectId === projectId
+}
+
 async function loadAiLogs(taskId = null, page = 0) {
-  if (!activeProject.value) return
+  const projectId = activeProject.value?.projectId
+  const generation = ++requestGeneration
+  if (!projectId) { reset(); return null }
   currentTaskId = taskId
-  const scope = taskId ? `taskId=${taskId}` : `projectId=${activeProject.value.projectId}`
-  const data = await api(`/ai/logs?${scope}&page=${page}&size=100`)
-  if (data && Array.isArray(data.items)) {
-    aiLogs.value = data.items
-    aiLogPage.value = data.page ?? 0
-    aiLogTotalPages.value = data.totalPages ?? 1
-  } else {
-    // 旧后端(信封化前)兜底
-    aiLogs.value = Array.isArray(data) ? data : []
-    aiLogPage.value = 0
-    aiLogTotalPages.value = 1
+  aiLogsLoading.value = true
+  aiLogsError.value = ''
+  try {
+    const taskQuery = taskId == null || taskId === '' ? '' : `&taskId=${encodeURIComponent(taskId)}`
+    const data = await api(`/ai/logs?projectId=${encodeURIComponent(projectId)}${taskQuery}&page=${page}&size=100`)
+    if (!isCurrentRequest(generation, projectId)) return null
+    if (data && Array.isArray(data.items)) {
+      aiLogs.value = data.items
+      aiLogPage.value = data.page ?? 0
+      aiLogTotalPages.value = data.totalPages ?? 1
+    } else {
+      aiLogs.value = Array.isArray(data) ? data : []
+      aiLogPage.value = 0
+      aiLogTotalPages.value = 1
+    }
+    aiLogScope.value = taskId == null || taskId === '' ? '项目维度' : `任务 #${taskId} 维度`
+    return data
+  } catch (error) {
+    if (!isCurrentRequest(generation, projectId)) return null
+    aiLogsError.value = error?.message || 'AI 日志加载失败'
+    throw error
+  } finally {
+    if (isCurrentRequest(generation, projectId)) aiLogsLoading.value = false
   }
-  aiLogScope.value = taskId ? `任务 #${taskId} 维度` : '项目维度'
 }
 
 async function nextAiLogPage() {
@@ -62,17 +82,21 @@ async function prevAiLogPage() {
 function toggleDate(date) { collapsedDates[date] = !collapsedDates[date] }
 
 function reset() {
+  requestGeneration += 1
   aiLogs.value = []
   selectedAiLog.value = null
   aiLogScope.value = '项目维度'
   aiLogPage.value = 0
   aiLogTotalPages.value = 1
   currentTaskId = null
+  aiLogsLoading.value = false
+  aiLogsError.value = ''
+  for (const date of Object.keys(collapsedDates)) delete collapsedDates[date]
 }
 
 export function useAiLogs() {
   return {
     aiLogs, aiLogScope, selectedAiLog, collapsedDates, groupedAiLogs,
-    aiLogPage, aiLogTotalPages, loadAiLogs, nextAiLogPage, prevAiLogPage, toggleDate, reset,
+    aiLogPage, aiLogTotalPages, aiLogsLoading, aiLogsError, loadAiLogs, nextAiLogPage, prevAiLogPage, toggleDate, reset,
   }
 }

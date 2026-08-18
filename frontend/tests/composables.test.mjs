@@ -10,6 +10,11 @@ import { beforeEach, mock, test } from 'node:test'
 const fetchRoutes = new Map()
 function stubJson(pathPart, data) { fetchRoutes.set(pathPart, () => data) }
 function stubFn(pathPart, fn) { fetchRoutes.set(pathPart, fn) }
+function deferred() {
+  let resolve
+  const promise = new Promise(r => { resolve = r })
+  return { promise, resolve }
+}
 
 // @vue/runtime-dom 在模块加载时会 createElement 探测能力,给足最小面
 const fakeEl = () => ({
@@ -30,7 +35,7 @@ globalThis.fetch = async url => {
       return {
         ok: true, status: 200,
         headers: { get: () => null },
-        json: async () => ({ code: 0, data: fn() }),
+        json: async () => ({ code: 0, data: await fn() }),
       }
     }
   }
@@ -53,12 +58,21 @@ const { useConfirm } = await import('../src/composables/useConfirm.js')
 const { useKnowledge } = await import('../src/composables/useKnowledge.js')
 const { useReviews } = await import('../src/composables/useReviews.js')
 const { useAgentWorkspace } = await import('../src/composables/useAgentWorkspace.js')
+const { useAiLogs } = await import('../src/composables/useAiLogs.js')
+const { useWorkbench } = await import('../src/composables/useWorkbench.js')
+const { useDevelopmentMetrics } = await import('../src/composables/useDevelopmentMetrics.js')
 
 const { activeProject } = useSession()
 const { toast } = useToast()
 const { busy, run } = useBusy()
+const { reset: resetAiLogs } = useAiLogs()
+const { reset: resetWorkbench } = useWorkbench()
+const { reset: resetMetrics } = useDevelopmentMetrics()
 
 beforeEach(() => {
+  resetAiLogs()
+  resetWorkbench()
+  resetMetrics()
   activeProject.value = { projectId: 7, name: 'demo', defaultBranch: 'main' }
   toast.text = ''
   fetchRoutes.clear()
@@ -204,4 +218,39 @@ test('switching runs closes the previous SSE connection', async () => {
   assert.match(second.url, /\/agent-runs\/22\/events$/)
   reset()
   assert.equal(second.closed, true)
+})
+
+
+test('P7 project loaders scope requests and ignore stale responses after a project switch', async () => {
+  const { loadAiLogs, aiLogs } = useAiLogs()
+  const { loadWorkbench, workbench } = useWorkbench()
+  const { loadMetrics, metrics } = useDevelopmentMetrics()
+  const oldAi = deferred()
+  const oldWorkbench = deferred()
+  const oldMetrics = deferred()
+
+  stubFn('/ai/logs?projectId=7&taskId=99', () => oldAi.promise)
+  stubFn('/projects/7/workbench', () => oldWorkbench.promise)
+  stubFn('/projects/7/metrics', () => oldMetrics.promise)
+  const oldAiRequest = loadAiLogs(99)
+  const oldWorkbenchRequest = loadWorkbench()
+  const oldMetricsRequest = loadMetrics('30d')
+
+  activeProject.value = { projectId: 8, name: 'next', defaultBranch: 'main' }
+  resetAiLogs()
+  resetWorkbench()
+  resetMetrics()
+  stubJson('/ai/logs?projectId=8&taskId=99', { items: [{ id: 8 }], page: 0, totalPages: 1 })
+  stubJson('/projects/8/workbench', { requirements: [{ requirementId: 8 }] })
+  stubJson('/projects/8/metrics', { window: '7d' })
+
+  await Promise.all([loadAiLogs(99), loadWorkbench(), loadMetrics('7d')])
+  oldAi.resolve({ items: [{ id: 7 }], page: 0, totalPages: 1 })
+  oldWorkbench.resolve({ requirements: [{ requirementId: 7 }] })
+  oldMetrics.resolve({ window: '30d' })
+  await Promise.all([oldAiRequest, oldWorkbenchRequest, oldMetricsRequest])
+
+  assert.deepEqual(aiLogs.value, [{ id: 8 }])
+  assert.deepEqual(workbench.value, { requirements: [{ requirementId: 8 }] })
+  assert.deepEqual(metrics.value, { window: '7d' })
 })

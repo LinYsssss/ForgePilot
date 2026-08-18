@@ -60,6 +60,7 @@ import { useSession } from '../composables/useSession.js'
 import { useMembers } from '../composables/useMembers.js'
 import { useRequirements } from '../composables/useRequirements.js'
 import { useRequirementAssistant } from '../composables/useRequirementAssistant.js'
+import { nav } from '../nav.js'
 
 // 研发任务页(P1b,墨境原生新页)。列表/详情/表单均出自 useRequirements 单例;
 // 指派下拉复用成员名册(useMembers);editing 是页面局部的视图态,不进全局 store。
@@ -100,14 +101,19 @@ function cancelEdit() {
   editing.value = false
 }
 
-watch(() => activeProject.value && activeProject.value.projectId, () => {
+watch(() => [activeProject.value?.projectId, nav.query().requirementId], async () => {
   assistant.reset()
   editing.value = false
   requirementDetail.value = null
   checkReports.value = []
   requirementLinks.value = []
-  run(loadRequirements, 'requirements')
+  await run(loadRequirements, 'requirements')
   run(loadMembers, 'members')
+  const requestedId = Number(nav.query().requirementId)
+  if (requestedId) {
+    const summary = requirements.value.find(item => Number(item.requirementId) === requestedId) || { requirementId: requestedId }
+    await run(() => openRequirementWithAssistant(summary), 'requirementOpen')
+  }
 }, { immediate: true })
 
 onMounted(assistant.loadConfig)

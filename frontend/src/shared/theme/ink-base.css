@@ -124,7 +124,9 @@ body.ink-drawer-open { overflow: hidden; }
   display: grid;
   place-items: center;
   width: 44px;
+  min-width: 44px;
   height: 44px;
+  flex: 0 0 44px;
   border: 1px solid transparent;
   border-radius: var(--ink-radius-control);
   background: transparent;
