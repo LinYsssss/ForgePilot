@@ -6,12 +6,15 @@ aggregates edges at top-level package granularity (agent, common, review, ...),
 reports edge counts and cycles. Re-runnable; used as evidence for
 .trellis/tasks/08-03-r5-backend-refactor/batch-c-boundaries.md.
 """
+import argparse
 import os
 import re
 import sys
+from pathlib import Path
 from collections import defaultdict
 
-ROOT = "/root/ForgePilot/backend/src/main/java"
+DEFAULT_ROOT = Path(__file__).resolve().parents[1] / "backend" / "src" / "main" / "java"
+ROOT = DEFAULT_ROOT
 BASE = "com.example.codereview"
 
 PKG_RE = re.compile(r"^\s*package\s+([\w.]+)\s*;", re.M)
@@ -27,6 +30,18 @@ def top(pkg: str) -> str:
 
 
 def main() -> None:
+    global ROOT
+    parser = argparse.ArgumentParser(description="Scan backend package dependencies")
+    parser.add_argument(
+        "--root",
+        default=os.environ.get("BACKEND_JAVA_ROOT", str(DEFAULT_ROOT)),
+        help="backend Java source root (default: repository-relative; env BACKEND_JAVA_ROOT also supported)",
+    )
+    args = parser.parse_args()
+    ROOT = Path(args.root).expanduser().resolve()
+    if not ROOT.is_dir():
+        parser.error(f"backend Java source root does not exist: {ROOT}")
+
     edges = defaultdict(int)            # (src_top, dst_top) -> import count
     edge_details = defaultdict(list)    # (src_top, dst_top) -> ["src.Class -> imported.symbol"]
     files = 0
@@ -76,6 +91,7 @@ def main() -> None:
 
     tops = sorted({t for e in edges for t in e})
 
+    print(f"# root: {ROOT}")
     print(f"# files scanned: {files}")
     print(f"# top-level packages with cross-package edges: {len(tops)}")
     print()

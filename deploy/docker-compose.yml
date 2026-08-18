@@ -197,8 +197,8 @@ services:
   grafana:
     image: grafana/grafana:11.1.0
     environment:
-      # 仅绑定 127.0.0.1,远程访问走 SSH 隧道;初始密码用 .env 覆盖,首次登录改掉。
-      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      # 仅绑定 127.0.0.1，远程访问走 SSH 隧道；密码必须由 .env 显式提供，禁止已知默认值。
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?GRAFANA_ADMIN_PASSWORD is required}
       GF_USERS_ALLOW_SIGN_UP: "false"
       GF_ANALYTICS_REPORTING_ENABLED: "false"
     volumes:

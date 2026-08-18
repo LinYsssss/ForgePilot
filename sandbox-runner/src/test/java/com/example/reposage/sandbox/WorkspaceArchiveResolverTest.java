@@ -7,6 +7,8 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.DisabledOnOs;
+import org.junit.jupiter.api.condition.OS;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -74,6 +76,7 @@ class WorkspaceArchiveResolverTest {
 
     /** realpath 围栏必须在:根目录内的符号链接不得把人引到根目录之外。 */
     @Test
+    @DisabledOnOs(value = OS.WINDOWS, disabledReason = "Windows symlink creation requires SeCreateSymbolicLinkPrivilege; Linux CI covers this realpath guard")
     void symlinkEscapingArchiveRootIsRejected() throws Exception {
         Path root = Files.createDirectory(tempDir.resolve("archives"));
         Path outside = Files.writeString(tempDir.resolve("outside.tar"), "outside");

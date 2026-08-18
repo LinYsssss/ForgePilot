@@ -184,3 +184,27 @@
 
 - Start a fresh ForgePilot clone for the requested full code/generated-file/production-readiness audit.
 - P8 remains in_progress until the Docker-enabled real-model matrix is executed.
+
+## Session 8: 全仓生产审计 checkpoint
+
+**Date**: 2026-08-18
+**Task**: 全仓代码、生成物与生产就绪审计（in_progress）
+**Repository**: fresh ForgePilot main `47a0ed4`
+
+### Completed
+
+- Confirmed and removed tracked `model-service/tests/__pycache__/test_main.cpython-312-pytest-8.3.4.pyc`.
+- Added global Python cache/pytest ignore rules.
+- Fixed smoke authentication to HttpOnly cookie + CSRF, current paginated envelopes, and initialized demo repositories.
+- Fixed verify-local temporary seed admin and ForgePilot summary labels.
+- Made package dependency scan repository-relative with override.
+- Removed Grafana known `admin` fallback.
+- Made Windows symlink regression test skip only where OS privilege prevents creation; Linux CI still runs it.
+- Backend 730 tests passed/6 skipped; sandbox 75 passed/1 Windows skip; frontend 85 passed/build; npmjs audit 0 vulnerabilities; model-service 9 passed in temporary pinned venv.
+- Focused H2/Mock smoke passed: health UP, auth, repo, knowledge, review SUCCESS, report, feedback, logs.
+
+### Remaining
+
+- Full source/security/dead-code audit and final cleanup manifest are not complete.
+- Docker, Trivy, Compose runtime, and exact Node22 verification remain unavailable or environment-dependent.
+- Generated local `target/dist/node_modules/.work/demo .git` outputs must be removed only after the final audit checks.

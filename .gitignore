@@ -45,3 +45,10 @@ Thumbs.db
 
 # 数据库备份(业务数据,不入库)
 deploy/backups/
+
+# Python tooling caches (all modules/tests)
+**/__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/

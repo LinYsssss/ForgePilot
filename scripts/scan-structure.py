@@ -114,7 +114,7 @@ def main():
     big_methods = []
     total_methods = 0
     for f in files:
-        total = sum(1 for _ in f.open())
+        total = sum(1 for _ in f.open(encoding="utf-8"))
         if total > 500:
             big_classes.append((total, f))
         for open_line, body in scan_file(f):

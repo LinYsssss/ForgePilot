@@ -7,53 +7,66 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+$BaseUrl = $BaseUrl.TrimEnd('/')
+$Session = [Microsoft.PowerShell.Commands.WebRequestSession]::new()
 
 if ([string]::IsNullOrWhiteSpace($RepoPath)) {
     $RepoPath = (Resolve-Path (Join-Path $PSScriptRoot "..\demo-repos\mall-order-service")).Path
+}
+
+function Get-CsrfHeaders {
+    $cookie = $Session.Cookies.GetCookies($BaseUrl) |
+        Where-Object Name -eq "XSRF-TOKEN" | Select-Object -First 1
+    if ($null -eq $cookie -or [string]::IsNullOrWhiteSpace($cookie.Value)) {
+        throw "CSRF cookie is missing; call /api/auth/csrf before a write request"
+    }
+    return @{ "X-XSRF-TOKEN" = $cookie.Value }
 }
 
 function Invoke-JsonApi {
     param(
         [string]$Method,
         [string]$Path,
-        [object]$Body = $null,
-        [string]$Token = ""
+        [object]$Body = $null
     )
 
-    $headers = @{}
-    if (-not [string]::IsNullOrWhiteSpace($Token)) {
-        $headers["Authorization"] = "Bearer $Token"
+    $params = @{
+        Method = $Method
+        Uri = "$BaseUrl$Path"
+        WebSession = $Session
+        Headers = (Get-CsrfHeaders)
     }
-
-    $uri = "$BaseUrl$Path"
-    if ($null -eq $Body) {
-        return Invoke-RestMethod -Method $Method -Uri $uri -Headers $headers
+    if ($null -ne $Body) {
+        $params.ContentType = "application/json; charset=utf-8"
+        $params.Body = $Body | ConvertTo-Json -Depth 20
     }
-
-    $json = $Body | ConvertTo-Json -Depth 20
-    return Invoke-RestMethod -Method $Method -Uri $uri -Headers $headers -ContentType "application/json; charset=utf-8" -Body $json
+    return Invoke-RestMethod @params
 }
 
 function Invoke-UploadFile {
     param(
         [string]$Path,
-        [string]$FilePath,
-        [string]$Token
+        [string]$FilePath
     )
 
     Add-Type -AssemblyName System.Net.Http
-
-    $client = [System.Net.Http.HttpClient]::new()
-    $content = $null
+    $handler = [System.Net.Http.HttpClientHandler]::new()
+    $handler.UseCookies = $true
+    $handler.CookieContainer = $Session.Cookies
+    $client = [System.Net.Http.HttpClient]::new($handler)
+    $multipart = [System.Net.Http.MultipartFormDataContent]::new()
+    $request = $null
     try {
-        $client.DefaultRequestHeaders.Authorization = [System.Net.Http.Headers.AuthenticationHeaderValue]::new("Bearer", $Token)
-        $content = [System.Net.Http.MultipartFormDataContent]::new()
         $bytes = [System.IO.File]::ReadAllBytes($FilePath)
         $fileContent = [System.Net.Http.ByteArrayContent]::new($bytes)
         $fileContent.Headers.ContentType = [System.Net.Http.Headers.MediaTypeHeaderValue]::Parse("text/markdown")
-        $content.Add($fileContent, "file", [System.IO.Path]::GetFileName($FilePath))
+        $multipart.Add($fileContent, "file", [System.IO.Path]::GetFileName($FilePath))
 
-        $response = $client.PostAsync("$BaseUrl$Path", $content).GetAwaiter().GetResult()
+        $request = [System.Net.Http.HttpRequestMessage]::new(
+            [System.Net.Http.HttpMethod]::Post, "$BaseUrl$Path")
+        $request.Headers.Add("X-XSRF-TOKEN", (Get-CsrfHeaders)["X-XSRF-TOKEN"])
+        $request.Content = $multipart
+        $response = $client.SendAsync($request).GetAwaiter().GetResult()
         $body = $response.Content.ReadAsStringAsync().GetAwaiter().GetResult()
         if (-not $response.IsSuccessStatusCode) {
             throw "Upload failed: HTTP $([int]$response.StatusCode) $body"
@@ -61,10 +74,10 @@ function Invoke-UploadFile {
         return $body | ConvertFrom-Json
     }
     finally {
-        if ($null -ne $content) {
-            $content.Dispose()
-        }
+        if ($null -ne $request) { $request.Dispose() }
+        $multipart.Dispose()
         $client.Dispose()
+        $handler.Dispose()
     }
 }
 
@@ -87,19 +100,17 @@ if ($health.status -ne "UP") {
     throw "Health check failed: $($health | ConvertTo-Json -Depth 5)"
 }
 
-$suffix = Get-Date -Format "yyyyMMddHHmmss"
-
-# Registration is no longer a public endpoint; the first user is provisioned via the
-# SEED_ADMIN_* env vars (AuthSeedRunner). Authenticate as that seeded admin.
+# AuthController rotates the CSRF token and writes the auth token only to an HttpOnly cookie.
+$csrfBootstrap = Invoke-RestMethod -Method Get -Uri "$BaseUrl/api/auth/csrf" -WebSession $Session
 $login = Invoke-JsonApi -Method Post -Path "/api/auth/login" -Body @{
     username = $AdminUser
     password = $AdminPassword
 }
 Assert-ApiOk $login "login"
-$token = $login.data.token
-$username = $AdminUser
+$username = $login.data.username
 
-$project = Invoke-JsonApi -Method Post -Path "/api/projects" -Token $token -Body @{
+$suffix = Get-Date -Format "yyyyMMddHHmmss"
+$project = Invoke-JsonApi -Method Post -Path "/api/projects" -Body @{
     name = "mall-order-review-$suffix"
     description = "API smoke test project"
     defaultBranch = "main"
@@ -107,7 +118,7 @@ $project = Invoke-JsonApi -Method Post -Path "/api/projects" -Token $token -Body
 Assert-ApiOk $project "create project"
 $projectId = $project.data.projectId
 
-$repo = Invoke-JsonApi -Method Post -Path "/api/projects/$projectId/repository" -Token $token -Body @{
+$repo = Invoke-JsonApi -Method Post -Path "/api/projects/$projectId/repository" -Body @{
     repoUrl = $RepoPath
     provider = "LOCAL"
     defaultBranch = "main"
@@ -115,7 +126,7 @@ $repo = Invoke-JsonApi -Method Post -Path "/api/projects/$projectId/repository" 
 }
 Assert-ApiOk $repo "bind repository"
 
-$commits = Invoke-JsonApi -Method Get -Path "/api/projects/$projectId/repository/commits?limit=5" -Token $token
+$commits = Invoke-JsonApi -Method Get -Path "/api/projects/$projectId/repository/commits?limit=5"
 Assert-ApiOk $commits "list commits"
 if ($commits.data.Count -lt 1) {
     throw "No commits found in demo repository"
@@ -123,16 +134,16 @@ if ($commits.data.Count -lt 1) {
 $commit = $commits.data[0]
 
 $securityDoc = Join-Path $RepoPath "docs\security-policy.md"
-$upload = Invoke-UploadFile -Path "/api/projects/$projectId/knowledge/documents?docType=SECURITY" -FilePath $securityDoc -Token $token
+$upload = Invoke-UploadFile -Path "/api/projects/$projectId/knowledge/documents?docType=SECURITY" -FilePath $securityDoc
 Assert-ApiOk $upload "upload knowledge"
 
-$knowledgeSearch = Invoke-JsonApi -Method Post -Path "/api/projects/$projectId/knowledge/search" -Token $token -Body @{
+$knowledgeSearch = Invoke-JsonApi -Method Post -Path "/api/projects/$projectId/knowledge/search" -Body @{
     query = "admin endpoint authorization and paid order shipping rule"
     topK = 5
 }
 Assert-ApiOk $knowledgeSearch "search knowledge"
 
-$task = Invoke-JsonApi -Method Post -Path "/api/projects/$projectId/reviews/tasks" -Token $token -Body @{
+$task = Invoke-JsonApi -Method Post -Path "/api/projects/$projectId/reviews/tasks" -Body @{
     commitId = $commit.commitId
     baseCommitId = $commit.parentCommitId
     branch = "main"
@@ -142,10 +153,10 @@ $taskId = $task.data.taskId
 
 $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
 do {
-    $taskDetail = Invoke-JsonApi -Method Get -Path "/api/projects/$projectId/reviews/tasks/$taskId" -Token $token
+    $taskDetail = Invoke-JsonApi -Method Get -Path "/api/projects/$projectId/reviews/tasks/$taskId"
     Assert-ApiOk $taskDetail "task detail"
     $status = $taskDetail.data.status
-    if ($status -in @("SUCCESS", "FAILED", "DEAD")) {
+    if ($status -in @("SUCCESS", "FAILED", "DEAD", "CANCELED")) {
         break
     }
     Start-Sleep -Seconds 2
@@ -155,33 +166,37 @@ if ($status -ne "SUCCESS") {
     throw "Review task did not succeed. taskId=$taskId, status=$status"
 }
 
-$reports = Invoke-JsonApi -Method Get -Path "/api/projects/$projectId/reviews/reports" -Token $token
+$reports = Invoke-JsonApi -Method Get -Path "/api/projects/$projectId/reviews/reports?page=0&size=100"
 Assert-ApiOk $reports "list reports"
-if ($reports.data.Count -lt 1) {
+$reportItems = @($reports.data.items)
+if ($reportItems.Count -lt 1) {
     throw "No report generated"
 }
-$reportId = $reports.data[0].reportId
+$reportId = $reportItems[0].reportId
 
-$report = Invoke-JsonApi -Method Get -Path "/api/projects/$projectId/reviews/reports/$reportId" -Token $token
+$report = Invoke-JsonApi -Method Get -Path "/api/projects/$projectId/reviews/reports/$reportId"
 Assert-ApiOk $report "report detail"
 if ($report.data.issues.Count -lt 1) {
     throw "No issues generated"
 }
 $issue = $report.data.issues[0]
 
-$feedback = Invoke-JsonApi -Method Post -Path "/api/review-issues/$($issue.issueId)/feedback" -Token $token -Body @{
+$feedback = Invoke-JsonApi -Method Post -Path "/api/review-issues/$($issue.issueId)/feedback" -Body @{
     feedbackType = "TRUE_POSITIVE"
     comment = "Smoke test confirmed."
 }
 Assert-ApiOk $feedback "create feedback"
 
-$mqLogs = Invoke-JsonApi -Method Get -Path "/api/mq/logs?taskId=$taskId" -Token $token
+$mqLogs = Invoke-JsonApi -Method Get -Path "/api/mq/logs?taskId=$taskId&page=0&size=100"
 Assert-ApiOk $mqLogs "mq logs"
 
-$aiLogs = Invoke-JsonApi -Method Get -Path "/api/ai/logs?projectId=$($projectId)&limit=50" -Token $token
+$aiLogs = Invoke-JsonApi -Method Get -Path "/api/ai/logs?projectId=$($projectId)&page=0&size=100"
 Assert-ApiOk $aiLogs "ai logs"
+$mqItems = @($mqLogs.data.items)
+$aiItems = @($aiLogs.data.items)
 
 [PSCustomObject]@{
+    Product = "ForgePilot"
     Health = $health.status
     Username = $username
     ProjectId = $projectId
@@ -193,8 +208,8 @@ Assert-ApiOk $aiLogs "ai logs"
     OverallRisk = $report.data.overallRisk
     FirstIssue = $issue.category
     FeedbackId = $feedback.data.feedbackId
-    MqLogCount = $mqLogs.data.Count
-    AiLogCount = $aiLogs.data.Count
-    AiLogTypes = (($aiLogs.data | ForEach-Object { $_.requestType } | Sort-Object -Unique) -join ",")
-    AiTotalTokens = (($aiLogs.data | Measure-Object -Property totalTokens -Sum).Sum)
+    MqLogCount = $mqItems.Count
+    AiLogCount = $aiItems.Count
+    AiLogTypes = (($aiItems | ForEach-Object { $_.requestType } | Sort-Object -Unique) -join ",")
+    AiTotalTokens = (($aiItems | Measure-Object -Property totalTokens -Sum).Sum)
 } | Format-List

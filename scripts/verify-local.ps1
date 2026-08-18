@@ -1,6 +1,8 @@
 param(
     [int]$BackendPort = 18080,
-    [switch]$SkipSmoke
+    [switch]$SkipSmoke,
+    [string]$SmokeAdminUser = "smoke-admin",
+    [string]$SmokeAdminPassword = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -9,6 +11,10 @@ $Root = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $BackendDir = Join-Path $Root "backend"
 $FrontendDir = Join-Path $Root "frontend"
 $SmokeScript = Join-Path $PSScriptRoot "smoke-backend.ps1"
+$DemoInitScript = Join-Path $PSScriptRoot "init-demo-repos.ps1"
+if ([string]::IsNullOrWhiteSpace($SmokeAdminPassword)) {
+    $SmokeAdminPassword = "Smoke-" + [Guid]::NewGuid().ToString("N")
+}
 $Results = [ordered]@{}
 
 function Invoke-Step {
@@ -69,17 +75,30 @@ function Wait-Backend {
 }
 
 function Invoke-Smoke {
+    if (-not (Test-Path -LiteralPath $DemoInitScript)) {
+        throw "missing demo repository initializer: $DemoInitScript"
+    }
+    Invoke-CommandChecked -FilePath "pwsh" -Arguments @("-NoProfile", "-File", $DemoInitScript, "-Verify") -WorkingDirectory $Root
+
     $baseUrl = "http://localhost:$BackendPort"
     $job = Start-Job -ScriptBlock {
-        param($dir, $port)
+        param($dir, $port, $seedUser, $seedPassword)
         Set-Location $dir
+        $env:APP_ENV = "dev"
         $env:SERVER_PORT = "$port"
+        $env:SEED_ADMIN_USERNAME = $seedUser
+        $env:SEED_ADMIN_PASSWORD = $seedPassword
+        $env:SEED_ADMIN_ROLE = "ADMIN"
+        $env:AI_PROVIDER = "mock"
+        $env:EMBEDDING_PROVIDER = "mock"
+        $env:REVIEW_INLINE = "true"
+        $env:GIT_ALLOW_LOCAL_PATH = "true"
         mvn -s .mvn\settings.xml spring-boot:run
-    } -ArgumentList $BackendDir, $BackendPort
+    } -ArgumentList $BackendDir, $BackendPort, $SmokeAdminUser, $SmokeAdminPassword
 
     try {
         Wait-Backend -BaseUrl $baseUrl
-        & $SmokeScript -BaseUrl $baseUrl
+        & $SmokeScript -BaseUrl $baseUrl -AdminUser $SmokeAdminUser -AdminPassword $SmokeAdminPassword
         if ($LASTEXITCODE -ne 0) {
             throw "smoke script exited with code $LASTEXITCODE"
         }
@@ -131,14 +150,14 @@ try {
     Test-DockerAvailability
 
     Write-Host ""
-    Write-Host "RepoSage local verification summary:"
+    Write-Host "ForgePilot local verification summary:"
     foreach ($item in $Results.GetEnumerator()) {
         Write-Host ("- {0}: {1}" -f $item.Key, $item.Value)
     }
 }
 catch {
     Write-Host ""
-    Write-Host "RepoSage local verification failed:"
+    Write-Host "ForgePilot local verification failed:"
     foreach ($item in $Results.GetEnumerator()) {
         Write-Host ("- {0}: {1}" -f $item.Key, $item.Value)
     }
