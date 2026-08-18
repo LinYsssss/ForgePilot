@@ -160,3 +160,27 @@
 - Docker-enabled isolated stack and real evaluation credentials are required for the five-arm/38-case matrix.
 - Preflight artifact: `.trellis/tasks/08-17-p8-experiment-defense/eval-runs/preflight-2026-08-18/matrix.md`.
 - This checkpoint is intentionally committed and pushed as a handoff; P8 remains `in_progress` and must be resumed after deployment.
+
+## Session 7: ForgePilot 新仓库与全历史身份重写迁移
+
+**Date**: 2026-08-18
+**Task**: P9 ForgePilot 新仓库与全历史身份重写迁移
+**Branch**: rewritten `main` in `LinYsssss/ForgePilot`
+
+### Summary
+
+创建 public 新仓库 `LinYsssss/ForgePilot`，旧 `LinYsssss/reposage` 保持 public/unarchived、main=`ce83abf`。在系统临时 bare mirror 中将 381 个历史 commit 的 Author/Committer 全部统一为 `LinYsssss <153968692+LinYsssss@users.noreply.github.com>`，所有 SHA 按用户确认发生变化；tree、完整 message、author/committer dates、parent topology 全量 381/381 验证通过，0 commit dropped、0 errors。迁移 11 个分支、0 tags；同名分支冲突中，旧远程 `fix/track-b-boundary` 保留原名，本地 tip 保存为 `local-only/fix/track-b-boundary`。新 main 增加迁移记录 commit `a13afb8`，README/MIGRATION.md 已通过 GitHub 读取验证。
+
+### Verification
+
+- [OK] New repo public/default main; commit `a13afb84095f64592d2bd093b19baebff8c600b2`
+- [OK] 381 rewrite map rows, 381/381 tree/message/date/topology preserved
+- [OK] All 382 reachable commits in new history use the confirmed Author/Committer identity
+- [OK] 11 remote branches verified; 0 tags
+- [OK] Old repo remains public/unarchived at `ce83abf`
+- [OK] Legacy workspace keeps old origin; added separate `forgepilot` remote
+
+### Next Steps
+
+- Start a fresh ForgePilot clone for the requested full code/generated-file/production-readiness audit.
+- P8 remains in_progress until the Docker-enabled real-model matrix is executed.
