@@ -2,7 +2,7 @@
 
 规范依据：[ARCHITECTURE.md](./ARCHITECTURE.md)（技术）+ [PRD.md](./PRD.md)（产品）。本文只定义**顺序与退出条件**，不重复规范内容。
 
-Phase 0 已冻结（2026-08-19），Phase 1 可以开始；Phase 2 及以后需前一 Phase 产物通过人工评审。
+Phase 0 已于 2026-08-19 获用户批准。当前指令仅为提交并推送方案，**Phase 1 尚未收到开始指令，不得自行启动**；启动后也只实施 Phase 1，Phase 2 及以后仍需前一 Phase 产物通过人工评审。
 
 ## 不可违反的实施纪律
 
@@ -14,7 +14,7 @@ Phase 0 已冻结（2026-08-19），Phase 1 可以开始；Phase 2 及以后需�
 - 任何 P1 功能不得插入核心 Phase：多轮 Assistant、Workbench、多仓库、相关代码读取、报告导出、高级监控。MVP 仅允许 Requirement 详情页的一次性结构化实现建议。
 - **写代码前先查迁移矩阵**：该模块的 Legacy 资产是 KEEP / REWRITE / REFERENCE / DROP。
 
-## Phase 0：冻结契约 ✅ 已完成（2026-08-19）
+## Phase 0：冻结契约 ✅ 已完成并批准（2026-08-19）
 
 - 冻结主流程、角色权限矩阵、Requirement/Finding/Review 状态。
 - 冻结 14 表、8 顶层包、依赖规则、运行边界、SCM event contract。
@@ -87,4 +87,4 @@ Phase 0 已冻结（2026-08-19），Phase 1 可以开始；Phase 2 及以后需�
 
 ## 首个实施授权的最小范围
 
-即使用户随后批准实施，第一次授权也应只覆盖 Phase 0-1。Phase 2 及以后需要在 Phase 1 产物通过人工评审后再继续，防止业务代码在边界尚未锁定时同时扩张。
+用户批准本方案后，第一次实施授权只覆盖 Phase 1。Phase 2 及以后需要在前一 Phase 产物通过人工评审后再继续，防止业务代码在边界尚未锁定时同时扩张。

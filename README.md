@@ -21,12 +21,13 @@ ForgePilot 是一个面向软件研发流程的轻量级 AI 研发协作与代�
 
 AI 或开发者进入仓库后，按以下顺序阅读：
 
-1. [AI 接手说明](docs/v2/AI-HANDOFF.md)
-2. [产品需求](docs/v2/PRD.md)
-3. [架构规范](docs/v2/ARCHITECTURE.md)
-4. [实施蓝图](docs/v2/IMPLEMENTATION-PLAN.md)
-5. [Legacy 迁移矩阵](docs/v2/LEGACY-MIGRATION-MATRIX.md)
-6. [架构决策记录](docs/v2/adr/README.md)
+1. [最终执行方案](docs/v2/FINAL-EXECUTION-PLAN.md)
+2. [AI 接手说明](docs/v2/AI-HANDOFF.md)
+3. [产品需求](docs/v2/PRD.md)
+4. [架构规范](docs/v2/ARCHITECTURE.md)
+5. [实施蓝图](docs/v2/IMPLEMENTATION-PLAN.md)
+6. [Legacy 迁移矩阵](docs/v2/LEGACY-MIGRATION-MATRIX.md)
+7. [架构决策记录](docs/v2/adr/README.md)
 
 ## 仓库结构
 
@@ -49,7 +50,7 @@ docs/v2/       产品与架构的唯一事实源
 
 ## 当前状态
 
-Phase 0：方案冻结与旧系统归档已完成。下一步只实施 [Phase 1 最小工程底座](docs/v2/IMPLEMENTATION-PLAN.md)。
+Phase 0：旧系统归档、V2 最终方案和 Trellis 三端初始化已完成，方案已于 2026-08-19 获用户批准。当前指令仅为提交并推送治理文件；在用户另行要求开始 Phase 1 前，仍禁止创建业务代码。
 
 ## License
 

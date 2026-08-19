@@ -14,10 +14,10 @@ This file is a review checklist, not an application implementation plan.
 
 ## User review
 
-- [ ] Review the 12 decisions in `docs/v2/FINAL-EXECUTION-PLAN.md`.
-- [ ] Record requested revisions, if any, in the authoritative PRD/Architecture/ADR first.
-- [ ] Regenerate the candidate version only if a decision changes.
-- [ ] Obtain explicit user approval.
+- [x] Review the 12 decisions in `docs/v2/FINAL-EXECUTION-PLAN.md`.
+- [x] No further decision revisions were requested.
+- [x] Promote Candidate R1 to Final R1.
+- [x] Obtain explicit user approval on 2026-08-19.
 
 ## After approval only
 

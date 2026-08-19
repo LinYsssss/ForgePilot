@@ -1,6 +1,6 @@
 # ForgePilot V2 产品需求
 
-状态：**Phase 0 已冻结（2026-08-19）**。本文是**产品权威**：定位、角色、范围、流程与验收标准。
+状态：**Final R1，已获用户批准（2026-08-19）**。本文是**产品权威**：定位、角色、范围、流程与验收标准。当前尚未收到开始 Phase 1 的实施指令。
 
 技术规范（模块、14 表、依赖、运行边界）见 [ARCHITECTURE.md](./ARCHITECTURE.md)，本文不复述。
 
@@ -130,7 +130,7 @@ REQUEST_CHANGES 后必须有新 head SHA 才能再次产生终局 Decision。
 
 ## 7. 验收标准
 
-### Phase 0（已完成）
+### Phase 0（已完成并批准）
 
 - [x] Legacy backend/frontend/deploy/evaluation/demo/docs 已实际扫描并逐项核实。
 - [x] 核心流程可用一句话讲清；每个 MVP 模块通过"删除后产品是否成立"测试。
@@ -138,7 +138,7 @@ REQUEST_CHANGES 后必须有新 head SHA 才能再次产生终局 Decision。
 - [x] 数据模型收敛为 14 张表，依赖单向且无环。
 - [x] 争议决策全部落为 ADR-001..008。
 - [x] 文档收敛为单一事实源，无跨文档重复定义。
-- [x] 用户批准，Phase 0 冻结。
+- [x] 用户批准最终执行方案；Phase 1 仍等待单独的开始指令。
 
 ### 产品 E2E（Phase 7 退出标准）
 

@@ -4,7 +4,8 @@
 
 - 本仓库已经清除旧系统实现，只保留 V2 方案和空工程骨架。
 - 旧版完整代码、评测和工程资产位于 [RepoSage](https://github.com/LinYsssss/reposage)，只读参考。
-- 当前阶段是 **Phase 1：最小绿地底座**。不得跨阶段实现业务功能。
+- Phase 0 最终执行方案已于 2026-08-19 获用户批准。
+- 当前最新指令仅为提交并推送治理与方案文件；用户尚未要求开始 **Phase 1：最小绿地底座**。在收到新的开始指令前，不得创建应用代码、依赖清单、数据库迁移、前端脚手架或 CI 实现。
 
 ## 产品定义
 
@@ -44,13 +45,13 @@ AI 的三个边界明确的落点：
 
 ## 工作方式
 
-1. 完整阅读 PRD、Architecture 和当前 Phase。
+1. 先完整阅读 `FINAL-EXECUTION-PLAN.md`，再读 PRD、Architecture 和当前 Phase。
 2. 在 `.trellis/tasks/` 新建一个小任务，明确非目标。
 3. 查迁移矩阵后再访问 RepoSage；优先迁测试和安全策略，不复制旧边界。
 4. 使用测试驱动完成一个纵向切片。
 5. 验证后更新任务结果；不得顺手扩展下一个 Phase。
 
-## Phase 1 只允许完成
+## 用户批准后的 Phase 1 只允许完成
 
 - 初始化 Spring Boot 与 Vue 工程。
 - 配置 PostgreSQL/pgvector、Flyway、测试运行环境。

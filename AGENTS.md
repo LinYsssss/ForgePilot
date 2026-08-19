@@ -37,12 +37,12 @@ Before planning or changing this repository, read these files completely:
 7. `docs/v2/LEGACY-MIGRATION-MATRIX.md` before consulting Legacy code
 8. `.trellis/workflow.md`
 
-## Current review gate
+## Current execution gate
 
-- The final execution plan is currently **awaiting explicit user approval**.
-- Until the user clearly approves it, work is limited to Trellis configuration, analysis, planning, and documentation corrections.
-- Do not create application source code, dependency manifests, database migrations, frontend scaffolding, or CI implementation before approval.
-- Approval of the overall plan does not authorize every phase. After approval, implement only the currently authorized phase and stop at its review gate.
+- The final execution plan was approved by the user on 2026-08-19.
+- The latest instruction only authorizes committing and pushing governance and plan files; Phase 1 has not been started.
+- Do not create application source code, dependency manifests, database migrations, frontend scaffolding, or CI implementation until the user gives a new explicit instruction to start Phase 1.
+- Approval of the overall plan does not authorize every phase. Implement only the currently authorized phase and stop at its review gate.
 
 ## Product and architecture guardrails
 

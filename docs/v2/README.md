@@ -2,7 +2,7 @@
 
 **围绕需求驱动 PR 审查的轻量级 AI 研发协作平台。**
 
-状态：**Phase 0 已冻结（2026-08-19）**，可进入 Phase 1 实施。
+状态：**Final R1 已获用户批准（2026-08-19）**。当前尚未收到开始 Phase 1 的指令，因此仍禁止创建业务代码。
 
 ---
 
@@ -10,12 +10,13 @@
 
 | # | 文档 | 是什么 | 什么时候读 |
 |---|---|---|---|
-| 1 | [PRD.md](./PRD.md) | **产品权威**：定位、角色权限、范围、状态、验收 | 想知道"做什么、给谁用" |
-| 2 | [ARCHITECTURE.md](./ARCHITECTURE.md) | **技术权威**：模块边界、依赖、14 表、流程契约、运行边界 | 想知道"怎么建、边界在哪" |
-| 3 | [IMPLEMENTATION-PLAN.md](./IMPLEMENTATION-PLAN.md) | 阶段顺序与退出条件 | 想知道"先做哪一步" |
-| 4 | [adr/](./adr/README.md) | 架构决策与理由 | 想知道"为什么这么定" |
-| 5 | [LEGACY-MIGRATION-MATRIX.md](./LEGACY-MIGRATION-MATRIX.md) | Legacy 资产 KEEP/REWRITE/REFERENCE/DROP | 实施某模块前查"旧代码能不能用" |
-| 6 | [AI-HANDOFF.md](./AI-HANDOFF.md) | AI 接手边界与当前阶段 | 新会话或新 Agent 开始工作 |
+| 1 | [FINAL-EXECUTION-PLAN.md](./FINAL-EXECUTION-PLAN.md) | **执行入口**：最终范围、阶段、闸门和授权方式 | 后续恢复上下文与阶段授权 |
+| 2 | [PRD.md](./PRD.md) | **产品权威**：定位、角色权限、范围、状态、验收 | 想知道"做什么、给谁用" |
+| 3 | [ARCHITECTURE.md](./ARCHITECTURE.md) | **技术权威**：模块边界、依赖、14 表、流程契约、运行边界 | 想知道"怎么建、边界在哪" |
+| 4 | [IMPLEMENTATION-PLAN.md](./IMPLEMENTATION-PLAN.md) | 阶段顺序与退出条件 | 想知道"先做哪一步" |
+| 5 | [adr/](./adr/README.md) | 架构决策与理由 | 想知道"为什么这么定" |
+| 6 | [LEGACY-MIGRATION-MATRIX.md](./LEGACY-MIGRATION-MATRIX.md) | Legacy 资产 KEEP/REWRITE/REFERENCE/DROP | 实施某模块前查"旧代码能不能用" |
+| 7 | [AI-HANDOFF.md](./AI-HANDOFF.md) | AI 接手边界与当前阶段 | 新会话或新 Agent 开始工作 |
 
 旧版实现和过程记录已经归档到 [RepoSage](https://github.com/LinYsssss/reposage)，不再保留在本仓库。
 

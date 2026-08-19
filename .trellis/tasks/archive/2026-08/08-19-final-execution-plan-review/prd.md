@@ -28,8 +28,8 @@ Review and approve the consolidated V2 scope, architecture boundaries, migration
 - [x] `docs/v2/FINAL-EXECUTION-PLAN.md` covers final scope, cuts, architecture limits, phases, tests, Legacy extraction, and approval rules.
 - [x] PRD, Architecture, Implementation Plan, README, and AI handoff no longer claim implementation is authorized.
 - [x] Trellis automatic commits are disabled and Codex dispatch defaults to inline.
-- [ ] User reviews the 12 final decisions and explicitly approves or requests revisions.
-- [ ] Only after approval may a separate Phase 1 planning task be created.
+- [x] User reviewed the 12 final decisions and explicitly approved the plan on 2026-08-19.
+- [x] A separate Phase 1 planning task may be created only after the user gives a new instruction to begin Phase 1.
 
 ## Notes
 

@@ -26,3 +26,9 @@
 # picking either side (task state lives in task.json, not index.md). See
 # .trellis/spec/cli/backend/directory-structure.md for details.
 .trellis/workspace/*/journal-*.md merge=union
+
+# Official Trellis skill templates intentionally contain Markdown hard-break
+# spaces and managed EOF layout. Do not report those generated files as
+# project whitespace defects.
+.agents/skills/** -whitespace
+.claude/skills/** -whitespace
