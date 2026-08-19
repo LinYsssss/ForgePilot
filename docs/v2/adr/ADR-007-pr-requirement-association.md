@@ -15,12 +15,12 @@
    （不区分大小写，取第一个匹配），命中且该 Requirement 属于同一项目则写入
    `pull_request.requirement_id`。
 2. **人工兜底**：Review/PR 页面提供下拉框修改关联，可设置也可清除。
-3. **修改权限**：项目 LEADER 或该 PR 的作者（映射到本地账户时）。
+3. **修改权限**：当前 head 尚无 Review 时，项目 LEADER 或该 PR 的作者（由 [ADR-010](./ADR-010-scm-identity-and-repository-immutability.md) 的身份映射判定）均可修改；当前 head 已存在任意 Review 时，**仅 LEADER** 可修改（[ADR-003](./ADR-003-review-identity.md) §9）。
 4. **解析失败不阻断**：`requirement_id` 保持 NULL，PR 照常入库，
    Review 仍可创建但**标记为无需求上下文**，UI 显式提示"未关联需求"。
-5. **关联变更不自动重跑 Review**：已完成的 Review 是对当时上下文的记录；
-   需要重新审查由人工点击重试（沿用 ADR-003 复用同一 Review 行的语义）。
-6. 跨项目关联由数据库复合外键拒绝（ADR-006），Service 不再自行校验。
+5. **关联变更不自动重跑 Review**：已完成的 Review 是对当时上下文的忠实记录，**永不覆盖、永不标记失效**。变更后的上下文构成新的 Review 身份（[ADR-003](./ADR-003-review-identity.md) §1），页面显示"审查已过期"，由人工点击重新审查。
+6. **关联变更必须留痕**：每次变更写入 `pull_request_requirement_event`（`pull_request_id`、`from_requirement_id`、`to_requirement_id`、`actor_user_id`、`reason`、`created_at`），与关联修改在**同一事务内**完成。该表只记录 PR↔需求关联变化，不承担需求正文与 AC 变更史（后者属 `requirement_revision`，见 [ADR-011](./ADR-011-requirement-revision-and-state.md)）。
+7. 跨项目关联由数据库复合外键拒绝（ADR-006），Service 不再自行校验。
 
 ## 后果与实施注记
 

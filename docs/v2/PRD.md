@@ -1,8 +1,8 @@
 # ForgePilot V2 产品需求
 
-状态：**Final R1，已获用户批准（2026-08-19）**。本文是**产品权威**：定位、角色、范围、流程与验收标准。当前尚未收到开始 Phase 1 的实施指令。
+状态：**Final R2，已获用户批准（2026-08-19）**。本文是**产品权威**：定位、角色、范围、流程与验收标准。当前尚未收到开始 Phase 1 的实施指令。
 
-技术规范（模块、14 表、依赖、运行边界）见 [ARCHITECTURE.md](./ARCHITECTURE.md)，本文不复述。
+技术规范（模块、16 表、依赖、运行边界）见 [ARCHITECTURE.md](./ARCHITECTURE.md)，本文不复述。
 
 ---
 
@@ -52,7 +52,7 @@ flowchart LR
 | 运行需求质量检查 | ✅ | ❌ | ❌ |
 | 需求 DRAFT → READY、指派开发 | ✅ | ❌ | ❌ |
 | 生成当前需求的一次性 AI 实现建议 | ✅ | 仅被指派需求 | ❌ |
-| 修改 PR↔需求关联 | ✅ | 仅本人 PR | ❌ |
+| 修改 PR↔需求关联 | ✅ | 仅本人 PR 且当前 head 尚无 Review | ❌ |
 | 触发/重试 Review | ✅ | ✅ | ✅ |
 | Finding 确认 / 拒绝 | ✅ | ❌ | ✅ |
 | Finding 认领、标记已修复 | ❌ | ✅ | ❌ |
@@ -93,12 +93,19 @@ P1（核心 E2E 完成前不得实施）：多轮 Requirement Assistant、Workbe
 
 ### Requirement
 
+持久状态（[ADR-011](./adr/ADR-011-requirement-revision-and-state.md)）：
+
 ```text
-DRAFT → READY → IN_DEVELOPMENT → IN_REVIEW → DONE
-  └──────────────────────────────────────→ CANCELED
+DRAFT → READY → IN_DEVELOPMENT → DONE
+  └────────────────────────────→ CANCELED
 ```
 
+`DRAFT → READY` 由 LEADER 确认；`READY → IN_DEVELOPMENT` 与**首次指派**同事务完成，后续更换负责人不再改变状态；`→ DONE` 由 LEADER 确认全部关联工作完成。**AI、Webhook、PR、Review 一律不得推进这些状态。**
+
 无 `NEEDS_IMPROVEMENT`：**质量检查是建议，不是工作流状态**，也不能自动置 READY。
+无 `IN_REVIEW`：评审进展是**只读派生量** `review_activity`（`FAILED > CHANGES_REQUESTED > REVIEWING > PENDING > MIXED > APPROVED > NO_PR`），按所有关联 PR 的**当前 head + 当前需求版本**的 Review 计算，不落表。UI 与需求状态并列展示，两个维度不得合并。
+
+READY 后正文与 AC 锁定；修改由 LEADER 创建新的不可变 Revision 并填写变更原因，旧 AC 永久保留。需求版本变更**不自动重审**，关联 PR 显示"审查已过期"，由人工触发。
 
 ### Finding
 
@@ -109,10 +116,12 @@ DRAFT → READY → IN_DEVELOPMENT → IN_REVIEW → DONE
 终态：CLOSED、REJECTED
 ```
 
+该状态机是**人工处理生命周期**，与跨 Review 血缘 `continuity`（`NEW / PERSISTING / SUPPRESSED`，[ADR-009](./adr/ADR-009-finding-continuity.md)）正交，两者不得混入同一字段或同一 UI 标签。
+
 ### Review Decision
 
 `PENDING | APPROVE | REQUEST_CHANGES`。**AI 置信度、Finding 状态、Review Decision 三者不互相替代**，UI 上必须分开呈现。
-REQUEST_CHANGES 后必须有新 head SHA 才能再次产生终局 Decision。
+REQUEST_CHANGES 后必须有新 head SHA 才能再次产生终局 Decision——**改需求关联或需求版本都不能解除该闸门**（[ADR-003](./adr/ADR-003-review-identity.md) §6）。
 
 ## 6. 关键产品规则
 
@@ -121,12 +130,14 @@ REQUEST_CHANGES 后必须有新 head SHA 才能再次产生终局 Decision。
 | P1 | PR 关联需求：分支名/标题解析 `REQ-<n>` 优先，页面下拉框可改可清除；解析失败不阻断入库，Review 标记"未关联需求" | [ADR-007](./adr/ADR-007-pr-requirement-association.md) |
 | P2 | 一个 Requirement 可有多个 PR；一个 PR 至多关联一个 Requirement | [ADR-004](./adr/ADR-004-domain-cardinality.md) |
 | P3 | 需求附件只在所属需求的 AI 场景可见；跨需求共享必须显式提升为项目知识 | [ADR-005](./adr/ADR-005-requirement-attachment-retrieval-boundary.md) |
-| P4 | 同一 head SHA 只有一条 Review；引擎升级不自动重审；重试复用同一条记录 | [ADR-003](./adr/ADR-003-review-identity.md) |
+| P4 | Review 身份 = (PR, head SHA, 需求版本)；终局 Decision 闸门只认 (PR, head SHA)；引擎升级不自动重审；FAILED 重试复用同一行，COMPLETED 永不覆盖 | [ADR-003](./adr/ADR-003-review-identity.md) |
 | P5 | 大 PR 分批审查但只产出一份报告；未审查文件必须显式呈现，禁止静默截断 | [ADR-002](./adr/ADR-002-large-pr-review.md) |
 | P6 | AI 返回非法结构时 Review 判定失败，**绝不生成"成功空报告"** | ARCHITECTURE §3.5 |
 | P7 | 人工决策全部留痕（actor、时间、备注），可追溯 | ARCHITECTURE §2.1 |
-| P8 | Review 保存审查时使用的 requirement_id 与不可变上下文快照；历史结果不得通过 PR 当前关联反查语义 | ARCHITECTURE §2.1/3.5 |
+| P8 | Review 保存审查时的 requirement_id、requirement_revision_id 与不可变上下文快照；历史结果不得通过 PR 当前关联反查语义 | ARCHITECTURE §2.1/3.5 |
 | P9 | 单个 PR APPROVE 只结束当前 Review；Requirement DONE 必须由 LEADER 在确认全部关联工作完成后执行 | [ADR-004](./adr/ADR-004-domain-cardinality.md) |
+| P10 | 上一轮已驳回且源码证据未变的 Finding，本轮自动抑制、不要求重复驳回；抑制不跨 PR，且不得自动认定"本轮未报告 = 已修复" | [ADR-009](./adr/ADR-009-finding-continuity.md) |
+| P11 | "本人 PR" 由项目级 SCM 稳定外部 ID 判定，**禁止按用户名授权**；身份由 LEADER 配置，开发者不得自行声明 | [ADR-010](./adr/ADR-010-scm-identity-and-repository-immutability.md) |
 
 ## 7. 验收标准
 
@@ -135,8 +146,8 @@ REQUEST_CHANGES 后必须有新 head SHA 才能再次产生终局 Decision。
 - [x] Legacy backend/frontend/deploy/evaluation/demo/docs 已实际扫描并逐项核实。
 - [x] 核心流程可用一句话讲清；每个 MVP 模块通过"删除后产品是否成立"测试。
 - [x] Finding 保持在 review 内；多轮 Assistant、相关代码检索、多仓库和强制四层已删除。
-- [x] 数据模型收敛为 14 张表，依赖单向且无环。
-- [x] 争议决策全部落为 ADR-001..008。
+- [x] 数据模型收敛为 16 张表，依赖单向且无环。
+- [x] 争议决策全部落为 ADR-001..011。
 - [x] 文档收敛为单一事实源，无跨文档重复定义。
 - [x] 用户批准最终执行方案；Phase 1 仍等待单独的开始指令。
 
@@ -147,13 +158,17 @@ REQUEST_CHANGES 后必须有新 head SHA 才能再次产生终局 Decision。
 - [ ] 开发者提交 `feat/REQ-<n>-*` 分支 PR，系统自动关联需求并产生 Review。
 - [ ] Review 呈现 AC 覆盖判定与带证据的 Finding，证据可点击回溯到 AC/知识/代码行。
 - [ ] Reviewer 确认部分 Finding 并 REQUEST_CHANGES；开发者修复推送新 head SHA。
-- [ ] 新 Review 自动产生，历史 Review 完整保留；Reviewer APPROVE 只完成当前 Review，LEADER 确认后再将需求置 DONE。
+- [ ] 新 Review 自动产生，历史 Review 完整保留；上一轮已驳回且源码证据未变的 Finding 在新 Review 中显示为已抑制，无需重复驳回。
+- [ ] Reviewer APPROVE 只完成当前 Review，LEADER 确认后再将需求置 DONE。
+- [ ] 需求状态与派生的评审活动在页面上分开呈现，互不污染。
 - [ ] A 项目用户无法看到或操作 B 项目的任何资源。
 
 ## 8. 风险与边界声明
 
 - 进程内 Review 执行**不提供**消息队列级持久性；系统必须先持久化 PENDING Review，并通过轻量 reconciliation 补偿漏触发任务，再由人工重试处理显式失败。
 - 一个项目一个仓库是 MVP 约束；出现真实多仓库需求后再设计。
+- **仓库产生 PR 后不可原地更换**：provider 与外部仓库 ID 冻结，凭据/Webhook Secret/API 地址仍可更新；确需更换仓库须新建项目（[ADR-010](./adr/ADR-010-scm-identity-and-repository-immutability.md)）。
+- **PostgreSQL 最低版本为 15**，来自复合外键列级 `ON DELETE SET NULL` 与 `UNIQUE NULLS NOT DISTINCT` 两处不可替代的语法。
 - Embedding 换 Profile 需维护窗口与 reindex，**不承诺**无停机切换。
 - GitHub 先跑通主线，GitLab 后验证同一 contract，用以证明 Adapter 的实际价值。
-- 评测语料为**人工构造的演示缺陷**，非真实企业缺陷，论文中须诚实说明。
+- 评测语料为**人工构造的演示缺陷**，非真实企业缺陷，论文中须诚实说明；且 holdout 仅 12 例，结论必须给出置信区间或明确的不确定性说明，不得把小样本上的差值当作强证据。

@@ -17,7 +17,7 @@
 4. Batch 阶段只输出 **Finding candidate** 和 **AC evidence**，不产生最终 AC verdict。
 5. 所有 Batch 完成后执行 **Final Merge/Synthesis**，统一产生 ReviewOutput。
 6. 最终 AC verdict 仅允许 `COVERED | NOT_FOUND | AT_RISK`。
-7. Finding 使用稳定 fingerprint 去重。
+7. Finding 使用稳定 fingerprint 去重。该 fingerprint 即 [ADR-009](./ADR-009-finding-continuity.md) 的 `finding_key`，用途为**批内去重 + 跨 Review 血缘键**两项。
 8. 仍需保存 truncation manifest；未审查文件显式呈现，不得静默截断。
 9. **不得由此创建第二套 Review Pipeline**。
 
@@ -29,4 +29,5 @@
 - 任一 Batch 输出非法 JSON 且 format-repair 后仍失败 → 整个 Review = FAILED，
   不得输出部分成功报告（沿用"绝不生成成功空报告"纪律）。
 - `ai_call_log` 逐调用记录并关联 review_id：一次 Review 产生 1..N 条调用日志，评测口径按 Review 聚合。
-- fingerprint 需包含 path（保留大小写）+ 归一化位置 + 类别/AC 语义，见迁移矩阵 `FindingFingerprint` 行。
+- fingerprint 需包含 path（保留大小写）+ 归一化位置 + 类别/AC 语义，见迁移矩阵 `FindingFingerprint` 行；
+  完整组成规则与 `REQUIREMENT` / `CODE_QUALITY` 的分叉见 [ADR-009](./ADR-009-finding-continuity.md) §10–11。

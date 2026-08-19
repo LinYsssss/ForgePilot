@@ -1,8 +1,8 @@
 # ForgePilot V2 最终执行方案
 
 - 状态：**APPROVED**
-- 版本：**Final R1 / 2026-08-19**
-- 批准记录：**用户已于 2026-08-19 明确确认方案无问题并授权提交、推送。**
+- 版本：**Final R2 / 2026-08-19**
+- 批准记录：**用户已于 2026-08-19 批准 Final R1，并于同日批准 R2 契约复审的九项决议（ADR-009/010/011 与 ADR-002/003/007/008 修订）。**
 - 当前授权边界：**仅提交并推送治理与方案文件；在用户另行要求开始 Phase 1 前，禁止创建业务代码。**
 
 本文是本轮评审的统一入口，负责把产品目标、裁剪结果、技术边界、迁移策略和实施顺序放在一张执行地图中。字段、约束和决策细节仍分别以 [PRD](./PRD.md)、[ARCHITECTURE](./ARCHITECTURE.md)、[ADR](./adr/README.md) 和 [迁移矩阵](./LEGACY-MIGRATION-MATRIX.md) 为权威；如发现冲突，先修文档，再实施。
@@ -76,7 +76,7 @@ AI 有且只有三个产品落点：
 - 只有一个 Review Engine；自动触发与人工重试共用 `ReviewService.requestReview(...)`。
 - `scm` 发布事件但不依赖 `review`；`review` 只能通过其他模块的 Service/Query facade 取数。
 - PostgreSQL 是唯一业务事实源；pgvector 只保存项目知识向量，禁止 JSON/影子表双写。
-- Review 身份固定为 `(pull_request_id, head_sha)`，并保存审查时的 Requirement/AC/Knowledge 不可变上下文快照。
+- Review 身份固定为 `(pull_request_id, head_sha, requirement_revision_id)`，终局 Decision 闸门只认 `(pull_request_id, head_sha)`，并保存审查时的 Requirement/AC/Knowledge 不可变上下文快照。
 - 单个 PR APPROVE 只完成当前 Review，Requirement DONE 必须由 LEADER 单独确认。
 - AI 只输出建议和分析，不直接改变 Requirement、Finding 或 Review Decision。
 - 后台执行采用“先落 PENDING + 有界进程内执行器 + reconciliation + 人工重试”；不以企业级名义提前引入 MQ。
@@ -84,7 +84,7 @@ AI 有且只有三个产品落点：
 
 ## 4. 数据与页面上限
 
-首版数据模型控制为 14 张表，详细字段和约束只在 [ARCHITECTURE §2](./ARCHITECTURE.md#2-数据模型) 定义。开发期间按纵向 Phase 增加迁移，首个可发布版本前再 squash 为干净的 `V1__init.sql`，不继承 RepoSage 的历史迁移。
+首版数据模型控制为 16 张表，详细字段和约束只在 [ARCHITECTURE §2](./ARCHITECTURE.md#2-数据模型) 定义。开发期间按纵向 Phase 增加迁移，首个可发布版本前再 squash 为干净的 `V1__init.sql`，不继承 RepoSage 的历史迁移。
 
 前端一级导航只有：
 
@@ -93,6 +93,8 @@ AI 有且只有三个产品落点：
 3. 代码审查
 
 知识、成员、仓库配置进入项目详情；实现建议进入需求详情；Finding 与人工决策进入 Review 详情。
+
+页面按**纵向切片**随各 Phase 交付（Phase 2 起每阶段都有最小可用真实界面），不集中堆到 Phase 7；Phase 7 只负责统一打磨与浏览器验收。视觉与动效契约定义在 `.trellis/spec/frontend/`。
 
 ## 5. Legacy 提取原则
 
@@ -114,14 +116,14 @@ AI 有且只有三个产品落点：
 | Phase | 目标与核心产物 | 退出标准 | 本阶段禁止 |
 |---|---|---|---|
 | 0（当前） | Trellis 三端初始化、最终方案、文档一致性 | Claude Code/Codex/Pi 可识别；方案进入用户评审；无业务代码 | 任何应用脚手架或业务实现 |
-| 1 | Spring Boot/Vue/PostgreSQL-pgvector/Flyway/Testcontainers/ArchUnit/基础 CI 的最小绿地底座 | 空库启动、pgvector、边界测试和构建全绿；无业务 UI | 登录、项目、需求、知识、SCM、Review |
-| 2 | Auth + Project + Member | 登录安全、唯一 LEADER、角色和跨项目越权测试通过 | Requirement/SCM/AI |
-| 3 | Requirement + AC + 指派 + 确定性质量规则 | 无 AI/SCM 也能创建、确认、指派；READY 锁定规则通过 | 附件、AI Quality、PR |
-| 4 | 统一 AiGateway + Project Knowledge + Requirement Attachment + 一次性 Implementation Guidance | 项目隔离、文档安全、向量维度和失败可见性通过 | Conversation、SSE、代码索引 |
-| 5 | GitHub SCM Adapter、Webhook、PR snapshot/patch、需求关联 | 验签、重放幂等、关联纠正和 `scm !→ review` 通过 | GitLab、clone、本地 Git |
-| 6 | AI Requirement Quality + 唯一 Review Engine + recovery | 非法 JSON 不假成功；大 PR 不静默丢文件；PENDING 可恢复 | 第二 Pipeline、MQ、Sandbox |
-| 7 | Finding 人工闭环 + 三页面 E2E | 三角色完成需求→PR→退回→修复→复审→通过→DONE | P1 扩展功能 |
-| 8 | GitLab Adapter + 评测、部署、答辩固化 | 同一 SCM contract；论文数据可重算；干净环境可复现 | 新业务功能 |
+| 1 | Spring Boot/Vue/PostgreSQL 15+ pgvector/Flyway/Testcontainers/ArchUnit/基础 CI 的最小绿地底座；前端脚手架与视觉契约；评测契约；部署容量实测 | 空库启动、pgvector、边界测试和构建全绿；视觉方向已选定并落入 `.trellis/spec/frontend/`；评测指标与评分器骨架就绪；4 GB 机常驻内存实测通过 | 登录、项目、需求、知识、SCM、Review 等业务实现 |
+| 2 | Auth + Project + Member + 项目级 SCM 身份 | 登录安全、唯一 LEADER、角色和跨项目越权测试通过；SCM 身份唯一性用例通过；登录页与项目/成员界面可用 | Requirement/SCM/AI |
+| 3 | Requirement + 不可变 Revision + AC + 指派 + 确定性质量规则 | 无 AI/SCM 也能创建、确认、指派；READY 锁定与新 Revision 规则通过；需求列表与详情界面可用 | 附件、AI Quality、PR |
+| 4 | 统一 AiGateway + Project Knowledge + Requirement Attachment + 一次性 Implementation Guidance | 项目隔离、文档安全、向量维度和失败可见性通过；知识上传与实现建议界面可用 | Conversation、SSE、代码索引 |
+| 5 | GitHub SCM Adapter、Webhook、PR snapshot/patch、作者映射、需求关联 | 验签、重放幂等、关联纠正、作者权限退化和 `scm !→ review` 通过；PR 列表界面可用 | GitLab、clone、本地 Git |
+| 6 | AI Requirement Quality + 唯一 Review Engine + Finding 血缘 + recovery + 评测增量试跑 | 非法 JSON 不假成功；大 PR 不静默丢文件；PENDING 可恢复；同 head 并发终局不冲突；Review 详情只读页可用；development 集三臂结果已产出 | 第二 Pipeline、MQ、Sandbox、运行 holdout |
+| 7 | Finding 人工闭环 + 三页面统一打磨与浏览器验收 | 三角色完成需求→PR→退回→修复→复审→通过→DONE；误报抑制可演示 | P1 扩展功能 |
+| 8 | GitLab Adapter + 正式评测、部署、答辩固化 | 同一 SCM contract；holdout 首次运行且不据其调参；论文数据可重算；干净环境可复现 | 新业务功能 |
 
 ## 7. 每阶段统一验收模板
 
@@ -156,7 +158,9 @@ AI 有且只有三个产品落点：
 2. `Diff + Requirement + AC`
 3. `Diff + Requirement + AC + Project Knowledge`（ForgePilot）
 
-报告 Precision、Recall、漏报率、误报率、Requirement Violation Recall、AC Verdict、结构失败率、Token 和耗时。Legacy 38 例可改造使用，但必须明确它们是人工构造的演示缺陷，不冒充真实企业数据。
+评测分三段执行，避免"Phase 8 才发现核心结论不成立"与"反复在全部语料上调参导致 holdout 泄漏"两个风险：Phase 1 建立评测契约与评分器骨架；Phase 6 每完成一个实验臂即在 development 集试跑并据其调优；Phase 8 配置冻结后首次运行 holdout。
+
+沿用 Legacy 既有切分（development 26 例 + holdout 12 例，合计 38 例），**不得重新切分**。报告 Precision、Recall、漏报率、误报率、Requirement Violation Recall、AC Verdict、结构失败率、Token 和耗时，并同时给出 development、holdout、全量三组结果。必须明确它们是人工构造的演示缺陷，不冒充真实企业数据；holdout 仅 12 例，须给出置信区间或明确的不确定性说明。
 
 ## 9. Trellis 与三种 AI 工具的协作方式
 
@@ -177,7 +181,7 @@ AI 有且只有三个产品落点：
 4. 每项目逻辑独立知识空间，底层共享 PostgreSQL + pgvector。
 5. 只有一个 Review Engine；大 PR 分批但只有一份最终结果。
 6. 人工 Reviewer 决定 PR，LEADER 单独决定 Requirement DONE。
-7. 14 表、8 顶层包和三个一级页面作为首版上限。
+7. 16 表、8 顶层包和三个一级页面作为首版上限。
 8. 进程内执行器 + PENDING + reconciliation，暂不引入 MQ。
 9. Agent、Patch、Risk Model、Sandbox runtime 永久退出 V2 主线。
 10. Legacy 只按迁移矩阵提取，不整包复制、不继承数据库历史。

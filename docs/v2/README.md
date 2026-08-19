@@ -2,7 +2,7 @@
 
 **围绕需求驱动 PR 审查的轻量级 AI 研发协作平台。**
 
-状态：**Final R1 已获用户批准（2026-08-19）**。当前尚未收到开始 Phase 1 的指令，因此仍禁止创建业务代码。
+状态：**Final R2 已获用户批准（2026-08-19）**。当前尚未收到开始 Phase 1 的指令，因此仍禁止创建业务代码。
 
 ---
 
@@ -12,7 +12,7 @@
 |---|---|---|---|
 | 1 | [FINAL-EXECUTION-PLAN.md](./FINAL-EXECUTION-PLAN.md) | **执行入口**：最终范围、阶段、闸门和授权方式 | 后续恢复上下文与阶段授权 |
 | 2 | [PRD.md](./PRD.md) | **产品权威**：定位、角色权限、范围、状态、验收 | 想知道"做什么、给谁用" |
-| 3 | [ARCHITECTURE.md](./ARCHITECTURE.md) | **技术权威**：模块边界、依赖、14 表、流程契约、运行边界 | 想知道"怎么建、边界在哪" |
+| 3 | [ARCHITECTURE.md](./ARCHITECTURE.md) | **技术权威**：模块边界、依赖、16 表、流程契约、运行边界 | 想知道"怎么建、边界在哪" |
 | 4 | [IMPLEMENTATION-PLAN.md](./IMPLEMENTATION-PLAN.md) | 阶段顺序与退出条件 | 想知道"先做哪一步" |
 | 5 | [adr/](./adr/README.md) | 架构决策与理由 | 想知道"为什么这么定" |
 | 6 | [LEGACY-MIGRATION-MATRIX.md](./LEGACY-MIGRATION-MATRIX.md) | Legacy 资产 KEEP/REWRITE/REFERENCE/DROP | 实施某模块前查"旧代码能不能用" |
@@ -24,7 +24,7 @@
 
 一件事只在一个地方定义，其他地方引用：
 
-- 14 表、依赖规则、状态机、运行边界 → 只在 `ARCHITECTURE.md`
+- 16 表、依赖规则、状态机、运行边界 → 只在 `ARCHITECTURE.md`
 - 角色权限、MVP 范围、验收标准 → 只在 `PRD.md`
 - 决策理由 → 只在 `adr/`
 
@@ -51,5 +51,8 @@
 | [004](./adr/ADR-004-domain-cardinality.md) | 每项目一个 LEADER；一个需求可有多个 PR |
 | [005](./adr/ADR-005-requirement-attachment-retrieval-boundary.md) | 需求附件不跨需求召回 |
 | [006](./adr/ADR-006-cross-project-referential-integrity.md) | 跨项目引用由复合外键拒绝，不写运行时校验 |
-| [007](./adr/ADR-007-pr-requirement-association.md) | PR 关联需求：解析 `REQ-N` 优先，页面可改 |
+| [007](./adr/ADR-007-pr-requirement-association.md) | PR 关联需求：解析 `REQ-N` 优先，页面可改，变更留痕 |
 | [008](./adr/ADR-008-review-context-and-recovery.md) | Review 保存上下文快照，PENDING 先落库并支持轻量恢复 |
+| [009](./adr/ADR-009-finding-continuity.md) | Finding 每轮独立快照 + 跨 Review 血缘，误报不用重复驳回 |
+| [010](./adr/ADR-010-scm-identity-and-repository-immutability.md) | 用项目级 SCM 稳定外部 ID 判定"本人 PR"；有 PR 后仓库不可换 |
+| [011](./adr/ADR-011-requirement-revision-and-state.md) | 删除 `IN_REVIEW`，需求正文与 AC 版本化，评审进展是派生量 |

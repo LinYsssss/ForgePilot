@@ -1,13 +1,13 @@
 # ForgePilot V2 架构规范
 
-状态：**Final R1，已获用户批准（2026-08-19）**。本文是 V2 的**技术权威**：模块边界、数据模型、流程契约、技术栈与运行边界。当前尚未收到开始 Phase 1 的实施指令。
+状态：**Final R2，已获用户批准（2026-08-19）**。本文是 V2 的**技术权威**：模块边界、数据模型、流程契约、技术栈与运行边界。当前尚未收到开始 Phase 1 的实施指令。
 
 - 产品定义（定位、角色、范围、验收）见 [PRD.md](./PRD.md)。
 - 决策理由见 [adr/](./adr/README.md)；本文只陈述**规则**，不重复论证。
 - 实施顺序见 [IMPLEMENTATION-PLAN.md](./IMPLEMENTATION-PLAN.md)。
 - Legacy 资产取舍见 [LEGACY-MIGRATION-MATRIX.md](./LEGACY-MIGRATION-MATRIX.md)。
 
-> **单一事实源纪律**：14 表、依赖规则、状态机、运行边界只在本文定义。其他文档引用本文，不复述。
+> **单一事实源纪律**：16 表、依赖规则、状态机、运行边界只在本文定义。其他文档引用本文，不复述。
 
 ---
 
@@ -79,27 +79,29 @@ common, project, scm, knowledge, requirement, ai  ←  review
 
 ## 2. 数据模型
 
-### 2.1 14 张表（唯一定义处）
+### 2.1 16 张表（唯一定义处）
 
 | 表 | 核心职责 | 关键约束 |
 |---|---|---|
 | `user_account` | 本地演示账户 | `username` unique；password_hash、enabled、session_version |
 | `project` | 项目边界 | name、created_by、status |
-| `project_member` | 成员与角色 | `(project_id,user_id)` unique；`UNIQUE(project_id) WHERE role='LEADER'`，Service 事务保证至少一个 LEADER（ADR-004） |
-| `requirement` | 需求、指派、状态、最新质量结果 | project_id、assignee_id、status、quality_json/version/checked_at；`UNIQUE(project_id,id)` |
-| `acceptance_criterion` | AC | `(requirement_id,seq)` unique；`UNIQUE(requirement_id,id)` |
+| `project_member` | 成员、角色与项目级 SCM 身份 | `(project_id,user_id)` unique；`UNIQUE(project_id) WHERE role='LEADER'`，Service 事务保证至少一个 LEADER（ADR-004）；`scm_external_user_id`（权限依据）、`scm_username`（仅显示）、`scm_identity_verified_at`，`(project_id,scm_external_user_id)` unique（ADR-010） |
+| `requirement` | 需求稳定身份、指派、状态、最新质量结果 | project_id、assignee_id、status、current_revision_id（可空，回填）、quality_json/version/checked_at；`UNIQUE(project_id,id)` |
+| `requirement_revision` | 不可变需求正文版本 | project_id、requirement_id、seq、title/background/description、created_by、change_reason、created_at；`(requirement_id,seq)` unique；`UNIQUE(project_id,id)`（ADR-011） |
+| `acceptance_criterion` | AC，归属具体 revision | requirement_revision_id、`ac_key`（稳定不可变业务身份）、`sort_order`（仅显示）、text；`(requirement_revision_id,ac_key)` unique；`UNIQUE(requirement_revision_id,id)`（ADR-011） |
 | `knowledge_document` | 项目知识与需求附件共用内容 | project_id、source_type、source_requirement_id（ADR-005）、text、status、model/version；`UNIQUE(project_id,id)` |
 | `requirement_attachment` | Requirement↔Document 关系 | project_id；`(requirement_id,document_id)` unique；双复合 FK（ADR-006） |
 | `knowledge_chunk` | Chunk 与唯一向量 | project_id、document_id、seq、content、metadata、`embedding vector`（无维度，ADR-001）、provider/model/version/dimension |
-| `scm_repository` | 项目的活动仓库与加密凭据 | `project_id` unique；provider、external_id、api_base、encrypted_token/secret；`UNIQUE(project_id,id)` |
-| `pull_request` | PR/MR 快照与需求关联 | `(repository_id,external_number)` unique；requirement_id nullable + 普通索引（ADR-004/007）；`UNIQUE(project_id,id)` |
-| `review` | 一个 head SHA 的审查、上下文快照、摘要与 Decision | `(pull_request_id,head_sha)` unique（ADR-003）；requirement_id、context_snapshot_json、status、decision、decision_by/at/comment、engine/prompt/model 审计列 |
-| `finding` | Review 问题当前态 | review_id、requirement_id、ac_id、path、line、evidence、status、assignee、fingerprint |
-| `finding_event` | Finding 人工状态与指派审计 | finding_id、actor_id、action、from/to、comment、created_at |
-| `ai_call_log` | 评测与故障定位 | project_id、review_id、use_case、model、token、latency、status、error |
+| `scm_repository` | 项目的活动仓库与加密凭据 | `project_id` unique；provider、external_id、api_base、encrypted_token/secret；有 PR 后 provider+external_id 不可修改（ADR-010）；`UNIQUE(project_id,id)` |
+| `pull_request` | PR/MR 快照、作者与需求关联 | `(repository_id,external_number)` unique；requirement_id nullable + 普通索引（ADR-004/007）；author_external_user_id、author_username（不可变快照）、author_user_id（派生映射，复合 FK 指向 project_member，列级 `ON DELETE SET NULL`，ADR-010）；`UNIQUE(project_id,id)` |
+| `pull_request_requirement_event` | **仅**记录 PR↔需求关联变更审计 | project_id、pull_request_id、from_requirement_id、to_requirement_id、actor_user_id、reason、created_at；与关联修改同事务写入（ADR-007） |
+| `review` | 一个 (head SHA, 需求版本) 的审查、上下文快照、摘要与 Decision | `UNIQUE NULLS NOT DISTINCT (pull_request_id,head_sha,requirement_revision_id)`（ADR-003）；project_id、requirement_id、requirement_revision_id、context_snapshot_json、status、decision、decision_by/at/comment、engine/prompt/model 审计列 |
+| `finding` | Review 问题当前态与跨轮血缘 | project_id、review_id、requirement_id、ac_id、finding_type、path、line、evidence、status、assignee、fingerprint(`finding_key`)、evidence_hash、continuity、carried_from_finding_id（ADR-009） |
+| `finding_event` | Finding 人工状态与指派审计 | project_id、finding_id、actor_id、action、from/to、comment、created_at |
+| `ai_call_log` | 评测与故障定位 | project_id、review_id、requirement_id、requirement_revision_id（三者均可空）、use_case、model、token、latency、status、error |
 
-**不建**：`scm_connection`（并入 `scm_repository`）、`review_task/report/issue`、`review_decision`（Decision 在 `review` 行上，唯一键天然保证同 head 只一次终局）、`webhook_delivery`、任何 vector 影子表。
-新增表必须有已发生的业务事实 + ADR 证明现有模型无法表达。
+**不建**：`scm_connection`（并入 `scm_repository`）、`review_task/report/issue`、`review_decision`（Decision 在 `review` 行上）、`webhook_delivery`、通用 `audit_event`（多态 entity_id 无法被 ADR-006 复合外键约束）、任何 vector 影子表。
+新增表必须有已发生的业务事实 + ADR 证明现有模型无法表达。表数量是复杂度提醒，不是为守数字而把两个领域事实塞进一张表的理由。
 
 ### 2.2 关系图
 
@@ -110,14 +112,17 @@ erDiagram
     project ||--o| scm_repository : "一个活动仓库"
     project ||--o{ requirement : ""
     project ||--o{ knowledge_document : ""
-    requirement ||--o{ acceptance_criterion : ""
+    requirement ||--o{ requirement_revision : "不可变版本 ADR-011"
+    requirement_revision ||--o{ acceptance_criterion : ""
     requirement ||--o{ requirement_attachment : ""
     knowledge_document ||--o{ requirement_attachment : ""
     knowledge_document ||--o{ knowledge_chunk : ""
     requirement ||--o{ knowledge_document : "附件归属 ADR-005"
     requirement ||--o{ pull_request : "1:N ADR-004"
     scm_repository ||--o{ pull_request : ""
-    pull_request ||--o{ review : "每 head SHA 一条 ADR-003"
+    pull_request ||--o{ pull_request_requirement_event : "关联变更审计 ADR-007"
+    pull_request ||--o{ review : "每 (head SHA, 需求版本) 一条 ADR-003"
+    requirement_revision ||--o{ review : "审查时的需求版本"
     review ||--o{ finding : ""
     finding ||--o{ finding_event : ""
     review ||--o{ ai_call_log : ""
@@ -153,9 +158,10 @@ erDiagram
 
 ### 3.1 触发与幂等
 
-`scm` 完成验签与 PR 同步后发布进程内 `PullRequestChanged`；`review` 同步监听并按 `(pull_request_id, head_sha)` 幂等持久化 Review(PENDING)，然后才把执行提交给有界执行器（ADR-003）。
+`scm` 完成验签与 PR 同步后发布进程内 `PullRequestChanged`；`review` 同步监听并按 `(pull_request_id, head_sha, requirement_revision_id)` 幂等持久化 Review(PENDING)，然后才把执行提交给有界执行器（ADR-003）。
 自动触发与人工重试是同一个 `ReviewService.requestReview(...)` 的两个入口，不是两个引擎。
-Webhook 在 PR 与 PENDING Review 均持久化后返回 202，不等待 LLM。轻量 `ReviewReconciliationScheduler` 定期查询“当前 head 存在但无 Review”及超时 PENDING/RUNNING，统一回到同一个 `requestReview(...)` 恢复路径；不得由此引入第二引擎。
+Webhook 在 PR 与 PENDING Review 均持久化后返回 202，不等待 LLM。轻量 `ReviewReconciliationScheduler` 定期查询”当前 head 与当前需求版本存在但无 Review”及超时 PENDING/RUNNING，统一回到同一个 `requestReview(...)` 恢复路径；不得由此引入第二引擎。
+**Decision Gate 与 Review Identity 分离**：终局 Decision 只以 `(pull_request_id, head_sha)` 为准——同一 head 一旦出现 `REQUEST_CHANGES`，任何需求版本都不能再 APPROVE，解除只能靠新 head SHA（ADR-003 §6）。写入终局 Decision 必须在事务内 `SELECT ... FOR UPDATE` 锁 `pull_request` 行后校验，禁止用普通 `EXISTS` 查询代替。
 
 ### 3.2 执行状态机
 
@@ -208,11 +214,12 @@ sequenceDiagram
 ### 3.5 输出校验与证据规则
 
 - 每条 AC 最终必须有 `COVERED | NOT_FOUND | AT_RISK`；模型漏项由 Validator 补 `NOT_FOUND`。
-- `acId` 必须属于当前 Requirement；`sourceId` 必须在本次召回白名单；`filePath` 必须在 changed files 内。
+- `acId` 必须属于当前 Requirement Revision；`sourceId` 必须在本次召回白名单；`filePath` 必须在 changed files 内。
 - 行号必须落在 patch 可验证范围，无法验证则不输出精确行号。
 - Finding 证据保存不可变 excerpt + hash，历史 Review 不受知识文档后续变更影响。
-- Review 创建时保存 `requirement_id` 及 Requirement/AC/Knowledge evidence 的不可变上下文快照；历史页面禁止通过 PR 当前 `requirement_id` 反推审查语义。
-- Requirement 进入 READY 后正文与 AC 默认锁定；已有 Review 的 PR 修改 Requirement 关联必须显式使旧审查失效，不允许静默替换。
+- Finding 跨轮血缘（`continuity`、`evidence_hash`、`carried_from_finding_id`、`finding_key`）规则见 ADR-009；`evidence_hash` 必须基于确定性源码证据，禁止哈希模型生成的描述。
+- Review 创建时保存 `requirement_id`、`requirement_revision_id` 及 Requirement/AC/Knowledge evidence 的不可变上下文快照；历史页面禁止通过 PR 当前关联反推审查语义。
+- Requirement 进入 READY 后正文与 AC 锁定，修改须由 LEADER 创建新的不可变 Revision（ADR-011）；旧 Review **永不失效、永不覆盖**，上下文变更后构成新的 Review 身份，页面显示"审查已过期"由人工触发重审。`review` 不设 `INVALIDATED` 状态——执行状态与语义有效性是两个维度。
 - 非法 JSON 允许**一次** format-repair；仍失败则 FAILED，**绝不生成"成功空报告"**。
 
 ---
@@ -234,8 +241,8 @@ AiGateway.embed(texts, embeddingConfig)
 
 ```text
 ReviewContext
-├── requirement: title, background, description
-├── acceptanceCriteria[]: id, text
+├── requirement: id, revisionId, title, background, description
+├── acceptanceCriteria[]: acKey, text
 ├── knowledgeEvidence[]: sourceId, documentId, chunkId, excerpt, score
 ├── pullRequest: provider, repo, number, baseSha, headSha, title
 ├── changedFiles[]: path, changeType, providerPatch
@@ -277,7 +284,9 @@ Requirement、文档、PR 标题、代码注释**全部是不可信数据**，�
 Workbench、Knowledge、Repository、Metrics、Agent、Patch、AI Logs 均**不做**一级页面。
 知识检索测试不面向普通用户；管理员只需看到文档状态与失败原因。
 一次性实现建议位于 Requirement 详情页，不创建 Assistant 一级菜单或 Conversation 页面。
-AI 置信度、Finding 人工状态、Review Decision 在 UI 上必须明确分开呈现。
+AI 置信度、Finding 人工状态、Review Decision 在 UI 上必须明确分开呈现；需求状态与派生的评审活动（ADR-011）同样是两个正交维度，不得合并为一个标签。
+
+视觉与动效契约（设计令牌、组件规范、动效基线、`prefers-reduced-motion`、设计漂移检查）定义在 `.trellis/spec/frontend/`，不在本文重复。页面按纵向切片随各 Phase 交付，不集中堆到最后一个 Phase。
 
 ---
 
@@ -289,7 +298,7 @@ AI 置信度、Finding 人工状态、Review Decision 在 UI 上必须明确分�
 |---|---|---|
 | Spring Boot / MVC | 业务 API、Webhook、编排 | 无后端产品 |
 | Spring Security | 三角色与人工决策可信边界 | 只能做单用户 Demo |
-| JPA + PostgreSQL | 业务状态与审计 | 无业务闭环 |
+| JPA + PostgreSQL **15+** | 业务状态与审计 | 无业务闭环 |
 | Flyway | 干净 V1 与可重复部署 | 结构不可复现 |
 | pgvector | 项目规范语义检索 | 退化为需求+Diff 审查 |
 | OpenAI-compatible Chat / Embedding | Quality 与 Review / 检索 | 无 AI 分析 / 只能关键词 |
@@ -302,6 +311,8 @@ AI 置信度、Finding 人工状态、Review Decision 在 UI 上必须明确分�
 
 **不引入**：RabbitMQ/Kafka/Redis/ES/Milvus/Qdrant、Resilience4j Circuit Breaker、分布式锁、服务发现、API Gateway、独立向量服务、独立 Sandbox、完整 OTel/Prometheus/Grafana、第二 AI runtime。
 HTTP timeout + 一次有限 retry + Review FAILED + 人工 retry 足够覆盖当前故障事实。
+
+**PostgreSQL 最低版本 15 是硬依赖**，来自两处不可替代的语法：复合外键的列级 `ON DELETE SET NULL (author_user_id)`（ADR-010）与 `UNIQUE NULLS NOT DISTINCT`（ADR-003）。Testcontainers 镜像、Docker Compose 与部署环境必须统一到 15+。
 
 ### 7.2 运行边界（初值，Phase 6 评测后可调；调整需更新本表）
 
@@ -329,6 +340,9 @@ HTTP timeout + 一次有限 retry + Review FAILED + 人工 retry 足够覆盖当
 | AiGateway 变成 Agent 工具箱 | 接口只允许 chat/embed，不暴露 tool loop |
 | `review` 变成新大泥球 | 可编排但禁访问外模块 Repository；Finding 是内聚不是吸收 |
 | 大 PR 静默丢文件 | 分批 + coverage manifest + UI 显式呈现 |
+| 终局 Decision 被上下文变更绕过 | Decision Gate 只认 `head_sha`，与 Review Identity 分离；写入前行锁串行化（ADR-003） |
+| 已驳回的误报每轮重复出现 | `finding_key + evidence_hash` 抑制，抑制不跨 PR 且可由 Reviewer 重新打开（ADR-009） |
+| 需求变更后历史结论语义错位 | 需求正文与 AC 版本化，Review 保存 `requirement_revision_id` 与不可变快照（ADR-011） |
 | 进程内任务丢失 | 先持久化 PENDING + reconciliation + 幂等 retry；压测证明不可接受再评估持久队列 |
 | Embedding 变更 | schema 不绑维度；换 Profile 走维护窗口 |
 | Prompt injection / 伪造证据 | 不可信标记 + source 白名单 + 输出回查 |

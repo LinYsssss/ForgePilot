@@ -11,9 +11,9 @@ V2 使用有界进程内执行器而不引入 MQ。应用可能在 PR 已保存�
 
 ## 决策
 
-1. Review 记录审查时的 `requirement_id`，并保存 Requirement、AC、Knowledge evidence 与 truncation manifest 的不可变 `context_snapshot_json`。
+1. Review 记录审查时的 `requirement_id` 与 `requirement_revision_id`，并保存 Requirement、AC、Knowledge evidence 与 truncation manifest 的不可变 `context_snapshot_json`。
 2. 历史 Review 页面只读取自身快照，不通过 PullRequest 当前关联反推审查语义。
-3. Requirement 进入 READY 后正文与 AC 默认锁定；已有 Review 时修改 PR↔Requirement 关联必须显式使旧 Review 失效。
+3. Requirement 进入 READY 后正文与 AC 锁定，修改须由 LEADER 创建新的不可变 Revision（[ADR-011](./ADR-011-requirement-revision-and-state.md)）。**旧 Review 永不失效、永不覆盖**：它是对当时上下文的忠实记录；上下文变更后构成新的 Review 身份（[ADR-003](./ADR-003-review-identity.md) §1），页面显示"审查已过期"，由人工触发重新审查。`review` 不设 `INVALIDATED` 之类的状态——执行状态与语义有效性是两个维度，不得混入同一列。
 4. Webhook 处理在返回 202 前必须已经持久化 PullRequest 与幂等的 Review(PENDING)。
 5. AI 执行由有界进程内执行器完成；轻量 reconciliation 定期发现当前 head 无 Review、超时 PENDING 或 RUNNING，并回到同一个 `ReviewService.requestReview` 恢复。
 6. reconciliation 不是第二条 Review Pipeline，不允许包含独立 Prompt、状态机或输出模型。

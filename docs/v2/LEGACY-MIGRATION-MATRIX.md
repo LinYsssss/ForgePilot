@@ -102,7 +102,7 @@
 | `ReviewReportExporter` | 在用；报告导出 | REFERENCE | Phase 8 可选 | 不进入核心闭环，答辩需要时再实现 |
 | `finding/FindingLifecycle` | 在用；人工闭环状态机 | KEEP | `review.FindingStatus` | 与目标状态边一致；Finding 不再独立成顶层模块 |
 | `FindingCandidate`、`FindingEvidence` | 在用；结构化问题与证据 | REWRITE | `review` | 新证据必须绑定 review/requirement/ac/source whitelist，旧 Agent sourceVersion 语义不适用 |
-| `FindingDeduplicator` | 在用；路径/符号/邻域 fingerprint | REWRITE | `review.FindingFingerprint` | 旧算法 lower-case path 且缺 head/ac 语义，可能错误合并 |
+| `FindingDeduplicator` | 在用；路径/符号/邻域 fingerprint | REWRITE | `review.FindingFingerprint` | 旧算法 lower-case path 且缺 head/ac 语义，可能错误合并；新实现须按 ADR-009 承担"批内去重 + 跨 Review 血缘键"双职责，需求类 Finding 必须含 `requirement_id + ac_key` |
 | `FindingVerifier` | 在用；证据门槛 | REFERENCE | Review output validation | 规则过于简单，不作为可信真值 |
 | `FindingConfidenceService` | 在用；人工加权置信度 | REFERENCE | 评测/展示，不自动 gate | 未校准权重不得决定 PR 是否通过 |
 | `Finding` JPA 实体 | 在用；pipeline status + lifecycle 双轴 | DROP | 新 Finding 实体 | 旧实体依赖 AgentRun 且双状态债务严重 |
