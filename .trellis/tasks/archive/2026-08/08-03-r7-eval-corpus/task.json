@@ -3,7 +3,7 @@
   "name": "r7-eval-corpus",
   "title": "评测集扩充：6到30-50例含漏报专项",
   "description": "扩充evaluation语料至30-50个标注diff，含漏报专项用例，作为提示词调优的评测地基",
-  "status": "in_progress",
+  "status": "completed",
   "dev_type": null,
   "scope": null,
   "package": null,
@@ -11,7 +11,7 @@
   "creator": "LinYsssss",
   "assignee": "LinYsssss",
   "createdAt": "2026-08-03",
-  "completedAt": null,
+  "completedAt": "2026-08-19",
   "branch": null,
   "base_branch": "main",
   "worktree_path": null,
@@ -21,6 +21,6 @@
   "children": [],
   "parent": "08-03-unified-roadmap",
   "relatedFiles": [],
-  "notes": "",
+  "notes": "2026-08-19: Archived without claiming the remaining acceptance items complete. This Legacy evaluation track was superseded by the frozen ForgePilot V2 roadmap; any reusable corpus assets remain read-only references for V2 Phase 8.",
   "meta": {}
 }

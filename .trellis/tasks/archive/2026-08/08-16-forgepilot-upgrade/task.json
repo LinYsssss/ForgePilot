@@ -3,7 +3,7 @@
   "name": "forgepilot-upgrade",
   "title": "ForgePilot Upgrade Master Plan",
   "description": "",
-  "status": "in_progress",
+  "status": "completed",
   "dev_type": null,
   "scope": null,
   "package": null,
@@ -11,7 +11,7 @@
   "creator": "LinYsssss",
   "assignee": "LinYsssss",
   "createdAt": "2026-08-16",
-  "completedAt": null,
+  "completedAt": "2026-08-19",
   "branch": null,
   "base_branch": "main",
   "worktree_path": null,
@@ -29,6 +29,6 @@
   ],
   "parent": null,
   "relatedFiles": [],
-  "notes": "",
+  "notes": "2026-08-19: Archived after all seven linked children completed. The multi-phase Legacy upgrade route was explicitly superseded by the frozen ForgePilot V2 greenfield plan.",
   "meta": {}
 }

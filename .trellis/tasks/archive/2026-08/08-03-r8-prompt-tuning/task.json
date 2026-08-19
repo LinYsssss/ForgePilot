@@ -3,7 +3,7 @@
   "name": "r8-prompt-tuning",
   "title": "提示词调优：分层模板+两段复核+动态few-shot",
   "description": "分层prompt模板、文件类型清单、两段式复核、动态few-shot、版本化+评测门禁；硬约束：宁精勿多、漏报recall-first",
-  "status": "in_progress",
+  "status": "completed",
   "dev_type": null,
   "scope": null,
   "package": null,
@@ -11,7 +11,7 @@
   "creator": "LinYsssss",
   "assignee": "LinYsssss",
   "createdAt": "2026-08-03",
-  "completedAt": null,
+  "completedAt": "2026-08-19",
   "branch": null,
   "base_branch": "main",
   "worktree_path": null,
@@ -21,6 +21,6 @@
   "children": [],
   "parent": "08-03-unified-roadmap",
   "relatedFiles": [],
-  "notes": "",
+  "notes": "2026-08-19: Archived without claiming the remaining acceptance items complete. This Legacy prompt-tuning route was superseded by the frozen ForgePilot V2 architecture and its single Review Engine boundary.",
   "meta": {}
 }

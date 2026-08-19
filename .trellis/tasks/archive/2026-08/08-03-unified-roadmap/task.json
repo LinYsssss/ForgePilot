@@ -3,7 +3,7 @@
   "name": "unified-roadmap",
   "title": "统一路线图：修复-规范-重构-美化-评测-提示词",
   "description": "父任务：合并审计修复批次与会话既定改进方案的总路线图，子任务按依赖顺序执行",
-  "status": "planning",
+  "status": "completed",
   "dev_type": null,
   "scope": null,
   "package": null,
@@ -11,7 +11,7 @@
   "creator": "LinYsssss",
   "assignee": "LinYsssss",
   "createdAt": "2026-08-03",
-  "completedAt": null,
+  "completedAt": "2026-08-19",
   "branch": null,
   "base_branch": "main",
   "worktree_path": null,
@@ -30,6 +30,6 @@
   ],
   "parent": null,
   "relatedFiles": [],
-  "notes": "",
+  "notes": "2026-08-19: Archived as a superseded Legacy roadmap after its remaining R7/R8 tracks were closed as references. ForgePilot V2 PRD/ARCHITECTURE/IMPLEMENTATION-PLAN are now authoritative.",
   "meta": {}
 }
