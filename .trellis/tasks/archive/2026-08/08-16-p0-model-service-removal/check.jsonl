@@ -1,2 +1,0 @@
-{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "存量测试保持绿;删除 ReviewProcessorTest 桩后断言口径不变"}
-{"file": ".trellis/spec/guides/demo-assets-and-claims.md", "reason": "文档口径:README/部署手册去 model-service 引用后声明与真实架构一致"}

@@ -1,7 +1,0 @@
-{"file": ".trellis/tasks/08-16-forgepilot-upgrade/design.md", "reason": "父任务 design §2:成员模型、授权语义演进、动作-角色矩阵、两步迁移策略——本子任务的设计基线"}
-{"file": ".trellis/spec/backend/frozen-contracts.md", "reason": "ProjectAuthorization/ErrorCode 冻结契约只做扩展式演进;404/403 口径不变;响应只加字段"}
-{"file": ".trellis/spec/backend/database-guidelines.md", "reason": "Flyway V29 不可变迁移纪律;负责人移交单事务;@Transactional 不自调用"}
-{"file": ".trellis/spec/backend/directory-structure.md", "reason": "新增 member 域包落位、DTO 嵌套 record、controller→service→repository 依赖方向"}
-{"file": ".trellis/spec/backend/error-handling.md", "reason": "新 ErrorCode 入词汇表姿态与 BusinessException 用法"}
-{"file": ".trellis/spec/frontend/component-guidelines.md", "reason": "墨境风格 SFC 写法,成员管理 UI 直接按设计系统建"}
-{"file": ".trellis/spec/frontend/state-management.md", "reason": "模块级单例 composable 划分与 API 边界容错"}

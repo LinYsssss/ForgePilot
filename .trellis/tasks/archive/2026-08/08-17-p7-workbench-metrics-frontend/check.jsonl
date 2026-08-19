@@ -1,8 +1,0 @@
-{"file":".trellis/spec/backend/frozen-contracts.md","reason":"复核 workbench/metrics API、授权、错误和迁移兼容"}
-{"file":".trellis/spec/backend/database-guidelines.md","reason":"复核聚合查询上限、索引重复、H2/PostgreSQL 与事务边界"}
-{"file":".trellis/spec/backend/quality-guidelines.md","reason":"复核角色谓词、对象级授权、窗口/JSON/percentile 测试"}
-{"file":".trellis/spec/frontend/state-management.md","reason":"复核 project reset、Agent SSE、Review polling 和 AI/Workbench composable 生命周期"}
-{"file":".trellis/spec/frontend/component-guidelines.md","reason":"复核八区墨境 UI、可访问列表/图表和展示/数据边界"}
-{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"复核旧 URL、API 边界、响应式、测试和 legacy 零引用"}
-{"file":".trellis/spec/guides/contract-testing.md","reason":"复核 workbench/metrics 生产者消费者、query 与 redirect 契约"}
-{"file":".trellis/tasks/08-17-p7-workbench-metrics-frontend/research/current-state-audit.md","reason":"核对实现未偏离审计确认的事实源和不可计算指标边界"}

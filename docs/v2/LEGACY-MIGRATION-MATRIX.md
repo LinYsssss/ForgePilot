@@ -1,6 +1,6 @@
 # Legacy → ForgePilot V2 迁移矩阵
 
-> 第二轮审查已按 `ARCHITECTURE.md` 修正过度乐观的 KEEP；当前表以修正后的判断为准。Finding 的目标模块统一为 `review`，Requirement Assistant 仅作 P1 参考。
+> 第二轮审查已按 `ARCHITECTURE.md` 修正过度乐观的 KEEP；当前表以修正后的判断为准。Finding 的目标模块统一为 `review`。Legacy Assistant 代码不迁；MVP 的一次性 Implementation Guidance 在 `requirement` 内重新实现。
 
 分类口径：`KEEP` 表示源代码可低成本迁移并补测试；`REWRITE` 表示保留业务但按 V2 边界重新实现；`REFERENCE` 表示只继承算法/安全策略/Prompt/测试思想；`DROP` 表示不进入 V2。
 

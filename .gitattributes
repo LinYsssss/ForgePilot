@@ -1,26 +1,18 @@
-# Trellis: append-only developer journals should merge cleanly across
-# parallel sessions/worktrees — each session only appends a new block, so
-# there is nothing to actually conflict on.
-#
-# Do NOT add a rule for workspace/*/index.md here — it is fully regenerated
-# every session, so a real conflict there is expected and safe to resolve by
-# picking either side (task state lives in task.json, not index.md). See
-# .trellis/spec/cli/backend/directory-structure.md for details.
-.trellis/workspace/*/journal-*.md merge=union
-# 演示仓库的文件参与 SHA 确定性重建，checkout 必须始终产出 LF
-# text=auto 会自动判别二进制，不会损坏日后可能加入的图片等素材
-demo-repos/** text=auto eol=lf
+* text=auto
 
-# 本机 core.autocrlf=true。若 shell 脚本被检出为 CRLF，msys bash 会在
-# `set -uo pipefail\r` 直接报错，而这些脚本是后续任务的验收入口。
+*.md text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.json text eol=lf
+*.java text eol=lf
+*.js text eol=lf
+*.vue text eol=lf
+*.sql text eol=lf
 *.sh text eol=lf
+*.ps1 text eol=crlf
 
-# SHA 清单由 `while read -r repo ref sha` 逐行解析。若检出为 CRLF，sha 字段会
-# 多出结尾的 \r（长度 41 而非 40），init-demo-repos.sh --verify 与
-# verify-demo-repos.sh 的六条比对会在全新 Windows 克隆上全部失败。
-scripts/demo-repos-expected-sha.txt text eol=lf
-scripts/init-demo-repos.ps1 text eol=lf
-
-# 提示词模板正文参与 promptHash 与 r8-R1 字节等价 golden 测试。若被检出为 CRLF,
-# 模板每行多出 \r,golden 测试全红且 promptHash 漂移——任何平台必须按 LF 原字节检出。
-backend/src/main/resources/prompts/** text eol=lf
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.pdf binary

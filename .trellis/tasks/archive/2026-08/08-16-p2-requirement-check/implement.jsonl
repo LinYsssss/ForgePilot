@@ -1,6 +1,0 @@
-{"file": ".trellis/tasks/08-16-forgepilot-upgrade/design.md", "reason": "父 design §5 Context Builder 场景化与 §6 体检流水线——本任务的设计基线"}
-{"file": ".trellis/spec/backend/prompt-management.md", "reason": "新模板入注册表五规则:宁精勿多、golden 测试、退役、禁承诺红线、唯一组装入口"}
-{"file": ".trellis/spec/backend/agent-model-contracts.md", "reason": "结构化输出两级防御:schema 校验不过丢弃不落库、枚举同源注入"}
-{"file": ".trellis/spec/backend/database-guidelines.md", "reason": "V31 不可变迁移;报告 round 取号事务边界"}
-{"file": ".trellis/spec/backend/error-handling.md", "reason": "复用 AI_RESPONSE_INVALID 词汇;BusinessException 姿态"}
-{"file": ".trellis/spec/frontend/component-guidelines.md", "reason": "详情内嵌报告块的墨境 SFC 写法"}

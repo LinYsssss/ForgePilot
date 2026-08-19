@@ -1,4 +1,0 @@
-{"file": ".trellis/tasks/08-16-forgepilot-upgrade/design.md", "reason": "父 design §7 coverage 注入与报告融合;§5 合并阶段判定复用"}
-{"file": ".trellis/spec/backend/frozen-contracts.md", "reason": "ReviewPublication 载荷与 Conclusion 映射冻结,只动 notes 内容"}
-{"file": ".trellis/spec/backend/database-guidelines.md", "reason": "V34 不可变迁移(agent_run.coverage_json)"}
-{"file": ".trellis/spec/guides/code-reuse-thinking-guide.md", "reason": "复用 CoverageJudgeService 单点,两链路零分叉"}

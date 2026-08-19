@@ -1,3 +1,0 @@
-{"file": ".trellis/spec/backend/index.md", "reason": "后端实现规范入口(quality/api/测试写法),反馈闭环与错误上报端点必须合规"}
-{"file": ".trellis/spec/guides/demo-assets-and-claims.md", "reason": "受保护资产与对外口径纪律——冗余清理与注释治理的硬边界"}
-{"file": ".trellis/spec/guides/cross-layer-thinking-guide.md", "reason": "跨进程契约思维+Mistake5(部署脚本消费程序输出的CRLF坑)"}

@@ -1,6 +1,0 @@
-mall-order-service main 6977028167f12d7c71e74ae49b9fc924e941c6fb
-payment-settlement-service main f62c312910c3bcc5d1052d7de743b876b8b87a7b
-tenant-user-center main f4a41bd524f8978fcead3d8d2609ce3a3edeaa73
-mall-order-service refs/heads/feature/promotion-batch-ship e205e0e23b0334d8bd5b48f6defdc96ec91aaeb4
-payment-settlement-service refs/heads/feature/instant-settlement e51fad49a418995d8a9244aa853e3412cd865f5b
-tenant-user-center refs/heads/feature/ops-console 7e9e7a4347a699cc7e4c7c8292dce0068babf427

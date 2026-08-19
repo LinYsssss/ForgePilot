@@ -1,3 +1,0 @@
-{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "状态机与角色负面用例准入;存量用例保持绿"}
-{"file": ".trellis/spec/guides/cross-layer-thinking-guide.md", "reason": "实体→REST→前端字段口径一致(状态枚举/优先级/AC 结构)"}
-{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "API 边界容错与 node --test 写法"}

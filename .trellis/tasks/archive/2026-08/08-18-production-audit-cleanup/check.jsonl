@@ -1,8 +1,0 @@
-{"file": ".trellis/spec/guides/demo-assets-and-claims.md", "reason": "检查清理没有误删演示/评测/QA 证据并保持诚实口径。"}
-{"file": ".trellis/spec/guides/contract-testing.md", "reason": "检查 smoke、API、MQ、sandbox、脚本契约的真实生产/消费闭环。"}
-{"file": ".trellis/spec/guides/deployment-and-observability.md", "reason": "检查生产配置、端口、日志、健康、备份和复验记录。"}
-{"file": ".trellis/spec/backend/security-guidelines.md", "reason": "检查认证授权、CSRF、秘密、供应链与生产安全门禁。"}
-{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "检查全量/聚焦测试、授权矩阵、路径和上下文基线。"}
-{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "检查前端 clean install/audit/test/build 和 session/SSE 边界。"}
-{"file": ".trellis/spec/sandbox-runner/guidelines.md", "reason": "检查 sandbox 安全不变量、镜像契约和测试。"}
-{"file": ".trellis/tasks/08-18-production-audit-cleanup/research/initial-inventory.md", "reason": "核对已知 generated artifact 和 smoke/Grafana/path findings 是否闭环。"}

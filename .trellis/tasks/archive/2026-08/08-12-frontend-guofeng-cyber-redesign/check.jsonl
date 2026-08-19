@@ -1,6 +1,0 @@
-{"file":".trellis/spec/frontend/index.md","reason":"检查实现是否遵守仓库前端规范"}
-{"file":".trellis/tasks/08-12-frontend-guofeng-cyber-redesign/research/visual-directions.md","reason":"检查实现只遵循已选墨境书院方向且未混入 B/C"}
-{"file":".trellis/tasks/08-12-frontend-guofeng-cyber-redesign/research/prototype.md","reason":"检查核心路径和三档视口是否匹配获批原型"}
-{"file":".trellis/tasks/08-12-frontend-guofeng-cyber-redesign/research/ui-design.md","reason":"检查令牌、组件、状态、水墨动效与降级合同"}
-{"file":".trellis/tasks/08-12-frontend-guofeng-cyber-redesign/research/ui-decisions.md","reason":"检查架构、表现层与依赖决策是否被遵守"}
-{"file":".trellis/tasks/08-12-frontend-guofeng-cyber-redesign/research/qa-report.md","reason":"终验浏览器、无障碍、性能和构建证据"}

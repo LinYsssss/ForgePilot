@@ -1,1 +1,0 @@
-class Broken { void compile( { }

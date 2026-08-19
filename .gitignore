@@ -1,54 +1,32 @@
-# Build outputs
-backend/target/
-sandbox-runner/target/
-frontend/dist/
-model-service/__pycache__/
-model-service/.python-packages/
-model-service/app/__pycache__/
-model-service/scripts/__pycache__/
-scripts/__pycache__/
-
-# Dependency directories
-frontend/node_modules/
-frontend/.npm-cache/
-.m2home/
-
-# Runtime and temporary files
-backend/.work/
-backend/*.log
-frontend/*.log
-frontend/.vite-dev.*.log
-.work/
-.worktrees/
-
-# Local env files
-.env
-deploy/.env
-# .env 的任何备份副本同样含明文密钥,一律不入库(安全渠道另存,见 deploy/backup.sh 注释)
-deploy/.env.bak*
-.env.bak*
-
-# 分析工具缓存(可再生)
-.ua/
-
-# IDE
+# IDE / OS
 .idea/
 .vscode/
-*.iml
-
-# OS
-Thumbs.db
 .DS_Store
+Thumbs.db
 
-# Claude Code session/memory
-.claude/
+# Java
+**/target/
+*.log
 
-# 数据库备份(业务数据,不入库)
-deploy/backups/
+# Node
+**/node_modules/
+**/dist/
 
-# Python tooling caches (all modules/tests)
-**/__pycache__/
-*.py[cod]
-.pytest_cache/
-.mypy_cache/
-.ruff_cache/
+# Local environment and secrets
+.env
+.env.*
+!.env.example
+*.local
+
+# Runtime data
+data/
+uploads/
+pgdata/
+
+# Trellis working state
+.trellis/tasks/*
+!.trellis/tasks/.gitkeep
+
+# Evaluation outputs
+evaluation/results/*
+!evaluation/results/.gitkeep

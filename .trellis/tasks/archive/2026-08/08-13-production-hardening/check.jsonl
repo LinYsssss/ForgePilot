@@ -1,3 +1,0 @@
-{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "后端测试与质量门标准,验证新端点/实体/迁移的测试覆盖"}
-{"file": ".trellis/spec/guides/demo-assets-and-claims.md", "reason": "复核清理未触碰 demo-repos/evaluation/prompts 等受保护资产"}
-{"file": ".trellis/spec/frontend/index.md", "reason": "尾段前端接线(错误上报挂载)与3文件注释治理的规范核对"}

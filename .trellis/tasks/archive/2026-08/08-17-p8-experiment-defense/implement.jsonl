@@ -1,9 +1,0 @@
-{"file": ".trellis/spec/guides/demo-assets-and-claims.md", "reason": "P8 的演示素材不可修复或削弱；所有指标和能力声明必须有真实产物，且禁止零漏报口径。"}
-{"file": ".trellis/spec/guides/contract-testing.md", "reason": "P8 扩展 manifest、coverage、run metadata 与 HMAC 注入路径时，必须由生产方真实产出驱动消费方契约测试。"}
-{"file": ".trellis/spec/guides/deployment-and-observability.md", "reason": "在线/离线彩排需要沿用部署前置检查、trace、日志和可复现证据边界。"}
-{"file": ".trellis/spec/guides/cross-layer-thinking-guide.md", "reason": "语料标注、后端 DTO、评分器、前端/答辩展示是同一条跨层数据流，需逐层核对字段与指标口径。"}
-{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "EvaluationCorpusService、webhook 与新增脚本/契约必须补确定性正负向测试，并遵守授权与测试目录规则。"}
-{"file": ".trellis/spec/backend/security-guidelines.md", "reason": "离线演示仍必须使用真实 HMAC 验签、secret 脱敏和供应链门禁，不得新增验签后门。"}
-{"file": ".trellis/spec/backend/prompt-management.md", "reason": "五臂实验必须使用既定 prompt/评测门禁和诚实声明规则，不能把未实测数字写入对外材料。"}
-{"file": ".trellis/tasks/08-03-r7-eval-corpus/research/corpus-inventory.md", "reason": "提供 38 例语料结构、development/holdout 隔离和既有真值盘点，P8 必须在其上扩展而非复制。"}
-{"file": ".trellis/tasks/08-03-r8-prompt-tuning/research/r2-impl-notes.md", "reason": "记录 R8 清单/提示词版本、38 例服务器复跑风险和 sec-java 六例观察点，决定 P8 的实验限制与回灌检查。"}

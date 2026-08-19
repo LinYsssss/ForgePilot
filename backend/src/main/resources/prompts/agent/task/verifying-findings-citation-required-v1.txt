@@ -1,5 +1,0 @@
-# template: verifying-findings-citation-required-v1（验证发现步·有知识分支的 citation 指令片段）
-# 来源: VerifyingFindingsStepExecutor 的 citationInstruction 有知识分支（原 181-182 行），r8-R1 字节等价。
-# 原文尾随空格由主模板 verifying-findings-task-v1 的槽后空格承担。
-
-Every finding must include at least one citationId taken verbatim from the supplied citation list.

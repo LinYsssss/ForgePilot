@@ -1,8 +1,0 @@
-# template: chat-review-project-v1（chat 审查·项目层：知识库上下文槽）
-# 来源: OpenAiCompatibleReviewClient.buildPrompt() 模板的「RAG 项目上下文」段（原 256-257 行），r8-R1 字节等价。
-# %s = 知识库上下文（RagService 产出；为空时由组装器注入 chat-review-project-empty-v1 的兜底文案）。
-# 技术栈声明槽为 r8 后续内容性变更预留（须附评测对比），本版（字节等价）不引入。
-# 经 layer() 加载：正文逐字节保留（末尾换行是与任务层拼接的结构字节）。
-
-RAG 项目上下文：
-%s

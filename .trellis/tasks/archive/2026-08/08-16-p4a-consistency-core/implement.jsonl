@@ -1,5 +1,0 @@
-{"file": ".trellis/tasks/08-16-forgepilot-upgrade/design.md", "reason": "父 design §5(分片融合决策)§7(coverage schema/flags 预埋)——本任务设计基线"}
-{"file": ".trellis/spec/backend/prompt-management.md", "reason": "coverage-judge-v1 入注册表五规则与 golden 测试"}
-{"file": ".trellis/spec/backend/agent-model-contracts.md", "reason": "结构化输出两级防御;引用校验丢弃姿态"}
-{"file": ".trellis/spec/backend/database-guidelines.md", "reason": "V33 不可变迁移(review_task.flags_json / review_report.coverage_json)"}
-{"file": ".trellis/spec/backend/frozen-contracts.md", "reason": "ReviewReportDetail 响应只加字段;ReviewTask 幂等键不动"}

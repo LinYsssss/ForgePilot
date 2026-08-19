@@ -1,2 +1,0 @@
-{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "存量审查行为零回归;flags 缺省路径与现状一致"}
-{"file": ".trellis/spec/guides/cross-layer-thinking-guide.md", "reason": "coverage 结构在落库/REST/前端三层口径一致"}

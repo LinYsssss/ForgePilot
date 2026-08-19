@@ -1,6 +1,0 @@
-{"file": ".trellis/tasks/08-16-forgepilot-upgrade/design.md", "reason": "父 design §8 生命周期与身份匹配、§9 门禁扩展——设计基线"}
-{"file": ".trellis/spec/backend/database-guidelines.md", "reason": "V35 不可变迁移与存量回填"}
-{"file": ".trellis/spec/backend/frozen-contracts.md", "reason": "SCM Conclusion 映射与响应只加字段;既有 status 轴不动"}
-{"file": ".trellis/spec/backend/error-handling.md", "reason": "FINDING_TRANSITION_ILLEGAL 入词汇表"}
-{"file": ".trellis/spec/frontend/component-guidelines.md", "reason": "/quality 墨境新页写法"}
-{"file": ".trellis/spec/frontend/directory-structure.md", "reason": "新页与导航接缝落位"}

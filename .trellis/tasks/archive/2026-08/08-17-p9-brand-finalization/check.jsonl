@@ -1,4 +1,0 @@
-{"file": ".trellis/spec/guides/demo-assets-and-claims.md", "reason": "检查新 README 的迁移、能力和评测表述均有证据且保留旧仓库历史入口。"}
-{"file": ".trellis/spec/guides/deployment-and-observability.md", "reason": "检查新旧仓库 URL、clone/deploy 路径和本地 remote cutover 的可操作性。"}
-{"file": ".trellis/spec/guides/contract-testing.md", "reason": "将 branch/tag/ref 集合作为跨远程迁移契约核验，避免只看 main 即误报完整迁移。"}
-{"file": ".trellis/tasks/08-03-r7-eval-corpus/research/expansion-readiness.md", "reason": "检查 README 没有把未执行的 38 例真实模型矩阵写成已完成。"}

@@ -1,7 +1,0 @@
-{"file":".trellis/spec/backend/frozen-contracts.md","reason":"复核新增端点未破坏既有 REST、错误码和授权语义"}
-{"file":".trellis/spec/backend/quality-guidelines.md","reason":"复核匿名/陌生人/跨项目矩阵以及后端测试覆盖"}
-{"file":".trellis/spec/backend/security-guidelines.md","reason":"复核 CSRF、Cookie、错误脱敏与容量限制"}
-{"file":".trellis/spec/backend/agent-model-contracts.md","reason":"复核 Prompt 注入、秘密、预算和模型失败处理"}
-{"file":".trellis/spec/frontend/state-management.md","reason":"复核 reset/Abort/401，不回归既有 Agent EventSource"}
-{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"复核流解析边界、API 错误与前端测试"}
-{"file":".trellis/spec/guides/contract-testing.md","reason":"复核 context/delta/done/error 的生产者消费者契约"}

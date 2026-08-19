@@ -11,20 +11,20 @@ Phase 0 已冻结（2026-08-19），Phase 1 可以开始；Phase 2 及以后需�
 - 只允许 `common/auth/project/requirement/scm/knowledge/ai/review` 顶层包。
 - Finding 必须留在 review；SCM 只能发布事件，不能依赖 review。
 - 禁止 Agent、Patch、MQ/Outbox、第二 Review Engine、第二 AI runtime、本地 Git/clone、向量双写和运行时 DDL。
-- 任何 P1 功能不得插入核心 Phase：Assistant、Workbench、多仓库、相关代码读取、报告导出、高级监控。
+- 任何 P1 功能不得插入核心 Phase：多轮 Assistant、Workbench、多仓库、相关代码读取、报告导出、高级监控。MVP 仅允许 Requirement 详情页的一次性结构化实现建议。
 - **写代码前先查迁移矩阵**：该模块的 Legacy 资产是 KEEP / REWRITE / REFERENCE / DROP。
 
 ## Phase 0：冻结契约 ✅ 已完成（2026-08-19）
 
 - 冻结主流程、角色权限矩阵、Requirement/Finding/Review 状态。
 - 冻结 14 表、8 顶层包、依赖规则、运行边界、SCM event contract。
-- 7 条争议决策落为 ADR-001..007。
+- 架构争议决策落为 ADR-001..008。
 - 文档收敛为单一事实源（PRD / ARCHITECTURE / PLAN / ADR / 迁移矩阵）。
 
 ## Phase 1：最小绿地底座
 
 - 单 Spring Boot 应用、Vue 应用、Postgres pgvector。
-- 建 8 个顶层包和 `V1__init.sql` 14 表（含 ADR-001/003/004/005 约定的列与索引约束）。
+- 建 8 个顶层包、Flyway/Testcontainers/CI 骨架；本阶段不预建全部业务表，表随纵向 Phase 增加，发布首个版本前再 squash 为干净初始化迁移。
 - ArchUnit：cycle=0、禁止包、scm 不依赖 review、跨模块 Repository 禁止。
 - Testcontainers 验证从空库启动、约束和 pgvector。
 - 退出条件：不含任何业务 UI 也能证明边界不会长回旧架构。
@@ -41,13 +41,14 @@ Phase 0 已冻结（2026-08-19），Phase 1 可以开始；Phase 2 及以后需�
 - Requirement/AC CRUD、简化状态机、指派。
 - 需求附件不在本 Phase：Knowledge 模块在 Phase 4，附件（KnowledgeDocument + RequirementAttachment）随 Phase 4 一并实现，避免建临时存储再拆除。
 - 确定性质量规则先实现；AI Quality 在 Phase 6 接入。
-- 退出条件：无 AI/SCM 时可完成需求创建、确认、指派、提交评审。
+- 退出条件：无 AI/SCM 时可完成需求创建、确认和指派；READY 后正文与 AC 锁定规则通过测试。
 
 ## Phase 4：AI Gateway + Knowledge
 
 - 统一 chat/embed Gateway、timeout、一次 retry、PromptSanitizer、ai_call_log。
 - KnowledgeUploadValidator、Chunk、单 vector 列、project-scoped TopK、维护式 reindex。
 - 需求附件：上传即 KnowledgeDocument（source_type=REQUIREMENT_ATTACHMENT）+ RequirementAttachment 关系（ADR-005）。
+- Requirement 详情页的一次性 Implementation Guidance：Requirement + AC + Project Knowledge → 实现清单、相关规则、风险提示；不建 conversation 表。
 - 只支持一个 configured embedding model/dimension；`V1__init.sql` 为无维度 vector 列、不建向量索引，生产 Profile 确定后以独立 migration 创建 HNSW expression index（ADR-001）。
 - 退出条件：A 项目检索不到 B 项目；非法 UTF-8/超限/NUL/维度不匹配显式失败。
 
@@ -56,7 +57,7 @@ Phase 0 已冻结（2026-08-19），Phase 1 可以开始；Phase 2 及以后需�
 - 一个项目一个活动 scm_repository。
 - GitHub Webhook raw-byte HMAC、PR snapshot、changed-file patch。
 - `REQ-N` 分支/标题解析写入 requirement_id，解析失败不阻断（ADR-007）。
-- 数据库幂等同步，发布 `PullRequestChanged`；不调用 Review、不 clone。
+- 数据库幂等同步，发布 `PullRequestChanged`；不直接依赖 Review、不 clone。
 - 退出条件：重放不重复建 PR，非法签名不写业务数据，SCM compile dependency 不含 review。
 
 ## Phase 6：Requirement Quality + Review Engine
@@ -66,12 +67,13 @@ Phase 0 已冻结（2026-08-19），Phase 1 可以开始；Phase 2 及以后需�
 - 唯一 Review Engine 产出 AC verdict + Finding；小 PR 单次调用，大 PR 分批产 candidate/evidence 后 Final Synthesis 统一合成（ADR-002）。
 - ReviewOutputValidator 校验 acId/sourceId/path/line，补齐漏判 AC，伪造证据不得落库。
 - 有界进程内执行器、Review 状态、幂等 retry。
+- Webhook 返回前持久化 PENDING Review；reconciliation 补偿漏触发与停滞任务；Review 保存 requirement_id 与不可变 context snapshot。
 - 退出条件：仓库只有一个 ReviewEngine；大 PR 未审文件显式呈现；AI 非法 JSON 不产生假成功。
 
 ## Phase 7：人工闭环 + 三页面 UI
 
 - Finding confirm/reject/assign/in-progress/fixed/verified/closed 与 finding_event。
-- Review APPROVE/REQUEST_CHANGES；REQUEST_CHANGES 后必须新 head 才能再次终局决定。
+- Review APPROVE/REQUEST_CHANGES；REQUEST_CHANGES 后必须新 head 才能再次终局决定；APPROVE 不自动完成 Requirement，由 LEADER 单独确认 DONE。
 - 项目、研发需求、代码审查三个一级页面完成 E2E。
 - 退出条件：需求→PR→Finding→退回→修复→新 Review→通过可由三角色重复演示。
 

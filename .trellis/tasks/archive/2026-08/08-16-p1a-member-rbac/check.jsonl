@@ -1,3 +1,0 @@
-{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "授权矩阵准入:每个新增/收紧端点必须有负面用例;存量用例保持绿"}
-{"file": ".trellis/spec/backend/frozen-contracts.md", "reason": "检查冻结契约未破坏:404/403 口径、PageResponse、Flyway 不可变"}
-{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "node --test 写法与 API 边界容错检查"}

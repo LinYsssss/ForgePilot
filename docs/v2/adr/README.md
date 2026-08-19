@@ -12,3 +12,4 @@ Phase 0 冻结前由用户裁决的架构决策。修订 ARCHITECTURE/PRD 时以
 | [ADR-005](./ADR-005-requirement-attachment-retrieval-boundary.md) | Attachment Retrieval Boundary：附件为 requirement-scoped 知识，默认不跨需求召回 | 已接受 |
 | [ADR-006](./ADR-006-cross-project-referential-integrity.md) | 跨项目引用完整性：复合外键兜底，Service 不写跨项目一致性校验 | 已接受 |
 | [ADR-007](./ADR-007-pr-requirement-association.md) | PR↔Requirement 关联：分支/标题解析 `REQ-N` 优先，页面可改，失败不阻断 | 已接受 |
+| [ADR-008](./ADR-008-review-context-and-recovery.md) | Review Context & Recovery：保存不可变上下文快照，先持久化 PENDING，再用 reconciliation 补偿进程内任务 | 已接受 |

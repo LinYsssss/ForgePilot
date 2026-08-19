@@ -1,3 +1,0 @@
-{"file": ".trellis/spec/backend/directory-structure.md", "reason": "确认 model 包移除后的包边界;严禁误伤 agent/model(结构化输出)同名包"}
-{"file": ".trellis/spec/backend/frozen-contracts.md", "reason": "删除路径不得触碰冻结契约:ErrorCode 词汇表、Flyway 既有迁移、REST/MQ 载荷"}
-{"file": ".trellis/spec/backend/security-guidelines.md", "reason": "CI supply-chain 门禁:ci.yml 改动后 trivy 扫描镜像列表同步(去 model-service)"}

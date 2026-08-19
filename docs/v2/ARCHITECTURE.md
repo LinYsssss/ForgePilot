@@ -20,7 +20,7 @@ com.forgepilot
 ├── common        # API error、paging、clock、纯安全工具
 ├── auth          # 登录、Cookie/Session、Spring Security
 ├── project       # Project、Member、Role、ProjectAccessService
-├── requirement   # Requirement、AC、附件关系、质量检查
+├── requirement   # Requirement、AC、附件关系、质量检查、一次性实现建议
 ├── scm           # Repository、PR、Webhook、GitHub/GitLab provider
 ├── knowledge     # Document、Chunk、ingestion、search
 ├── ai            # provider-neutral chat/embed gateway
@@ -45,7 +45,7 @@ review/  ReviewController · ReviewService · ReviewRepository · Review · Find
 | 模块 | 只负责 | 明确不负责 |
 |---|---|---|
 | `project` | 成员、角色、项目隔离、仓库/知识入口 | Sprint、工时、看板、审批流 |
-| `requirement` | 需求、AC、指派、质量检查、附件关系 | 通用任务管理、聊天平台 |
+| `requirement` | 需求、AC、指派、质量检查、附件关系、一次性实现建议 | 通用任务管理、聊天平台、多轮会话 |
 | `scm` | 凭据、Webhook、PR 元数据与 patch、`REQ-N` 解析 | Review 结论、本地 Git 工作区 |
 | `knowledge` | 文档、Chunk、Embedding、项目内检索 | Requirement 状态、Review 编排、代码索引 |
 | `ai` | OpenAI-compatible chat/embed 协议与调用记录 | 业务 Prompt、Agent 编排、自动决策 |
@@ -93,7 +93,7 @@ common, project, scm, knowledge, requirement, ai  ←  review
 | `knowledge_chunk` | Chunk 与唯一向量 | project_id、document_id、seq、content、metadata、`embedding vector`（无维度，ADR-001）、provider/model/version/dimension |
 | `scm_repository` | 项目的活动仓库与加密凭据 | `project_id` unique；provider、external_id、api_base、encrypted_token/secret；`UNIQUE(project_id,id)` |
 | `pull_request` | PR/MR 快照与需求关联 | `(repository_id,external_number)` unique；requirement_id nullable + 普通索引（ADR-004/007）；`UNIQUE(project_id,id)` |
-| `review` | 一个 head SHA 的审查、摘要与 Decision | `(pull_request_id,head_sha)` unique（ADR-003）；status、decision、decision_by/at/comment、engine/prompt/model 审计列 |
+| `review` | 一个 head SHA 的审查、上下文快照、摘要与 Decision | `(pull_request_id,head_sha)` unique（ADR-003）；requirement_id、context_snapshot_json、status、decision、decision_by/at/comment、engine/prompt/model 审计列 |
 | `finding` | Review 问题当前态 | review_id、requirement_id、ac_id、path、line、evidence、status、assignee、fingerprint |
 | `finding_event` | Finding 人工状态与指派审计 | finding_id、actor_id、action、from/to、comment、created_at |
 | `ai_call_log` | 评测与故障定位 | project_id、review_id、use_case、model、token、latency、status、error |
@@ -153,9 +153,9 @@ erDiagram
 
 ### 3.1 触发与幂等
 
-`scm` 完成验签与 PR 同步后发布进程内 `PullRequestChanged`；`review` 监听并按 `(pull_request_id, head_sha)` 幂等创建 Review（ADR-003）。
+`scm` 完成验签与 PR 同步后发布进程内 `PullRequestChanged`；`review` 同步监听并按 `(pull_request_id, head_sha)` 幂等持久化 Review(PENDING)，然后才把执行提交给有界执行器（ADR-003）。
 自动触发与人工重试是同一个 `ReviewService.requestReview(...)` 的两个入口，不是两个引擎。
-Webhook 保存 PR 后即返回 202，不等待 LLM。
+Webhook 在 PR 与 PENDING Review 均持久化后返回 202，不等待 LLM。轻量 `ReviewReconciliationScheduler` 定期查询“当前 head 存在但无 Review”及超时 PENDING/RUNNING，统一回到同一个 `requestReview(...)` 恢复路径；不得由此引入第二引擎。
 
 ### 3.2 执行状态机
 
@@ -169,7 +169,7 @@ stateDiagram-v2
     COMPLETED --> [*]
 ```
 
-崩溃留下的停滞 PENDING/RUNNING 同样由人工重试重置重跑。Decision 与执行状态正交：`PENDING | APPROVE | REQUEST_CHANGES`。
+崩溃留下的停滞 PENDING/RUNNING 先由 reconciliation 标记并恢复，仍失败时由人工重试。Decision 与执行状态正交：`PENDING | APPROVE | REQUEST_CHANGES`。
 
 ### 3.3 单次 Review（小 PR 路径）
 
@@ -211,6 +211,8 @@ sequenceDiagram
 - `acId` 必须属于当前 Requirement；`sourceId` 必须在本次召回白名单；`filePath` 必须在 changed files 内。
 - 行号必须落在 patch 可验证范围，无法验证则不输出精确行号。
 - Finding 证据保存不可变 excerpt + hash，历史 Review 不受知识文档后续变更影响。
+- Review 创建时保存 `requirement_id` 及 Requirement/AC/Knowledge evidence 的不可变上下文快照；历史页面禁止通过 PR 当前 `requirement_id` 反推审查语义。
+- Requirement 进入 READY 后正文与 AC 默认锁定；已有 Review 的 PR 修改 Requirement 关联必须显式使旧审查失效，不允许静默替换。
 - 非法 JSON 允许**一次** format-repair；仍失败则 FAILED，**绝不生成"成功空报告"**。
 
 ---
@@ -226,7 +228,7 @@ AiGateway.embed(texts, embeddingConfig)
 
 `ai` 负责 HTTP、认证、超时、一次有限重试、调用元数据、Token/延迟与错误分类。
 它**不知道** Requirement/Finding/Review 等业务类型，也不暴露 tool loop。
-业务 Prompt 归 `requirement` 与 `review` 各自所有；不建 Prompt Registry，不建万能 ContextBuilder。
+业务 Prompt 归 `requirement` 与 `review` 各自所有；Requirement Quality 与一次性 Implementation Guidance 共享 AI Gateway 但使用不同 schema。不建 Prompt Registry，不建万能 ContextBuilder。
 
 ### 4.2 ReviewContext
 
@@ -274,6 +276,7 @@ Requirement、文档、PR 标题、代码注释**全部是不可信数据**，�
 
 Workbench、Knowledge、Repository、Metrics、Agent、Patch、AI Logs 均**不做**一级页面。
 知识检索测试不面向普通用户；管理员只需看到文档状态与失败原因。
+一次性实现建议位于 Requirement 详情页，不创建 Assistant 一级菜单或 Conversation 页面。
 AI 置信度、Finding 人工状态、Review Decision 在 UI 上必须明确分开呈现。
 
 ---
@@ -326,7 +329,7 @@ HTTP timeout + 一次有限 retry + Review FAILED + 人工 retry 足够覆盖当
 | AiGateway 变成 Agent 工具箱 | 接口只允许 chat/embed，不暴露 tool loop |
 | `review` 变成新大泥球 | 可编排但禁访问外模块 Repository；Finding 是内聚不是吸收 |
 | 大 PR 静默丢文件 | 分批 + coverage manifest + UI 显式呈现 |
-| 进程内任务丢失 | 状态可见 + 幂等 retry；压测证明不可接受再评估持久队列 |
+| 进程内任务丢失 | 先持久化 PENDING + reconciliation + 幂等 retry；压测证明不可接受再评估持久队列 |
 | Embedding 变更 | schema 不绑维度；换 Profile 走维护窗口 |
 | Prompt injection / 伪造证据 | 不可信标记 + source 白名单 + 输出回查 |
 | 范围回弹 | P1 清单在核心 E2E 完成前不得实施 |

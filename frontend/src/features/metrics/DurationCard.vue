@@ -1,2 +1,0 @@
-<template><MetricCard :title="title" :sample="metric.sampleCount" :items="[['平均', formatDuration(metric.averageMs)], ['P50', formatDuration(metric.p50Ms)], ['P95', formatDuration(metric.p95Ms)], ['最小', formatDuration(metric.minMs)], ['最大', formatDuration(metric.maxMs)], ['截断', metric.truncated ? '是' : '否']]" /></template>
-<script setup>import MetricCard from './MetricCard.vue';import { formatDuration } from './metricsModel.js';defineProps({title:{type:String,required:true},metric:{type:Object,required:true}})</script>
