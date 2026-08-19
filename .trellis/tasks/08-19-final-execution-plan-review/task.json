@@ -1,0 +1,37 @@
+{
+  "id": "final-execution-plan-review",
+  "name": "final-execution-plan-review",
+  "title": "Review ForgePilot V2 final execution plan",
+  "description": "Review and approve the consolidated V2 scope, architecture boundaries, migration policy, phases, and implementation gates before any application code is written.",
+  "status": "planning",
+  "dev_type": null,
+  "scope": "governance/docs only; no application code",
+  "package": null,
+  "priority": "P0",
+  "creator": "LinYsssss",
+  "assignee": "LinYsssss",
+  "createdAt": "2026-08-19",
+  "completedAt": null,
+  "branch": null,
+  "base_branch": "main",
+  "worktree_path": null,
+  "commit": null,
+  "pr_url": null,
+  "subtasks": [],
+  "children": [],
+  "parent": null,
+  "relatedFiles": [
+    "docs/v2/FINAL-EXECUTION-PLAN.md",
+    "docs/v2/PRD.md",
+    "docs/v2/ARCHITECTURE.md",
+    "docs/v2/IMPLEMENTATION-PLAN.md",
+    "docs/v2/LEGACY-MIGRATION-MATRIX.md",
+    "AGENTS.md",
+    "CLAUDE.md"
+  ],
+  "notes": "Remain in planning until the user explicitly approves the final plan. Do not run task.py start.",
+  "meta": {
+    "review_gate": "user_approval_required",
+    "implementation_authorized": false
+  }
+}

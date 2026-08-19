@@ -23,10 +23,6 @@ data/
 uploads/
 pgdata/
 
-# Trellis working state
-.trellis/tasks/*
-!.trellis/tasks/.gitkeep
-
 # Evaluation outputs
 evaluation/results/*
 !evaluation/results/.gitkeep
