@@ -47,7 +47,7 @@
 |---|---|
 | [001](./adr/ADR-001-embedding-schema.md) | 向量列不带维度，V1 不建索引，Phase 4 再建 |
 | [002](./adr/ADR-002-large-pr-review.md) | 大 PR 分批产证据，最后统一合成一份报告 |
-| [003](./adr/ADR-003-review-identity.md) | Review 业务键 = (PR, head SHA)，版本只是审计字段 |
+| [003](./adr/ADR-003-review-identity.md) | Review 身份 = (PR, head SHA, 需求版本)；终局闸门只认 (PR, head SHA) |
 | [004](./adr/ADR-004-domain-cardinality.md) | 每项目一个 LEADER；一个需求可有多个 PR |
 | [005](./adr/ADR-005-requirement-attachment-retrieval-boundary.md) | 需求附件不跨需求召回 |
 | [006](./adr/ADR-006-cross-project-referential-integrity.md) | 跨项目引用由复合外键拒绝，不写运行时校验 |

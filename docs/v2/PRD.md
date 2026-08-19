@@ -53,7 +53,7 @@ flowchart LR
 | 需求 DRAFT → READY、指派开发 | ✅ | ❌ | ❌ |
 | 生成当前需求的一次性 AI 实现建议 | ✅ | 仅被指派需求 | ❌ |
 | 修改 PR↔需求关联 | ✅ | 仅本人 PR 且当前 head 尚无 Review | ❌ |
-| 触发/重试 Review | ✅ | ✅ | ✅ |
+| 触发/重试 Review（含版本过期后的重审） | ✅ | 仅本人 PR | ✅ |
 | Finding 确认 / 拒绝 | ✅ | ❌ | ✅ |
 | Finding 认领、标记已修复 | ❌ | ✅ | ❌ |
 | Finding 验证通过 / 打回 | ✅ | ❌ | ✅ |
@@ -105,7 +105,7 @@ DRAFT → READY → IN_DEVELOPMENT → DONE
 无 `NEEDS_IMPROVEMENT`：**质量检查是建议，不是工作流状态**，也不能自动置 READY。
 无 `IN_REVIEW`：评审进展是**只读派生量** `review_activity`（`FAILED > CHANGES_REQUESTED > REVIEWING > PENDING > MIXED > APPROVED > NO_PR`），按所有关联 PR 的**当前 head + 当前需求版本**的 Review 计算，不落表。UI 与需求状态并列展示，两个维度不得合并。
 
-READY 后正文与 AC 锁定；修改由 LEADER 创建新的不可变 Revision 并填写变更原因，旧 AC 永久保留。需求版本变更**不自动重审**，关联 PR 显示"审查已过期"，由人工触发。
+READY 后正文与 AC 锁定；修改由 LEADER 创建新的不可变 Revision 并填写变更原因，旧 AC 永久保留。DRAFT 阶段的 Revision 1 可原地编辑，`DRAFT → READY` 同事务冻结——"不可变"指**已发布的 Revision**。需求版本变更**不自动重审**，关联 PR 显示"审查已过期"，由人工按上表权限触发。需求质量检查结果归属具体 Revision，DRAFT 期间正文一改即失效。
 
 ### Finding
 

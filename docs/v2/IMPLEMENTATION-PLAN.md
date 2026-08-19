@@ -48,7 +48,9 @@ Phase 0 已于 2026-08-19 获用户批准并完成 R2 契约复审（新增 ADR-
 ## Phase 3：Requirement
 
 - Requirement/AC CRUD、简化状态机（`DRAFT / READY / IN_DEVELOPMENT / DONE / CANCELED`，无 `IN_REVIEW`）、指派。
-- 不可变 `requirement_revision` + 稳定 `ac_key`：READY 发布 Revision 1，其后修改由 LEADER 创建新 Revision 并填写变更原因（ADR-011）。互为外键按"建 requirement → 建 revision → 建 AC → 回填 current_revision_id"顺序解决，不用 DEFERRABLE。
+- 不可变 `requirement_revision` + 稳定 `ac_key`：创建 Requirement 时同步建 Revision 1，DRAFT 期间可原地编辑，`DRAFT → READY` 同事务冻结；其后修改由 LEADER 一次性创建新的已发布 Revision 并填写变更原因（ADR-011）。**禁止给 revision 加 `is_draft`/`status` 列**，可编辑性只由父 Requirement 状态决定。互为外键按"建 requirement → 建 revision → 建 AC → 回填 current_revision_id"顺序解决，不用 DEFERRABLE。
+- 需求质量检查结果归属 Revision；DRAFT 期间正文或 AC 一改，同事务清空该 Revision 的质量结果。
+- 需求版本链的复合外键与 CHECK 按 ADR-006 §6–8 落地。
 - 需求附件不在本 Phase：Knowledge 模块在 Phase 4，附件（KnowledgeDocument + RequirementAttachment）随 Phase 4 一并实现，避免建临时存储再拆除。
 - 确定性质量规则先实现；AI Quality 在 Phase 6 接入。
 - 界面：需求列表 + 需求详情（含 AC 与版本历史）。
@@ -69,7 +71,7 @@ Phase 0 已于 2026-08-19 获用户批准并完成 R2 契约复审（新增 ADR-
 - 一个项目一个活动 scm_repository；有 PR 后 provider + external_id 不可修改（ADR-010）。
 - GitHub Webhook raw-byte HMAC、PR snapshot、changed-file patch。
 - PR 作者快照（`author_external_user_id` / `author_username`）与派生映射 `author_user_id`（每次同步幂等重算），据此判定"本人 PR"；禁止按用户名授权（ADR-010）。
-- `REQ-N` 分支/标题解析写入 requirement_id，解析失败不阻断（ADR-007）；每次关联变更与 `pull_request_requirement_event` 同事务写入。
+- `REQ-N` 分支/标题解析写入 requirement_id，解析失败不阻断（ADR-007）；每次关联变更与 `pull_request_requirement_event` 同事务写入，自动解析记为 `actor_type=SYSTEM`。
 - 数据库幂等同步，发布 `PullRequestChanged`；不直接依赖 Review、不 clone。
 - 界面：PR 列表与需求关联修改入口。
 - 退出条件：重放不重复建 PR，非法签名不写业务数据，SCM compile dependency 不含 review；成员被移出项目后 `author_user_id` 自动置空、权限退化为仅 LEADER。
@@ -81,7 +83,7 @@ Phase 0 已于 2026-08-19 获用户批准并完成 R2 契约复审（新增 ADR-
 - 唯一 Review Engine 产出 AC verdict + Finding；小 PR 单次调用，大 PR 分批产 candidate/evidence 后 Final Synthesis 统一合成（ADR-002）。
 - ReviewOutputValidator 校验 acId/sourceId/path/line，补齐漏判 AC，伪造证据不得落库。
 - Review 身份 `(pull_request_id, head_sha, requirement_revision_id)` 且 `NULLS NOT DISTINCT`；终局 Decision 闸门只认 `(pull_request_id, head_sha)`，写入前须行锁串行化（ADR-003）。
-- Finding 跨轮血缘：`finding_key` / `evidence_hash` / `continuity` / `carried_from_finding_id`，`evidence_hash` 基于确定性源码证据（ADR-009）。
+- Finding 跨轮血缘：`finding_key` / `evidence_hash` / `continuity` / `carried_from_finding_id`，`evidence_hash` 基于确定性源码证据；"上一轮"按 ADR-009 §12 的两条确定性查找规则实现，禁止各自约定隐含规则。
 - 派生 `review_activity` 一次聚合查询，含 `FAILED` 档（ADR-011）。
 - 有界进程内执行器、Review 状态、幂等 retry。
 - Webhook 返回前持久化 PENDING Review；reconciliation 补偿漏触发与停滞任务；Review 保存 requirement_id、requirement_revision_id 与不可变 context snapshot。

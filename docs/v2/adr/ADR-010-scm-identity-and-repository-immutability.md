@@ -25,7 +25,7 @@ PRD §3 与 ADR-007 §3 都规定 DEVELOPER 可修改**本人 PR** 的需求关�
 ## 后果与实施注记
 
 - 第 7 条必须使用 PostgreSQL 15+ 的**列级** `ON DELETE SET NULL (author_user_id)`。普通 `ON DELETE SET NULL` 会同时清空复合外键中的 `project_id`（NOT NULL），删除成员时直接报错。
-- 与 [ADR-011](./ADR-011-requirement-revision-and-state.md) 的 `UNIQUE NULLS NOT DISTINCT` 共同构成硬依赖：**本项目最低 PostgreSQL 版本为 15**，Testcontainers 镜像、Docker Compose 与部署环境须统一。
+- 与 [ADR-003](./ADR-003-review-identity.md) 的 `UNIQUE NULLS NOT DISTINCT` 共同构成硬依赖：**本项目最低 PostgreSQL 版本为 15**，Testcontainers 镜像、Docker Compose 与部署环境须统一。
 - 第 7 条的副作用即第 5 条的兜底：成员被移出项目时 `author_user_id` 自动置空，权限自然退化为"仅 LEADER 可改"，无需额外代码。
 - 第 8 条是**用户可见的产品限制**，已写入 PRD §8。未来支持换仓或多仓库时改为 Project 1:N Repository + 单活动仓库约束；届时第 6 条的重算必须补充"该 PR 所属仓库仍是当前活动仓库"守卫。**当前不写该守卫**——在本 ADR 的约束下它恒为真，永真判断属死代码。
 - 落地阶段：`project_member` 三列与唯一约束在 Phase 2；`pull_request` 三列与权限判断在 Phase 5。

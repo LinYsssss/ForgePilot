@@ -19,8 +19,18 @@
 4. **解析失败不阻断**：`requirement_id` 保持 NULL，PR 照常入库，
    Review 仍可创建但**标记为无需求上下文**，UI 显式提示"未关联需求"。
 5. **关联变更不自动重跑 Review**：已完成的 Review 是对当时上下文的忠实记录，**永不覆盖、永不标记失效**。变更后的上下文构成新的 Review 身份（[ADR-003](./ADR-003-review-identity.md) §1），页面显示"审查已过期"，由人工点击重新审查。
-6. **关联变更必须留痕**：每次变更写入 `pull_request_requirement_event`（`pull_request_id`、`from_requirement_id`、`to_requirement_id`、`actor_user_id`、`reason`、`created_at`），与关联修改在**同一事务内**完成。该表只记录 PR↔需求关联变化，不承担需求正文与 AC 变更史（后者属 `requirement_revision`，见 [ADR-011](./ADR-011-requirement-revision-and-state.md)）。
-7. 跨项目关联由数据库复合外键拒绝（ADR-006），Service 不再自行校验。
+6. **关联变更必须留痕**：每次变更写入 `pull_request_requirement_event`（`project_id`、`pull_request_id`、`from_requirement_id`、`to_requirement_id`、`actor_type`、`actor_user_id`、`reason`、`created_at`），与关联修改在**同一事务内**完成。该表只记录 PR↔需求关联变化，不承担需求正文与 AC 变更史（后者属 `requirement_revision`，见 [ADR-011](./ADR-011-requirement-revision-and-state.md)）。
+7. **自动解析写入必须标记为系统操作**，不得伪造成某个普通用户：
+
+   ```sql
+   actor_type ∈ {USER, SYSTEM}
+   actor_user_id nullable, → user_account(id)
+   CHECK ((actor_type = 'SYSTEM' AND actor_user_id IS NULL)
+       OR (actor_type = 'USER'   AND actor_user_id IS NOT NULL))
+   ```
+
+   第 1 条的 `REQ-N` 自动解析写 `SYSTEM`；页面手工修改写 `USER`。
+8. 跨项目关联由数据库复合外键拒绝（ADR-006），Service 不再自行校验。
 
 ## 后果与实施注记
 
@@ -30,3 +40,4 @@
   由复合外键保证，`scm` 不 import requirement 类型（不透明 id 模式，依赖方向不变）。
 - 关联为 N:1（Requirement 1:N PR，ADR-004），下拉框允许多个 PR 指向同一需求。
 - 演示脚本固定使用 `feat/REQ-<n>-<slug>` 分支命名，保证答辩现场自动路径可复现。
+- `actor_user_id` 指向 `user_account` 而非 `project_member`：审计是既成事实，成员退出项目不得抹掉或破坏历史记录。这与 `pull_request.author_user_id → project_member`（ADR-010）指向不同表是刻意区分，理由见 [ADR-006](./ADR-006-cross-project-referential-integrity.md) §9。

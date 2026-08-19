@@ -1,4 +1,4 @@
-# ADR-003 Review Identity：业务键收敛为 (pull_request_id, head_sha)
+# ADR-003 Review Identity：业务键 (pull_request_id, head_sha, requirement_revision_id) 与独立的 Decision Gate
 
 - 状态：已接受（2026-08-19，用户裁决）
 - 关联：[ARCHITECTURE.md](../ARCHITECTURE.md) §3.1 · §2.1、[PRD.md](../PRD.md) §6 P4

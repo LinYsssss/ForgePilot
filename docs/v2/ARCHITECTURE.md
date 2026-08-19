@@ -86,18 +86,18 @@ common, project, scm, knowledge, requirement, ai  ←  review
 | `user_account` | 本地演示账户 | `username` unique；password_hash、enabled、session_version |
 | `project` | 项目边界 | name、created_by、status |
 | `project_member` | 成员、角色与项目级 SCM 身份 | `(project_id,user_id)` unique；`UNIQUE(project_id) WHERE role='LEADER'`，Service 事务保证至少一个 LEADER（ADR-004）；`scm_external_user_id`（权限依据）、`scm_username`（仅显示）、`scm_identity_verified_at`，`(project_id,scm_external_user_id)` unique（ADR-010） |
-| `requirement` | 需求稳定身份、指派、状态、最新质量结果 | project_id、assignee_id、status、current_revision_id（可空，回填）、quality_json/version/checked_at；`UNIQUE(project_id,id)` |
-| `requirement_revision` | 不可变需求正文版本 | project_id、requirement_id、seq、title/background/description、created_by、change_reason、created_at；`(requirement_id,seq)` unique；`UNIQUE(project_id,id)`（ADR-011） |
+| `requirement` | 需求稳定身份、指派、状态 | project_id、assignee_id、status、current_revision_id（可空，回填；`(id,current_revision_id)` 复合 FK 指向自身 Revision）；`UNIQUE(project_id,id)` |
+| `requirement_revision` | 不可变需求正文版本与该版本的质量结果 | project_id、requirement_id、seq、title/background/description、created_by、change_reason、created_at、quality_json/quality_version/quality_checked_at；`(requirement_id,seq)` unique；`UNIQUE(project_id,id)`、`UNIQUE(project_id,requirement_id,id)`（ADR-006/011） |
 | `acceptance_criterion` | AC，归属具体 revision | requirement_revision_id、`ac_key`（稳定不可变业务身份）、`sort_order`（仅显示）、text；`(requirement_revision_id,ac_key)` unique；`UNIQUE(requirement_revision_id,id)`（ADR-011） |
 | `knowledge_document` | 项目知识与需求附件共用内容 | project_id、source_type、source_requirement_id（ADR-005）、text、status、model/version；`UNIQUE(project_id,id)` |
 | `requirement_attachment` | Requirement↔Document 关系 | project_id；`(requirement_id,document_id)` unique；双复合 FK（ADR-006） |
 | `knowledge_chunk` | Chunk 与唯一向量 | project_id、document_id、seq、content、metadata、`embedding vector`（无维度，ADR-001）、provider/model/version/dimension |
 | `scm_repository` | 项目的活动仓库与加密凭据 | `project_id` unique；provider、external_id、api_base、encrypted_token/secret；有 PR 后 provider+external_id 不可修改（ADR-010）；`UNIQUE(project_id,id)` |
 | `pull_request` | PR/MR 快照、作者与需求关联 | `(repository_id,external_number)` unique；requirement_id nullable + 普通索引（ADR-004/007）；author_external_user_id、author_username（不可变快照）、author_user_id（派生映射，复合 FK 指向 project_member，列级 `ON DELETE SET NULL`，ADR-010）；`UNIQUE(project_id,id)` |
-| `pull_request_requirement_event` | **仅**记录 PR↔需求关联变更审计 | project_id、pull_request_id、from_requirement_id、to_requirement_id、actor_user_id、reason、created_at；与关联修改同事务写入（ADR-007） |
-| `review` | 一个 (head SHA, 需求版本) 的审查、上下文快照、摘要与 Decision | `UNIQUE NULLS NOT DISTINCT (pull_request_id,head_sha,requirement_revision_id)`（ADR-003）；project_id、requirement_id、requirement_revision_id、context_snapshot_json、status、decision、decision_by/at/comment、engine/prompt/model 审计列 |
-| `finding` | Review 问题当前态与跨轮血缘 | project_id、review_id、requirement_id、ac_id、finding_type、path、line、evidence、status、assignee、fingerprint(`finding_key`)、evidence_hash、continuity、carried_from_finding_id（ADR-009） |
-| `finding_event` | Finding 人工状态与指派审计 | project_id、finding_id、actor_id、action、from/to、comment、created_at |
+| `pull_request_requirement_event` | **仅**记录 PR↔需求关联变更审计 | project_id、pull_request_id、from_requirement_id、to_requirement_id、actor_type(`USER/SYSTEM`)、actor_user_id（可空，→ `user_account`）、reason、created_at；CHECK 保证 type 与 actor 组合合法；与关联修改同事务写入（ADR-007） |
+| `review` | 一个 (head SHA, 需求版本) 的审查、上下文快照、摘要与 Decision | `UNIQUE NULLS NOT DISTINCT (pull_request_id,head_sha,requirement_revision_id)`（ADR-003）；`UNIQUE(id,requirement_id,requirement_revision_id)` 供 finding 引用；project_id、requirement_id、requirement_revision_id、context_snapshot_json、status、decision、decision_by/at/comment、engine/prompt/model 审计列 |
+| `finding` | Review 问题当前态与跨轮血缘 | project_id、review_id、requirement_id、requirement_revision_id、ac_id、finding_type、path、line、evidence、status、assignee、fingerprint(`finding_key`)、evidence_hash、continuity、carried_from_finding_id；三条 CHECK 约束上下文归属（ADR-006 §8、ADR-009） |
+| `finding_event` | Finding 人工状态与指派审计 | project_id、finding_id、actor_id（→ `user_account`）、action、from/to、comment、created_at |
 | `ai_call_log` | 评测与故障定位 | project_id、review_id、requirement_id、requirement_revision_id（三者均可空）、use_case、model、token、latency、status、error |
 
 **不建**：`scm_connection`（并入 `scm_repository`）、`review_task/report/issue`、`review_decision`（Decision 在 `review` 行上）、`webhook_delivery`、通用 `audit_event`（多态 entity_id 无法被 ADR-006 复合外键约束）、任何 vector 影子表。
@@ -121,7 +121,7 @@ erDiagram
     requirement ||--o{ pull_request : "1:N ADR-004"
     scm_repository ||--o{ pull_request : ""
     pull_request ||--o{ pull_request_requirement_event : "关联变更审计 ADR-007"
-    pull_request ||--o{ review : "每 (head SHA, 需求版本) 一条 ADR-003"
+    pull_request ||--o{ review : "每 head SHA 与需求版本一条 ADR-003"
     requirement_revision ||--o{ review : "审查时的需求版本"
     review ||--o{ finding : ""
     finding ||--o{ finding_event : ""
@@ -130,13 +130,14 @@ erDiagram
 
 ### 2.3 项目隔离
 
-1. 每张项目内业务表携带 `project_id`；指向另一张项目内业务表的外键一律为**含 `project_id` 的复合外键**（ADR-006）。被引用表配 `UNIQUE(project_id,id)`。
-2. Service 层**不写**跨项目一致性校验——由数据库拒绝，异常映射为 409/422。
-3. Repository 查询必须接受 `projectId`；禁止裸 id 查询后补权限判断。
-4. 向量检索的 `project_id` 必须在 SQL 中硬过滤，不是召回后内存过滤。
-5. 附件检索边界：`source_type='REQUIREMENT_ATTACHMENT'` 的文档只对所属 Requirement 可见（ADR-005）：
+1. 每张项目内业务表携带 `project_id`；指向另一张项目内业务表的外键一律为**含 `project_id` 的复合外键**（ADR-006）。被引用表配 `UNIQUE(project_id,id)`。需求版本链（`requirement → requirement_revision → review → finding → acceptance_criterion`）的完整外键与 CHECK 定义见 ADR-006 §6–8。
+2. 审计表的 actor 指向 `user_account`；`pull_request.author_user_id` 指向 `project_member`。二者刻意不同：前者是审计事实，成员退出不得抹掉；后者是活的权限输入，成员退出即应失效（ADR-006 §9）。
+3. Service 层**不写**跨项目一致性校验——由数据库拒绝，异常映射为 409/422。
+4. Repository 查询必须接受 `projectId`；禁止裸 id 查询后补权限判断。
+5. 向量检索的 `project_id` 必须在 SQL 中硬过滤，不是召回后内存过滤。
+6. 附件检索边界：`source_type='REQUIREMENT_ATTACHMENT'` 的文档只对所属 Requirement 可见（ADR-005）：
    `WHERE project_id=:p AND (source_type<>'REQUIREMENT_ATTACHMENT' OR source_requirement_id=:r)`
-6. 集成测试固定包含 A 项目用户猜 B 项目 requirement/document/review/finding id 的越权用例。
+7. 集成测试固定包含 A 项目用户猜 B 项目 requirement/document/review/finding id 的越权用例。
 
 ### 2.4 命名与约定
 
