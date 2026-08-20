@@ -113,15 +113,16 @@ READY 后正文与 AC 锁定；修改由 LEADER 创建新的不可变 Revision �
 主链：OPEN → CONFIRMED → IN_PROGRESS → FIXED → VERIFIED → CLOSED
 旁路：OPEN → REJECTED；CONFIRMED → REJECTED
 打回：FIXED → IN_PROGRESS（复验不通过）
-终态：CLOSED、REJECTED
+重开：REJECTED → OPEN（**仅** continuity=SUPPRESSED 的继承驳回项，须留审计）
+终态：CLOSED；REJECTED（普通驳回不可逆）
 ```
 
-该状态机是**人工处理生命周期**，与跨 Review 血缘 `continuity`（`NEW / PERSISTING / SUPPRESSED`，[ADR-009](./adr/ADR-009-finding-continuity.md)）正交，两者不得混入同一字段或同一 UI 标签。
+该状态机是**人工处理生命周期**，与跨 Review 血缘 `continuity`（`NEW / PERSISTING / SUPPRESSED`，[ADR-009](./adr/ADR-009-finding-continuity.md)）正交，两者不得混入同一字段或同一 UI 标签。继承而来的抑制项以 `status=REJECTED + continuity=SUPPRESSED` 落库；被重新打开后 `continuity` 仍保留 `SUPPRESSED`（血缘事实不因当前状态改变而消失），并回到主列表正常显示。
 
 ### Review Decision
 
 `PENDING | APPROVE | REQUEST_CHANGES`。**AI 置信度、Finding 状态、Review Decision 三者不互相替代**，UI 上必须分开呈现。
-REQUEST_CHANGES 后必须有新 head SHA 才能再次产生终局 Decision——**改需求关联或需求版本都不能解除该闸门**（[ADR-003](./adr/ADR-003-review-identity.md) §6）。
+终局 Decision 只能写在**已完成、且 head 与需求版本均等于 PR 当前值**的 Review 上；REQUEST_CHANGES 后必须有新 head SHA 才能再次产生终局 Decision——**改需求关联或需求版本都不能解除该闸门**（[ADR-003](./adr/ADR-003-review-identity.md) §6 · §8）。
 
 ## 6. 关键产品规则
 

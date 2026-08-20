@@ -61,6 +61,6 @@
 - 第 8 条按"至少存在一个已完成 Review"判断是错的：PR push 新 head 后旧 Review 仍满足该条件，页面会显示过期结论。
 - 需求列表页必须用**一次聚合查询**计算派生活动，禁止逐需求查 PR 再查 Review（N+1）。
 - 第 12 条使需求变更史独立于 Review 存在：`review.context_snapshot_json` 只能证明"有 Review 时"的上下文，未触发 Review 的修改在快照中无任何记录。
-- `requirement.current_revision_id` 与 `requirement_revision.requirement_id` 互为外键，按固定顺序解决而**不用 DEFERRABLE**（更直观、更好测）：建 `requirement`（`current_revision_id = NULL`）→ 建 `requirement_revision` → 建该 Revision 下的 AC → 回填 `current_revision_id`。该回填由复合外键 `(id, current_revision_id) → requirement_revision(requirement_id, id)` 保证指向自身 Requirement 的 Revision（ADR-006 §7）。
+- `requirement.current_revision_id` 与 `requirement_revision.requirement_id` 互为外键，按固定顺序解决而**不用 DEFERRABLE**（更直观、更好测）：建 `requirement`（`current_revision_id = NULL`）→ 建 `requirement_revision` → 建该 Revision 下的 AC → 回填 `current_revision_id`。该回填由复合外键 `(project_id, id, current_revision_id) → requirement_revision(project_id, requirement_id, id)` 保证指向自身 Requirement 的 Revision，复用 `requirement_revision` 上已有的 `UNIQUE (project_id, requirement_id, id)`（ADR-006 §7）。
 - 需求版本链、Finding 上下文归属与 CHECK 约束的完整定义在 [ADR-006](./ADR-006-cross-project-referential-integrity.md) §6–8，本文不重复。
 - 落地阶段：状态机、`requirement_revision` 与质量结果归属在 Phase 3；派生 Review Activity 在 Phase 6（Review 存在后才有意义），Phase 3 先返回 `NO_PR`。

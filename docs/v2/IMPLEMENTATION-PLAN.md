@@ -82,8 +82,9 @@ Phase 0 已于 2026-08-19 获用户批准并完成 R2 契约复审（新增 ADR-
 - ReviewContext：Requirement/AC、Knowledge evidence、PR metadata、ChangedFile patch、truncation manifest。
 - 唯一 Review Engine 产出 AC verdict + Finding；小 PR 单次调用，大 PR 分批产 candidate/evidence 后 Final Synthesis 统一合成（ADR-002）。
 - ReviewOutputValidator 校验 acId/sourceId/path/line，补齐漏判 AC，伪造证据不得落库。
-- Review 身份 `(pull_request_id, head_sha, requirement_revision_id)` 且 `NULLS NOT DISTINCT`；终局 Decision 闸门只认 `(pull_request_id, head_sha)`，写入前须行锁串行化（ADR-003）。
-- Finding 跨轮血缘：`finding_key` / `evidence_hash` / `continuity` / `carried_from_finding_id`，`evidence_hash` 基于确定性源码证据；"上一轮"按 ADR-009 §12 的两条确定性查找规则实现，禁止各自约定隐含规则。
+- Review 身份 `(pull_request_id, head_sha, requirement_revision_id)` 且 `NULLS NOT DISTINCT`；终局 Decision 闸门只认 `(pull_request_id, head_sha)`，写入前须行锁串行化并逐条校验四项前置条件（COMPLETED、head 相等、需求版本 `IS NOT DISTINCT FROM`、该 head 无 REQUEST_CHANGES）（ADR-003 §8）。
+- 恢复路径：PR head 更新与 PENDING Review 创建同事务链；reconciliation **只恢复已存在的超时 PENDING/RUNNING**，禁止按"无 Review"自动补建（ADR-008）。
+- Finding 跨轮血缘：`finding_key` / `evidence_hash` / `continuity` / `carried_from_finding_id`，`evidence_hash` 基于确定性源码证据；"上一轮"按 ADR-009 §14 的两条确定性查找规则实现，禁止各自约定隐含规则。抑制项以 `status=REJECTED + continuity=SUPPRESSED` 落库；`carried_from_finding_id` 的"同 PR"约束由 Service 不变式与集成测试保证（外键只保证同项目）。
 - 派生 `review_activity` 一次聚合查询，含 `FAILED` 档（ADR-011）。
 - 有界进程内执行器、Review 状态、幂等 retry。
 - Webhook 返回前持久化 PENDING Review；reconciliation 补偿漏触发与停滞任务；Review 保存 requirement_id、requirement_revision_id 与不可变 context snapshot。
@@ -93,7 +94,7 @@ Phase 0 已于 2026-08-19 获用户批准并完成 R2 契约复审（新增 ADR-
 
 ## Phase 7：人工闭环 + 三页面 UI
 
-- Finding confirm/reject/assign/in-progress/fixed/verified/closed 与 finding_event；抑制项折叠呈现且可重新打开。
+- Finding confirm/reject/assign/in-progress/fixed/verified/closed 与 finding_event；抑制项折叠呈现，且仅 `continuity=SUPPRESSED` 者可经审计事件 `REJECTED → OPEN` 重新打开，重开后回到主列表且 `continuity` 保留。
 - Review APPROVE/REQUEST_CHANGES；REQUEST_CHANGES 后必须新 head 才能再次终局决定——改需求关联或需求版本都不解除该闸门；APPROVE 不自动完成 Requirement，由 LEADER 单独确认 DONE。
 - 项目、研发需求、代码审查三个一级页面统一打磨与浏览器验收（响应式、键盘与焦点、对比度、reduced-motion、设计漂移）。
 - 退出条件：需求→PR→Finding→退回→修复→新 Review→通过可由三角色重复演示。

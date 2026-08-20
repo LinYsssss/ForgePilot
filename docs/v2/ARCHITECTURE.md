@@ -86,7 +86,7 @@ common, project, scm, knowledge, requirement, ai  ←  review
 | `user_account` | 本地演示账户 | `username` unique；password_hash、enabled、session_version |
 | `project` | 项目边界 | name、created_by、status |
 | `project_member` | 成员、角色与项目级 SCM 身份 | `(project_id,user_id)` unique；`UNIQUE(project_id) WHERE role='LEADER'`，Service 事务保证至少一个 LEADER（ADR-004）；`scm_external_user_id`（权限依据）、`scm_username`（仅显示）、`scm_identity_verified_at`，`(project_id,scm_external_user_id)` unique（ADR-010） |
-| `requirement` | 需求稳定身份、指派、状态 | project_id、assignee_id、status、current_revision_id（可空，回填；`(id,current_revision_id)` 复合 FK 指向自身 Revision）；`UNIQUE(project_id,id)` |
+| `requirement` | 需求稳定身份、指派、状态 | project_id、assignee_id、status、current_revision_id（可空，回填；复合 FK `(project_id,id,current_revision_id)` 指向自身 Revision）；`UNIQUE(project_id,id)` |
 | `requirement_revision` | 不可变需求正文版本与该版本的质量结果 | project_id、requirement_id、seq、title/background/description、created_by、change_reason、created_at、quality_json/quality_version/quality_checked_at；`(requirement_id,seq)` unique；`UNIQUE(project_id,id)`、`UNIQUE(project_id,requirement_id,id)`（ADR-006/011） |
 | `acceptance_criterion` | AC，归属具体 revision | requirement_revision_id、`ac_key`（稳定不可变业务身份）、`sort_order`（仅显示）、text；`(requirement_revision_id,ac_key)` unique；`UNIQUE(requirement_revision_id,id)`（ADR-011） |
 | `knowledge_document` | 项目知识与需求附件共用内容 | project_id、source_type、source_requirement_id（ADR-005）、text、status、model/version；`UNIQUE(project_id,id)` |
@@ -95,8 +95,8 @@ common, project, scm, knowledge, requirement, ai  ←  review
 | `scm_repository` | 项目的活动仓库与加密凭据 | `project_id` unique；provider、external_id、api_base、encrypted_token/secret；有 PR 后 provider+external_id 不可修改（ADR-010）；`UNIQUE(project_id,id)` |
 | `pull_request` | PR/MR 快照、作者与需求关联 | `(repository_id,external_number)` unique；requirement_id nullable + 普通索引（ADR-004/007）；author_external_user_id、author_username（不可变快照）、author_user_id（派生映射，复合 FK 指向 project_member，列级 `ON DELETE SET NULL`，ADR-010）；`UNIQUE(project_id,id)` |
 | `pull_request_requirement_event` | **仅**记录 PR↔需求关联变更审计 | project_id、pull_request_id、from_requirement_id、to_requirement_id、actor_type(`USER/SYSTEM`)、actor_user_id（可空，→ `user_account`）、reason、created_at；CHECK 保证 type 与 actor 组合合法；与关联修改同事务写入（ADR-007） |
-| `review` | 一个 (head SHA, 需求版本) 的审查、上下文快照、摘要与 Decision | `UNIQUE NULLS NOT DISTINCT (pull_request_id,head_sha,requirement_revision_id)`（ADR-003）；`UNIQUE(id,requirement_id,requirement_revision_id)` 供 finding 引用；project_id、requirement_id、requirement_revision_id、context_snapshot_json、status、decision、decision_by/at/comment、engine/prompt/model 审计列 |
-| `finding` | Review 问题当前态与跨轮血缘 | project_id、review_id、requirement_id、requirement_revision_id、ac_id、finding_type、path、line、evidence、status、assignee、fingerprint(`finding_key`)、evidence_hash、continuity、carried_from_finding_id；三条 CHECK 约束上下文归属（ADR-006 §8、ADR-009） |
+| `review` | 一个 (head SHA, 需求版本) 的审查、上下文快照、摘要与 Decision | `UNIQUE NULLS NOT DISTINCT (pull_request_id,head_sha,requirement_revision_id)`（ADR-003）；`UNIQUE(id,requirement_id,requirement_revision_id)` 供 finding 引用；CHECK 保证 requirement_id 与 requirement_revision_id 同空或同非空；project_id、context_snapshot_json、status、decision、decision_by/at/comment、engine/prompt/model 审计列 |
+| `finding` | Review 问题当前态与跨轮血缘 | project_id、review_id、requirement_id、requirement_revision_id、ac_id、finding_type、path、line、evidence、status、assignee、fingerprint(`finding_key`)、evidence_hash、continuity、carried_from_finding_id（复合 FK `(project_id,carried_from_finding_id)`）；`UNIQUE(project_id,id)`；三条 CHECK 约束上下文归属（ADR-006 §8、ADR-009） |
 | `finding_event` | Finding 人工状态与指派审计 | project_id、finding_id、actor_id（→ `user_account`）、action、from/to、comment、created_at |
 | `ai_call_log` | 评测与故障定位 | project_id、review_id、requirement_id、requirement_revision_id（三者均可空）、use_case、model、token、latency、status、error |
 
@@ -160,9 +160,16 @@ erDiagram
 ### 3.1 触发与幂等
 
 `scm` 完成验签与 PR 同步后发布进程内 `PullRequestChanged`；`review` 同步监听并按 `(pull_request_id, head_sha, requirement_revision_id)` 幂等持久化 Review(PENDING)，然后才把执行提交给有界执行器（ADR-003）。
+**PR 的 head 更新与 PENDING Review 的创建必须在同一事务链内完成**，不允许出现"head 已更新但无 Review"的中间态（ADR-008 §4）。
 自动触发与人工重试是同一个 `ReviewService.requestReview(...)` 的两个入口，不是两个引擎。
-Webhook 在 PR 与 PENDING Review 均持久化后返回 202，不等待 LLM。轻量 `ReviewReconciliationScheduler` 定期查询”当前 head 与当前需求版本存在但无 Review”及超时 PENDING/RUNNING，统一回到同一个 `requestReview(...)` 恢复路径；不得由此引入第二引擎。
-**Decision Gate 与 Review Identity 分离**：终局 Decision 只以 `(pull_request_id, head_sha)` 为准——同一 head 一旦出现 `REQUEST_CHANGES`，任何需求版本都不能再 APPROVE，解除只能靠新 head SHA（ADR-003 §6）。写入终局 Decision 必须在事务内 `SELECT ... FOR UPDATE` 锁 `pull_request` 行后校验，禁止用普通 `EXISTS` 查询代替。
+Webhook 在 PR 与 PENDING Review 均持久化后返回 202，不等待 LLM。轻量 `ReviewReconciliationScheduler` **只恢复已存在的超时 `PENDING` / `RUNNING`**，统一回到同一个 `requestReview(...)` 路径；**禁止**按"当前 head + 当前需求版本无 Review"自动补建 Review——需求关联或版本变更后的重审一律人工触发（ADR-008 §5–6、ADR-011 §14）。
+
+**Decision Gate 与 Review Identity 分离**：终局 Decision 只以 `(pull_request_id, head_sha)` 为准——同一 head 一旦出现 `REQUEST_CHANGES`，任何需求版本都不能再 APPROVE，解除只能靠新 head SHA（ADR-003 §6）。写入终局 Decision 的事务必须 `SELECT ... FOR UPDATE` 锁 `pull_request` 行，并逐条校验以下前置条件，禁止用普通 `EXISTS` 查询代替：
+
+1. 目标 Review 的 `status = COMPLETED`；
+2. `review.head_sha = pull_request.head_sha`（当前 head）；
+3. `review.requirement_revision_id IS NOT DISTINCT FROM pull_request` 当前关联需求版本（NULL 亦须相等）；
+4. 该 `head_sha` 上不存在任何 `REQUEST_CHANGES`（否则只能靠新 head 解除）。
 
 ### 3.2 执行状态机
 
@@ -176,7 +183,7 @@ stateDiagram-v2
     COMPLETED --> [*]
 ```
 
-崩溃留下的停滞 PENDING/RUNNING 先由 reconciliation 标记并恢复，仍失败时由人工重试。Decision 与执行状态正交：`PENDING | APPROVE | REQUEST_CHANGES`。
+崩溃留下的停滞 PENDING/RUNNING 先由 reconciliation 标记并恢复，仍失败时由人工重试；reconciliation **不补建**从未存在的 Review。Decision 与执行状态正交：`PENDING | APPROVE | REQUEST_CHANGES`。
 
 ### 3.3 单次 Review（小 PR 路径）
 

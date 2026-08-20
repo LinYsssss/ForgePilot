@@ -1,6 +1,6 @@
 # ADR-003 Review Identity：业务键 (pull_request_id, head_sha, requirement_revision_id) 与独立的 Decision Gate
 
-- 状态：已接受（2026-08-19，用户裁决）
+- 状态：已接受（2026-08-19，用户裁决；R2.1 修订：身份加入 requirement_revision_id 与 Decision Gate 分离；R2.2 修订：补全终局前置条件与 review CHECK）
 - 关联：[ARCHITECTURE.md](../ARCHITECTURE.md) §3.1 · §2.1、[PRD.md](../PRD.md) §6 P4
 
 ## 背景
@@ -40,8 +40,24 @@
    | 项目知识更新 | **不**改变生产 Review 身份 |
    | Prompt / 模型 / 检索策略变化 | 进入 evaluation，不制造生产 Review |
 
-8. **终局决策必须串行化**：事务内 `SELECT ... FOR UPDATE` 锁 `pull_request` 行 → 校验当前 head → 查该 head 是否已有 `REQUEST_CHANGES` → 写 Decision → 提交。
+8. **终局决策必须串行化并逐条校验前置条件**。事务内 `SELECT ... FOR UPDATE` 锁 `pull_request` 行后，依次校验：
+
+   ```text
+   ① review.status = COMPLETED
+   ② review.head_sha = pull_request.head_sha
+   ③ review.requirement_revision_id IS NOT DISTINCT FROM
+        pull_request 当前关联的需求版本          -- NULL 亦须相等
+   ④ 该 head_sha 上不存在任何 REQUEST_CHANGES
+   ```
+
+   全部通过才写入 Decision 并提交。第 ③ 条必须用 `IS NOT DISTINCT FROM` 而非 `=`：未关联需求时两侧均为 NULL，用 `=` 会恒为 UNKNOWN 而拒绝一切合法决策。
 9. **关联修改权限按是否已有 Review 收紧**：当前 head 尚无 Review 时，本人 PR 的 DEVELOPER 可修正关联（[ADR-010](./ADR-010-scm-identity-and-repository-immutability.md)）；当前 head 已有任意 Review 时，**仅 LEADER** 可修改。LEADER 亦不能解除 head 级 `REQUEST_CHANGES`。
+10. `review` 增加 CHECK，保证上下文归属成对出现：
+
+    ```sql
+    CHECK ((requirement_id IS NULL AND requirement_revision_id IS NULL)
+        OR (requirement_id IS NOT NULL AND requirement_revision_id IS NOT NULL))
+    ```
 
 ## 后果与实施注记
 
@@ -49,6 +65,8 @@
 - Review 身份由**真实上下文派生**，不存在任何人工维护的上下文计数器；因此也不需要"什么才触发上下文变更"的纪律清单——知识库更新不产生新 revision，重审风暴在设计上不可能发生。
 - 第 6 条堵的是一条真实可达路径：被审查方修改需求关联即可换出新 Review 身份，若闸门跟随身份走，`REQUEST_CHANGES` 就能被"改个关联再跑一次"洗掉。闸门只认 head，代码不动则退回不可解除。
 - 第 8 条不能退化为普通 `EXISTS` 查询：两个 Reviewer 并发提交时两笔事务会同时通过检查。须补并发集成测试，证明同一 head 不可能并发产生冲突终局。
+- 第 8 条的 ②③ 两项防的是"对着过期 Review 点通过"：页面停留期间 PR 可能已推新 head 或换了需求版本，此时那条 Review 展示的结论已不代表当前 PR。
+- 第 10 条与 `finding` 的同类 CHECK（ADR-006 §8）成对存在：Review 的上下文归属是 Finding 归属的上游，上游允许半空则下游约束无意义。
 - 人工重试**复用同一条 Review 行**（停滞的 PENDING/RUNNING 或 FAILED 重置后重跑），不插入第二行；历史尝试通过 `ai_call_log` 与状态时间戳追溯。`COMPLETED` 的 Review **永不覆盖**。
 - "修复后按新 head SHA 产生新 Review、保留前后结果"的规则不受影响。
 - 评测环境多版本对比使用 evaluation 设施（Phase 8），不写生产 `review` 表。

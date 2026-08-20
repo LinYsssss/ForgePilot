@@ -1,6 +1,6 @@
 # ADR-006 跨项目引用完整性：复合外键兜底，而非运行时校验
 
-- 状态：已接受（2026-08-19；R2.1 修订：AC 归属 Revision 后的完整约束链）
+- 状态：已接受（2026-08-19；R2.1 修订：AC 归属 Revision 后的完整约束链；R2.2 修订：current_revision_id 与 carried_from_finding_id 改用可用的复合唯一键）
 - 关联：[ARCHITECTURE.md](../ARCHITECTURE.md) §2.3、[ADR-004](./ADR-004-domain-cardinality.md)、[ADR-005](./ADR-005-requirement-attachment-retrieval-boundary.md)
 
 ## 背景
@@ -39,7 +39,8 @@ D2 的项目隔离此前只有**运行时纪律**（"查询必须带 projectId"�
 
    ```text
    requirement.current_revision_id
-     (id, current_revision_id) → requirement_revision(requirement_id, id)
+     (project_id, id, current_revision_id)
+       → requirement_revision(project_id, requirement_id, id)
 
    review
      (project_id, requirement_id, requirement_revision_id)
@@ -48,14 +49,26 @@ D2 的项目隔离此前只有**运行时纪律**（"查询必须带 projectId"�
    finding
      (review_id, requirement_id, requirement_revision_id)
        → review(id, requirement_id, requirement_revision_id)
+
+   finding.carried_from_finding_id
+     (project_id, carried_from_finding_id) → finding(project_id, id)
    ```
 
-   `review` 因此需要 `UNIQUE (id, requirement_id, requirement_revision_id)` 作为引用目标。
+   `review` 因此需要 `UNIQUE (id, requirement_id, requirement_revision_id)`、`finding` 需要
+   `UNIQUE (project_id, id)` 作为引用目标；前三条复用 `requirement_revision` 上已有的
+   `UNIQUE (project_id, requirement_id, id)`，不再额外建索引。
    **不再单独声明 `finding → requirement_revision`**：Finding 的三元组已锁定到 Review，
    Review 的三元组又指向 `requirement_revision`，传递保证成立，多一条约束只增加维护成本。
-8. `finding` 的上下文归属由 CHECK 约束保证：
+   `carried_from_finding_id` 的外键只能保证来源 Finding **同项目**；"来源必须属于同一 PR"
+   （ADR-009 §9 的抑制作用域）无法用外键表达，由 Service 不变式 + 集成测试保证。
+8. `review` 与 `finding` 的上下文归属由 CHECK 约束保证：
 
    ```sql
+   -- review
+   CHECK ((requirement_id IS NULL AND requirement_revision_id IS NULL)
+       OR (requirement_id IS NOT NULL AND requirement_revision_id IS NOT NULL))
+
+   -- finding
    CHECK ((requirement_id IS NULL AND requirement_revision_id IS NULL)
        OR (requirement_id IS NOT NULL AND requirement_revision_id IS NOT NULL))
 

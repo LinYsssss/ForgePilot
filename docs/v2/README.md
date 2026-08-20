@@ -52,7 +52,7 @@
 | [005](./adr/ADR-005-requirement-attachment-retrieval-boundary.md) | 需求附件不跨需求召回 |
 | [006](./adr/ADR-006-cross-project-referential-integrity.md) | 跨项目引用由复合外键拒绝，不写运行时校验 |
 | [007](./adr/ADR-007-pr-requirement-association.md) | PR 关联需求：解析 `REQ-N` 优先，页面可改，变更留痕 |
-| [008](./adr/ADR-008-review-context-and-recovery.md) | Review 保存上下文快照，PENDING 先落库并支持轻量恢复 |
+| [008](./adr/ADR-008-review-context-and-recovery.md) | Review 保存上下文快照，PENDING 与 head 更新同事务；reconciliation 只恢复停滞任务 |
 | [009](./adr/ADR-009-finding-continuity.md) | Finding 每轮独立快照 + 跨 Review 血缘，误报不用重复驳回 |
 | [010](./adr/ADR-010-scm-identity-and-repository-immutability.md) | 用项目级 SCM 稳定外部 ID 判定"本人 PR"；有 PR 后仓库不可换 |
 | [011](./adr/ADR-011-requirement-revision-and-state.md) | 删除 `IN_REVIEW`，需求正文与 AC 版本化，评审进展是派生量 |
