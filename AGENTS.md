@@ -39,10 +39,10 @@ Before planning or changing this repository, read these files completely:
 
 ## Current execution gate
 
-- The final execution plan was approved by the user on 2026-08-19.
-- The latest instruction only authorizes committing and pushing governance and plan files; Phase 1 has not been started.
-- Do not create application source code, dependency manifests, database migrations, frontend scaffolding, or CI implementation until the user gives a new explicit instruction to start Phase 1.
-- Approval of the overall plan does not authorize every phase. Implement only the currently authorized phase and stop at its review gate.
+- The final execution plan was approved by the user on 2026-08-19, refined through contract reviews R2 / R2.1 / R2.2.
+- **Phase 1 (minimal greenfield foundation) is authorized as of 2026-08-20.** Its scope is defined in `docs/v2/IMPLEMENTATION-PLAN.md`: Spring Boot + Vue skeleton, PostgreSQL 15+ with pgvector, Flyway, Testcontainers, ArchUnit, basic CI, frontend scaffolding plus the frozen visual contract, the evaluation contract skeleton, and the 4 GB deployment memory measurement.
+- Do not implement login, project, requirement, knowledge, SCM, or review business logic in Phase 1.
+- **Phase 2 and every later phase still require a separate explicit authorization.** Stop at each phase review gate; approval of the overall plan does not authorize every phase.
 
 ## Product and architecture guardrails
 
