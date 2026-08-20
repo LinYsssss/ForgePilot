@@ -1,58 +1,37 @@
 # ForgePilot V2 开发方案
 
-**围绕需求驱动 PR 审查的轻量级 AI 研发协作平台。**
+ForgePilot 是围绕需求驱动 Pull Request 审查建设的轻量级 AI 研发协作平台。
 
-状态：**Final R2 已获用户批准（2026-08-19）**。**Phase 1 已于 2026-08-20 获授权开始**；Phase 2 及以后仍需单独授权。
+状态：**R2.3 文档基线已于 2026-08-20 验收**。Phase 1 已获授权进入任务级规划；具体实现必须在 Phase 1 Trellis 任务的 `prd.md`、`design.md`、`implement.md` 经确认并执行 `task.py start` 后开始。Phase 2 及以后仍需单独授权。
 
----
+## 权威文档
 
-## 阅读顺序
+本目录只保留六份用于开发的权威文档。每类事实只在一个地方定义，其他文档只引用：
 
-| # | 文档 | 是什么 | 什么时候读 |
-|---|---|---|---|
-| 1 | [FINAL-EXECUTION-PLAN.md](./FINAL-EXECUTION-PLAN.md) | **执行入口**：最终范围、阶段、闸门和授权方式 | 后续恢复上下文与阶段授权 |
-| 2 | [PRD.md](./PRD.md) | **产品权威**：定位、角色权限、范围、状态、验收 | 想知道"做什么、给谁用" |
-| 3 | [ARCHITECTURE.md](./ARCHITECTURE.md) | **技术权威**：模块边界、依赖、16 表、流程契约、运行边界 | 想知道"怎么建、边界在哪" |
-| 4 | [IMPLEMENTATION-PLAN.md](./IMPLEMENTATION-PLAN.md) | 阶段顺序与退出条件 | 想知道"先做哪一步" |
-| 5 | [adr/](./adr/README.md) | 架构决策与理由 | 想知道"为什么这么定" |
-| 6 | [LEGACY-MIGRATION-MATRIX.md](./LEGACY-MIGRATION-MATRIX.md) | Legacy 资产 KEEP/REWRITE/REFERENCE/DROP | 实施某模块前查"旧代码能不能用" |
-| 7 | [AI-HANDOFF.md](./AI-HANDOFF.md) | AI 接手边界与当前阶段 | 新会话或新 Agent 开始工作 |
+| 文档 | 权威内容 | 使用时机 |
+|---|---|---|
+| [PRD.md](./PRD.md) | 产品定位、角色权限、范围、状态与产品验收 | 判断做什么、谁能做 |
+| [ARCHITECTURE.md](./ARCHITECTURE.md) | 模块边界、16 张表、数据库约束、流程与运行边界 | 判断怎么实现、不能越过什么边界 |
+| [IMPLEMENTATION-PLAN.md](./IMPLEMENTATION-PLAN.md) | Phase 顺序、授权闸门、任务级规划要求、测试与退出条件 | 安排开发和验收 |
+| [DECISIONS.md](./DECISIONS.md) | D001–D011 的决策理由与不可逆后果 | 需要理解为何这样定或要提出变更 |
+| [LEGACY-MIGRATION-MATRIX.md](./LEGACY-MIGRATION-MATRIX.md) | Legacy 资产的 KEEP/REWRITE/REFERENCE/DROP | 实施某模块前判断旧代码能否参考 |
+| 本页 | 阅读入口、当前状态和不可违反的总边界 | 新会话或新开发者接手 |
 
-旧版实现和过程记录已经归档到 [RepoSage](https://github.com/LinYsssss/reposage)，不再保留在本仓库。
+推荐阅读顺序：本页 → `PRD.md` → `ARCHITECTURE.md` → `IMPLEMENTATION-PLAN.md` → 需要时查 `DECISIONS.md` 和迁移矩阵。
 
-## 单一事实源纪律
+## 不可违反的总边界
 
-一件事只在一个地方定义，其他地方引用：
+- 后端是模块化单体，顶层包仅为 `common/auth/project/requirement/scm/knowledge/ai/review`。
+- 首版数据模型上限为 16 张表；Finding 内聚于 `review`，只有一个 Review Engine。
+- `scm` 发布 `PullRequestChanged` 事件但不依赖 `review`；AI 不直接改变业务状态或代码。
+- 禁止 Agent、Patch、MQ/Outbox、第二 AI runtime、本地 clone/Git、第二 Review Pipeline、代码向量库和额外一级菜单。
+- PostgreSQL 15+ 与 pgvector 是业务事实源；所有项目内引用和查询必须保持 `project_id` 隔离。
+- Legacy RepoSage 只读，按迁移矩阵逐项提取，不整包复制，也不继承其迁移历史。
 
-- 16 表、依赖规则、状态机、运行边界 → 只在 `ARCHITECTURE.md`
-- 角色权限、MVP 范围、验收标准 → 只在 `PRD.md`
-- 决策理由 → 只在 `adr/`
+## 当前执行闸门
 
-发现两处说同一件事，删掉其中一处改为链接。**违反此纪律的文档漂移是本项目上一版失控的直接原因。**
+Phase 1 只允许建立最小绿地底座：Spring Boot/Vue/PostgreSQL 15+ pgvector、Flyway、Testcontainers、ArchUnit、基础 CI、前端脚手架与视觉契约、评测契约骨架和 4 GB 部署容量基线。不得实现登录、项目、需求、知识、SCM 或 Review 业务。完成 Phase 1 后必须停止并提交验收证据，等待下一阶段授权。
 
 ## 一句话主流程
 
-> 负责人创建并指派带 AC 的需求，开发者先获得边界明确的 AI 实现建议，再提交关联 PR；ForgePilot 结合需求、项目知识与 Diff 生成可核验 Finding，Reviewer 据此退回或通过，开发者修复后复审闭环。
-
-## 不可违反的边界
-
-- Legacy 代码位于 RepoSage，**只读**且只作能力来源；V2 不在旧架构上堆叠。
-- 只有 8 个顶层包：`common/auth/project/requirement/scm/knowledge/ai/review`。
-- 禁止：Agent、Patch、MQ/Outbox、第二 Review Engine、第二 AI runtime、本地 Git/clone、向量双写、运行时 DDL。
-- AI 实现建议只允许一次性结构化输出；聊天历史、SSE、Agent 和通用问答仍不进入 MVP。
-
-## 决策速查
-
-| ADR | 一句话 |
-|---|---|
-| [001](./adr/ADR-001-embedding-schema.md) | 向量列不带维度，V1 不建索引，Phase 4 再建 |
-| [002](./adr/ADR-002-large-pr-review.md) | 大 PR 分批产证据，最后统一合成一份报告 |
-| [003](./adr/ADR-003-review-identity.md) | Review 身份 = (PR, head SHA, 需求版本)；终局闸门只认 (PR, head SHA) |
-| [004](./adr/ADR-004-domain-cardinality.md) | 每项目一个 LEADER；一个需求可有多个 PR |
-| [005](./adr/ADR-005-requirement-attachment-retrieval-boundary.md) | 需求附件不跨需求召回 |
-| [006](./adr/ADR-006-cross-project-referential-integrity.md) | 跨项目引用由复合外键拒绝，不写运行时校验 |
-| [007](./adr/ADR-007-pr-requirement-association.md) | PR 关联需求：解析 `REQ-N` 优先，页面可改，变更留痕 |
-| [008](./adr/ADR-008-review-context-and-recovery.md) | Review 保存上下文快照，PENDING 与 head 更新同事务；reconciliation 只恢复停滞任务 |
-| [009](./adr/ADR-009-finding-continuity.md) | Finding 每轮独立快照 + 跨 Review 血缘，误报不用重复驳回 |
-| [010](./adr/ADR-010-scm-identity-and-repository-immutability.md) | 用项目级 SCM 稳定外部 ID 判定"本人 PR"；有 PR 后仓库不可换 |
-| [011](./adr/ADR-011-requirement-revision-and-state.md) | 删除 `IN_REVIEW`，需求正文与 AC 版本化，评审进展是派生量 |
+负责人创建并指派带 AC 的需求，开发者获得一次性实现建议并提交关联 PR；ForgePilot 结合需求、项目知识和 Diff 生成可核验 Finding，Reviewer 退回或通过，开发者修复后复审，最后由 LEADER 确认需求完成。

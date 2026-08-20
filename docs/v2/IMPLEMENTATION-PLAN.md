@@ -1,113 +1,119 @@
-# ForgePilot V2 实施蓝图
+# ForgePilot V2 实施计划
 
-规范依据：[ARCHITECTURE.md](./ARCHITECTURE.md)（技术）+ [PRD.md](./PRD.md)（产品）。本文只定义**顺序与退出条件**，不重复规范内容。
+规范依据：[ARCHITECTURE.md](./ARCHITECTURE.md)（技术规则）+ [PRD.md](./PRD.md)（产品规则）+ [DECISIONS.md](./DECISIONS.md)（决策理由）。本文只定义实施顺序、授权闸门、验证纪律和退出条件，不重复字段或业务规则。
 
-Phase 0 已于 2026-08-19 获用户批准并完成 R2 / R2.1 / R2.2 契约复审。**Phase 1 已于 2026-08-20 获授权开始**；只实施 Phase 1，Phase 2 及以后仍需前一 Phase 产物通过人工评审后单独授权。
+状态：**R2.3 文档基线已于 2026-08-20 验收**。Phase 1 已获授权进入任务级规划；Phase 1 的具体实现仍须先创建并确认 Trellis 任务，再执行 `task.py start`。Phase 2 及以后必须在前一阶段通过人工评审后单独授权。
 
 ## 不可违反的实施纪律
 
-- Legacy 只读；新实现必须位于单独绿地工程。
-- 不按旧 package 搬运。KEEP 先迁特征测试，再决定是否迁实现。
-- 只允许 `common/auth/project/requirement/scm/knowledge/ai/review` 顶层包。
-- Finding 必须留在 review；SCM 只能发布事件，不能依赖 review。
-- 禁止 Agent、Patch、MQ/Outbox、第二 Review Engine、第二 AI runtime、本地 Git/clone、向量双写和运行时 DDL。
-- 任何 P1 功能不得插入核心 Phase：多轮 Assistant、Workbench、多仓库、相关代码读取、报告导出、高级监控。MVP 仅允许 Requirement 详情页的一次性结构化实现建议。
-- **写代码前先查迁移矩阵**：该模块的 Legacy 资产是 KEEP / REWRITE / REFERENCE / DROP。
+- Legacy 只读；写代码前先查 [LEGACY-MIGRATION-MATRIX.md](./LEGACY-MIGRATION-MATRIX.md)，按 KEEP/REWRITE/REFERENCE/DROP 处理，不整包复制。
+- 只允许 `common/auth/project/requirement/scm/knowledge/ai/review` 八个顶层包；Finding 留在 `review`。
+- 禁止 Agent、Patch、MQ/Outbox、第二 Review Engine、第二 AI runtime、本地 Git/clone、代码向量库和运行时 DDL。
+- `scm` 不依赖 `review`；跨模块只经 Service/Query facade；项目内数据必须由 `project_id` 复合外键和查询过滤隔离。
+- 一件事实只在一个权威文档定义；实现发现规则冲突时先停下，更新文档或新增决策，不用代码“自行解释”。
+- 每个 Phase 单独建立 Trellis 任务；复杂任务必须有 `prd.md`、`design.md`、`implement.md`，经用户确认并 `task.py start` 后才可实现。
+- 不自动提交或推送；提交前先展示文件分组和提交信息并取得用户确认。
 
-## Phase 0：冻结契约 ✅ 已完成并批准（2026-08-19）
+## Phase 0：契约与治理 ✅
 
-- 冻结主流程、角色权限矩阵、Requirement/Finding/Review 状态。
-- 冻结 16 表、8 顶层包、依赖规则、运行边界、SCM event contract。
-- 架构争议决策落为 ADR-001..011。
-- 文档收敛为单一事实源（PRD / ARCHITECTURE / PLAN / ADR / 迁移矩阵）。
+已完成：V2 方案冻结、R2.3 契约加固、权威文档收敛、Trellis 治理初始化。不得在本阶段创建业务源码或工程实现。
 
-## 纵切原则（适用于 Phase 2..7）
+## Phase 1：最小绿地底座（已授权进入任务级规划）
 
-每个 Phase 必须交付**该阶段的最小可用真实界面**，而不是把全部前端堆到 Phase 7。一级导航仍只有三个，页面清单不变，改的只是建造顺序。这样每个 Phase 的 API 当期就有真实消费者，契约问题当期暴露、当期修正。
+### 目标产物
 
-## Phase 1：最小绿地底座
+- 单 Spring Boot 模块化单体、Vue 3 前端、PostgreSQL 15+ 与 pgvector。
+- Flyway、Testcontainers、ArchUnit、基础 CI 和可重复的空库启动。
+- 只建立底座所需最小 schema；业务表随对应纵向 Phase 增加，首个可发布版本前再 squash 为干净初始化迁移。
+- 前端路由、请求层、设计令牌、基础组件和三方向视觉对比；用户选定的视觉方向、动效基线、`prefers-reduced-motion` 与设计漂移清单写入 `.trellis/spec/frontend/`。
+- 评测契约与确定性评分器骨架；从既有 development 26 例中选 10–15 例快速集，不调用尚不存在的 Review Engine，不运行 holdout。
+- 目标 4 GB 部署机容量基线：PostgreSQL + 空后端 + 前端静态服务与现有常驻服务连续稳定至少 30 分钟；记录 RSS/PSS、JVM heap/direct memory、Postgres 参数、可用内存和 swap/OOM 情况。空载后至少保留 1 GB 可用内存。
 
-- 单 Spring Boot 应用、Vue 应用、Postgres **15+** pgvector。
-- 建 8 个顶层包、Flyway/Testcontainers/CI 骨架；本阶段不预建全部业务表，表随纵向 Phase 增加，发布首个版本前再 squash 为干净初始化迁移。
-- ArchUnit：cycle=0、禁止包、scm 不依赖 review、跨模块 Repository 禁止。
-- Testcontainers 验证从空库启动、约束和 pgvector；须实测 PostgreSQL 15+ 的列级 `ON DELETE SET NULL` 与 `UNIQUE NULLS NOT DISTINCT` 可用。
-- **前端脚手架与视觉契约**：路由、请求层、设计令牌、组件基础；三方向视觉对比后由用户选定一个方向，结果写入 `.trellis/spec/frontend/`（含动效基线与 `prefers-reduced-motion`、设计漂移检查清单）。
-- **评测契约**：固定指标定义、确定性评分器骨架，从既有 development 26 例中挑 10–15 例作为快速集，沿用既有 development/holdout 边界。本阶段不调用尚不存在的 Review Engine。
-- **部署容量实测**：在目标 4 GB 部署机上实测 PostgreSQL + JVM 与现有常驻服务共同运行的常驻内存，确认 JVM/Postgres 上限与并发 Review 取值。
-- 退出条件：不含任何业务 UI 也能证明边界不会长回旧架构；评测设施与前端脚手架不算业务代码，属本阶段范围。
+### 明确禁止
+
+登录、项目、成员、需求、知识、SCM、Review、Finding、业务实体、业务迁移和任何业务 UI 均不在 Phase 1。
+
+### 退出条件
+
+空库启动、构建、CI、pgvector 与 PostgreSQL 15+ 硬约束验证全绿；ArchUnit 证明顶层包无环且 `scm` 不依赖 `review`；前端视觉方向已选定并固化；评测评分器能重算快速集；容量原始数据、命令和结论已版本化；无业务源码和业务表。
 
 ## Phase 2：Auth + Project
 
-- 本地账户、Cookie/Session、CSRF、登录失效。
-- Project、ProjectMember、LEADER/DEVELOPER/REVIEWER、恰好一个 LEADER。
-- 成员的项目级 SCM 身份（`scm_external_user_id` / `scm_username` / `scm_identity_verified_at`），由 LEADER 配置，`(project_id, scm_external_user_id)` 唯一（ADR-010）。
-- ProjectAccessService 作为跨业务授权入口；业务模块接收 userId，不依赖 auth。
-- 界面：登录页 + 项目列表 + 成员管理。
-- 退出条件：跨项目猜 id 和角色越权集成测试全部拒绝；同项目内 SCM 身份唯一性用例通过。
+- 本地账户、Cookie/Session、CSRF、登录失效；Project、ProjectMember、三角色和恰好一个 LEADER。
+- 成员项目级 SCM 身份由 LEADER 配置，稳定外部 ID 唯一。
+- 界面：登录、项目列表、成员管理。
+- 退出：跨项目猜 id、角色越权、Leader 唯一性和 SCM 身份唯一性集成测试通过。
 
 ## Phase 3：Requirement
 
-- Requirement/AC CRUD、简化状态机（`DRAFT / READY / IN_DEVELOPMENT / DONE / CANCELED`，无 `IN_REVIEW`）、指派。
-- 不可变 `requirement_revision` + 稳定 `ac_key`：创建 Requirement 时同步建 Revision 1，DRAFT 期间可原地编辑，`DRAFT → READY` 同事务冻结；其后修改由 LEADER 一次性创建新的已发布 Revision 并填写变更原因（ADR-011）。**禁止给 revision 加 `is_draft`/`status` 列**，可编辑性只由父 Requirement 状态决定。互为外键按"建 requirement → 建 revision → 建 AC → 回填 current_revision_id"顺序解决，不用 DEFERRABLE。
-- 需求质量检查结果归属 Revision；DRAFT 期间正文或 AC 一改，同事务清空该 Revision 的质量结果。
-- 需求版本链的复合外键与 CHECK 按 ADR-006 §6–8 落地。
-- 需求附件不在本 Phase：Knowledge 模块在 Phase 4，附件（KnowledgeDocument + RequirementAttachment）随 Phase 4 一并实现，避免建临时存储再拆除。
-- 确定性质量规则先实现；AI Quality 在 Phase 6 接入。
-- 界面：需求列表 + 需求详情（含 AC 与版本历史）。
-- 退出条件：无 AI/SCM 时可完成需求创建、确认和指派；READY 后正文与 AC 锁定、修改必须产生新 Revision 的规则通过测试；`review_activity` 此阶段恒为 `NO_PR`。
+- Requirement/AC CRUD、指派、`DRAFT/READY/IN_DEVELOPMENT/DONE/CANCELED` 状态；不可变 Revision 与稳定 `ac_key`。
+- DRAFT 原地编辑，READY 冻结；之后由 LEADER 创建带变更原因的新 Revision；质量结果归属 Revision。
+- 界面：需求列表、详情和版本历史；无 AI/SCM 也能完成创建、确认和指派。
 
 ## Phase 4：AI Gateway + Knowledge
 
-- 统一 chat/embed Gateway、timeout、一次 retry、PromptSanitizer、ai_call_log。
-- KnowledgeUploadValidator、Chunk、单 vector 列、project-scoped TopK、维护式 reindex。
-- 需求附件：上传即 KnowledgeDocument（source_type=REQUIREMENT_ATTACHMENT）+ RequirementAttachment 关系（ADR-005）。
-- Requirement 详情页的一次性 Implementation Guidance：Requirement + AC + Project Knowledge → 实现清单、相关规则、风险提示；不建 conversation 表。
-- 只支持一个 configured embedding model/dimension；`V1__init.sql` 为无维度 vector 列、不建向量索引，生产 Profile 确定后以独立 migration 创建 HNSW expression index（ADR-001）。
-- 界面：知识上传与文档状态、需求详情页的实现建议展示。
-- 退出条件：A 项目检索不到 B 项目；非法 UTF-8/超限/NUL/维度不匹配显式失败。
+- 统一 chat/embed Gateway、超时、一次 retry、PromptSanitizer、`ai_call_log`。
+- KnowledgeDocument/Chunk、单 vector 列、project-scoped 检索、附件关系与安全上传。
+- 一次性 Requirement Implementation Guidance；不建 Conversation、SSE 或 Assistant 模块。
+- 退出：项目隔离、非法 UTF-8/NUL/超限/维度不匹配显式失败，附件关系和检索边界通过测试。
 
 ## Phase 5：GitHub SCM
 
-- 一个项目一个活动 scm_repository；有 PR 后 provider + external_id 不可修改（ADR-010）。
-- GitHub Webhook raw-byte HMAC、PR snapshot、changed-file patch。
-- PR 作者快照（`author_external_user_id` / `author_username`）与派生映射 `author_user_id`（每次同步幂等重算），据此判定"本人 PR"；禁止按用户名授权（ADR-010）。
-- `REQ-N` 分支/标题解析写入 requirement_id，解析失败不阻断（ADR-007）；每次关联变更与 `pull_request_requirement_event` 同事务写入，自动解析记为 `actor_type=SYSTEM`。
-- 数据库幂等同步，发布 `PullRequestChanged`；不直接依赖 Review、不 clone。
-- 界面：PR 列表与需求关联修改入口。
-- 退出条件：重放不重复建 PR，非法签名不写业务数据，SCM compile dependency 不含 review；成员被移出项目后 `author_user_id` 自动置空、权限退化为仅 LEADER。
+- 一个项目一个活动 `scm_repository`；稳定身份为 provider + 规范化 instance identity + external id，有 PR 后冻结。
+- 验签后读取 Provider 权威快照；保存 source revision/time、base/head、changed files、patch 和确定性 `review_input_fingerprint`。
+- PR 关联解析、作者稳定外部 ID 映射、人工纠正和 `PullRequestChanged` 同步事件。
+- 退出：重放幂等、乱序/并发不回退、Base/Diff 变化更新 fingerprint、非法签名不写数据、编译依赖无 `review`。
 
 ## Phase 6：Requirement Quality + Review Engine
 
-- Requirement Quality：规则结果 + 项目知识 + 一次结构化 AI 输出。
-- ReviewContext：Requirement/AC、Knowledge evidence、PR metadata、ChangedFile patch、truncation manifest。
-- 唯一 Review Engine 产出 AC verdict + Finding；小 PR 单次调用，大 PR 分批产 candidate/evidence 后 Final Synthesis 统一合成（ADR-002）。
-- ReviewOutputValidator 校验 acId/sourceId/path/line，补齐漏判 AC，伪造证据不得落库。
-- Review 身份 `(pull_request_id, head_sha, requirement_revision_id)` 且 `NULLS NOT DISTINCT`；终局 Decision 闸门只认 `(pull_request_id, head_sha)`，写入前须行锁串行化并逐条校验四项前置条件（COMPLETED、head 相等、需求版本 `IS NOT DISTINCT FROM`、该 head 无 REQUEST_CHANGES）（ADR-003 §8）。
-- 恢复路径：PR head 更新与 PENDING Review 创建同事务链；reconciliation **只恢复已存在的超时 PENDING/RUNNING**，禁止按"无 Review"自动补建（ADR-008）。
-- Finding 跨轮血缘：`finding_key` / `evidence_hash` / `continuity` / `carried_from_finding_id`，`evidence_hash` 基于确定性源码证据；"上一轮"按 ADR-009 §14 的两条确定性查找规则实现，禁止各自约定隐含规则。抑制项以 `status=REJECTED + continuity=SUPPRESSED` 落库；`carried_from_finding_id` 的"同 PR"约束由 Service 不变式与集成测试保证（外键只保证同项目）。
-- 派生 `review_activity` 一次聚合查询，含 `FAILED` 档（ADR-011）。
-- 有界进程内执行器、Review 状态、幂等 retry。
-- Webhook 返回前持久化 PENDING Review；reconciliation 补偿漏触发与停滞任务；Review 保存 requirement_id、requirement_revision_id 与不可变 context snapshot。
-- **评测增量试跑**：每完成一个实验臂（`Diff+LLM` → `+Requirement+AC` → `+Knowledge`）即在 development 集上跑一次，不等本 Phase 结束。Prompt、TopK、证据组织**只允许依据 development 集调整**；**禁止运行 holdout**。
-- 界面：Review 详情只读页（AC 判定、Finding、证据、未审文件清单）。
-- 退出条件：仓库只有一个 ReviewEngine；大 PR 未审文件显式呈现；AI 非法 JSON 不产生假成功；同一 head 并发终局决策的集成测试证明不产生冲突结论。
+- 规则 + 一次结构化 AI Quality；唯一 Review Engine；大 PR 分批产 evidence/candidate、Final Synthesis 统一产出。
+- Review 身份为 `(pull_request_id, head_sha, review_input_fingerprint, requirement_revision_id)`，当前有效性同时匹配四项输入；旧 Review 保留。
+- `PullRequestChanged` 在事务内同步创建 PENDING，失败则 SCM 回滚；事务提交后才调度执行器。reconciliation 只恢复已落库但未执行或停滞的 PENDING/RUNNING，禁止补建缺失 Review。
+- attempt/token/lease fencing；旧 Worker 不得完成、失败或插入 Finding。Finding 永久父 FK `(project_id,review_id) → review(project_id,id)`，上下文由数据库约束触发器保持 NULL-safe 一致。
+- Finding continuity 同时绑定 `evidence_hash + basis_hash`；Review activity 覆盖 `REVIEW_REQUIRED/FAILED/CHANGES_REQUESTED/REVIEWING/PENDING/MIXED/APPROVED/NO_PR`。
+- development 集三臂增量试跑；只据 development 调参，不运行 holdout。
+- 在目标 4 GB 机以生产 JVM/PostgreSQL 上限运行至少一个最大预算 Review，据实把并发 Review 冻结为 1 或 2，并记录峰值、失败与降级行为。
+- 退出：非法 JSON 不假成功、大 PR 不静默丢文件、after-commit 失败可恢复、fencing/父 FK/上下文/聚合矩阵集成测试全绿；Review 详情只读页可用。
 
-## Phase 7：人工闭环 + 三页面 UI
+## Phase 7：人工闭环 + 三页面统一验收
 
-- Finding confirm/reject/assign/in-progress/fixed/verified/closed 与 finding_event；抑制项折叠呈现，且仅 `continuity=SUPPRESSED` 者可经审计事件 `REJECTED → OPEN` 重新打开，重开后回到主列表且 `continuity` 保留。
-- Review APPROVE/REQUEST_CHANGES；REQUEST_CHANGES 后必须新 head 才能再次终局决定——改需求关联或需求版本都不解除该闸门；APPROVE 不自动完成 Requirement，由 LEADER 单独确认 DONE。
-- 项目、研发需求、代码审查三个一级页面统一打磨与浏览器验收（响应式、键盘与焦点、对比度、reduced-motion、设计漂移）。
-- 退出条件：需求→PR→Finding→退回→修复→新 Review→通过可由三角色重复演示。
+- Finding 人工生命周期与审计；抑制项可按规则重开。
+- Review Decision 仅 `PENDING → APPROVE|REQUEST_CHANGES` 一次；PR 行锁、完整前置校验和条件更新保证并发只有一个成功；同 head 的 REQUEST_CHANGES 只能由新 head 解除。
+- 三个一级页面完成浏览器、可访问性、响应式和视觉漂移验收。
+- 退出：三角色可重复演示“需求→PR→Finding→退回→修复→新 Review→通过→DONE”；Revision/Diff 变化显示 `REVIEW_REQUIRED`。
 
-## Phase 8：GitLab + 评测答辩
+## Phase 8：GitLab + 正式评测与答辩
 
-- GitLab Adapter 通过与 GitHub 同一 Provider contract。
-- 适配 Legacy 38 例 fixture/score（既有切分：development 26 + holdout 12，不得重新切分），删除 Agent/Patch 运行字段。
-- 配置冻结后同时报告 development、holdout、全量三组结果；**holdout 为首次运行，不得据其调 Prompt**。
-- 独立呈报漏报率、误报率、AC verdict、结构失败、Token、latency 和 notRun；holdout 仅 12 例，须给出置信区间或明确的不确定性说明。
-- 演示 Prompt injection、Webhook 重放、跨项目访问、大 Diff、AI outage。
-- 退出条件：从版本化原始结果可重算论文数据；干净环境可复现部署和演示。
+- GitLab 使用同一 Provider contract；沿用 development 26 + holdout 12，不重新切分。
+- 配置冻结后首次运行 holdout；报告 Precision、Recall、误报/漏报、需求违规召回、AC verdict、结构失败、Token、耗时、notRun，并说明小样本不确定性。
+- 干净环境可复现部署、演示和论文数据重算。
 
-## 首个实施授权的最小范围
+## 统一授权闸门
 
-用户批准本方案后，第一次实施授权只覆盖 Phase 1。Phase 2 及以后需要在前一 Phase 产物通过人工评审后再继续，防止业务代码在边界尚未锁定时同时扩张。
+1. 方案和前一 Phase 通过人工评审后，才可请求下一 Phase 授权。
+2. “Phase 1 已获授权”仅表示可以创建并确认 Phase 1 任务级计划，不表示可以直接写业务代码，也不授权 Phase 2+。
+3. 每个 Phase 开始前必须有 Trellis `prd.md`；复杂 Phase 还必须有 `design.md`、`implement.md` 和验证清单；用户确认后执行 `task.py start`。
+4. 每个 Phase 完成后必须停止，提交验证证据和风险，不得自动进入下一 Phase。
+5. 任一退出条件未通过，不得归档任务为 completed，不得以“后续补齐”越过闸门。
+
+## 每阶段 `result.md` 验收模板
+
+- 实际完成项、明确未完成项及与计划的偏差。
+- 影响的模块、表、API、页面和配置；明确业务边界是否保持。
+- 单元、集成、架构、前端、构建、性能和安全验证命令及结果。
+- 跨项目隔离、角色权限和关键失败路径的证据。
+- 是否触发新决策；没有则明确写“无新决策”。
+- 使用的 Legacy 资产及 KEEP/REWRITE/REFERENCE/DROP 依据。
+- 已知风险、回滚方法、遗留问题和下一 Phase 的前置条件。
+
+## 测试与研究纪律
+
+- 后端必须覆盖单元、Spring 集成、真实 PostgreSQL/pgvector Testcontainers、ArchUnit；前端覆盖类型检查、构建、交互和关键可访问性。
+- SCM 测试必须包含验签、重放、分页/限流、错误映射、乱序和并发；Review 测试必须包含小/大 PR、截断清单、非法结构、reconciliation、fencing、并发 Decision 和跨项目隔离。
+- 安全测试必须覆盖跨项目猜 ID、角色越权、凭据不回显、上传 NUL/超限/非法 UTF-8、SSRF 和 Prompt injection。
+- 评测固定模型、温度、Prompt 版本和语料；只在 development 集调参，holdout 只在 Phase 8 配置冻结后首次运行，不得泄漏。
+- 任何新增表、模块、一级页面、运行时依赖或改变已接受决策的行为都必须先补充并批准新的决策记录。
+
+## Phase 1 下一步
+
+下一步不是直接实现业务，而是创建 Phase 1 独立 Trellis 任务，提交其 `prd.md`、`design.md`、`implement.md` 和验证清单供用户确认；确认后才执行 `task.py start`，仅建设本页定义的底座，并在退出闸门处停止。

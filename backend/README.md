@@ -1,6 +1,6 @@
 # Backend
 
-Phase 1 将在这里初始化单个 Spring Boot 模块化单体。
+Phase 1 的具体 Trellis 计划经确认并执行 `task.py start` 后，将在这里初始化单个 Spring Boot 模块化单体。
 
 允许的顶层业务包仅为：
 
@@ -15,4 +15,4 @@ ai
 review
 ```
 
-在 Phase 1 获得明确任务前，不提前生成业务实体、数据库表或空分层目录。
+Phase 1 只建工程底座，不生成业务实体、业务表或空分层目录；登录、项目、需求、知识、SCM 和 Review 从 Phase 2 起按授权纵向实现。

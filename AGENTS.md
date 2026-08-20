@@ -28,19 +28,19 @@ The block above is managed by Trellis. The rules below are ForgePilot-owned and 
 
 Before planning or changing this repository, read these files completely:
 
-1. `docs/v2/FINAL-EXECUTION-PLAN.md`
-2. `docs/v2/AI-HANDOFF.md`
-3. `docs/v2/PRD.md`
-4. `docs/v2/ARCHITECTURE.md`
-5. `docs/v2/IMPLEMENTATION-PLAN.md`
-6. the relevant files under `docs/v2/adr/`
-7. `docs/v2/LEGACY-MIGRATION-MATRIX.md` before consulting Legacy code
-8. `.trellis/workflow.md`
+1. `docs/v2/README.md`
+2. `docs/v2/PRD.md`
+3. `docs/v2/ARCHITECTURE.md`
+4. `docs/v2/IMPLEMENTATION-PLAN.md`
+5. `docs/v2/DECISIONS.md`
+6. `docs/v2/LEGACY-MIGRATION-MATRIX.md` before consulting Legacy code
+7. `.trellis/workflow.md`
 
 ## Current execution gate
 
-- The final execution plan was approved by the user on 2026-08-19, refined through contract reviews R2 / R2.1 / R2.2.
-- **Phase 1 (minimal greenfield foundation) is authorized as of 2026-08-20.** Its scope is defined in `docs/v2/IMPLEMENTATION-PLAN.md`: Spring Boot + Vue skeleton, PostgreSQL 15+ with pgvector, Flyway, Testcontainers, ArchUnit, basic CI, frontend scaffolding plus the frozen visual contract, the evaluation contract skeleton, and the 4 GB deployment memory measurement.
+- Phase 0 and the R2.3 contract/document consolidation are complete as of 2026-08-20.
+- **Phase 1 is authorized to enter task-level planning, not immediate implementation.** Create and obtain confirmation for its Trellis `prd.md`, `design.md`, `implement.md`, then run `task.py start` before editing application code.
+- Phase 1 scope is defined in `docs/v2/IMPLEMENTATION-PLAN.md`: Spring Boot + Vue skeleton, PostgreSQL 15+ with pgvector, Flyway, Testcontainers, ArchUnit, basic CI, frontend scaffolding plus the visual contract, the evaluation contract skeleton, and the 4 GB deployment memory measurement.
 - Do not implement login, project, requirement, knowledge, SCM, or review business logic in Phase 1.
 - **Phase 2 and every later phase still require a separate explicit authorization.** Stop at each phase review gate; approval of the overall plan does not authorize every phase.
 

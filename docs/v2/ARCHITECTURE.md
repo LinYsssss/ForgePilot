@@ -1,9 +1,9 @@
 # ForgePilot V2 架构规范
 
-状态：**Final R2，已获用户批准（2026-08-19）**。本文是 V2 的**技术权威**：模块边界、数据模型、流程契约、技术栈与运行边界。Phase 1 已于 2026-08-20 获授权开始。
+状态：**R2.3 已验收开发基线（2026-08-20）**。本文是 V2 的**技术权威**：模块边界、数据模型、流程契约、技术栈与运行边界。Phase 1 已获授权进入任务级规划，具体实现仍须通过 Trellis 计划确认闸门。
 
 - 产品定义（定位、角色、范围、验收）见 [PRD.md](./PRD.md)。
-- 决策理由见 [adr/](./adr/README.md)；本文只陈述**规则**，不重复论证。
+- 决策理由见 [DECISIONS.md](./DECISIONS.md)；本文只陈述**规则**，不重复论证。
 - 实施顺序见 [IMPLEMENTATION-PLAN.md](./IMPLEMENTATION-PLAN.md)。
 - Legacy 资产取舍见 [LEGACY-MIGRATION-MATRIX.md](./LEGACY-MIGRATION-MATRIX.md)。
 
@@ -84,24 +84,24 @@ common, project, scm, knowledge, requirement, ai  ←  review
 | 表 | 核心职责 | 关键约束 |
 |---|---|---|
 | `user_account` | 本地演示账户 | `username` unique；password_hash、enabled、session_version |
-| `project` | 项目边界 | name、created_by、status |
-| `project_member` | 成员、角色与项目级 SCM 身份 | `(project_id,user_id)` unique；`UNIQUE(project_id) WHERE role='LEADER'`，Service 事务保证至少一个 LEADER（ADR-004）；`scm_external_user_id`（权限依据）、`scm_username`（仅显示）、`scm_identity_verified_at`，`(project_id,scm_external_user_id)` unique（ADR-010） |
-| `requirement` | 需求稳定身份、指派、状态 | project_id、assignee_id、status、current_revision_id（可空，回填；复合 FK `(project_id,id,current_revision_id)` 指向自身 Revision）；`UNIQUE(project_id,id)` |
-| `requirement_revision` | 不可变需求正文版本与该版本的质量结果 | project_id、requirement_id、seq、title/background/description、created_by、change_reason、created_at、quality_json/quality_version/quality_checked_at；`(requirement_id,seq)` unique；`UNIQUE(project_id,id)`、`UNIQUE(project_id,requirement_id,id)`（ADR-006/011） |
-| `acceptance_criterion` | AC，归属具体 revision | requirement_revision_id、`ac_key`（稳定不可变业务身份）、`sort_order`（仅显示）、text；`(requirement_revision_id,ac_key)` unique；`UNIQUE(requirement_revision_id,id)`（ADR-011） |
-| `knowledge_document` | 项目知识与需求附件共用内容 | project_id、source_type、source_requirement_id（ADR-005）、text、status、model/version；`UNIQUE(project_id,id)` |
-| `requirement_attachment` | Requirement↔Document 关系 | project_id；`(requirement_id,document_id)` unique；双复合 FK（ADR-006） |
-| `knowledge_chunk` | Chunk 与唯一向量 | project_id、document_id、seq、content、metadata、`embedding vector`（无维度，ADR-001）、provider/model/version/dimension |
-| `scm_repository` | 项目的活动仓库与加密凭据 | `project_id` unique；provider、external_id、api_base、encrypted_token/secret；有 PR 后 provider+external_id 不可修改（ADR-010）；`UNIQUE(project_id,id)` |
-| `pull_request` | PR/MR 快照、作者与需求关联 | `(repository_id,external_number)` unique；requirement_id nullable + 普通索引（ADR-004/007）；author_external_user_id、author_username（不可变快照）、author_user_id（派生映射，复合 FK 指向 project_member，列级 `ON DELETE SET NULL`，ADR-010）；`UNIQUE(project_id,id)` |
-| `pull_request_requirement_event` | **仅**记录 PR↔需求关联变更审计 | project_id、pull_request_id、from_requirement_id、to_requirement_id、actor_type(`USER/SYSTEM`)、actor_user_id（可空，→ `user_account`）、reason、created_at；CHECK 保证 type 与 actor 组合合法；与关联修改同事务写入（ADR-007） |
-| `review` | 一个 (head SHA, 需求版本) 的审查、上下文快照、摘要与 Decision | `UNIQUE NULLS NOT DISTINCT (pull_request_id,head_sha,requirement_revision_id)`（ADR-003）；`UNIQUE(id,requirement_id,requirement_revision_id)` 供 finding 引用；CHECK 保证 requirement_id 与 requirement_revision_id 同空或同非空；project_id、context_snapshot_json、status、decision、decision_by/at/comment、engine/prompt/model 审计列 |
-| `finding` | Review 问题当前态与跨轮血缘 | project_id、review_id、requirement_id、requirement_revision_id、ac_id、finding_type、path、line、evidence、status、assignee、fingerprint(`finding_key`)、evidence_hash、continuity、carried_from_finding_id（复合 FK `(project_id,carried_from_finding_id)`）；`UNIQUE(project_id,id)`；三条 CHECK 约束上下文归属（ADR-006 §8、ADR-009） |
-| `finding_event` | Finding 人工状态与指派审计 | project_id、finding_id、actor_id（→ `user_account`）、action、from/to、comment、created_at |
-| `ai_call_log` | 评测与故障定位 | project_id、review_id、requirement_id、requirement_revision_id（三者均可空）、use_case、model、token、latency、status、error |
+| `project` | 项目边界 | name、created_by（→ `user_account`）、status |
+| `project_member` | 成员、角色与项目级 SCM 身份 | `(project_id,user_id)` unique；`UNIQUE(project_id) WHERE role='LEADER'`，Service 事务保证至少一个 LEADER（D004）；`scm_external_user_id`（权限依据）、`scm_username`（仅显示）、`scm_identity_verified_at`，`(project_id,scm_external_user_id)` unique（D010） |
+| `requirement` | 需求稳定身份、指派、状态 | project_id、assignee_id（nullable，复合 FK 指向 project_member）、status、current_revision_id（可空，回填；复合 FK `(project_id,id,current_revision_id)` 指向自身 Revision）；`UNIQUE(project_id,id)` |
+| `requirement_revision` | 不可变需求正文版本与该版本的质量结果 | project_id、requirement_id、seq、title/background/description、created_by、change_reason、created_at、quality_json/quality_version/quality_checked_at；`(requirement_id,seq)` unique；`UNIQUE(project_id,id)`、`UNIQUE(project_id,requirement_id,id)`（D006/D011） |
+| `acceptance_criterion` | AC，归属具体 revision | project_id、requirement_revision_id、`ac_key`（稳定不可变业务身份）、`sort_order`（仅显示）、text；`(requirement_revision_id,ac_key)` unique；`UNIQUE(project_id,id)`、`UNIQUE(project_id,requirement_revision_id,id)`（D011） |
+| `knowledge_document` | 项目知识与需求附件共用内容 | project_id、source_type、source_requirement_id（D005）、text、status、model/version；附件类型与归属必须匹配；`UNIQUE(project_id,id)`、`UNIQUE(project_id,id,source_requirement_id)` |
+| `requirement_attachment` | Requirement↔Document 关系 | project_id；`(requirement_id,document_id)` unique、`(project_id,document_id)` unique（一个附件只有一个归属需求）；与 Document 的 source_requirement_id 双复合 FK（D006） |
+| `knowledge_chunk` | Chunk 与唯一向量 | project_id、document_id、seq、content、metadata、`embedding vector`（无维度，D001）、provider/model/version/dimension |
+| `scm_repository` | 项目的活动仓库与加密凭据 | `project_id` unique；provider、规范化 `instance_identity`、external_id、api_base、encrypted_token/secret；有 PR 后稳定身份三元组不可修改，api_base 更新须验证同一实例（D010）；`UNIQUE(project_id,id)` |
+| `pull_request` | PR/MR 权威快照、作者与需求关联 | `(repository_id,external_number)` unique；当前 base_sha、head_sha、`review_input_fingerprint`（由规范化 base/head、changed-file manifest、patch 及可用的稳定 Diff version 确定性计算）；source_revision/source_updated_at 仅用于乱序保护；requirement_id nullable + 普通索引（D004/D007）；author_external_user_id、author_username（不可变作者快照）、author_user_id（可重算映射，复合 FK 指向 project_member，列级 `ON DELETE SET NULL`，D010）；`UNIQUE(project_id,id)` |
+| `pull_request_requirement_event` | **仅**记录 PR↔需求关联变更审计 | project_id、pull_request_id、from_requirement_id、to_requirement_id、actor_type(`USER/SYSTEM`)、actor_user_id（可空，→ `user_account`）、reason、created_at；CHECK 保证 type 与 actor 组合合法；与关联修改同事务写入（D007） |
+| `review` | 一个 (head SHA、实际 Review 输入、需求版本) 的审查、上下文快照、摘要与 Decision | `UNIQUE NULLS NOT DISTINCT (pull_request_id,head_sha,review_input_fingerprint,requirement_revision_id)`（D003）；`UNIQUE(project_id,id)` 供 Finding 父 FK；CHECK 保证 requirement_id 与 requirement_revision_id 同空或同非空、Decision 字段组合合法；一次性 Decision 由 PR 行锁 + `WHERE decision='PENDING'` 条件更新保证；project_id、不可变的 review_input_fingerprint/context_snapshot_json、status、decision、decision_by/at/comment、execution_attempt/token/lease、engine/prompt/model 审计列 |
+| `finding` | Review 问题当前态与跨轮血缘 | project_id、review_id、requirement_id、requirement_revision_id、ac_id、finding_type、path、line、evidence、status、assignee_id（nullable，→ project_member）、fingerprint(`finding_key`)、evidence_hash、`basis_hash`、continuity、carried_from_finding_id；永久父 FK `(project_id,review_id) → review(project_id,id)`，血缘 FK `(project_id,carried_from_finding_id)`；`UNIQUE(project_id,id)`；CHECK 与约束触发器保证父子上下文 NULL-safe 一致（D006/D009） |
+| `finding_event` | Finding 人工状态与指派审计 | project_id、finding_id（复合 FK）、actor_id（→ `user_account`）、action、from/to、comment、created_at |
+| `ai_call_log` | 评测与故障定位 | project_id、review_id、requirement_id、requirement_revision_id（三者均可空且使用含 project_id 的复合 FK）、use_case、model、token、latency、status、error |
 
-**不建**：`scm_connection`（并入 `scm_repository`）、`review_task/report/issue`、`review_decision`（Decision 在 `review` 行上）、`webhook_delivery`、通用 `audit_event`（多态 entity_id 无法被 ADR-006 复合外键约束）、任何 vector 影子表。
-新增表必须有已发生的业务事实 + ADR 证明现有模型无法表达。表数量是复杂度提醒，不是为守数字而把两个领域事实塞进一张表的理由。
+**不建**：`scm_connection`（并入 `scm_repository`）、`review_task/report/issue`、`review_decision`（Decision 在 `review` 行上且只写一次）、`webhook_delivery`、通用 `audit_event`（多态 entity_id 无法被 D006 复合外键约束）、任何 vector 影子表。执行恢复不另建任务表，使用 Review 上的 attempt/token/lease fencing 元数据。
+新增表必须有已发生的业务事实 + 新决策记录证明现有模型无法表达。表数量是复杂度提醒，不是为守数字而把两个领域事实塞进一张表的理由。
 
 ### 2.2 关系图
 
@@ -112,16 +112,16 @@ erDiagram
     project ||--o| scm_repository : "一个活动仓库"
     project ||--o{ requirement : ""
     project ||--o{ knowledge_document : ""
-    requirement ||--o{ requirement_revision : "不可变版本 ADR-011"
+    requirement ||--o{ requirement_revision : "不可变版本 D011"
     requirement_revision ||--o{ acceptance_criterion : ""
     requirement ||--o{ requirement_attachment : ""
     knowledge_document ||--o{ requirement_attachment : ""
     knowledge_document ||--o{ knowledge_chunk : ""
-    requirement ||--o{ knowledge_document : "附件归属 ADR-005"
-    requirement ||--o{ pull_request : "1:N ADR-004"
+    requirement ||--o{ knowledge_document : "附件归属 D005"
+    requirement ||--o{ pull_request : "1:N D004"
     scm_repository ||--o{ pull_request : ""
-    pull_request ||--o{ pull_request_requirement_event : "关联变更审计 ADR-007"
-    pull_request ||--o{ review : "每 head SHA 与需求版本一条 ADR-003"
+    pull_request ||--o{ pull_request_requirement_event : "关联变更审计 D007"
+    pull_request ||--o{ review : "每组 Review 输入与需求版本一条 D003"
     requirement_revision ||--o{ review : "审查时的需求版本"
     review ||--o{ finding : ""
     finding ||--o{ finding_event : ""
@@ -130,14 +130,107 @@ erDiagram
 
 ### 2.3 项目隔离
 
-1. 每张项目内业务表携带 `project_id`；指向另一张项目内业务表的外键一律为**含 `project_id` 的复合外键**（ADR-006）。被引用表配 `UNIQUE(project_id,id)`。需求版本链（`requirement → requirement_revision → review → finding → acceptance_criterion`）的完整外键与 CHECK 定义见 ADR-006 §6–8。
-2. 审计表的 actor 指向 `user_account`；`pull_request.author_user_id` 指向 `project_member`。二者刻意不同：前者是审计事实，成员退出不得抹掉；后者是活的权限输入，成员退出即应失效（ADR-006 §9）。
-3. Service 层**不写**跨项目一致性校验——由数据库拒绝，异常映射为 409/422。
-4. Repository 查询必须接受 `projectId`；禁止裸 id 查询后补权限判断。
-5. 向量检索的 `project_id` 必须在 SQL 中硬过滤，不是召回后内存过滤。
-6. 附件检索边界：`source_type='REQUIREMENT_ATTACHMENT'` 的文档只对所属 Requirement 可见（ADR-005）：
-   `WHERE project_id=:p AND (source_type<>'REQUIREMENT_ATTACHMENT' OR source_requirement_id=:r)`
-7. 集成测试固定包含 A 项目用户猜 B 项目 requirement/document/review/finding id 的越权用例。
+除全局 `user_account` 与项目根 `project` 外，所有项目作用域表都携带 `project_id`。项目内外键必须把 `project_id` 一并带入，被引用表提供对应复合唯一键；指向全局 `user_account` 的审计 actor 是唯一例外。数据库负责拒绝跨项目写入，Repository 读路径仍必须接受 `projectId`，禁止裸 id 查询后再补权限判断。约束冲突统一映射为 409/422。
+
+关键复合引用至少包括：
+
+```text
+requirement.assignee
+  (project_id, assignee_id) -> project_member(project_id, user_id)
+
+requirement_revision
+  (project_id, requirement_id) -> requirement(project_id, id)
+
+knowledge_document
+  (project_id, source_requirement_id) -> requirement(project_id, id)
+
+requirement_attachment
+  (project_id, requirement_id) -> requirement(project_id, id)
+  (project_id, document_id, requirement_id)
+    -> knowledge_document(project_id, id, source_requirement_id)
+
+requirement.current_revision
+  (project_id, id, current_revision_id)
+    -> requirement_revision(project_id, requirement_id, id)
+
+acceptance_criterion
+  (project_id, requirement_revision_id)
+    -> requirement_revision(project_id, id)
+
+pull_request
+  (project_id, repository_id) -> scm_repository(project_id, id)
+  (project_id, requirement_id) -> requirement(project_id, id)
+  (project_id, author_user_id) -> project_member(project_id, user_id)
+    ON DELETE SET NULL (author_user_id)
+
+review
+  (project_id, pull_request_id) -> pull_request(project_id, id)
+  (project_id, requirement_id, requirement_revision_id)
+    -> requirement_revision(project_id, requirement_id, id)
+
+finding
+  (project_id, review_id) -> review(project_id, id)
+  (project_id, requirement_revision_id, ac_id)
+    -> acceptance_criterion(project_id, requirement_revision_id, id)
+  (project_id, assignee_id) -> project_member(project_id, user_id)
+  (project_id, carried_from_finding_id) -> finding(project_id, id)
+
+finding_event
+  (project_id, finding_id) -> finding(project_id, id)
+
+knowledge_chunk
+  (project_id, document_id) -> knowledge_document(project_id, id)
+
+ai_call_log
+  (project_id, review_id) -> review(project_id, id)
+  (project_id, requirement_id) -> requirement(project_id, id)
+  (project_id, requirement_id, requirement_revision_id)
+    -> requirement_revision(project_id, requirement_id, id)
+
+pull_request_requirement_event
+  (project_id, pull_request_id) -> pull_request(project_id, id)
+  (project_id, from_requirement_id) -> requirement(project_id, id)
+  (project_id, to_requirement_id) -> requirement(project_id, id)
+```
+
+可空复合外键使用 PostgreSQL `MATCH SIMPLE`，因此不能用 Finding 的 nullable Requirement/Revision/AC 外键证明父 Review 存在。`finding` 必须永久保留 `(project_id,review_id) → review(project_id,id)`；同时 migration 定义约束触发器，使用 `IS NOT DISTINCT FROM` 保证 Finding 的 `requirement_id` 与 `requirement_revision_id` 分别等于父 Review 对应列。Review 未关联 Requirement 时，Finding 两列必须都为空。触发器也必须覆盖对父 Review 上下文列的更新，或直接拒绝这些身份列在创建后变化。
+
+Review 与 Finding 还必须具备以下行内约束：
+
+```sql
+-- review / finding 均适用
+CHECK ((requirement_id IS NULL AND requirement_revision_id IS NULL)
+    OR (requirement_id IS NOT NULL AND requirement_revision_id IS NOT NULL));
+
+-- finding
+CHECK (ac_id IS NULL OR requirement_revision_id IS NOT NULL);
+CHECK (finding_type <> 'CODE_QUALITY' OR ac_id IS NULL);
+
+-- review decision 字段组合；状态转换仍由条件更新保证
+CHECK (
+  (decision = 'PENDING'
+    AND decision_by IS NULL AND decision_at IS NULL AND decision_comment IS NULL)
+  OR
+  (decision IN ('APPROVE', 'REQUEST_CHANGES')
+    AND decision_by IS NOT NULL AND decision_at IS NOT NULL)
+);
+```
+
+审计表的 `actor_id` 指向 `user_account`，因为退出项目不能抹掉既成事实；`pull_request.author_user_id` 与 Finding assignee 指向 `project_member`，因为成员退出后活权限必须失效。
+
+附件的唯一事实源是 `requirement_attachment`，`knowledge_document.source_requirement_id` 只是受约束检索投影。附件 Document 必须满足 `source_type='REQUIREMENT_ATTACHMENT'` 且 scope 非空，公共知识必须 scope 为空；关系表通过 `(project_id,document_id,requirement_id) → knowledge_document(project_id,id,source_requirement_id)` 锁定二者相等，并以 `UNIQUE(project_id,document_id)` 保证一个 Document 最多属于一个 Requirement。Document 与关系同事务写入；提升为公共知识时复制为新 Document，不就地改写原附件。
+
+附件检索必须在 SQL 中同时硬过滤项目与 Requirement：
+
+```sql
+WHERE project_id = :projectId
+  AND (source_type <> 'REQUIREMENT_ATTACHMENT'
+       OR source_requirement_id = :requirementId)
+```
+
+SCM 仓库稳定身份由 `provider + instance_identity + external_id` 构成；`api_base` 可变但只能指向同一规范化实例。Webhook 只作触发，PR 当前值来自 Provider 权威快照，并以 Provider 可用的 source revision/time 单调规则拒绝旧快照回退。
+
+固定集成测试包含：A 项目用户猜 B 项目 requirement/document/review/finding id；附件关系与投影不一致；Finding 无父 Review或父子上下文不一致；乱序 Webhook 回退；过期 Worker 持旧 token 写入。
 
 ### 2.4 命名与约定
 
@@ -159,31 +252,51 @@ erDiagram
 
 ### 3.1 触发与幂等
 
-`scm` 完成验签与 PR 同步后发布进程内 `PullRequestChanged`；`review` 同步监听并按 `(pull_request_id, head_sha, requirement_revision_id)` 幂等持久化 Review(PENDING)，然后才把执行提交给有界执行器（ADR-003）。
-**PR 的 head 更新与 PENDING Review 的创建必须在同一事务链内完成**，不允许出现"head 已更新但无 Review"的中间态（ADR-008 §4）。
-自动触发与人工重试是同一个 `ReviewService.requestReview(...)` 的两个入口，不是两个引擎。
-Webhook 在 PR 与 PENDING Review 均持久化后返回 202，不等待 LLM。轻量 `ReviewReconciliationScheduler` **只恢复已存在的超时 `PENDING` / `RUNNING`**，统一回到同一个 `requestReview(...)` 路径；**禁止**按"当前 head + 当前需求版本无 Review"自动补建 Review——需求关联或版本变更后的重审一律人工触发（ADR-008 §5–6、ADR-011 §14）。
+Webhook 是同步信号，不是 PR 真值。`scm` 先完成 raw-byte 验签，再从 Provider 读取权威 PR/changed-file 快照；仅当 source revision/updated time 不旧于当前记录时才更新 `pull_request`，旧事件不得回退 head、base 或 patch。规范化快照生成确定性的 `review_input_fingerprint`，至少覆盖 provider/instance/repository、base/head SHA、changed-file manifest 与每个 patch 内容；Provider 的稳定 Diff version 可纳入哈希，仅用于事件排序的 revision/time 不得单独制造新身份。
 
-**Decision Gate 与 Review Identity 分离**：终局 Decision 只以 `(pull_request_id, head_sha)` 为准——同一 head 一旦出现 `REQUEST_CHANGES`，任何需求版本都不能再 APPROVE，解除只能靠新 head SHA（ADR-003 §6）。写入终局 Decision 的事务必须 `SELECT ... FOR UPDATE` 锁 `pull_request` 行，并逐条校验以下前置条件，禁止用普通 `EXISTS` 查询代替：
+`scm` 在更新 PR 的数据库事务内发布**同步**进程内 `PullRequestChanged`；`review` 的同步监听器参加同一事务，按 `(pull_request_id, head_sha, review_input_fingerprint, requirement_revision_id)` 幂等创建或取得 Review(PENDING)。监听失败则整个 SCM 事务回滚，禁止出现“PR 已更新但无应有 PENDING Review”的提交结果。`scm` 只依赖事件 contract，仍不编译依赖 `review`。
+
+执行器只能在事务成功提交后的 after-commit callback 中启动；提交前不得有 Worker 读取该 Review。after-commit 提交失败不回滚已提交的 PR/PENDING，而是保留 PENDING 供 reconciliation 恢复。自动触发、人工触发与失败重试最终共用 `ReviewService.requestReview(...)`，不是多个引擎。
+
+Webhook 在 PR 与 PENDING Review 均提交后返回 202，不等待 LLM。轻量 `ReviewReconciliationScheduler` 只处理**已经落库但未执行或停滞**的任务：未被原子领取的超时 PENDING，以及 lease 已过期的 RUNNING；统一回到同一个领取/执行路径。**禁止**按“当前 head + 当前上下文无 Review”补建缺失 Review——需求关联或版本变化后的重审一律人工触发。
+
+**Review Identity、当前有效性与 Decision Gate 是三个不同概念**：
+
+```text
+Review Identity = pull_request_id + head_sha + review_input_fingerprint + requirement_revision_id
+Current Validity = Review 的 head/fingerprint/requirement revision 均等于 PR 当前值
+Decision Gate = pull_request_id + head_sha 上是否已有 REQUEST_CHANGES
+```
+
+Base、changed files、patch 或纳入指纹的稳定 Diff version 改变时，即使 head SHA 不变，也必须形成新的 Review Identity；旧 Review 保留但不再当前有效。同一 head 一旦出现 `REQUEST_CHANGES`，任何需求版本或 Diff fingerprint 都不能再 APPROVE，解除只能靠新 head SHA。
+
+Decision 是一次性人工终局事实，只允许 `PENDING → APPROVE | REQUEST_CHANGES`，不得覆盖、反转或重写。写入事务必须 `SELECT ... FOR UPDATE` 锁 `pull_request` 行，并逐条校验以下前置条件，再以 `WHERE decision='PENDING'` 条件更新；禁止用普通 `EXISTS` 查询或无条件 save 代替：
 
 1. 目标 Review 的 `status = COMPLETED`；
-2. `review.head_sha = pull_request.head_sha`（当前 head）；
-3. `review.requirement_revision_id IS NOT DISTINCT FROM pull_request` 当前关联需求版本（NULL 亦须相等）；
-4. 该 `head_sha` 上不存在任何 `REQUEST_CHANGES`（否则只能靠新 head 解除）。
+2. 目标 Review 的 `decision = PENDING`；
+3. `review.head_sha = pull_request.head_sha`；
+4. `review.review_input_fingerprint = pull_request.review_input_fingerprint`；
+5. `review.requirement_revision_id IS NOT DISTINCT FROM pull_request` 当前关联需求版本（NULL 亦须相等）；
+6. 该 `head_sha` 上不存在任何 `REQUEST_CHANGES`（否则只能靠新 head 解除）。
+
+条件更新影响行数必须为 1，否则按并发冲突返回 409。Review 增加 CHECK：`decision=PENDING` 时 `decision_by/at/comment` 均为空；终局时 actor/time 必须非空（comment 可按产品规则选填）。MVP 不支持撤销或改判；未来若确有需求再新增审计模型与决策记录。
 
 ### 3.2 执行状态机
 
 ```mermaid
 stateDiagram-v2
     [*] --> PENDING: PullRequestChanged / 手动触发
-    PENDING --> RUNNING: 有界执行器领取
+    PENDING --> RUNNING: 原子领取并生成 attempt/token/lease
     RUNNING --> COMPLETED: 输出通过校验
     RUNNING --> FAILED: AI 失败或非法 JSON 修复无效
     FAILED --> PENDING: 人工重试（复用同一行）
+    RUNNING --> PENDING: lease 过期后 reconciliation 恢复
     COMPLETED --> [*]
 ```
 
-崩溃留下的停滞 PENDING/RUNNING 先由 reconciliation 标记并恢复，仍失败时由人工重试；reconciliation **不补建**从未存在的 Review。Decision 与执行状态正交：`PENDING | APPROVE | REQUEST_CHANGES`。
+领取必须是单条原子条件更新：只有 PENDING 或 lease 已过期的 RUNNING 可领取；每次领取递增 `execution_attempt`、生成新 `execution_token` 并写 `lease_until`。Worker 完成、失败或续租时必须同时匹配 `review_id + execution_token + status=RUNNING`，过期 Worker 的写入影响行数为 0，不能覆盖新尝试、插入 Finding 或改写 Review。
+
+reconciliation 恢复已落库但未执行的 PENDING 和 lease 过期的 RUNNING，**不补建**从未存在的 Review。失败重试复用原行并产生新 attempt/token；`COMPLETED` 永不重跑或覆盖。Decision 与执行状态正交：`PENDING | APPROVE | REQUEST_CHANGES`。
 
 ### 3.3 单次 Review（小 PR 路径）
 
@@ -196,7 +309,7 @@ sequenceDiagram
     participant V as ReviewOutputValidator
     participant D as PostgreSQL
 
-    SCM->>R: PullRequestChanged(prId, headSha)
+    SCM->>R: PullRequestChanged(prId, headSha, inputFingerprint)
     R->>D: create Review(PENDING), unique
     R->>K: search(projectId, requirement + AC + file names)
     K-->>R: project-scoped evidence
@@ -207,7 +320,7 @@ sequenceDiagram
     R->>D: Review(COMPLETED) + Finding
 ```
 
-### 3.4 大 PR 分批（ADR-002）
+### 3.4 大 PR 分批（D002）
 
 "一次 Review" ≠ "一次 LLM 调用"。大 PR 由 `ChangedFileBatcher` 分批：
 
@@ -225,10 +338,22 @@ sequenceDiagram
 - `acId` 必须属于当前 Requirement Revision；`sourceId` 必须在本次召回白名单；`filePath` 必须在 changed files 内。
 - 行号必须落在 patch 可验证范围，无法验证则不输出精确行号。
 - Finding 证据保存不可变 excerpt + hash，历史 Review 不受知识文档后续变更影响。
-- Finding 跨轮血缘（`continuity`、`evidence_hash`、`carried_from_finding_id`、`finding_key`）规则见 ADR-009；`evidence_hash` 必须基于确定性源码证据，禁止哈希模型生成的描述。
-- Review 创建时保存 `requirement_id`、`requirement_revision_id` 及 Requirement/AC/Knowledge evidence 的不可变上下文快照；历史页面禁止通过 PR 当前关联反推审查语义。
-- Requirement 进入 READY 后正文与 AC 锁定，修改须由 LEADER 创建新的不可变 Revision（ADR-011）；旧 Review **永不失效、永不覆盖**，上下文变更后构成新的 Review 身份，页面显示"审查已过期"由人工触发重审。`review` 不设 `INVALIDATED` 状态——执行状态与语义有效性是两个维度。
+- Finding 跨轮血缘（`continuity`、`evidence_hash`、`basis_hash`、`carried_from_finding_id`、`finding_key`）规则见 D009；`evidence_hash` 必须基于确定性源码证据，`basis_hash` 必须基于所引用 AC/Requirement Revision、知识 excerpt/hash 与确定性规则版本，二者均禁止哈希模型生成的描述。只有两者均未变才允许继承历史误报抑制。
+- Review 创建时保存 `head_sha`、`review_input_fingerprint`、`requirement_id`、`requirement_revision_id` 及 Requirement/AC/Knowledge evidence/truncation 的不可变上下文快照；历史页面禁止通过 PR 当前关联反推审查语义。页面以当前 PR 的 head/fingerprint/revision 对比快照派生“当前/已过期”，不写 `INVALIDATED` 状态。
+- Requirement 进入 READY 后正文与 AC 锁定，修改须由 LEADER 创建新的不可变 Revision（D011）；旧 Review **永不失效、永不覆盖**，上下文变更后构成新的 Review 身份，页面显示"审查已过期"由人工触发重审。`review` 不设 `INVALIDATED` 状态——执行状态与语义有效性是两个维度。
 - 非法 JSON 允许**一次** format-repair；仍失败则 FAILED，**绝不生成"成功空报告"**。
+
+### 3.6 Finding 跨 Review 连续性
+
+每条 Review 保存自己的 Finding 快照，历史行不可覆盖。连续性计算只在同一 Pull Request 内进行，按以下确定性规则执行：
+
+1. `finding_key` 同时用于批内去重和跨 Review 匹配。`CODE_QUALITY` 使用大小写敏感 path + 归一化位置 + 类别；`REQUIREMENT` 还必须加入 `requirement_id + ac_key`。`ac_key` 是跨 Revision 稳定业务身份，不得用数据库行 id 或显示顺序代替。
+2. `evidence_hash` 只覆盖确定性源码证据：统一换行并去除易变行号，但不得对 Python/YAML 等缩进敏感内容做通用空白折叠。`basis_hash` 覆盖被引用 Requirement/AC 内容、知识 excerpt/hash 和确定性规则版本。两个 hash 均不得包含 LLM 自由文本。
+3. `PERSISTING/NEW/NOT_REPORTED` 只比较同一 PR 紧邻的上一条 `COMPLETED` Review，按 `(created_at,id)` 确定性排序。匹配项仍存在时，新 Finding 为 `PERSISTING` 且从 `OPEN` 开始；上一轮存在、本轮未报告只查询派生 `NOT_REPORTED`，不落库、不自动判定修复。
+4. `SUPPRESSED` 在同一 PR 全部历史中查该 `finding_key` 最近一次人工判定，按 `(finding_event.created_at,finding_event.id)` 排序。只有结果为 `REJECTED` 且 `evidence_hash`、`basis_hash` 都相同时，新 Finding 才以 `status=REJECTED + continuity=SUPPRESSED` 落库。
+5. 计算优先级固定为 `SUPPRESSED > PERSISTING > NEW`。`carried_from_finding_id` 在 SUPPRESSED 时指向最近有效人工驳回的 Finding，在 PERSISTING 时指向紧邻上一条 COMPLETED Review 的匹配 Finding；来源必须属于同一 PR，由 Service 不变式和集成测试保证。
+
+普通 `REJECTED` 不可重开；只有继承的 `SUPPRESSED` Finding 可经审计事件重开。重开后 `continuity` 仍为 `SUPPRESSED`，但状态回到 `OPEN` 并出现在主列表。
 
 ---
 
@@ -252,7 +377,7 @@ ReviewContext
 ├── requirement: id, revisionId, title, background, description
 ├── acceptanceCriteria[]: acKey, text
 ├── knowledgeEvidence[]: sourceId, documentId, chunkId, excerpt, score
-├── pullRequest: provider, repo, number, baseSha, headSha, title
+├── pullRequest: provider, instance, repo, number, baseSha, headSha, inputFingerprint, title
 ├── changedFiles[]: path, changeType, providerPatch
 └── truncation: skipped/truncated file details
 ```
@@ -267,7 +392,7 @@ Requirement、文档、PR 标题、代码注释**全部是不可信数据**，�
 
 ## 5. Knowledge
 
-- 一个部署一个 Embedding provider/model/dimension；**部署配置不得改变 schema**（ADR-001）。
+- 一个部署一个 Embedding provider/model/dimension；**部署配置不得改变 schema**（D001）。
 - `knowledge_chunk.embedding` 是唯一向量存储，pgvector **无维度 `vector`**；无 JSON 双写、无第二 vector 表、无运行时 DDL。
 - `V1__init.sql` 不绑定模型维度、不建向量索引；Phase 4 定下 Profile 后由独立 migration 建 HNSW expression index，检索 SQL 须用一致的 cast 表达式。
 - 应用层写入时校验向量维度与当前 Profile 一致，不一致显式失败。
@@ -292,7 +417,7 @@ Requirement、文档、PR 标题、代码注释**全部是不可信数据**，�
 Workbench、Knowledge、Repository、Metrics、Agent、Patch、AI Logs 均**不做**一级页面。
 知识检索测试不面向普通用户；管理员只需看到文档状态与失败原因。
 一次性实现建议位于 Requirement 详情页，不创建 Assistant 一级菜单或 Conversation 页面。
-AI 置信度、Finding 人工状态、Review Decision 在 UI 上必须明确分开呈现；需求状态与派生的评审活动（ADR-011）同样是两个正交维度，不得合并为一个标签。
+AI 置信度、Finding 人工状态、Review Decision 在 UI 上必须明确分开呈现；需求状态与派生的评审活动（D011）同样是两个正交维度，不得合并为一个标签。
 
 视觉与动效契约（设计令牌、组件规范、动效基线、`prefers-reduced-motion`、设计漂移检查）定义在 `.trellis/spec/frontend/`，不在本文重复。页面按纵向切片随各 Phase 交付，不集中堆到最后一个 Phase。
 
@@ -320,7 +445,7 @@ AI 置信度、Finding 人工状态、Review Decision 在 UI 上必须明确分�
 **不引入**：RabbitMQ/Kafka/Redis/ES/Milvus/Qdrant、Resilience4j Circuit Breaker、分布式锁、服务发现、API Gateway、独立向量服务、独立 Sandbox、完整 OTel/Prometheus/Grafana、第二 AI runtime。
 HTTP timeout + 一次有限 retry + Review FAILED + 人工 retry 足够覆盖当前故障事实。
 
-**PostgreSQL 最低版本 15 是硬依赖**，来自两处不可替代的语法：复合外键的列级 `ON DELETE SET NULL (author_user_id)`（ADR-010）与 `UNIQUE NULLS NOT DISTINCT`（ADR-003）。Testcontainers 镜像、Docker Compose 与部署环境必须统一到 15+。
+**PostgreSQL 最低版本 15 是硬依赖**，来自两处不可替代的语法：复合外键的列级 `ON DELETE SET NULL (author_user_id)`（D010）与 `UNIQUE NULLS NOT DISTINCT`（D003）。Testcontainers 镜像、Docker Compose 与部署环境必须统一到 15+。
 
 ### 7.2 运行边界（初值，Phase 6 评测后可调；调整需更新本表）
 
@@ -348,13 +473,15 @@ HTTP timeout + 一次有限 retry + Review FAILED + 人工 retry 足够覆盖当
 | AiGateway 变成 Agent 工具箱 | 接口只允许 chat/embed，不暴露 tool loop |
 | `review` 变成新大泥球 | 可编排但禁访问外模块 Repository；Finding 是内聚不是吸收 |
 | 大 PR 静默丢文件 | 分批 + coverage manifest + UI 显式呈现 |
-| 终局 Decision 被上下文变更绕过 | Decision Gate 只认 `head_sha`，与 Review Identity 分离；写入前行锁串行化（ADR-003） |
-| 已驳回的误报每轮重复出现 | `finding_key + evidence_hash` 抑制，抑制不跨 PR 且可由 Reviewer 重新打开（ADR-009） |
-| 需求变更后历史结论语义错位 | 需求正文与 AC 版本化，Review 保存 `requirement_revision_id` 与不可变快照（ADR-011） |
-| 进程内任务丢失 | 先持久化 PENDING + reconciliation + 幂等 retry；压测证明不可接受再评估持久队列 |
+| head 未变但 Base/Diff 已变 | `review_input_fingerprint` 进入 Review Identity 与当前有效性校验；旧 Review 不可终局决定 |
+| 终局 Decision 被覆盖或被上下文变更绕过 | Decision 只从 PENDING 写一次；Decision Gate 只认 `head_sha`，写入前 PR 行锁 + 条件更新（D003） |
+| 已驳回的误报每轮重复出现或依据变化后仍被抑制 | `finding_key + evidence_hash + basis_hash` 抑制，抑制不跨 PR 且可由 Reviewer 重新打开（D009） |
+| 需求变更后历史结论语义错位 | 需求正文与 AC 版本化，Review 保存 `requirement_revision_id` 与不可变快照（D011） |
+| 进程内任务丢失或旧 Worker 覆盖新结果 | 同事务持久化 PENDING + after-commit 调度 + reconciliation + attempt/token/lease fencing；压测证明不可接受再评估持久队列 |
+| Webhook 重放/乱序回退 PR | 验签后读取 Provider 权威快照，以 source revision/time 单调更新，旧事件只做 no-op |
 | Embedding 变更 | schema 不绑维度；换 Profile 走维护窗口 |
 | Prompt injection / 伪造证据 | 不可信标记 + source 白名单 + 输出回查 |
-| 范围回弹 | P1 清单在核心 E2E 完成前不得实施 |
+| 范围回弹 | 后置能力清单在核心 E2E 完成前不得实施 |
 
 ---
 

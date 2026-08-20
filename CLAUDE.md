@@ -2,4 +2,4 @@
 
 Read and follow `AGENTS.md` in full before doing any work. It is the shared ForgePilot instruction source for Claude Code, Codex, and Pi.
 
-Then load the current Trellis context and follow the execution gate recorded in `docs/v2/FINAL-EXECUTION-PLAN.md`. **Phase 1 (minimal greenfield foundation) is authorized as of 2026-08-20**; implement only that phase and stop at its review gate. Phase 2 and later still require a separate explicit authorization from the user.
+Then load the current Trellis context and follow the execution gate in `docs/v2/IMPLEMENTATION-PLAN.md`. **Phase 1 is authorized only to enter task-level planning as of 2026-08-20**; confirm its `prd.md`, `design.md`, and `implement.md`, then run `task.py start` before implementation. Stop at the Phase 1 review gate. Phase 2 and later require separate authorization.
