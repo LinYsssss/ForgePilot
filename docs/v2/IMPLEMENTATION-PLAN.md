@@ -2,7 +2,7 @@
 
 规范依据：[ARCHITECTURE.md](./ARCHITECTURE.md)（技术规则）+ [PRD.md](./PRD.md)（产品规则）+ [DECISIONS.md](./DECISIONS.md)（决策理由）。本文只定义实施顺序、授权闸门、验证纪律和退出条件，不重复字段或业务规则。
 
-状态：**R2.3 文档基线已于 2026-08-20 验收**。Phase 1 已获授权进入任务级规划；Phase 1 的具体实现仍须先创建并确认 Trellis 任务，再执行 `task.py start`。Phase 2 及以后必须在前一阶段通过人工评审后单独授权。
+状态：**R2.3 文档基线已于 2026-08-20 验收；Phase 1 最小绿地底座已于 2026-08-21 完成并验收**，证据见 `.trellis/tasks/08-20-phase-1-foundation/result.md`。后续按 [D012](./DECISIONS.md#d012) 批次化授权，批次 1（Phase 2+3）已获授权进入任务级规划；其实现仍须先确认 Trellis 计划再执行 `task.py start`。批次 2 及以后必须在前一批次通过人工评审后单独授权。
 
 ## 不可违反的实施纪律
 
@@ -18,7 +18,7 @@
 
 已完成：V2 方案冻结、R2.3 契约加固、权威文档收敛、Trellis 治理初始化。不得在本阶段创建业务源码或工程实现。
 
-## Phase 1：最小绿地底座（已授权进入任务级规划）
+## Phase 1：最小绿地底座 ✅
 
 ### 目标产物
 
@@ -90,11 +90,12 @@
 
 ## 统一授权闸门
 
-1. 方案和前一 Phase 通过人工评审后，才可请求下一 Phase 授权。
-2. “Phase 1 已获授权”仅表示可以创建并确认 Phase 1 任务级计划，不表示可以直接写业务代码，也不授权 Phase 2+。
-3. 每个 Phase 开始前必须有 Trellis `prd.md`；复杂 Phase 还必须有 `design.md`、`implement.md` 和验证清单；用户确认后执行 `task.py start`。
-4. 每个 Phase 完成后必须停止，提交验证证据和风险，不得自动进入下一 Phase。
+1. 方案和前一批次通过人工评审后，才可请求下一批次授权。批次划分见 [D012](./DECISIONS.md#d012)：批次 1 = Phase 2+3，批次 2 = Phase 4+5，批次 3 = Phase 6+7，Phase 8 单独且最后。
+2. 授权一个批次仅表示可以创建并确认该批次的任务级计划，不表示可以跳过计划直接写业务代码，也不授权后续批次。
+3. 每个批次开始前必须有 Trellis `prd.md`；复杂批次还必须有 `design.md`、`implement.md` 和验证清单；用户确认后执行 `task.py start`。
+4. 每个批次完成后必须停止，提交验证证据和风险，不得自动进入下一批次。批次内部的 Phase 退出条件不变，逐条满足后才算该批次完成。
 5. 任一退出条件未通过，不得归档任务为 completed，不得以“后续补齐”越过闸门。
+6. holdout 仍锁定在 Phase 8 且只运行一次；Phase 6 的运行边界必须实测确定。批次化不放宽这两条（[D012](./DECISIONS.md#d012)）。
 
 ## 每阶段 `result.md` 验收模板
 
@@ -114,6 +115,8 @@
 - 评测固定模型、温度、Prompt 版本和语料；只在 development 集调参，holdout 只在 Phase 8 配置冻结后首次运行，不得泄漏。
 - 任何新增表、模块、一级页面、运行时依赖或改变已接受决策的行为都必须先补充并批准新的决策记录。
 
-## Phase 1 下一步
+## 下一步：批次 1（Phase 2 + Phase 3）
 
-下一步不是直接实现业务，而是创建 Phase 1 独立 Trellis 任务，提交其 `prd.md`、`design.md`、`implement.md` 和验证清单供用户确认；确认后才执行 `task.py start`，仅建设本页定义的底座，并在退出闸门处停止。
+Phase 1 已完成并验收。下一步不是直接实现，而是按 [D012](./DECISIONS.md#d012) 创建批次 1 的独立 Trellis 任务，提交其 `prd.md`、`design.md`、`implement.md` 和验证清单供用户确认；确认后才执行 `task.py start`，只实现 Phase 2 与 Phase 3 定义的范围，并在批次退出闸门处停止。
+
+批次 1 开始前必须处理的 Phase 1 遗留前置条件（详见任务 `result.md` 第 7 节）：推送后确认 CI 四个 job 全绿；引入业务类的同时补齐 ArchUnit 的子包深度与 Repository 识别规则；`common.web` 错误契约落地时填写 `.trellis/spec/backend/error-handling.md` 与 `logging-guidelines.md`。

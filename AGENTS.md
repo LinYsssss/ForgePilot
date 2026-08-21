@@ -38,11 +38,13 @@ Before planning or changing this repository, read these files completely:
 
 ## Current execution gate
 
-- Phase 0 and the R2.3 contract/document consolidation are complete as of 2026-08-20.
-- **Phase 1 is authorized to enter task-level planning, not immediate implementation.** Create and obtain confirmation for its Trellis `prd.md`, `design.md`, `implement.md`, then run `task.py start` before editing application code.
-- Phase 1 scope is defined in `docs/v2/IMPLEMENTATION-PLAN.md`: Spring Boot + Vue skeleton, PostgreSQL 15+ with pgvector, Flyway, Testcontainers, ArchUnit, basic CI, frontend scaffolding plus the visual contract, the evaluation contract skeleton, and the 4 GB deployment memory measurement.
-- Do not implement login, project, requirement, knowledge, SCM, or review business logic in Phase 1.
-- **Phase 2 and every later phase still require a separate explicit authorization.** Stop at each phase review gate; approval of the overall plan does not authorize every phase.
+- Phase 0, the R2.3 contract/document consolidation, and **Phase 1 (minimal greenfield foundation)** are complete. Phase 1 was accepted on 2026-08-21; its evidence is in `.trellis/tasks/08-20-phase-1-foundation/result.md`.
+- Authorization is now **batched** per `docs/v2/DECISIONS.md` D012: batch 1 = Phase 2+3, batch 2 = Phase 4+5, batch 3 = Phase 6+7, Phase 8 alone and last.
+- **Batch 1 (Phase 2 + Phase 3) is authorized to enter task-level planning, not immediate implementation.** Create and obtain confirmation for its Trellis `prd.md`, `design.md`, `implement.md`, then run `task.py start` before editing application code.
+- Batch 1 scope is defined in `docs/v2/IMPLEMENTATION-PLAN.md`: local accounts, Cookie/Session, CSRF, Project/ProjectMember with exactly one LEADER, project-level SCM identity, Requirement/AC CRUD with immutable Revisions and stable `ac_key`, plus the login, project list, member management, requirement list/detail/history screens.
+- Do not implement knowledge, AI gateway, SCM, PR, Review, or Finding logic in batch 1.
+- **Batch 2 and later still require a separate explicit authorization.** Stop at each batch review gate; approval of the overall plan does not authorize every batch.
+- **The holdout set stays locked to Phase 8 and runs exactly once, after configuration freeze.** Running it early, running it repeatedly, or tuning against it permanently destroys the only unbiased estimate in the thesis and cannot be undone by re-running.
 
 ## Product and architecture guardrails
 

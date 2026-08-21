@@ -122,3 +122,27 @@ Finding 永久拥有 `(project_id,review_id) → review(project_id,id)` 父 FK�
 单 PR activity 取值：`REVIEW_REQUIRED/FAILED/CHANGES_REQUESTED/REVIEWING/PENDING/APPROVED`。Requirement 无 PR 为 `NO_PR`；多 PR 时 FAILED、CHANGES_REQUESTED 依次占优，否则全部相同返回该状态、全部 APPROVED 才 APPROVED，其余为 `MIXED` 并显示明细计数。
 
 **理由**：持久 `IN_REVIEW` 会迫使 SCM/Review 反向写 Requirement；原地修改需求会使历史 Review 指向已经改变的语义；没有 REVIEW_REQUIRED 又无法表达“有 PR 但当前输入尚未审查”。
+
+<a id="d012"></a>
+## D012 Phase 批次化授权
+
+**决定**：Phase 2 起改为按批次授权，而不是逐个 Phase 单独授权：
+
+```text
+批次 1 = Phase 2 + Phase 3      Auth/Project/Member + Requirement/AC/Revision
+批次 2 = Phase 4 + Phase 5      AI Gateway + Knowledge/pgvector + GitHub SCM
+批次 3 = Phase 6 + Phase 7      Review Engine + 人工闭环
+Phase 8 单独且最后               GitLab + 正式评测与答辩
+```
+
+每个批次仍必须有自己的 Trellis 任务、`prd.md`、`design.md`、`implement.md` 和验证清单，经用户确认后才 `task.py start`；批次结束时停在评审闸门，提交验收证据后才请求下一批次授权。批次内部的 Phase 顺序和各自的退出条件不变。
+
+以下三条不随批次化放宽：
+
+1. **holdout 仍锁定在 Phase 8**，配置冻结后只运行一次。任何提前运行、反复运行或据其调参都会永久摧毁该 12 例作为无偏估计的资格，且不可通过重跑恢复。
+2. **Phase 6 的运行边界是实测输出**，不是可以预先写死的常量。并发 Review 上限（1 或 2）、单 Batch 输入预算和 changed-file 上限必须由目标 4 GB 机上的实际 Review 运行确定，并按 [ARCHITECTURE §7.2](./ARCHITECTURE.md#72-运行边界初值phase-6-评测后可调调整需更新本表) 更新该表。
+3. **数据库约束的反馈回路必须保留**。[D006](#d006) 已经声明约束触发器与 ORM 可能不兼容，且该情况必须先新增决策而不是静默降级。批次划分刻意把这一风险留在批次 1（第一次真正建业务表时）暴露，而不是等六个 Phase 的代码堆完再发现。
+
+**理由**：R2.3 已把 16 张表、依赖方向、状态机和 D001–D011 冻结得足够彻底，逐个 Phase 停一次的边际收益低，而横切模式（`project_id` 复合外键、Service/Query facade、错误映射）一次性统一实现比分批引入更一致。同时，把批次做到"一次写完全部 Phase"则会同时破坏上述三条：holdout 不可逆污染、Phase 6 参数变成猜测、schema 风险在六个 Phase 的代码之下暴露。批次为 2 个 Phase 是这两种失效模式之间的平衡点。
+
+**后果**：授权闸门从 7 次减为 4 次。用户于 2026-08-21 明确批准本决策，同批次内不再逐 Phase 请求授权，但批次之间仍须停止并等待明确授权。
