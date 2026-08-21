@@ -3,9 +3,7 @@
 授权依据：[D012](../../../docs/v2/DECISIONS.md#d012)（批次划分）、[D014](../../../docs/v2/DECISIONS.md#d014)（闸门执行者）。
 上一批次：`.trellis/tasks/archive/2026-08/08-21-batch-1-auth-project-requirement/result.md`。
 
-> **状态：验收条件待研究回填。** 本文的范围、边界与规则来自权威文档，与研究结论无关，先行写死；
-> 逐条验收条件在三份 `research/` 落地后补齐，因为其中最关键的一条——**如何在没有凭据的前提下测**——
-> 目前还没有被证实可行的答案。没有答案就写 AC 等于写空头支票。
+> **状态：验收条件已回填**（研究落地后补全，见 §7）。范围、边界与规则来自权威文档，与研究结论无关。
 
 ## 1. 为什么是这一批
 
@@ -99,6 +97,47 @@ Repository 读路径一律接受 `projectId`。约束冲突不捕获后继续（
 
 ## 7. 验收条件
 
-**待研究回填。** 三份 `research/` 落地后按 Phase 4 / Phase 5 的退出条件逐条展开为可断言的 AC，
-并明确每条在哪一层断言、用什么证据。凡是「无法在无凭据环境下验证」的条目，
-要么给出 stub 方案，要么如实记为缺口——不写成看起来能过的样子。
+研究已落地，**最关键的一条「如何在无凭据前提下测」已被证实可行**（[D015.8](../../../docs/v2/DECISIONS.md#d015)：
+`jdk.httpserver` 与 `MockRestServiceServer` 均已在 classpath 上，零依赖增量），因此以下 AC 全部可断言。
+
+- [ ] **AC1**　空库 Flyway 后恰好 13 张业务表；七张新表的项目内引用均为含 `project_id` 的复合外键，
+      每个被引用表具备对应唯一键；真实 PostgreSQL 集成测试证明跨项目写入被数据库拒绝（`23503`），
+      而不是只靠 Service 校验。
+- [ ] **AC2**　公共知识（`source_requirement_id IS NULL`）无法被挂成需求附件（`23503`）；
+      附件被钉在其 Document 自身归属的那个需求上；**并有反证测试**证明子表 `requirement_id` 一旦可空，
+      整条三列检查就蒸发（[D015.2](../../../docs/v2/DECISIONS.md#d015)）。
+- [ ] **AC3**　文档类型与归属不匹配被 `23514` 拒绝；`FAILED` 文档必须带失败原因，否则被数据库拒绝。
+- [ ] **AC4**　`knowledge_chunk` 维度自洽 CHECK 生效（`23514`）；**与本项目既有维度不符的向量写入被应用层拒绝**；
+      并有记录性测试说明混维度会让整个项目的 TopK 查询失败（[D015.3](../../../docs/v2/DECISIONS.md#d015)）。
+- [ ] **AC5**　NUL 与非法 UTF-8 显式失败；**孤立代理项被应用层拒绝**，且测试先断言"驱动确实会静默改成 `?`"，
+      使该断言不可能空转（[D015.5](../../../docs/v2/DECISIONS.md#d015)）；超限文本被 `KnowledgeUploadValidator` 拒绝。
+- [ ] **AC6**　检索一律带 `projectId`；A 项目检索不到 B 项目的 chunk。`::vector` 与 `<=>` 只出现在
+      `ChunkSearchRepository` 一处。
+- [ ] **AC7**　提升为公共知识产生**新** Document，原附件行未被就地改写（[D005](../../../docs/v2/DECISIONS.md#d005)）。
+- [ ] **AC8**　AI Gateway：超时真的触发并记为 `TIMEOUT`；**可重试错误下 stub 请求计数恰为 2，永久错误恰为 1**；
+      两次尝试都落 `ai_call_log`；畸形 JSON 判定为失败而非"成功空结果"；`Authorization` 头携带配置值
+      且**全仓库不存在任何真实 key**。
+- [ ] **AC9**　全仓库无硬编码 provider host；SCM base URI 取自 `scm_repository.api_base`。
+- [ ] **AC10**　`OutboundUrlPolicy` 在白名单为空时逐条拒绝 loopback、`10/8`、`172.16/12`、`192.168/16`、
+      `169.254.169.254`、`::1` 与非 `http(s)` 协议；集成测试中该策略**始终开启**，只加一条窄白名单例外。
+- [ ] **AC11**　Webhook 按**原始字节**验签：正确签名通过；改一字节被拒；**解析后结构相同但字节不同**
+      （重排键/加空白）被拒。无效签名返回 `401` 且零写入；未知仓库同样 `401`，两者不可区分。
+- [ ] **AC12**　`review_input_fingerprint` 确定性：同输入同值；任一输入变一字节则变值；
+      `source_revision` / `source_updated_at` 变化**不**改变它。
+- [ ] **AC13**　重放幂等；旧 `source_updated_at` 不得回退 head/base/patch。
+- [ ] **AC14**　`REQ-<n>` 按 PR 所属项目解析（经 `RequirementDirectory`，不注入 `RequirementRepository`）；
+      外项目 id 解析为「未关联需求」且**不阻断入库**。
+- [ ] **AC15**　稳定身份三元组全局唯一；有 PR 后修改三元组被拒（`409`）——该不变式由 Service 执行，
+      **必须在 `result.md` 如实记为「非数据库执行」**（`design.md` §3.7）。
+- [ ] **AC16**　移除成员后 `pull_request.author_user_id` 置空，而 `author_external_user_id` /
+      `author_username` 快照不变；授权判定不读 `scm_username`。
+- [ ] **AC17**　`ai_call_log.review_id` 建列未建外键，且该列全为 NULL——批次 3 补外键的前置条件。
+- [ ] **AC18**　ArchUnit 七条全绿；顶层包仍八个；子包只有 `scm.github`；`scm` 不依赖 `review`；
+      `knowledge` 不反查 `requirement`。
+- [ ] **AC19**　`./mvnw -B -ntp verify` 全绿无 skip；**`backend/pom.xml` 零改动**；
+      Compose 空库冷启动通过且断言十三张表；CI 四个 job 全绿且 `ci.yml` 中仍无 `secrets.*`。
+- [ ] **AC20**　`result.md` 完整：§2.1 补列（`title` / `failure_reason`）单独列出；
+      非数据库执行的不变式如实标注；密钥轮换缺口如实记录；未触发 [D015](../../../docs/v2/DECISIONS.md#d015) 之外的新决策。
+
+**记法约定**（延续批次 1）：验收条件只有通过与不通过，**部分通过必须记为部分通过**，
+不得为了凑绿而放宽措辞。

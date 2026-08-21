@@ -149,10 +149,20 @@ class ArchitectureRulesTest {
 
     /**
      * Naming alone is not a boundary: a repository can be called anything. The
-     * Spring Data type is the real signal, the suffix only catches the ones that
-     * do not extend it.
+     * Spring Data type is the real signal, and the suffix only catches the ones
+     * that do not extend it.
+     *
+     * <p>Entities are excluded first, because the suffix is ambiguous in the other
+     * direction too. The table {@code scm_repository} gives an entity named
+     * {@code ScmRepository}, which is correct per ARCHITECTURE.md 2.4 and is not a
+     * repository at all. Without this, a future feature legitimately naming that
+     * entity would trip the rule, and the natural response to a false positive is
+     * to work around the rule rather than obey it.
      */
     private static boolean isRepository(JavaClass target) {
+        if (target.isAnnotatedWith("jakarta.persistence.Entity")) {
+            return false;
+        }
         return target.getSimpleName().endsWith("Repository")
                 || target.isAssignableTo("org.springframework.data.repository.Repository");
     }
