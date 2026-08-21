@@ -21,6 +21,8 @@ class ArchitectureRulesTest {
             "common", "auth", "project", "requirement", "scm", "knowledge", "ai", "review");
     private static final Set<String> FORBIDDEN_FEATURES = Set.of(
             "agent", "patch", "mq", "rag", "repo", "pullrequest", "context", "assistant", "finding");
+    /** The only subpackages ARCHITECTURE.md 1.1 sanctions; everything else lives in the feature package itself. */
+    private static final Set<String> ALLOWED_SUBPACKAGES = Set.of("scm.github", "scm.gitlab", "ai.openai");
     private static final JavaClasses PRODUCTION_CLASSES = new ClassFileImporter()
             .withImportOption(ImportOption.Predefined.DO_NOT_INCLUDE_TESTS)
             .importPackages("com.forgepilot");
@@ -59,6 +61,11 @@ class ArchitectureRulesTest {
     }
 
     @Test
+    void featureSubpackagesAreExplicitlyAllowlisted() {
+        classes().should(resideInAnAllowedSubpackage()).check(PRODUCTION_CLASSES);
+    }
+
+    @Test
     void forbiddenAndCrossFeatureRulesAreNotTautologies() {
         JavaClasses fixtures = new ClassFileImporter().importPackages(
                 "com.forgepilot.scm.fixture", "com.forgepilot.review.fixture", "com.forgepilot.agent.fixture");
@@ -72,6 +79,39 @@ class ArchitectureRulesTest {
         assertThatThrownBy(() -> classes().that().haveSimpleNameEndingWith("Controller")
                 .should(notDependOnRepositoryInAnotherFeature()).check(fixtures))
                 .isInstanceOf(AssertionError.class);
+    }
+
+    @Test
+    void theTwoNewRulesAreNotTautologies() {
+        JavaClasses fixtures = new ClassFileImporter().importPackages(
+                "com.forgepilot.knowledge.fixture", "com.forgepilot.ai.fixture");
+
+        // A class parked in an unlisted subpackage of an otherwise allowed feature.
+        assertThatThrownBy(() -> classes().should(resideInAnAllowedSubpackage()).check(fixtures))
+                .isInstanceOf(AssertionError.class);
+
+        // A cross-feature Spring Data repository that the name suffix alone would miss.
+        assertThatThrownBy(() -> classes().should(notDependOnRepositoryInAnotherFeature()).check(fixtures))
+                .isInstanceOf(AssertionError.class);
+    }
+
+    private static ArchCondition<JavaClass> resideInAnAllowedSubpackage() {
+        return new ArchCondition<>("reside in a feature package or an allowlisted subpackage") {
+            @Override
+            public void check(JavaClass item, ConditionEvents events) {
+                String prefix = "com.forgepilot.";
+                if (!item.getPackageName().startsWith(prefix)) {
+                    return; // The top-level rule already owns this case.
+                }
+                String remainder = item.getPackageName().substring(prefix.length());
+                boolean directlyInFeature = !remainder.isEmpty() && remainder.indexOf('.') < 0;
+                if (remainder.isEmpty() || directlyInFeature || ALLOWED_SUBPACKAGES.contains(remainder)) {
+                    return;
+                }
+                events.add(SimpleConditionEvent.violated(item,
+                        item.getFullName() + " sits in unlisted subpackage " + remainder));
+            }
+        };
     }
 
     private static ArchCondition<JavaClass> resideInAllowedTopLevelPackage() {
@@ -98,13 +138,23 @@ class ArchitectureRulesTest {
                 String owner = featureOf(item.getPackageName());
                 item.getDirectDependenciesFromSelf().stream()
                         .map(dependency -> dependency.getTargetClass())
-                        .filter(target -> target.getSimpleName().endsWith("Repository"))
+                        .filter(ArchitectureRulesTest::isRepository)
                         .filter(target -> target.getPackageName().startsWith("com.forgepilot."))
                         .filter(target -> !featureOf(target.getPackageName()).equals(owner))
                         .forEach(target -> events.add(SimpleConditionEvent.violated(item,
                                 item.getFullName() + " directly depends on " + target.getFullName())));
             }
         };
+    }
+
+    /**
+     * Naming alone is not a boundary: a repository can be called anything. The
+     * Spring Data type is the real signal, the suffix only catches the ones that
+     * do not extend it.
+     */
+    private static boolean isRepository(JavaClass target) {
+        return target.getSimpleName().endsWith("Repository")
+                || target.isAssignableTo("org.springframework.data.repository.Repository");
     }
 
     private static String featureOf(String packageName) {
