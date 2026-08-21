@@ -39,9 +39,9 @@
 > ```
 
 §2.3 lists no FK for `scm_repository`; its `project_id` reference follows from the blanket rule — every
-project-scoped table carries `project_id`, every intra-project FK carries it too, read paths still take
-`projectId`, constraint conflicts map to 409/422. §2.4 adds: `snake_case` singular, `id` BIGINT identity PK,
-`created_at`/`updated_at` `timestamptz`, enum = `varchar` + `CHECK`, Flyway `V<n>__<snake_case>.sql`.
+project-scoped table carries `project_id`, every intra-project FK carries it too, read paths take `projectId`,
+constraint conflicts map to 409/422. §2.4 adds: `snake_case` singular, `id` BIGINT identity PK, `created_at`/
+`updated_at` `timestamptz`, enum = `varchar` + `CHECK`, Flyway `V<n>__<snake_case>.sql`.
 
 ### 1.3 What §2.1 does not enumerate
 
@@ -53,16 +53,16 @@ Its third column is headed **关键约束**, not "columns". Required elsewhere b
 **Not defined anywhere: where the changed-file manifest and patches live.** §1.2 gives `scm` "PR 元数据与
 **patch**", §3.1 requires the fingerprint to cover "changed-file manifest 与每个 patch 内容", §4.2 requires
 `changedFiles[]: path, changeType, providerPatch` — yet §2.1 lists no patch column, there is no
-`pull_request_file` table, and §2.1 bars a 17th table without "已发生的业务事实 + 新决策记录". → **OQ-2**.
+`pull_request_file` table, and a 17th table needs "已发生的业务事实 + 新决策记录". → **OQ-2**.
 
 ### 1.4 Disagreements between sources
 
 1. **`ON DELETE SET NULL` vs. batch 1's "no `ON DELETE` anywhere"** — not a real conflict; batch 1 pre-carved this
-   exception. `database-guidelines.md` states that no `ON DELETE` clause is declared anywhere because §2.3 defines
-   deletion semantics only for `pull_request.author_user_id`, everywhere else leaving a hard delete to be refused
-   by the foreign key until a phase decides what deletion means. `pull_request` is therefore the only table that
-   may carry an `ON DELETE`, on that one FK, in the PG15 column-level form (§7.1 names it as one of the two
-   syntaxes making PostgreSQL 15 a hard floor).
+   exception. `database-guidelines.md`: no `ON DELETE` is declared anywhere because §2.3 defines deletion
+   semantics only for `pull_request.author_user_id`, leaving every other hard delete to be refused by the foreign
+   key until a phase decides what deletion means. `pull_request` is therefore the only table that may carry an
+   `ON DELETE`, on that one FK, in the PG15 column-level form (§7.1 names it as one of the two syntaxes making
+   PostgreSQL 15 a hard floor).
 2. **`scm` owns `REQ-N` parsing (§1.2) but may not depend on `requirement` (§1.3).** Real conflict → §6, **OQ-1**.
 3. **The repository triple has no uniqueness constraint.** D010 calls it the stable identity; §2.1 declares only
    `project_id` unique and `UNIQUE(project_id,id)`. Nothing stops two projects registering one repo. **OQ-3**.
@@ -133,8 +133,8 @@ gives both.
 ### 3.3 What must be normalized — and where the docs are silent
 
 **Silent on all of it.** §3.6.2 gives normalization rules, but for `evidence_hash`/`basis_hash` — a different hash
-on different input ("统一换行并去除易变行号，但不得对…缩进敏感内容做通用空白折叠"). Applying those here is **wrong**:
-a whitespace-only change is a real Diff change. Seven decisions no document makes (**OQ-6**):
+on different input ("统一换行并去除易变行号…不得做通用空白折叠"). Applying those here is **wrong**: a whitespace-only
+change is a real Diff change. Seven decisions no document makes (**OQ-6**):
 
 1. **File ordering** — `GET /pulls/{n}/files` is paginated (30/page, max 100) and a 300-file PR spans pages;
    order is conventional, not contractual. Sort by path, byte-wise, before hashing.
@@ -172,8 +172,8 @@ No document gives a status code. [I] 401 with the `common.ApiError` body. → **
 **Two batch-1 mechanisms the endpoint collides with** (`auth/SecurityConfig.java`): the chain ends in
 `.anyRequest().authenticated()` and CSRF is `.csrf(CsrfConfigurer::spa)`. A GitHub POST carries neither a session
 nor `X-XSRF-TOKEN`, so the path needs `permitAll()` **and** a CSRF exclusion or it is rejected before verification
-runs. Per `error-handling.md` that rejection must write the `ApiError` body itself — the filter chain runs before
-MVC dispatch and never reaches `ApiExceptionHandler`.
+runs. Per `error-handling.md` that rejection writes the `ApiError` body itself — the chain runs before MVC
+dispatch and never reaches `ApiExceptionHandler`.
 
 ### 4.2 "A signal, not the truth"
 
@@ -187,7 +187,7 @@ read is current by definition — which is also what makes replay harmless.
 
 Note the comparison: **不旧于** = `>=`, not `>`. Equal timestamps still update — necessary because GitHub's
 `updated_at` has 1-second resolution and successive pushes can share one; safe because the values come from a
-fresh authoritative read, so an update at an equal timestamp writes identical bytes.
+fresh authoritative read, so an update at an equal timestamp writes the same bytes.
 
 [I] The compare-and-write must be atomic. Docs specify a row lock only for the Decision path; nothing for the PR
 update path, yet two concurrent deliveries that read-then-write will interleave. Either `SELECT ... FOR UPDATE`
@@ -236,7 +236,7 @@ belongs in the spec as forbidden, being the reflex choice.
 to Review identity but not to the event, so the listener derives it.
 
 **Publishing without compiling against `review`.** §1.4 rule 3 ("`scm` 的编译期依赖不含 `review`") is enforced by
-`ArchitectureRulesTest::scmCannotDependOnReview`, over production classes only. [I] So the event **type lives in
+`ArchitectureRulesTest::scmCannotDependOnReview`, over production classes only. [I] So the event **type lives
 `scm`**, published via `ApplicationEventPublisher`; `review` imports `scm.PullRequestChanged`, legal in the §1.3
 direction (`… scm … ← review`). Putting it in `common` compiles too but adds an SCM-shaped type to a package §1.1
 defines as "API error、paging、clock、纯安全工具".
@@ -293,7 +293,7 @@ grep (AC4: 无处读取 `scmUsername` 做判定). Batch 2 keeps that green **and
 **The mapping** = the `project_member` in this project whose `scm_external_user_id` equals the PR's
 `author_external_user_id`, else NULL. [I] `scm` may depend on `project` (§1.3), but ArchUnit rule 4 forbids
 injecting `ProjectMemberRepository` across features, so `project` must expose a facade method —
-`ProjectAccessService` today has only `requireMember`/`requireRole` (precedent: D013.6's `auth.UserDirectory`).
+`ProjectAccessService` today has only `requireMember`/`requireRole` (cf. D013.6's `auth.UserDirectory`).
 
 **"可重算" has a gap** [I]: recomputation happens on PR sync, but if a LEADER configures a member's SCM identity
 *after* the PRs exist, nothing in `scm` observes it (`project` may not depend on `scm`). The mapping stays NULL
@@ -377,9 +377,9 @@ concrete failure they would have caught", and the plan requires an approved deci
 | **OQ-8** | PR-update concurrency: row lock, or conditional `UPDATE … WHERE source_updated_at <= :new`? A3 is unprovable without a ruling. (§3.1 locks only the Decision path) |
 | **OQ-9** | How do stub-server tests coexist with an SSRF policy that must block loopback and private ranges? (LEGACY matrix + the plan's SSRF rule vs §8) |
 | **OQ-10** | Precedence when branch and title carry different `REQ-<n>`; case sensitivity of the prefix. (D007/P1) |
-| **OQ-11** | Does re-syncing overwrite a **human-set** association by re-parsing? When is `author_user_id` recomputed if the SCM identity is configured after the PR exists? (D007 against itself) |
-| **OQ-12** | Does the *initial* auto-association write an event row (`from=NULL`, `to=n`, `SYSTEM`) when §2.1 says the table records **仅** *changes*? Exact CHECK for "type 与 actor 组合合法"? |
-| **OQ-13** | Where does the key encrypting `encrypted_token/secret` come from, and how is it rotated? `SecretCipher` does not exist. (LEGACY matrix vs no design) |
+| **OQ-11** | Does re-syncing overwrite a **human-set** association by re-parsing (D007 against itself)? When is `author_user_id` recomputed if the SCM identity is configured after the PR exists? |
+| **OQ-12** | Does the *initial* auto-association write an event row (`from=NULL`, `to=n`, `SYSTEM`) when §2.1 says the table records **仅** *changes*? Exact CHECK for "type 与 actor"? |
+| **OQ-13** | Where does the key encrypting `encrypted_token/secret` come from, and how is it rotated? `SecretCipher` (LEGACY matrix, REWRITE) does not exist. |
 
 ---
 
