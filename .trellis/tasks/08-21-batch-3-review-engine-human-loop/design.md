@@ -187,29 +187,114 @@ Review 详情页本就展示其 PR，关联下拉框放在该页头部。
 - 三角色演示**串行登出/登录**。[D013.7](../../../docs/v2/DECISIONS.md#d013) 是进程内会话，
   同一浏览器本来就只能有一个会话，演示脚本写死这一种。
 
-## 4. 迁移 `V6__review.sql`
+## 4. 迁移 `V6__review.sql`（实测支撑，见 `research/finding-constraint-trigger-measured.md`）
 
-**待 `research/finding-constraint-trigger-measured.md` 与
-`research/fencing-and-concurrency-measured.md` 落地后填写。**
+### 4.0 先纠正我自己给研究委托写错的一条前提
 
-已经确定、不依赖研究的部分：
+我在研究委托里把「父子上下文」写成「file_path / line 等」。**这是错的**，而且方向性地错。
+`ARCHITECTURE.md:200` 原文：
+
+> 使用 `IS NOT DISTINCT FROM` 保证 Finding 的 **`requirement_id` 与 `requirement_revision_id`**
+> 分别等于父 Review 对应列。Review 未关联 Requirement 时，Finding 两列必须都为空。
+
+「父子上下文」是这**两列**的跨行不变式。`path` / `line` 是 Finding 自己的列，**没有对应的父列**，
+谈不上「与父一致」，实测确认它们在数据库层零约束（`line = -9999` 直接落库）。
+它们的正确性归 `ARCHITECTURE.md:342-343` 的 Validator（`filePath` 必须在 changed files 内、
+行号必须落在 patch 可验证范围），那是**应用层**规则。
+照我原来那个错前提设计，会做出一个规范没要求、也无法自洽的触发器。
+
+### 4.1 表与约束（不依赖研究的部分）
 
 - 三张表 `review` / `finding` / `finding_event`，建完恰好 **16 张**，此后不得再有新表。
-- `review` 唯一键必须**逐字**写成
+- `review` 唯一键**逐字**写成
   `UNIQUE NULLS NOT DISTINCT (pull_request_id, head_sha, review_input_fingerprint, requirement_revision_id)`。
   写成默认的 `NULLS DISTINCT`，未关联需求的 PR 就能堆积无限条同四元组 Review，
   「当前 Review」从单数变成集合，整张单 PR 映射表失去意义，`ARCHITECTURE.md:261` 的幂等也一并失效。
-- `review` 与 `finding` 各需 `UNIQUE(project_id, id)` 供子表复合父 FK。
-- `finding` 的**永久**父 FK `(project_id, review_id) → review(project_id, id)`。
-- `ARCHITECTURE.md:206-220` 的四条行内 CHECK 逐字落地，外加 §2.7 裁定的那条。
-- 本批次同时补 `ai_call_log.review_id` 的外键（[D015.1](../../../docs/v2/DECISIONS.md#d015)），
+- `review` 需 `UNIQUE(project_id, id)`（供 Finding 父 FK）与
+  `UNIQUE(project_id, id, execution_attempt)`（供 §6.1 的 attempt fence）。
+- `finding` 需 `UNIQUE(project_id, id)` 供 `finding_event` 父 FK。
+- `ARCHITECTURE.md:206-220` 的四条行内 CHECK 逐字落地，外加 §2.7 裁定的
+  `CHECK (decision = 'PENDING' OR status = 'COMPLETED')`。
+- 同时补 `ai_call_log.review_id` 的外键（[D015.1](../../../docs/v2/DECISIONS.md#d015)），
   并反转 `aiCallLogHasNoReviewForeignKeyYetAndNoRowsUsingIt` 的断言。
 
-**一处必须写进迁移注释的承重点**：`review` 的三列复合外键
+**必须写进迁移注释的承重点**：`review` 的三列复合外键
 `(project_id, requirement_id, requirement_revision_id) → requirement_revision(project_id, requirement_id, id)`
-在 `MATCH SIMPLE` 下，只要任一列为 NULL 整条外键**就被跳过**。
+在 `MATCH SIMPLE` 下，任一列为 NULL 整条外键**就被跳过**。
 让它承重的是那条「同空或同非空」的 CHECK——与批次 2 `requirement_attachment` 的 NOT NULL 同型
 （[D015.2](../../../docs/v2/DECISIONS.md#d015)）。**删掉那条 CHECK，外键会静默失效。**
+
+### 4.2 约束触发器用 **IMMEDIATE**，不用 `INITIALLY DEFERRED`
+
+实测的延迟模式行为其实不坏：违规语句成功返回、事务全程可用、**不进 `25P02`**、
+COMMIT 报 `23514` 并**点名具体 finding id**；JPA 侧是 `DataIntegrityViolationException`
+直接包 `PSQLException(23514)`，`getServerErrorMessage().getConstraint()` 拿得到约束名。
+
+**但延迟有两个实测陷阱，而且都很难查**：
+
+- 先插违规行**再改对** → COMMIT **仍然失败**；
+- 先插违规行**再删掉** → COMMIT **仍然失败**。
+
+原因是延迟事件绑定在**行版本**上，不是事务的最终状态。
+
+**裁定：用 IMMEDIATE。** 理由是延迟在本项目**买不到任何东西**——
+Finding 的上下文是插入时从父 Review 复制的，不存在需要临时违规的合法场景。
+延迟只会把「第 3 条 Finding 写错了」的报错时点推迟到 COMMIT，还附赠两个陷阱。
+
+（顺带实测结论保留在研究里：[D015.9](../../../docs/v2/DECISIONS.md#d015) 担心的绕过口子**真实存在**——
+在 JPA 事务内用 `doWork()` + savepoint + `SET CONSTRAINTS IMMEDIATE` 能救回并成功提交。
+本批次选 IMMEDIATE 使这条路径不可达，算是顺手关掉。）
+
+### 4.3 父表那一半走 `ARCHITECTURE.md:200` 明确给出的**更简单的分支**
+
+原文是「触发器也必须覆盖对父 Review 上下文列的更新，**或**直接拒绝这些身份列在创建后变化」。
+
+**裁定：取后者。** `review` 上加一个 `BEFORE UPDATE` 触发器，
+拒绝 `pull_request_id` / `head_sha` / `review_input_fingerprint` /
+`requirement_id` / `requirement_revision_id` / `review_input_fingerprint` /
+`context_snapshot_json` 在创建后发生变化。
+
+**三个理由**：
+
+1. 这几列**本来就是 Review 的身份**（四元组）与 `ARCHITECTURE.md:102` 明文标注的
+   「**不可变的** `review_input_fingerprint`/`context_snapshot_json`」。
+   改它们等于把一条 Review 改成另一条 Review，语义上就不该允许。
+   §2.1 只是「说」它们不可变，这条触发器让它**真的**不可变。
+2. 实测发现「函数包装的 CHECK」在 PG15 上被接受且真能在 INSERT 上拦住，
+   但**挡不住父表更新**——也就是说单靠 CHECK 一定要配一个父侧机制。取本分支正好补上。
+3. **它顺手关掉了一个实测出来的并发写偏斜**：研究实测「并发插 Finding vs 改 Review 上下文」
+   触发器本身挡不住，目前挡得住**纯属** D003 唯一键含 `requirement_revision_id` 的**副作用**。
+   身份列一旦不可变，这个场景**根本不可达**——从「靠副作用」变成「靠设计」。
+
+### 4.4 批量插入：整批回滚是既定事实，靠**写入前校验**保住好行
+
+实测：延迟与非延迟**都整批回滚**，差别只是什么时候知道。
+唯一能保住好行的是写入前校验，或每行独立事务（后者会制造「部分成功报告」，
+被 `ARCHITECTURE.md:334` / P6 明令禁止）。
+
+**裁定**：Finding 的上下文在写入前由 `ReviewOutputValidator` 校验
+（它本来就要校验 `acId` / `sourceId` / `filePath` / 行号，多校验两列上下文是顺手的）。
+触发器是**最后一道防线**，不是第一道。这与 `ARCHITECTURE.md:341` 的 Validator 职责一致。
+
+一次 Review 的全部 Finding 与终局状态**同一事务**提交——
+这同时满足 §6.1 fence 的预防性（研究 §3.9 的隐藏前提正是「有一个已经碰过 finding 行的事务正开着」）。
+
+### 4.5 补一条 §2.3 索引清单里没有的索引
+
+实测：血缘外键 `(project_id, carried_from_finding_id)` 无索引时删 2000 行 **7.04 s**，
+有索引 **176 ms**（40×）。PostgreSQL 不为外键的**引用侧**自动建索引。
+
+**裁定**：建 `idx_finding_carried_from (project_id, carried_from_finding_id)`。
+这是索引，不是列也不是表，不触及 §2.1 的清单；不建它会让任何删除路径慢 40 倍。
+
+### 4.6 Flyway 实测已关闭前两批遗留的 caveat
+
+实测确认 `CREATE CONSTRAINT TRIGGER` + `$fn$` plpgsql 函数体 + `UNIQUE NULLS NOT DISTINCT`
++ D015.1 的补外键，**六个迁移全绿**。批次 1 与批次 2 各自遗留过「Flyway 能否处理 plpgsql 函数体
+分隔符」的 caveat，本批次实测关闭。
+
+D013.1 变体 A 的映射方式在 `finding` 上**照样适用**——实测自然写法仍然启动即
+`MappingException: Column 'project_id' is duplicated`，变体 A 读写与关联导航全部正常。
 
 ## 5. 执行器与调度（实测支撑，见 `research/after-commit-scheduling-measured.md`）
 
