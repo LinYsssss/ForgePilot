@@ -1,0 +1,9 @@
+{"file": ".trellis/spec/backend/index.md", "reason": "Backend quality-check entry point."}
+{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "Enforceable backend check items and their expected command output."}
+{"file": ".trellis/spec/backend/database-guidelines.md", "reason": "Migration and real-PostgreSQL test rules to check the new migrations against."}
+{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "Frontend drift checklist and forbidden patterns."}
+{"file": ".trellis/spec/frontend/component-guidelines.md", "reason": "Accessibility and component checks for the new screens."}
+{"file": ".trellis/spec/guides/cross-layer-thinking-guide.md", "reason": "Cross-layer consistency guidance for a change spanning migration, entity, service, API and UI."}
+{"file": ".trellis/tasks/08-21-batch-1-auth-project-requirement/research/pg15-hibernate-constraints.md", "reason": "Ground truth for whether the implemented constraints behave as designed."}
+{"file": ".trellis/tasks/08-21-batch-1-auth-project-requirement/research/auth-project-contracts.md", "reason": "Role matrix and isolation assertions to verify against."}
+{"file": ".trellis/tasks/08-21-batch-1-auth-project-requirement/research/requirement-contracts.md", "reason": "State machine and revision assertions to verify against."}

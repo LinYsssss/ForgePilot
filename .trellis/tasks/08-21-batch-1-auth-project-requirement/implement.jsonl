@@ -1,0 +1,13 @@
+{"file": ".trellis/spec/backend/index.md", "reason": "Backend pre-development checklist and quality gate entry point."}
+{"file": ".trellis/spec/backend/database-guidelines.md", "reason": "Flyway authority, migration naming, and the real-PostgreSQL test contract that batch 1 migrations must follow."}
+{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "Build entry point, ArchUnit rule map, credential fail-closed rule and the frozen JVM envelope."}
+{"file": ".trellis/spec/backend/directory-structure.md", "reason": "Package layout and the no-empty-layer rule for the new auth/project/requirement classes."}
+{"file": ".trellis/spec/frontend/index.md", "reason": "Frontend pre-development checklist."}
+{"file": ".trellis/spec/frontend/design-contract.md", "reason": "Design tokens and the selected visual contract the new screens must follow."}
+{"file": ".trellis/spec/frontend/component-guidelines.md", "reason": "Component and accessibility conventions for the login, member and requirement screens."}
+{"file": ".trellis/spec/frontend/hook-guidelines.md", "reason": "The requestJson error contract and the CSRF injection point the new screens depend on."}
+{"file": ".trellis/spec/frontend/state-management.md", "reason": "No-Pinia rule and how per-screen state is expected to be held."}
+{"file": ".trellis/spec/frontend/type-safety.md", "reason": "Route contract typing and the forbidden hardcoded-path pattern."}
+{"file": ".trellis/tasks/08-21-batch-1-auth-project-requirement/research/auth-project-contracts.md", "reason": "Extracted Auth/Project/Member contracts, role assertions and Legacy verdicts."}
+{"file": ".trellis/tasks/08-21-batch-1-auth-project-requirement/research/requirement-contracts.md", "reason": "Extracted Requirement/Revision/AC contracts, state machine assertions and the three-step backfill reasoning."}
+{"file": ".trellis/tasks/08-21-batch-1-auth-project-requirement/research/pg15-hibernate-constraints.md", "reason": "Measured PostgreSQL 15 + Hibernate behaviour: composite FK mapping forms, partial unique index limits, MATCH SIMPLE semantics."}
