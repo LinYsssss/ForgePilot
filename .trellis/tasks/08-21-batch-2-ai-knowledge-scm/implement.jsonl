@@ -1,1 +1,9 @@
-{"_example": "Fill with {\"file\": \"<path>\", \"reason\": \"<why>\"}. Put spec/research files only — no code paths. Run `python .trellis/scripts/get_context.py --mode packages` to list available specs. Delete this line once real entries are added."}
+{"file": ".trellis/spec/backend/index.md", "reason": "Backend pre-development checklist and quality gate entry point."}
+{"file": ".trellis/spec/backend/database-guidelines.md", "reason": "Flyway authority, the D013.1 composite-FK mapping form, and the real-PostgreSQL test contract the new migrations must follow."}
+{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "Build entry point, ArchUnit rule map, and the rule that a new dependency must name the real failure it would have caught."}
+{"file": ".trellis/spec/backend/error-handling.md", "reason": "The single error body, the 404-vs-403 information flow, and why constraint violations are never caught."}
+{"file": ".trellis/spec/backend/logging-guidelines.md", "reason": "One logger in the whole backend, and the rule that ai_call_log payloads must not reach it."}
+{"file": ".trellis/spec/backend/directory-structure.md", "reason": "Package layout and the subpackage allowlist that scm.github relies on."}
+{"file": ".trellis/tasks/08-21-batch-2-ai-knowledge-scm/research/pgvector-hibernate-measured.md", "reason": "Measured PG15 + pgvector + Hibernate behaviour: dimensionless vector columns, the index failure, MATCH SIMPLE on the attachment key, and the silent lone-surrogate corruption."}
+{"file": ".trellis/tasks/08-21-batch-2-ai-knowledge-scm/research/ai-knowledge-contracts.md", "reason": "Extracted AI Gateway, ai_call_log, Knowledge and attachment contracts, plus the credential-free test seams."}
+{"file": ".trellis/tasks/08-21-batch-2-ai-knowledge-scm/research/scm-contracts.md", "reason": "Extracted SCM identity, fingerprint, webhook and author-mapping contracts, plus the SSRF/test-seam conflict."}

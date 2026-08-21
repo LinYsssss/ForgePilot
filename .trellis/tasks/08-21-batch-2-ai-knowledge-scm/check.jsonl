@@ -1,1 +1,6 @@
-{"_example": "Fill with {\"file\": \"<path>\", \"reason\": \"<why>\"}. Put spec/research files only — no code paths. Run `python .trellis/scripts/get_context.py --mode packages` to list available specs. Delete this line once real entries are added."}
+{"file": ".trellis/spec/backend/index.md", "reason": "Backend quality-check entry point."}
+{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "Enforceable backend check items and their expected command output."}
+{"file": ".trellis/spec/backend/database-guidelines.md", "reason": "Migration and real-PostgreSQL test rules to check the new migrations against."}
+{"file": ".trellis/spec/backend/error-handling.md", "reason": "Status mapping and the indistinguishability rules the new endpoints must honour."}
+{"file": ".trellis/spec/guides/cross-layer-thinking-guide.md", "reason": "Cross-layer consistency guidance for a change spanning migration, entity, gateway and webhook."}
+{"file": ".trellis/tasks/08-21-batch-2-ai-knowledge-scm/research/pgvector-hibernate-measured.md", "reason": "Ground truth for whether the implemented constraints behave as designed."}

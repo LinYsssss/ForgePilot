@@ -14,10 +14,12 @@ import org.springframework.jdbc.core.JdbcTemplate;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
 class FoundationDatabaseTest extends PostgresTestBase {
 
-    /** Batch 1 owns exactly these; the remaining ten tables arrive with their own phase. */
+    /** Thirteen of the sixteen tables exist; review, finding and finding_event arrive with batch 3. */
     private static final List<String> EXPECTED_TABLES = List.of(
-            "acceptance_criterion", "project", "project_member",
-            "requirement", "requirement_revision", "user_account");
+            "acceptance_criterion", "ai_call_log", "knowledge_chunk", "knowledge_document",
+            "project", "project_member", "pull_request", "pull_request_requirement_event",
+            "requirement", "requirement_attachment", "requirement_revision", "scm_repository",
+            "user_account");
 
     @Autowired
     private JdbcTemplate jdbc;
@@ -40,9 +42,11 @@ class FoundationDatabaseTest extends PostgresTestBase {
         List<String> tables = jdbc.queryForList(
                 "select table_name from information_schema.tables "
                         + "where table_schema = 'public' and table_type = 'BASE TABLE' "
-                        + "and table_name <> 'flyway_schema_history' order by table_name",
+                        + "and table_name <> 'flyway_schema_history'",
                 String.class);
-        assertThat(tables).containsExactlyElementsOf(EXPECTED_TABLES);
+        // Order is the database collation's business, not this test's. The set is
+        // what matters: an unplanned table has to fail here.
+        assertThat(tables).containsExactlyInAnyOrderElementsOf(EXPECTED_TABLES);
     }
 
     @Test
@@ -51,7 +55,8 @@ class FoundationDatabaseTest extends PostgresTestBase {
                 "select version, description, success from flyway_schema_history order by installed_rank");
 
         assertThat(history).extracting(row -> row.get("version") + ":" + row.get("description"))
-                .containsExactly("1:foundation", "2:auth project", "3:requirement");
+                .containsExactly("1:foundation", "2:auth project", "3:requirement",
+                        "4:knowledge ai", "5:scm");
         assertThat(history).allSatisfy(row -> assertThat(row.get("success")).isEqualTo(true));
     }
 
