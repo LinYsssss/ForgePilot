@@ -57,18 +57,33 @@ class GitHubWebhookController {
     void receive(@RequestBody byte[] body,
             @RequestHeader(name = "X-Hub-Signature-256", required = false) String signature,
             @RequestHeader(name = "X-GitHub-Event", required = false) String event) {
-        JsonNode payload = parse(body);
-        JsonNode repositoryNode = payload.path("repository");
-        ScmRepository repository = sync.authenticate(ScmProvider.GITHUB,
-                instanceIdentityOf(required(repositoryNode.path("html_url"))),
-                required(repositoryNode.path("id")), body, signature);
+        // Everything up to and including verification runs inside this guard. The
+        // endpoint is public and unauthenticated, so a hostile payload must not be
+        // able to raise an exception that escapes as a stack trace and an
+        // off-contract body: a container node where a string belongs, or a DNS label
+        // over 63 characters reaching IDN.toASCII, both did before this.
+        // Every pre-verification failure answers exactly like a bad signature, which
+        // also keeps §3.4's indistinguishability intact.
+        ScmRepository repository;
+        JsonNode payload;
+        try {
+            payload = parse(body);
+            JsonNode repositoryNode = payload.path("repository");
+            repository = sync.authenticate(ScmProvider.GITHUB,
+                    instanceIdentityOf(required(repositoryNode.path("html_url"))),
+                    required(repositoryNode.path("id")), body, signature);
+        } catch (ApiException rejected) {
+            throw rejected;
+        } catch (RuntimeException malformed) {
+            throw unverifiable();
+        }
 
         if (!PULL_REQUEST_EVENT.equals(event)) {
             // A verified delivery this deployment has nothing to do with — the ping
             // GitHub sends when the hook is created, for instance.
             return;
         }
-        sync.apply(repository, github.fetch(repository, payload.path("number").asInt()));
+        sync.apply(repository, github.fetch(repository, pullRequestNumber(payload)));
     }
 
     private JsonNode parse(byte[] body) {
@@ -101,6 +116,21 @@ class GitHubWebhookController {
             throw unauthenticated();
         }
         return node.asString();
+    }
+
+    /** Same shape as a bad signature: the caller learns nothing from the difference. */
+    private static ApiException unverifiable() {
+        return new ApiException(HttpStatus.UNAUTHORIZED, "unauthorized",
+                "The delivery could not be verified.");
+    }
+
+    /** Verified by now, so this may say what is wrong. */
+    private static int pullRequestNumber(JsonNode payload) {
+        JsonNode number = payload.path("number");
+        if (!number.isIntegralNumber()) {
+            throw ApiException.unprocessable("The delivery has no pull request number.");
+        }
+        return number.asInt();
     }
 
     private static ApiException unauthenticated() {

@@ -64,7 +64,17 @@ public class PullRequestSyncService {
     }
 
     @Transactional
-    public void apply(ScmRepository repository, PullRequestSnapshot snapshot) {
+    public void apply(ScmRepository detached, PullRequestSnapshot snapshot) {
+        // Re-read inside this transaction rather than trusting the row that
+        // authenticate() read and committed. The provider fetch happens between the
+        // two, and an identity update can commit in that window: the triple freeze
+        // only refuses a change while pull requests already exist, so an update that
+        // ran before this insert is legal, and this delivery would then attach a
+        // pull request to a repository whose identity had just moved -- storing a
+        // fingerprint computed from the old triple, which is exactly the
+        // irreproducibility design.md 3.7 exists to prevent.
+        ScmRepository repository = repositories.findById(detached.getId())
+                .orElseThrow(PullRequestSyncService::unauthenticated);
         long projectId = repository.getProjectId();
         String fingerprint = ReviewInputFingerprint.of(repository.getProvider().name(),
                 repository.getInstanceIdentity(), repository.getExternalId(), snapshot);
@@ -106,8 +116,23 @@ public class PullRequestSyncService {
         publish(created);
     }
 
+    /**
+     * Refuses rather than guesses when the delivery carries no ordering value.
+     * Returning false there would make the guard vanish silently and let an
+     * out-of-order delivery roll head, base and the patches backwards -- the one
+     * thing R4 forbids. GitHub always sends updated_at, so this is latent today and
+     * becomes live the moment a provider that omits it is added.
+     */
     private static boolean isOlderThan(Instant incoming, Instant current) {
-        return incoming != null && current != null && incoming.isBefore(current);
+        if (current == null) {
+            return false;
+        }
+        if (incoming == null) {
+            throw ApiException.unprocessable(
+                    "The delivery carries no source timestamp, so it cannot be ordered "
+                            + "against what is already stored.");
+        }
+        return incoming.isBefore(current);
     }
 
     /**

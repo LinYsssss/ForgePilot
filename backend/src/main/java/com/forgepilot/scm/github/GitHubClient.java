@@ -58,16 +58,16 @@ class GitHubClient {
 
         return new PullRequestSnapshot(
                 number,
-                text(pullRequest.path("base").path("sha")),
-                text(pullRequest.path("head").path("sha")),
-                text(pullRequest.path("head").path("ref")),
-                text(pullRequest.path("title")),
+                required(pullRequest.path("base"), "sha", "base.sha"),
+                required(pullRequest.path("head"), "sha", "head.sha"),
+                required(pullRequest.path("head"), "ref", "head.ref"),
+                required(pullRequest, "title"),
                 // GitHub exposes no stable diff revision, so that slot stays empty
                 // and ordering rests on updated_at alone.
                 null,
-                Instant.parse(text(pullRequest.path("updated_at"))),
-                text(pullRequest.path("user").path("id")),
-                text(pullRequest.path("user").path("login")),
+                Instant.parse(required(pullRequest, "updated_at")),
+                required(pullRequest.path("user"), "id", "user.id"),
+                required(pullRequest.path("user"), "login", "user.login"),
                 changedFiles(client, externalId, number));
     }
 
@@ -110,8 +110,8 @@ class GitHubClient {
                 // Absent is not empty: a binary file or one past GitHub's own diff
                 // limit carries no patch at all, and the fingerprint distinguishes them.
                 String content = patch.isMissingNode() || patch.isNull() ? null : patch.asString();
-                ChangedFile changed = new ChangedFile(text(file.path("filename")),
-                        text(file.path("status")), content);
+                ChangedFile changed = new ChangedFile(required(file, "filename"),
+                        required(file, "status"), content);
                 characters += changed.path().length() + (content == null ? 0 : content.length());
                 if (characters > ChangedFile.MAX_TOTAL_CHARS) {
                     throw ApiException.unprocessable(
@@ -125,7 +125,29 @@ class GitHubClient {
         }
     }
 
-    private static String text(JsonNode node) {
-        return node.asString();
+    /**
+     * An authoritative field that is absent, null, or a container must fail loudly.
+     * {@code JsonNode.asString()} answers "" for a missing or null node, which would
+     * write base_sha='' or author_external_user_id='' — both satisfy NOT NULL, so
+     * the database cannot catch it, and the fingerprint would then be computed over
+     * empty SHAs. author_external_user_id is worse still: D010 makes it the
+     * authorization key, so every ghost-author pull request would share one identity.
+     * R3 requires malformed input to fail explicitly rather than store bad data.
+     */
+    private static String required(JsonNode parent, String field, String label) {
+        JsonNode node = parent.path(field);
+        if (!node.isValueNode() || node.isNull()) {
+            throw ApiException.unprocessable(
+                    "The provider's pull request is missing " + label + ".");
+        }
+        String value = node.asString();
+        if (value.isBlank()) {
+            throw ApiException.unprocessable("The provider's pull request has an empty " + label + ".");
+        }
+        return value;
+    }
+
+    private static String required(JsonNode parent, String field) {
+        return required(parent, field, field);
     }
 }
