@@ -146,3 +146,94 @@ Phase 8 单独且最后               GitLab + 正式评测与答辩
 **理由**：R2.3 已把 16 张表、依赖方向、状态机和 D001–D011 冻结得足够彻底，逐个 Phase 停一次的边际收益低，而横切模式（`project_id` 复合外键、Service/Query facade、错误映射）一次性统一实现比分批引入更一致。同时，把批次做到"一次写完全部 Phase"则会同时破坏上述三条：holdout 不可逆污染、Phase 6 参数变成猜测、schema 风险在六个 Phase 的代码之下暴露。批次为 2 个 Phase 是这两种失效模式之间的平衡点。
 
 **后果**：授权闸门从 7 次减为 4 次。用户于 2026-08-21 明确批准本决策，同批次内不再逐 Phase 请求授权，但批次之间仍须停止并等待明确授权。
+
+<a id="d013"></a>
+## D013 批次 1 实现裁定
+
+**背景**：批次 1 规划期做了三项研究（`.trellis/tasks/08-21-batch-1-auth-project-requirement/research/`），其中 `pg15-hibernate-constraints.md` 用真实 PostgreSQL 15.19 + Hibernate 7.4.1 实测了本模型最危险的约束。研究共提出 49 条开放问题；本决策裁定其中会改变实现形态或消除文档矛盾的部分，其余属实现细节，由 `design.md` 承担。
+
+**总判据**（用户 2026-08-21 要求）：优先选零新增表、零新增列、零新增抽象的可行解；只有当简单解会让两条权威规定互相矛盾或根本跑不起来时才升级，并说明为什么简单解不成立。**以下裁定没有一条改动 16 表定义。**
+
+### D013.1 复合外键的实体映射形态（实测强制）
+
+**决定**：所有把 `project_id` 带进复合键的关联，统一采用**变体 A**——`@JoinColumn` 全部 `insertable=false, updatable=false`，另用标量 `Long xxxId` 承担写入。全局统一，禁止与变体 B 混用。
+
+**理由**：Hibernate 7.4.1 **拒绝启动**最自然的写法，实测报 `AnnotationException: Column mappings for property 'currentRevision' mix insertable with 'insertable=false'` 与 `MappingException: Column 'project_id' is duplicated in mapping`。由于每条项目内外键都带 `project_id`，该冲突会出现在 16 张表几乎每个关联上，不是个案。实测只有两种合法形态。选 A 而非 B（关联可写、`project_id` 由目标推导）的理由：A 的服务层写普通 `Long`，DTO 映射与批量写入都不绕；跨项目写入由数据库复合外键以 23503 拒绝，这正是 [D006](#d006) 规定数据库承担的职责，不需要再用 ORM 结构二次保证；且标量外键更契合 [ARCHITECTURE §1.3](./ARCHITECTURE.md#13-依赖规则单向唯一定义处)「跨模块只经 Service/Query facade」——本就不该靠实体图跨模块导航。
+
+**后果**：该约定必须写入 `.trellis/spec/backend/`，否则第一个写复合关联的人会撞上启动期异常。变体 B 在防跨项目写入上更强，被否决的代价是服务层需自行保证 `projectId` 取值正确，由数据库兜底。
+
+### D013.2 `REQ-<n>` 的 `<n>` 使用 `requirement.id`
+
+**决定**：`<n>` 直接是 `requirement.id`，不新增项目内展示编号列。解析必须按 PR 所属项目过滤，外项目 id 解析不到即落入 [P1](./PRD.md) 已规定的「未关联需求」。
+
+**理由**：`ARCHITECTURE §2.1` 的 `requirement` 列清单没有编号列，而 P1 与 PRD §7 的 E2E 验收都要求解析 `feat/REQ-<n>-*`。新增编号列需要一个额外唯一键并改动已冻结的表定义，而 id 已全局唯一、足以定位。代价是各项目看到的编号不连续，属展示层美观问题，不影响正确性。
+
+### D013.3 P7 审计范围收窄，不新增 `requirement_event`
+
+**决定**：[P7](./PRD.md)「人工决策全部留痕」的适用范围是 `ARCHITECTURE §2.1` 已定义审计结构的那些决策：PR↔需求关联（`pull_request_requirement_event`）、Finding 生命周期（`finding_event`）、Review 终局（`review` 行上的 decision 列）、Revision 发布（`requirement_revision.created_by/change_reason/created_at`）。需求状态转换（DRAFT→READY、指派、CANCELED、DONE）在 MVP 不单独留痕。
+
+**理由**：P7 的依据栏写的就是 `ARCHITECTURE §2.1`，而 §2.1 明禁通用 `audit_event`（多态 entity_id 无法被 D006 复合外键约束），16 表里也没有需求状态审计表。新增第 17 张表须满足 §2.1 结尾的门槛；在 Phase 3 尚无人工闭环的前提下，该门槛不成立。收窄解释即可消除 PRD 与表清单之间的张力，无需新增结构。
+
+**后果**：这是明确记录的 MVP 缺口。Phase 7 建设人工闭环时若确有需要，须带正式决策新增 `requirement_event`，不得由实现自行补表。
+
+### D013.4 `CANCELED` 的可达性
+
+**决定**：`CANCELED` 可由任意非终态（`DRAFT` / `READY` / `IN_DEVELOPMENT`）到达，是终态，不可恢复。
+
+**理由**：PRD §5 的状态图中该分支横跨整行，两种读法都成立；取"任意非终态可取消"是最少意外的读法，且不引入"取消后恢复"这条额外状态边。
+
+### D013.5 项目创建者同事务成为 LEADER
+
+**决定**：任何已登录用户都可以创建项目；创建项目与写入该用户的 `project_member(role=LEADER)` 在同一事务内完成。`project.created_by` 记录创建者，与 LEADER 身份是两件事——LEADER 可后续转移，`created_by` 不变。
+
+**理由**：PRD §3 把「创建项目」列在 LEADER 列，但创建之前该用户在该项目没有任何角色，[D004](#d004)「至少一个 LEADER」因而没有起点。同事务落 LEADER 是唯一不需要新增结构的解法，也让 D004 的不变式从第一条记录起就成立。
+
+### D013.6 `auth` 暴露只读账户目录，§1.3 的措辞收窄
+
+**决定**：`user_account` 归 `auth`。`auth` 对外只暴露一个只读 Query facade（按 id / username 查 id、username、enabled），`project` 等业务模块可依赖该 facade。`ARCHITECTURE §1.3`「业务模块不依赖 auth」收窄为：**业务模块不依赖 auth 的认证机制**（Session、Spring Security、登录状态），身份仍按原文由 Controller 从登录上下文取 `userId` 传参；读取账户展示信息经该只读 facade。
+
+**理由**：成员管理必须按 username 添加成员、必须展示成员用户名，而 §1.3 原措辞只解决了写入方向的身份传递，没解决读取方向。备选方案各有代价：把 `user_account` 挪进 `common` 与 §1.1 对 `common` 的定义（API error、paging、clock、纯安全工具）矛盾；在 `project_member` 冗余 username 需要新增列且会陈旧。**本裁定不需要改动 ArchUnit**：§1.4 的五条规则并不包含「project 不得依赖 auth」，且 facade 是 Service 而非 Repository，规则 4、5 均不触发。
+
+### D013.7 会话与 CSRF：进程内 HttpSession，无新增表
+
+**决定**：使用 Spring Security 默认的服务端 `HttpSession`（进程内），CSRF 用 Spring Security 的 cookie token repository。密码哈希用 Spring Security 默认的 BCrypt `PasswordEncoder`。`user_account.session_version` 仅在改密码和「强制全端登出」时递增，普通登录/登出不动它。
+
+**理由**：`ARCHITECTURE §7.1` 禁止 Redis，16 表里也没有 session 表，新增表须过门槛。进程内会话零新增依赖、零新增表，与「单体、单实例、有界进程内执行器」的既定运行形态一致。自定义签名 Cookie 协议被否决：Legacy 的 `TokenService` 在迁移矩阵中是 REFERENCE 而非 KEEP，明确「不原样继承私有 Token 协议」，自己实现一套签名/续期/撤销比用框架现成机制复杂得多。
+
+**后果**：**进程重启会话即失效**，这是单节点部署下被接受的代价，须在部署说明中写明，不得靠新增持久化去掩盖。
+
+### D013.8 LEADER 转移的写法
+
+**决定**：LEADER 转移固定为同一事务内**先把原 LEADER 降级并 flush，再把新成员升级**。禁止写成单条 `UPDATE ... CASE` 交换。
+
+**理由**：实测发现部分唯一索引**无法 DEFERRABLE**（三种写法分别报 42601/42601/42809），且单语句交换的成败**依赖物理扫描顺序**——同一条语义等价的 SQL，旧 LEADER 的 ctid 在前就成功、在后就报 23505。这是一个会随数据分布随机复现的缺陷，必须在写法上根除而不是靠重试。
+
+### D013.9 D004「至少一个 LEADER」的语义澄清
+
+**决定**：[D004](#d004) 的「Service 事务保证至少一个 LEADER」是**每次事务提交后的不变式**，不是事务内每一时刻的不变式。
+
+**理由**：因 D013.8，转移过程中必然存在短暂的「零个 LEADER」中间状态；该状态位于事务内部，受隔离性保护，对外不可见。任何 immediate 约束都无法表达「至少一个」，这不是实现缺陷而是约束表达能力的边界。
+
+### D013.10 复合外键的匹配与延迟语义
+
+**决定**：批次 1 的全部外键为默认 `NOT DEFERRABLE INITIALLY IMMEDIATE`，且 `requirement.current_revision_id` 这条复合自引用外键**必须**保持 `MATCH SIMPLE`。需求创建固定为同事务三步：插 `requirement`（`current_revision_id = NULL`）→ 插 `requirement_revision` → 回填。
+
+**理由**：实测三步回填在非延迟下全程通过，回填别的需求/别的项目的 revision、删除在用 revision 均被 23503 拒绝；Hibernate 的 flush 顺序（INSERT 先于 UPDATE）天然产出该顺序，无需人工干预。改 `MATCH FULL` 会直接报 `MATCH FULL does not allow mixing of null and nonnull key values`，使回填设计不可能——这条必须写死，避免后来者"顺手加严"。
+
+**后果**：数据库无法证明「每个已提交的需求都有 current revision」（该列永远可为 NULL）。该不变式由 Service 事务保证并由集成测试覆盖，与 D013.9 同类。
+
+### D013.11 约束冲突一律不捕获后继续
+
+**决定**：任何数据库约束冲突（唯一、外键、CHECK、约束触发器）都不得捕获后在同一事务内继续，统一映射为 409/422 并让事务回滚。
+
+**理由**：实测约束触发器错误会使事务进入 25P02，即便加 JDBC savepoint 也会撞 `UnexpectedRollbackException`。该结论与 `ARCHITECTURE §2.3`「约束冲突统一映射为 409/422」原本的规定一致，此处只是给出实测依据并明确禁止"捕获后降级处理"的写法。
+
+### D013.12 前向说明：§2.3 的两个"备选"实际收敛（Phase 6）
+
+**决定**：`ARCHITECTURE §2.3` 关于 Finding 约束触发器给出的两个备选（覆盖父表更新 / 直接拒绝身份列变化）在实测中收敛为同一个——`INITIALLY IMMEDIATE` 下父子协同改写在两种顺序下都失败，只有 `SET CONSTRAINTS ALL DEFERRED` 能完成。此处仅作前向记录，Phase 6 实现时按此设计，不在批次 1 改动文档。
+
+**理由**：避免 Phase 6 的实现者误以为存在两条可选路线而反复试错。
+
+---
+
+**本决策不改变**：16 张表的定义、模块边界、依赖方向（仅收窄 §1.3 对 auth 的措辞）、ArchUnit 五条规则、holdout 纪律，以及 [D001](#d001)–[D012](#d012) 的任何已接受结论。
