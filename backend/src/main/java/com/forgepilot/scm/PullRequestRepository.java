@@ -11,6 +11,16 @@ interface PullRequestRepository extends JpaRepository<PullRequest, Long> {
     Optional<PullRequest> findByProjectIdAndId(long projectId, long id);
 
     /**
+     * A human correction is a read-modify-write too: the audit row's
+     * {@code from_requirement_id} is the value read here, so two concurrent
+     * corrections must not both read the same one. Without the lock they would
+     * record two changes out of the same starting point while only one of them
+     * describes what actually happened.
+     */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    Optional<PullRequest> findWithLockByProjectIdAndId(long projectId, long id);
+
+    /**
      * The ordering rule is a compare-and-write, so the row is locked before its
      * {@code source_updated_at} is read. Without this two concurrent deliveries
      * both read the old value and the later commit wins by accident rather than by

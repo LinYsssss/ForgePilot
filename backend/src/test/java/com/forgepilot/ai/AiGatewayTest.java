@@ -338,10 +338,23 @@ class AiGatewayTest extends PostgresTestBase {
         Throwable thrown = catchThrowable(() -> gateway.chat(promptMarker, null,
                 AiUseCase.IMPLEMENTATION_GUIDANCE, fixture.revisionContext()));
 
-        // ApiExceptionHandler logs a 5xx with exactly this stack trace, and it is
-        // the only logger in the backend. If a payload is not in here, it cannot
-        // reach the application log at all.
+        // The claim this test can support: nothing the gateway raises carries the
+        // payload, so neither ApiExceptionHandler's 5xx log line nor any handler
+        // above it can print one.
+        //
+        // It deliberately does NOT claim the payload can never reach a log. An
+        // exception that escapes to the container is printed by Tomcat with a full
+        // stack trace, outside ApiExceptionHandler entirely — that is a real class
+        // of failure, and an earlier version of the webhook endpoint had it.
+        //
+        // The stack-trace assertion below is weak on its own: `thrown` is a fresh
+        // ApiException with a constant message and no cause, so it would pass for
+        // an implementation that leaked payloads everywhere else. It is kept as a
+        // regression guard for the day someone attaches the provider's response as
+        // a cause, and the assertion that carries real weight is the ai_call_log
+        // one after it.
         assertThat(thrown).isInstanceOf(ApiException.class);
+        assertThat(thrown).hasNoCause();
         assertThat(stackTraceOf(thrown)).doesNotContain(promptMarker, answerMarker);
         assertThat(callLogs.findByProjectIdOrderByIdAsc(fixture.project))
                 .singleElement()

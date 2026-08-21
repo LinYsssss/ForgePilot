@@ -26,10 +26,13 @@ import org.springframework.web.bind.annotation.RestController;
 class RequirementController {
 
     private final RequirementService requirements;
+    private final ImplementationGuidanceService guidance;
     private final UserDirectory users;
 
-    RequirementController(RequirementService requirements, UserDirectory users) {
+    RequirementController(RequirementService requirements, ImplementationGuidanceService guidance,
+            UserDirectory users) {
         this.requirements = requirements;
+        this.guidance = guidance;
         this.users = users;
     }
 
@@ -80,6 +83,17 @@ class RequirementController {
     RequirementDetail assign(@PathVariable long projectId, @PathVariable long requirementId,
             @Valid @RequestBody AssigneeRequest request, Principal principal) {
         return requirements.assign(projectId, userIdOf(principal), requirementId, request.userId());
+    }
+
+    /**
+     * One-shot implementation guidance for the requirement's current revision.
+     * POST rather than GET because it spends a provider call: it is neither safe
+     * nor cacheable, and nothing about it is stored to read back later.
+     */
+    @PostMapping("/{requirementId}/guidance")
+    ImplementationGuidance generateGuidance(@PathVariable long projectId,
+            @PathVariable long requirementId, Principal principal) {
+        return guidance.generate(projectId, userIdOf(principal), requirementId);
     }
 
     /**

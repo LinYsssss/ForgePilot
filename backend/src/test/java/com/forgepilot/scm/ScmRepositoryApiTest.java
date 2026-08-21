@@ -233,6 +233,45 @@ class ScmRepositoryApiTest extends ScmTestBase {
         assertThat(body.path("reviewInputFingerprint").asString()).isEqualTo("fingerprint");
     }
 
+    /**
+     * The correction endpoint over the real filter chain, including the clear.
+     * What each refusal means is asserted one layer down in
+     * {@code PullRequestAssociationTest}; this proves the route, the CSRF-protected
+     * PUT and the JSON body actually reach it.
+     */
+    @Test
+    void aLeaderCorrectsThePullRequestsRequirementOverHttp() throws Exception {
+        Client leader = register();
+        Client developer = register();
+        long project = leader.post("/api/projects", """
+                {"name": "Correctable"}""").path("id").asLong();
+        leader.post("/api/projects/" + project + "/members", """
+                {"username": "%s", "role": "DEVELOPER"}""".formatted(developer.username));
+        long repository = connect(leader, project, "correct-" + SEQUENCE.incrementAndGet(), INSTANCE);
+        long pullRequest = insertPullRequest(project, repository, 7);
+        long requirement = leader.post("/api/projects/" + project + "/requirements", """
+                {"title": "Log in", "acceptanceCriteria": [{"text": "A wrong password is rejected."}]}""")
+                .path("id").asLong();
+
+        String path = "/api/projects/" + project + "/pull-requests/" + pullRequest + "/requirement";
+
+        JsonNode linked = leader.put(path, """
+                {"requirementId": %d, "reason": "The branch named nothing."}""".formatted(requirement));
+        assertThat(linked.path("requirementId").asLong()).isEqualTo(requirement);
+
+        // Clearing is a correction too, and null is the way the contract expresses it.
+        JsonNode cleared = leader.put(path, """
+                {"requirementId": null, "reason": "It implements nothing tracked."}""");
+        assertThat(cleared.path("requirementId").isNull()).isTrue();
+
+        assertThat(jdbc.queryForObject("select count(*) from pull_request_requirement_event "
+                + "where pull_request_id = ? and actor_type = 'USER'", Integer.class, pullRequest))
+                .isEqualTo(2);
+
+        developer.putExpecting(path, """
+                {"requirementId": %d}""".formatted(requirement), status().isForbidden());
+    }
+
     // ------------------------------------------------------------------ helpers
 
     /** Everything the caller can compare, which is the body minus the per-response traceId. */
@@ -335,6 +374,16 @@ class ScmRepositoryApiTest extends ScmTestBase {
         private MvcResult patchExpecting(String path, String payload, ResultMatcher expected)
                 throws Exception {
             return mockMvc.perform(write(MockMvcRequestBuilders.patch(path), payload))
+                    .andExpect(expected).andReturn();
+        }
+
+        private JsonNode put(String path, String payload) throws Exception {
+            return body(putExpecting(path, payload, status().is2xxSuccessful()));
+        }
+
+        private MvcResult putExpecting(String path, String payload, ResultMatcher expected)
+                throws Exception {
+            return mockMvc.perform(write(MockMvcRequestBuilders.put(path), payload))
                     .andExpect(expected).andReturn();
         }
 

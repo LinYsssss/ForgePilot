@@ -180,6 +180,24 @@ requirement/  新增 RequirementDirectory（只读 facade，供 scm 用，D015.6
 - `scm.github` 是子包白名单允许的两个之一（ArchUnit 规则 6），其余一律直接放在 feature 包下。
 - `ChunkSearchRepository` 是**唯一**允许出现 `::vector` 与 `<=>` 的地方（[D015.4](../../../docs/v2/DECISIONS.md#d015)）。
 
+## 4.1 批次 2 新增的两个端点（供 Phase 7 前端冻结形状）
+
+```text
+PUT  /api/projects/{projectId}/pull-requests/{pullRequestId}/requirement
+     body {requirementId: number|null, reason?: string}   仅 LEADER
+     同事务写一条 pull_request_requirement_event(actor_type=USER)
+     置空是合法纠正，同样留痕；无变化的纠正被 ck_..._is_a_change 拒为 409
+     外项目 requirementId → 422，与从未存在的 id 字节相同
+
+POST /api/projects/{projectId}/requirements/{requirementId}/guidance
+     一次性实现建议；不落表、不建会话、无 SSE
+     LEADER 恒可；DEVELOPER 仅限指派给自己的需求（PRD §3）
+```
+
+**P1 的 DEVELOPER 半条未实现**：「本人 PR 且当前 head 尚无人工终局 Decision」——
+批次 2 没有 `review`，「尚无终局」无法表达，写一个恒答「没有」的判断会**多授权**。
+只有 LEADER 能到达该端点，已写进 service javadoc，且必须在 `result.md` 记为部分实现。
+
 ## 5. 测试策略
 
 **必须有的集成测试**（真实 PostgreSQL + JDK HTTP 服务器，无凭据）：

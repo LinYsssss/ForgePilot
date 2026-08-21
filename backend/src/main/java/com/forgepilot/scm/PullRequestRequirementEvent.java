@@ -17,9 +17,9 @@ import org.hibernate.annotations.CreationTimestamp;
  * same transaction as the change itself (D007).
  *
  * <p>The table records changes only, so a row with neither side or with both sides
- * equal is refused by a CHECK. Batch 2 only ever writes the {@code SYSTEM} row for
- * the automatic {@code REQ-<n>} link at ingestion; manual correction is a later
- * phase and would write {@code USER} rows through the same table.
+ * equal is refused by a CHECK. Two producers write it through the same table: the
+ * automatic {@code REQ-<n>} link at ingestion writes a {@code SYSTEM} row, and a
+ * human correction writes a {@code USER} row naming the account that made it.
  */
 @Entity
 @Table(name = "pull_request_requirement_event")
@@ -74,6 +74,19 @@ public class PullRequestRequirementEvent {
             String reason) {
         return new PullRequestRequirementEvent(projectId, pullRequestId, null, toRequirementId,
                 ScmActorType.SYSTEM, null, reason);
+    }
+
+    /**
+     * A person corrected the association (PRD P1, D007). {@code actorUserId} is
+     * mandatory in practice, not by this signature: the CHECK on the table refuses
+     * a USER row without one, so an anonymous human correction cannot be stored.
+     * Either side may be null — clearing the link is a correction like any other —
+     * but not both, and not two equal sides.
+     */
+    static PullRequestRequirementEvent userCorrection(Long projectId, Long pullRequestId,
+            Long fromRequirementId, Long toRequirementId, Long actorUserId, String reason) {
+        return new PullRequestRequirementEvent(projectId, pullRequestId, fromRequirementId,
+                toRequirementId, ScmActorType.USER, actorUserId, reason);
     }
 
     public Long getId() {
