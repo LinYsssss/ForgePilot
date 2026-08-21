@@ -29,38 +29,80 @@ web layer.
 
 - Migration files live in `backend/src/main/resources/db/migration` and follow
   the naming rule in `ARCHITECTURE.md` §2.4.
-- `V1__foundation.sql` is the only migration and contains only
-  `CREATE EXTENSION IF NOT EXISTS vector`. It deliberately contains no business
-  table, index, trigger, or seed row; each vertical phase adds its own tables
-  when that phase is authorized.
+- `V1__foundation.sql` contains only `CREATE EXTENSION IF NOT EXISTS vector` —
+  no business table, index, trigger, or seed row. Batch 1 added
+  `V2__auth_project.sql` (`user_account`, `project`, `project_member`) and
+  `V3__requirement.sql` (`requirement`, `requirement_revision`,
+  `acceptance_criterion`). The remaining ten of the sixteen tables arrive with
+  the phase that uses them.
+- **No migration carries seed rows.** The first account is created through
+  `POST /api/auth/register`, so no password ever lives in the repository.
 - Flyway derives the history `description` from the file name, and
-  `FoundationDatabaseTest` asserts version `1` with description `foundation`
-  and `success = true`. Renaming an applied migration breaks both that test and
-  every existing database.
+  `FoundationDatabaseTest` asserts the full history — `1:foundation`,
+  `2:auth project`, `3:requirement` — all successful, plus the exact set of
+  base tables in `public`. Renaming an applied migration breaks both that test
+  and every existing database.
 - Migrations are append-only. Never edit or renumber an applied migration; add
   the next version instead.
+- No `ON DELETE` clause is declared anywhere. `ARCHITECTURE.md` §2.3 defines
+  deletion semantics only for `pull_request.author_user_id`; everywhere else a
+  hard delete is meant to be refused by the foreign key until a phase decides
+  what deletion means.
 - The role that runs Flyway must be allowed to create the `vector` extension.
   The Testcontainers database and the Compose database both run as the image's
   bootstrap superuser; a deployment with a restricted application role has to
   solve extension creation before startup, not by weakening the migration.
+
+## Entities over composite foreign keys
+
+Every project-scoped foreign key carries `project_id`, so almost every
+association repeats a column that is already mapped. Hibernate 7 **refuses to
+start** on the natural spelling, with `AnnotationException: ... mix insertable
+with 'insertable=false'` or `MappingException: Column 'project_id' is
+duplicated in mapping`.
+
+The project-wide answer is [D013.1](../../../docs/v2/DECISIONS.md#d013)
+variant A, and it is not optional: **write through a scalar `Long xxxId`, and
+mark every `@JoinColumn` of the association `insertable = false, updatable =
+false`.** `Requirement.currentRevision` is the worked example — a three-column
+self-referencing key that proves same project, correct parent and existence in
+one constraint.
+
+Two consequences follow from the same decision:
+
+- `requirement.current_revision_id` stays nullable and its foreign key stays
+  `MATCH SIMPLE` and `NOT DEFERRABLE`. Creating a requirement is therefore a
+  three-step write in one transaction: insert the requirement with a null
+  pointer, insert revision 1, then backfill. Hibernate's flush order (inserts
+  before updates) produces exactly that; do not "tighten" the key to
+  `MATCH FULL`, which makes the design impossible.
+- A partial unique index (`... WHERE role = 'LEADER'`) cannot be deferred, and a
+  single-statement `UPDATE ... CASE` swap succeeds or fails depending on
+  physical scan order. Transferring the LEADER role is always **demote →
+  `flush()` → promote** inside one transaction, with the `project` row locked
+  first so concurrent transfers serialise and the loser re-reads its own role.
 
 ## Database tests
 
 Database behavior is proven against a real PostgreSQL with pgvector, never a
 substitute:
 
-- `FoundationDatabaseTest` starts
-  `pgvector/pgvector:0.8.6-pg15-bookworm` through Testcontainers, declared with
+- `PostgresTestBase` owns one `pgvector/pgvector:0.8.6-pg15-bookworm` container
+  for the whole test run, declared with
   `DockerImageName.parse(IMAGE).asCompatibleSubstituteFor("postgres")` because
-  the image is not the official `postgres` name.
+  the image is not the official `postgres` name. Database tests extend it
+  instead of declaring their own container.
 - Container coordinates are injected with `@DynamicPropertySource` into
   `spring.datasource.url/username/password`. Use the same mechanism for new
   database tests instead of adding a second wiring style.
-- The test asserts the runtime facts, not just that the context started:
-  `server_version_num >= 150000`, the `vector` extension is installed, a
-  `<->` distance query returns the expected value, the Flyway history row is
-  successful, and `public` contains no base table other than
-  `flyway_schema_history`.
+- `FoundationDatabaseTest` asserts the runtime facts, not just that the context
+  started: `server_version_num >= 150000`, the `vector` extension is installed,
+  a `<->` distance query returns the expected value, the whole Flyway history is
+  successful, and `public` contains exactly the migrated tables.
+- `DatabaseConstraintTest` asserts that each constraint actually rejects, by
+  writing through `JdbcTemplate` **below** any application code and naming the
+  SQLState it expects (`23505`, `23503`, `23514`). A constraint that is only
+  ever enforced by a service is not enforced.
 
 Forbidden in database tests: H2 or any in-memory replacement, a "skip when
 Docker is missing" branch, `@Disabled`, and `assumeTrue` guards. A database

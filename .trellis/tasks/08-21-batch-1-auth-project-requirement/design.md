@@ -101,6 +101,7 @@ requirement/  RequirementController · RequirementService · Requirement · Requ
 `ProjectAccessService` 是唯一入口，暴露形如 `requireRole(projectId, userId, ProjectRole...)` 的方法，返回成员身份或抛出。约定：
 
 - Controller 从登录上下文取 `userId`（`ARCHITECTURE.md` §1.3），作为参数传入 Service；业务 Service 不接触 Spring Security。
+- 具体形态：`project` / `requirement` 的 Controller 接收 JDK 的 `java.security.Principal`，再经 `auth` 的只读 `UserDirectory.byUsername` 换成 `userId`。这样业务模块既不 import Spring Security，也不依赖 `auth` 的认证机制，只用到 [D013.6](../../../docs/v2/DECISIONS.md#d013) 明确放行的只读 facade。代价是每个请求多一次按唯一索引的账户查询，MVP 接受。
 - 项目角色**不进入** Spring Security 的全局权限体系——角色是项目内概念，全局权限只区分「已认证/未认证」。
 - **不存在的资源与无权访问的资源返回同一种结果**，避免通过状态码差异探测跨项目资源是否存在。
 
@@ -148,10 +149,12 @@ Hibernate 的 flush 顺序（INSERT 先于 UPDATE）天然产出该顺序，实�
 
 ## 8. API 形态
 
-项目内资源一律带 `projectId` 段（§2.4）：
+项目内资源一律带 `projectId` 段（§2.4）。**请求体、响应体、校验规则与状态机入口的完整契约见
+[`api-contract.md`](./api-contract.md)**，前后端共用同一份，避免各写各的形状：
 
 ```text
-POST   /api/auth/login              POST /api/auth/logout        GET /api/auth/me
+POST   /api/auth/register           POST /api/auth/login         POST /api/auth/logout
+GET    /api/auth/me                 POST /api/auth/password
 GET    /api/projects                POST /api/projects
 GET    /api/projects/{projectId}
 GET    /api/projects/{projectId}/members
@@ -166,6 +169,9 @@ POST   /api/projects/{projectId}/requirements/{id}/status      # READY / DONE / 
 POST   /api/projects/{projectId}/requirements/{id}/assignee
 GET    /api/projects/{projectId}/requirements/{id}/revisions
 ```
+
+`register` 与 `password` 是规划期补入的：AC2 要求「可注册或由种子数据获得账户」并要求「改密码后其它会话失效」，
+而 `.trellis/spec/backend/database-guidelines.md` 不允许迁移里放种子行，注册接口是不新增结构的那个解。
 
 错误响应用 `common` 的统一 `{code, message, traceId}`；约束冲突映射 409/422（[D013.11](../../../docs/v2/DECISIONS.md#d013)），**不捕获后在同一事务内继续**——实测约束触发器错误会使事务进入 25P02，savepoint 也救不回来。
 
