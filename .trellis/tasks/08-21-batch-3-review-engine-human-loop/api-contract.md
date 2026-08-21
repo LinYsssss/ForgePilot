@@ -202,7 +202,15 @@ PRD §5 只说「**仅** `continuity=SUPPRESSED` 的继承驳回项，须留审�
 
 ## 6. 待研究回填
 
-- **Review activity 的 8 个值**（`REVIEW_REQUIRED/FAILED/CHANGES_REQUESTED/REVIEWING/PENDING/MIXED/APPROVED/NO_PR`）
-  出现在哪个响应体的哪个字段、以及判定顺序——等 `research/review-activity-matrix.md`。
-- 三个一级页面的具体路由与 Review/Finding 的挂载位置——等 `research/frontend-phase7-gap.md`。
+- **Review activity 的值域已核实为两层**（见 `research/review-activity-matrix.md`，我已逐字核对 `DECISIONS.md:122`）：
+  单 PR 只有 6 个值 `REVIEW_REQUIRED/FAILED/CHANGES_REQUESTED/REVIEWING/PENDING/APPROVED`；
+  `NO_PR` 与 `MIXED` **只属于需求级聚合**。
+  `IMPLEMENTATION-PLAN.md:73` 那个 8 值清单是两层值域的**并集**，不是一层的值域。
+  **把它实现成一个 8 值枚举按 PR 算是错的。** 具体字段与计算归属见 `design.md`。
+- **三个一级页面已核实**（我自己读了 `frontend/src/app/routes.ts`）：
+  `项目 / 研发需求 / 代码审查`。**`/reviews` 就是第三个一级页面本身**，不是挂在别人下面的子页面——
+  本文早先的相反说法已作废。Finding 确实无独立路由，必须长在 `/reviews/:id` 内。
+  `/reviews`、`/reviews/:id`、`/projects/:id/settings` 目前**三个都是 `FoundationPlaceholderPage`**。
 - fencing 相关列的确切名字与类型——等 `research/fencing-and-concurrency-measured.md`。
+- 约束触发器的确切形态——等 `research/finding-constraint-trigger-measured.md`。
+- after-commit 调度形态——等 `research/after-commit-scheduling-measured.md`。
