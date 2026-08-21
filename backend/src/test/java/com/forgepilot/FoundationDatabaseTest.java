@@ -2,7 +2,6 @@ package com.forgepilot;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 
@@ -11,26 +10,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.health.actuate.endpoint.HealthEndpoint;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.test.context.DynamicPropertyRegistry;
-import org.springframework.test.context.DynamicPropertySource;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
-import org.testcontainers.postgresql.PostgreSQLContainer;
-import org.testcontainers.utility.DockerImageName;
 
-@Testcontainers
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
-class FoundationDatabaseTest {
+class FoundationDatabaseTest extends PostgresTestBase {
 
-    private static final String IMAGE = "pgvector/pgvector:0.8.6-pg15-bookworm";
-
-    @Container
-    static final PostgreSQLContainer POSTGRES = new PostgreSQLContainer(
-            DockerImageName.parse(IMAGE).asCompatibleSubstituteFor("postgres"))
-            .withDatabaseName("forgepilot")
-            .withUsername("forgepilot")
-            .withPassword("forgepilot")
-            .withStartupTimeout(Duration.ofMinutes(3));
+    /** Batch 1 owns exactly these; the remaining ten tables arrive with their own phase. */
+    private static final List<String> EXPECTED_TABLES = List.of(
+            "acceptance_criterion", "project", "project_member",
+            "requirement", "requirement_revision", "user_account");
 
     @Autowired
     private JdbcTemplate jdbc;
@@ -38,15 +25,8 @@ class FoundationDatabaseTest {
     @Autowired
     private HealthEndpoint healthEndpoint;
 
-    @DynamicPropertySource
-    static void datasourceProperties(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url", POSTGRES::getJdbcUrl);
-        registry.add("spring.datasource.username", POSTGRES::getUsername);
-        registry.add("spring.datasource.password", POSTGRES::getPassword);
-    }
-
     @Test
-    void cleanPostgresHasVectorAndOnlyFlywayMetadata() {
+    void postgresHasVectorAndOnlyTheMigratedTables() {
         Integer version = jdbc.queryForObject("select current_setting('server_version_num')::integer", Integer.class);
         assertThat(version).isGreaterThanOrEqualTo(150000);
 
@@ -62,12 +42,17 @@ class FoundationDatabaseTest {
                         + "where table_schema = 'public' and table_type = 'BASE TABLE' "
                         + "and table_name <> 'flyway_schema_history' order by table_name",
                 String.class);
-        assertThat(tables).isEmpty();
+        assertThat(tables).containsExactlyElementsOf(EXPECTED_TABLES);
+    }
 
-        Map<String, Object> migration = jdbc.queryForMap(
-                "select version, description, success from flyway_schema_history where version = '1'");
-        assertThat(migration.get("description")).isEqualTo("foundation");
-        assertThat(migration.get("success")).isEqualTo(true);
+    @Test
+    void everyMigrationApplied() {
+        List<Map<String, Object>> history = jdbc.queryForList(
+                "select version, description, success from flyway_schema_history order by installed_rank");
+
+        assertThat(history).extracting(row -> row.get("version") + ":" + row.get("description"))
+                .containsExactly("1:foundation", "2:auth project", "3:requirement");
+        assertThat(history).allSatisfy(row -> assertThat(row.get("success")).isEqualTo(true));
     }
 
     @Test
