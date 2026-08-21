@@ -1,0 +1,41 @@
+:root {
+  color-scheme: light;
+  /* Precision Review Console: cool neutral surfaces with distinct semantic roles. */
+  --fp-color-canvas: #f1f5f7;
+  --fp-color-surface: #ffffff;
+  --fp-color-surface-muted: #e8eef2;
+  --fp-color-surface-strong: #17242e;
+  --fp-color-text: #17242e;
+  --fp-color-text-muted: #526372;
+  --fp-color-text-inverse: #f5f8fa;
+  --fp-color-text-inverse-muted: #b8c7d0;
+  --fp-color-text-inverse-nav: #c6d3da;
+  --fp-color-surface-header-hover: #263945;
+  --fp-color-surface-header-active: #28474b;
+  --fp-color-accent-inverse: #9ce2d4;
+  --fp-color-border: #c4d0d8;
+  --fp-color-accent: #176d70;
+  --fp-color-focus: #b94f1e;
+  --fp-color-foundation: #39785e;
+  /* Semantic status and diff roles are a contract-first set required by PRD R5;
+     business state components consume them from Phase 2 onward. */
+  --fp-color-info: #2d6fa3;
+  --fp-color-warning: #9a6415;
+  --fp-color-danger: #a43f3b;
+  --fp-color-success: #39785e;
+  --fp-color-diff-added: #1f704f;
+  --fp-color-diff-removed: #a43f3b;
+  --fp-font-sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --fp-font-mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  --fp-space-1: 0.25rem;
+  --fp-space-2: 0.5rem;
+  --fp-space-3: 0.75rem;
+  --fp-space-4: 1rem;
+  --fp-space-6: 1.5rem;
+  --fp-space-8: 2rem;
+  --fp-space-12: 3rem;
+  --fp-radius-sm: 0.375rem;
+  --fp-radius-md: 0.5rem;
+  --fp-shadow-panel: 0 0.25rem 1rem rgb(23 36 46 / 7%);
+  --fp-duration-fast: 140ms;
+}

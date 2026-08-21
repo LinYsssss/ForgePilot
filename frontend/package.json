@@ -1,0 +1,31 @@
+{
+  "name": "forgepilot-frontend",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "engines": {
+    "node": ">=24.15.0 <25"
+  },
+  "scripts": {
+    "dev": "vite",
+    "lint": "node scripts/lint.mjs",
+    "typecheck": "vue-tsc --noEmit -p tsconfig.app.json",
+    "test": "vitest",
+    "build": "vue-tsc --noEmit -p tsconfig.app.json && vite build"
+  },
+  "dependencies": {
+    "vue": "3.5.41",
+    "vue-router": "5.2.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "6.0.8",
+    "@types/node": "24.13.1",
+    "@vue/compiler-sfc": "3.5.41",
+    "@vue/test-utils": "2.4.11",
+    "jsdom": "30.0.1",
+    "typescript": "6.0.2",
+    "vite": "8.2.1",
+    "vitest": "4.1.11",
+    "vue-tsc": "3.3.10"
+  }
+}

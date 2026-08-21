@@ -6,7 +6,8 @@
 
 ## Overview
 
-This directory contains guidelines for frontend development. Fill in each file with your project's specific conventions.
+This directory contains executable frontend conventions for the selected
+Precision Review Console direction.
 
 ---
 
@@ -14,25 +15,23 @@ This directory contains guidelines for frontend development. Fill in each file w
 
 | Guide | Description | Status |
 |-------|-------------|--------|
-| [Directory Structure](./directory-structure.md) | Module organization and file layout | To fill |
-| [Component Guidelines](./component-guidelines.md) | Component patterns, props, composition | To fill |
-| [Hook Guidelines](./hook-guidelines.md) | Custom hooks, data fetching patterns | To fill |
-| [State Management](./state-management.md) | Local state, global state, server state | To fill |
-| [Quality Guidelines](./quality-guidelines.md) | Code standards, forbidden patterns | To fill |
-| [Type Safety](./type-safety.md) | Type patterns, validation | To fill |
+| [Design Contract](./design-contract.md) | Precision Review Console tokens and drift gate | Active |
+| [Motion Contract](./motion.md) | Motion and reduced-motion behavior | Active |
+| [Directory Structure](./directory-structure.md) | Module organization and file layout | Active |
+| [Component Guidelines](./component-guidelines.md) | Component patterns, props, composition | Active |
+| [Hook Guidelines](./hook-guidelines.md) | Composables and request boundary | Active |
+| [State Management](./state-management.md) | Local, URL, and future server state | Active |
+| [Quality Guidelines](./quality-guidelines.md) | Code standards, accessibility, drift | Active |
+| [Type Safety](./type-safety.md) | TypeScript and boundary types | Active |
 
 ---
 
-## How to Fill These Guidelines
+## How these guidelines evolve
 
-For each guideline file:
-
-1. Document your project's **actual conventions** (not ideals)
-2. Include **code examples** from your codebase
-3. List **forbidden patterns** and why
-4. Add **common mistakes** your team has made
-
-The goal is to help AI assistants and new team members understand how YOUR project works.
+These files describe the conventions the Phase 1 frontend actually implements.
+Update the relevant guide in the same change that introduces a new convention,
+token, or boundary, and reference the real file that demonstrates it. A rule
+that no code follows does not belong here; remove it or implement it.
 
 ---
 
