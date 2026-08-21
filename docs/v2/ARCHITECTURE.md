@@ -55,13 +55,17 @@ review/  ReviewController · ReviewService · ReviewRepository · Review · Find
 
 ```text
 common   ←  auth, project, ai
-common, project                              ←  scm
+common, project, requirement                 ←  scm
 common, project, ai                          ←  knowledge
 common, project, knowledge, ai               ←  requirement
 common, project, scm, knowledge, requirement, ai  ←  review
 ```
 
 - 业务模块**不依赖 auth**：Controller 从登录上下文取 `userId` 后作为参数传入业务 Service。
+  该措辞按 [D013.6](./DECISIONS.md#d013) 收窄为「不依赖 auth 的**认证机制**」；账户展示信息经 `auth` 的只读 Query facade 读取。
+- `scm` 依赖 `requirement` **仅限只读 Query facade**（[D015.6](./DECISIONS.md#d015)）：`REQ-<n>` 必须按 PR 所属项目解析，
+  且解析失败不得阻断入库，而复合外键只会让整条插入失败、捕获后继续又被 [D013.11](./DECISIONS.md#d013) 禁止，
+  因此解析必须发生在写入之前。方向上无环（`requirement` 不依赖 `scm`），且 `scm` 仍**不得**注入 `RequirementRepository`。
 - `scm` **不调用** `review`：`scm` 发布进程内 `PullRequestChanged`，`review` 监听。
 - `requirement` 可调用 `knowledge` 创建文档；`knowledge` 永不反查 requirement（只收不透明 scope id）。
 - `review` 是唯一跨模块编排者，但**不得访问外模块 Repository**，只经对方 Service/Query facade。

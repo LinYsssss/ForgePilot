@@ -264,3 +264,139 @@ Phase 8 单独且最后               GitLab + 正式评测与答辩
 **后果**：编排会话同时是实现者与评审者，独立性因此弱于外部评审。作为补偿，评审标准以**可复现的命令与
 真实输出**为准，不接受"我认为没问题"；批次 1 已按此执行——AC11 因缺少自动化浏览器点击闭环而被记为
 **部分通过**，而不是凑成全绿。用户随时可以收回该委托。
+
+---
+
+## D015 批次 2 实现裁定（结构性部分）
+
+**背景**：批次 2 的三份研究（`.trellis/tasks/08-21-batch-2-ai-knowledge-scm/research/`）提出 28 条开放问题，
+其中 `pgvector-hibernate-measured.md` 在真实 PostgreSQL 15.19 + pgvector 0.8.6 + Hibernate 7.4.1 上实测了
+本批次最危险的几条。本决策只裁定**会改变迁移结构或模块边界**的部分；其余属实现细节，由 `design.md` 承担。
+
+**总判据**（沿用 [D013](#d013)）：优先零新增表、零新增抽象的可行解；只有当简单解让两条权威规定互相矛盾
+或根本跑不起来时才升级，并说明为什么简单解不成立。**以下裁定不新增第 17 张表。**
+
+### D015.1 `ai_call_log.review_id` 先建列、不建外键，批次 3 补
+
+**决定**：`ai_call_log` 在批次 2 的迁移中建出 `review_id BIGINT`（可空），**暂不建**
+`(project_id, review_id) -> review(project_id, id)` 复合外键。批次 3 建 `review` 表的迁移里用
+`ALTER TABLE ... ADD CONSTRAINT` 补上该外键。迁移中必须写明这不是遗漏。
+
+**理由**：`ai_call_log` 属 Phase 4，`review` 属 Phase 6，被引用表还不存在，外键无法建立。
+三个备选各有硬伤：把 `ai_call_log` 推迟到 Phase 6 会让 Phase 4 的 AI 调用无处留痕，
+与「评测与故障定位」的建表目的直接矛盾；建一张过渡表是新增第 17 张表；不建这一列则 Phase 6 要改已应用的迁移。
+Flyway 追加式补外键是标准做法，不违反「迁移只增不改」。
+
+**后果**：批次 2 期间 `review_id` 不受数据库约束。暴露面为零——本批次没有任何代码写它，
+且 `review` 表尚不存在，任何非空值都必然是错的。批次 3 补外键前必须先断言该列此刻全为 NULL。
+
+### D015.2 `requirement_attachment.requirement_id` 必须 NOT NULL（实测承重）
+
+**决定**：`requirement_attachment.requirement_id` 与 `document_id` 均为 `NOT NULL`。
+
+**理由**：实测（研究 §3j）——`(project_id, document_id, requirement_id) -> knowledge_document(project_id, id,
+source_requirement_id)` 这条三列外键在 `MATCH SIMPLE` 下，**只要子表 `requirement_id` 可空，整条检查就蒸发**，
+一个根本不存在的 `document_id` 也能直接落库。该外键正是 [D005](#d005) 附件归属的唯一执行者，
+可空等于把它变成装饰。同一实测确认：父表 `knowledge_document` 必须有 `UNIQUE(project_id, id,
+source_requirement_id)`，且公共知识（`source_requirement_id IS NULL`）**无法**被挂成附件（23503）——
+这正是 D005 要的行为，且把父唯一键改成 `NULLS NOT DISTINCT` 也救不回来（§3l）。
+
+### D015.3 批次 2 不建向量索引；维度只加"自洽 CHECK"，真正的防线在应用层
+
+**决定**：批次 2 **不**创建任何向量索引。`knowledge_chunk` 增加一条**不绑定具体维度**的 CHECK：
+
+```sql
+CONSTRAINT ck_knowledge_chunk_dimension
+    CHECK (embedding IS NULL OR dimension = vector_dims(embedding))
+```
+
+写入前的维度一致性校验由应用层承担，并且必须有显式失败的测试。
+
+**理由**：实测（§2a–2c）——无维度列上 `ivfflat`/`hnsw` 一律 `22023: column does not have dimensions`，
+所以 [D001](#d001)「不绑维度」与「建向量索引」在批次 2 无法同时成立；表达式索引是 Phase 4 之后的出路（§2f）。
+更关键的实测（§1k）：**无维度列在建索引之前，数据库完全不校验维度**，同一项目内混入一行错维度向量，
+该项目**所有** TopK 查询立刻 `22000: different vector dimensions` 失败——一行脏数据毒死整个项目的检索。
+上面这条 CHECK 只保证「声明的维度与实际向量自洽」，挡不住"整列声明成同一个错维度"，
+因此 `ARCHITECTURE.md` §5「应用层写入时校验维度」**不是可选纪律，而是唯一防线**，必须这样写进 spec。
+好消息：`project_id` 硬过滤在排序表达式之前求值（§1l），别的项目污染不了本项目。
+
+### D015.4 `knowledge_chunk.embedding` 不映射进实体
+
+**决定**：`KnowledgeChunk` 实体**不映射** `embedding` 列。向量的写入与 TopK 检索一律走带 `::vector` cast 的
+原生 SQL，集中在一个 Repository 里。不引入 `hibernate-vector` 依赖。
+
+**理由**：实测（§6b–6g）四种写法：不映射 ✅ 启动并运行正常；`String` ❌ 启动即失败；
+`String + columnDefinition="vector"` ⚠️ **validate 放行、运行时才炸 42804**（最危险的一种，明确禁止）；
+`@JdbcTypeCode(SqlTypes.VECTOR) float[]` ✅ 功能完整但需要新增 `hibernate-vector` 依赖。
+同时实测确认 **`ddl-auto: validate` 只检查"实体映射到的列"，未映射的列它根本不看**，所以不映射不会破坏启动期校验。
+选不映射的理由：TopK 检索本来就必须用原生 `<->`/`<=>` 运算符，映射了也绕不开；
+向量不是 Java 侧要操作的领域状态，而是检索载荷；零依赖增量符合本项目的既定纪律。
+
+**后果**：`embedding` 列不受 `validate` 保护，实体与 schema 在这一列上的漂移不会在启动期暴露。
+代价由那个唯一的原生 SQL Repository 的集成测试承担。若 Phase 6 确实需要在 HQL 里做向量运算，
+再带决策引入 `hibernate-vector`（版本由 Boot 4.1.0 管理，无需写 `<version>`）。
+
+### D015.5 孤立代理项必须在应用层拒绝（实测破口）
+
+**决定**：写入任何文本列之前，应用层必须拒绝含孤立 UTF-16 代理项的文本（用 `CharsetEncoder` 或等价校验），
+并作为显式失败纳入 Phase 4 退出条件的测试。
+
+**理由**：实测（§7i–7n）——NUL 字节（`22021`）、非法字节序列（`22021`）都由数据库显式拒绝，
+但**孤立代理项被 PgJDBC 的编码器静默替换成 `?`**：`javaIn=[0061 d800 0062]` 落库成 `613f62`，
+往返不等，数据库收到的是合法 UTF-8，`22021` 永远不会触发。这是 Phase 4
+「非法输入必须显式失败而不是损坏数据」在实测中**唯一**的破口，数据库无从拦截。
+同时记录另一条实测：`varlena` 的 1 GB 上限在本项目量级上不是防线（600 MB 文本真的落库成功），
+`ARCHITECTURE.md` §7.2 的「单文件 5 MB + `KnowledgeUploadValidator`」是唯一真实的大小约束。
+
+### D015.6 `scm` 可依赖 `requirement` 的只读查询 facade，§1.3 相应收窄
+
+**决定**：`ARCHITECTURE.md` §1.3 的依赖行由 `common, project ← scm` 改为
+**`common, project, requirement ← scm`**。`requirement` 对外只暴露一个只读 Query facade
+（按 `(projectId, requirementId)` 判断存在性并返回展示所需的最小信息），`scm` 只能用它，
+**不得**注入 `RequirementRepository`（ArchUnit 规则 4 仍然生效）。
+
+**理由**：[D013.2](#d013) 要求 `REQ-<n>` 按 PR 所属项目解析，外项目 id 解析不到即「未关联需求」；
+而 [D007](#d007)/P1 要求解析失败**不阻断入库**。数据库复合外键做不到这件事：它只会让整条插入失败，
+而捕获约束冲突后继续正是 [D013.11](#d013) 明令禁止的。因此解析必须在写入之前完成，
+`scm` 必须能问「这个 id 在本项目存在吗」。**方向上无环**：`requirement` 不依赖 `scm`，
+`review` 本就同时依赖两者。本裁定与 [D013.6](#d013) 为 `auth.UserDirectory` 所做的收窄同型，
+不改动 ArchUnit 五条既有规则。
+
+### D015.7 changed-file manifest 与 patch 存 `pull_request` 的 JSONB 列
+
+**决定**：changed-file manifest 与各文件 patch 以 JSONB 列存在 `pull_request` 行上，不新增表。
+写入前施加明确的大小上限，超限显式失败并在 PR 行上标记，**不静默截断**。
+
+**理由**：`IMPLEMENTATION-PLAN.md` Phase 5 明文要求「**保存** …changed files、patch 和确定性
+`review_input_fingerprint`」。不存则 fingerprint 的输入无法从数据库复现，
+「PR 权威快照」就不成其为快照，Phase 6 的幂等与历史语义会失去依据；单独建表是第 17 张表，被门槛挡住。
+JSONB 让一个 PR 仍是一行，且与 `review_input_fingerprint` 同事务写入。
+[D002](#d002)「未审查文件必须显式呈现，禁止静默截断」的精神在此同样适用于超限 patch。
+
+### D015.8 无凭据测试形态固定为 JDK 自带 HTTP 服务器
+
+**决定**：AI Gateway 与 GitHub Provider 的自动化测试一律打到 `com.sun.net.httpserver.HttpServer`
+（`jdk.httpserver`，随构建镜像的 JDK 21 自带）或 `MockRestServiceServer`（已随
+`spring-boot-starter-test` 在 classpath 上）。**不新增 WireMock / MockWebServer / MockServer 依赖。**
+GitHub 客户端的 base URI **必须**取自 `scm_repository.api_base`，**禁止硬编码 host**。
+
+**理由**：两份研究分别核对了 `backend/pom.xml` 与 `~/.m2`：`jdk.httpserver@21.0.11` 与
+`MockRestServiceServer` 都已可用，WireMock/MockWebServer 都不在，新增即是新增依赖，
+而 `quality-guidelines.md` 要求新增门槛必须举出它能挡住的真实故障——此处举不出。
+JDK 服务器是真实 socket，能证明超时真的触发、能计数从而证明「恰好重试一次」、
+能返回畸形 JSON 驱动失败分类，这些都是 `MockRestServiceServer` 做不到的。
+「不硬编码 host」这一条同时满足两个目的：[D010](#d010) 要求支持自建实例，而 `api_base` 正好就是测试接缝——
+生产需求与可测性在这里是同一件事。
+
+### D015.9 [D013.11](#d013) 的实测边界修正
+
+**决定**：D013.11「约束冲突一律不捕获后继续」的结论**不变**，但其理由需精确化：
+实测（§5f–5i）确认约束触发器错误使事务进入 `25P02` 后，**SQL 层的 `SAVEPOINT` 可以救回，JPA 层不行**。
+
+**理由**：批次 1 的表述是「即便加 JDBC savepoint 也会撞 `UnexpectedRollbackException`」，
+这在 JPA/Spring 事务边界内成立，但作为对 PostgreSQL 的普遍陈述过强。
+禁令本身不依赖这个细节——它依赖的是 D013.11 的另一半（捕获后继续会让"部分成功"的写入提交），
+但一份说得过头的理由日后会被人用「我用的是原生 SQL 所以不适用」绕过去。
+
+**本决策不改变**：16 张表的定义、[D001](#d001) 的不绑维度、模块边界（仅收窄 §1.3 对 `scm` 的措辞）、
+ArchUnit 七条规则、holdout 纪律，以及 [D001](#d001)–[D014](#d014) 的任何其它已接受结论。
