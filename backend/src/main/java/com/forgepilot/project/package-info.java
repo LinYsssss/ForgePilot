@@ -1,2 +1,2 @@
-/** Project boundary reserved for a later authorized phase. */
+/** Project boundary: projects, members, project roles and in-project authorization. */
 package com.forgepilot.project;
