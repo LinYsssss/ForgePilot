@@ -115,3 +115,48 @@ Phase 2+3 完成：六张表、三个后端切片、七条 ArchUnit 规则、五
 - 批次 2（Phase 4+5）尚未授权，需人工评审批次 1 后单独授权
 - 批次 2 前须先回答：成员移出项目时 requirement.assignee 如何处置
 - 若引入禁用账户接口，必须同时递增 session_version，否则已存在会话不会失效
+
+
+## Session 4: 批次 2（Phase 4+5）完成并过闸
+
+**Date**: 2026-08-21
+**Task**: 批次 2（Phase 4+5）完成并过闸
+**Branch**: `main`
+
+### Summary
+
+AI Gateway、Knowledge、GitHub SCM 三条切片落地；13/16 表；155 测试全绿；D014 闸门五条自证通过
+
+### Main Changes
+
+- 七张新表：knowledge_document / requirement_attachment / knowledge_chunk / scm_repository / pull_request / pull_request_requirement_event / ai_call_log
+- AI Gateway：超时 + 恰好一次 retry + ai_call_log 落库，无凭据测试打到 JDK 自带 HTTP 服务器
+- Knowledge：分块、embed、项目内 TopK 检索；提升为公共知识是复制而非改写
+- SCM：原始字节验签、Provider 权威快照、确定性 fingerprint、REQ-<n> 按项目解析
+- 补 D016 正式化两处偏离：超限只拒绝不标记、P1 的 DEVELOPER 半条推迟到批次 3
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `0d1ee92` | (see git log) |
+| `8179d66` | (see git log) |
+| `2892059` | (see git log) |
+| `635d78f` | (see git log) |
+| `2da43e3` | (see git log) |
+| `e560f22` | (see git log) |
+| `7daf632` | (see git log) |
+
+### Testing
+
+- [OK] mvnw verify：155 tests, 0 failures, 0 errors, 0 skipped
+- [OK] Compose 空库冷启动：退出码 0，三服务健康，13 张表逐名比对
+- [OK] CI 2892059 四 job 全绿；ci.yml 中无 secrets.*
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- 批次 3（Phase 6+7）：review / finding / finding_event 三张表，补 P1 DEVELOPER 半条与 ai_call_log.review_id 外键

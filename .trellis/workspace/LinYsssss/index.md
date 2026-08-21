@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 3
+- **Total Sessions**: 4
 - **Last Active**: 2026-08-21
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~117 | Active |
+| `journal-1.md` | ~162 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 4 | 2026-08-21 | 批次 2（Phase 4+5）完成并过闸 | `0d1ee92`, `8179d66`, `2892059`, `635d78f`, `2da43e3`, `e560f22`, `7daf632` | `main` |
 | 3 | 2026-08-21 | 批次 1：Auth / Project / Requirement 三个切片落地 | `5954f1c`, `c303586`, `f1d02e1`, `248d3ee`, `351ebf4`, `22cb740`, `e2bc73b`, `be836f7`, `f6c93b2` | `main` |
 | 2 | 2026-08-21 | Phase 1 minimal greenfield foundation: review, fixes, evidence and acceptance | `3482473` | `main` |
 | 1 | 2026-08-19 | Initialize Trellis and prepare final execution plan | - | `main` |
