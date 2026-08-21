@@ -40,9 +40,9 @@ Before planning or changing this repository, read these files completely:
 
 - Phase 0, the R2.3 contract/document consolidation, **Phase 1 (minimal greenfield foundation)** and **batch 1 (Phase 2 + Phase 3)** are complete. Phase 1 was accepted on 2026-08-21; batch 1 completed on 2026-08-21 with evidence in `.trellis/tasks/08-21-batch-1-auth-project-requirement/result.md`.
 - Authorization is **batched** per `docs/v2/DECISIONS.md` D012: batch 1 = Phase 2+3, batch 2 = Phase 4+5, batch 3 = Phase 6+7, Phase 8 alone and last.
-- **Batch 2 (Phase 4 + Phase 5) is NOT authorized.** Do not create a batch 2 task, do not write knowledge, AI gateway, SCM, PR, Review or Finding logic, and do not add the tenth through sixteenth tables. Authorization must be requested explicitly after human review of batch 1.
+- **Batch 2 (Phase 4 + Phase 5) is authorized under `docs/v2/DECISIONS.md` D014**, which records that the user delegated the per-batch review gate to the orchestrating session. The gate itself is not removed: before opening a batch, the previous batch's `result.md` must show a green build with no skips, a passing Compose cold start, all CI jobs green, the boundary checks clean, and every partial pass honestly recorded as partial. If any of those fails, stop.
+- D012's three non-relaxable rules survive D014 untouched: the holdout stays locked to Phase 8 and runs once, Phase 6's runtime bounds are measured outputs rather than pre-written constants, and D006's schema feedback loop still sends conflicts back to a decision instead of a compatibility branch in code.
 - What batch 1 delivered: local accounts with in-process sessions and cookie CSRF, Project/ProjectMember with exactly one LEADER, project-level SCM identity, Requirement/AC with immutable Revisions and stable `ac_key`, and the login, project, member and requirement screens. Six of the sixteen tables exist; the other ten arrive with the phase that uses them.
-- **Every batch stops at its review gate.** Approval of the overall plan does not authorize any batch.
 - **The holdout set stays locked to Phase 8 and runs exactly once, after configuration freeze.** Running it early, running it repeatedly, or tuning against it permanently destroys the only unbiased estimate in the thesis and cannot be undone by re-running.
 
 ## Product and architecture guardrails

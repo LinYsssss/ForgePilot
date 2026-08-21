@@ -115,20 +115,26 @@
 - 评测固定模型、温度、Prompt 版本和语料；只在 development 集调参，holdout 只在 Phase 8 配置冻结后首次运行，不得泄漏。
 - 任何新增表、模块、一级页面、运行时依赖或改变已接受决策的行为都必须先补充并批准新的决策记录。
 
-## 下一步：批次 2（Phase 4 + Phase 5）——**尚未授权**
+## 下一步：批次 2（Phase 4 + Phase 5）
 
 批次 1 已完成：六张表、Auth/Project/Requirement 三个切片、七条 ArchUnit 规则、五个前端界面，
 `mvnw verify` 59 个测试全绿、前端五条命令全绿、Compose 空库冷启动通过、CI 四个 job 全绿。
-证据见 `.trellis/tasks/08-21-batch-1-auth-project-requirement/result.md`。
+证据见 `.trellis/tasks/archive/2026-08/08-21-batch-1-auth-project-requirement/result.md`。
 
 Phase 1 遗留的三条前置条件在批次 1 中已全部闭环：CI 首次真实运行四个 job 全绿；
 ArchUnit 补齐子包白名单与 Spring Data Repository 识别（各有反证 fixture）；
 `.trellis/spec/backend/error-handling.md` 已按真实代码填写。
 
-**批次 2 需要单独的显式授权。** 获得授权后才创建其 Trellis 任务，提交 `prd.md`、`design.md`、
-`implement.md` 与验证清单供确认，确认后才 `task.py start`。批次 2 开始前必须先回答的开放项
-（详见批次 1 `result.md` §10）：
+**批次 1 的退出闸门已按 [D014](./DECISIONS.md#d014) 的标准逐条自证通过**：构建与测试全绿且无 skip、
+Compose 空库冷启动通过、CI 全部 job 绿、边界检查（无计划外的表/顶层包/一级菜单/运行时依赖）通过、
+`result.md` 已如实记录偏差与缺口且把 AC11 标为**部分通过**（缺自动化浏览器点击闭环）。
+
+批次 2 开始前必须先回答的开放项（详见批次 1 `result.md` §10）：
 
 1. 成员移出项目的语义——`requirement.assignee` 如何处置，决定了成员删除接口能否存在。
 2. 若引入禁用账户的接口，必须同时递增 `session_version`，否则已存在的会话不会被踢掉。
 3. 需求状态审计若确有需要，须带正式决策新增第 17 张表（[D013.3](./DECISIONS.md#d013) 已把它列为 MVP 缺口）。
+
+**批次 2 的硬约束：CI 不得依赖任何 AI/SCM 凭据或仓库秘密。** AI Gateway、Embedding、
+GitHub Webhook 与 PR 快照的测试一律打到进程内或本地的假服务端，不打真实 provider。
+真实凭据只在人工验证时使用，且不进仓库。
