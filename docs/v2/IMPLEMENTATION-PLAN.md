@@ -2,7 +2,7 @@
 
 规范依据：[ARCHITECTURE.md](./ARCHITECTURE.md)（技术规则）+ [PRD.md](./PRD.md)（产品规则）+ [DECISIONS.md](./DECISIONS.md)（决策理由）。本文只定义实施顺序、授权闸门、验证纪律和退出条件，不重复字段或业务规则。
 
-状态：**R2.3 文档基线已于 2026-08-20 验收；Phase 1 最小绿地底座已于 2026-08-21 完成并验收；批次 1（Phase 2+3）已于 2026-08-21 完成**，证据分别见 `.trellis/tasks/08-20-phase-1-foundation/result.md` 与 `.trellis/tasks/08-21-batch-1-auth-project-requirement/result.md`。后续按 [D012](./DECISIONS.md#d012) 批次化授权，**批次 2（Phase 4+5）尚未授权**，须在批次 1 通过人工评审后单独授权。
+状态：**R2.3 文档基线已于 2026-08-20 验收；Phase 1 最小绿地底座已于 2026-08-21 完成并验收；批次 1（Phase 2+3）已于 2026-08-21 完成并通过退出闸门**，证据分别见 `.trellis/tasks/archive/2026-08/08-20-phase-1-foundation/result.md` 与 `.trellis/tasks/archive/2026-08/08-21-batch-1-auth-project-requirement/result.md`。后续按 [D012](./DECISIONS.md#d012) 批次化授权，批次评审职责按 [D014](./DECISIONS.md#d014) 委托给编排会话——闸门本身不取消，只是不再由用户逐批开口。
 
 ## 不可违反的实施纪律
 
@@ -90,12 +90,12 @@
 
 ## 统一授权闸门
 
-1. 方案和前一批次通过人工评审后，才可请求下一批次授权。批次划分见 [D012](./DECISIONS.md#d012)：批次 1 = Phase 2+3，批次 2 = Phase 4+5，批次 3 = Phase 6+7，Phase 8 单独且最后。
-2. 授权一个批次仅表示可以创建并确认该批次的任务级计划，不表示可以跳过计划直接写业务代码，也不授权后续批次。
-3. 每个批次开始前必须有 Trellis `prd.md`；复杂批次还必须有 `design.md`、`implement.md` 和验证清单；用户确认后执行 `task.py start`。
-4. 每个批次完成后必须停止，提交验证证据和风险，不得自动进入下一批次。批次内部的 Phase 退出条件不变，逐条满足后才算该批次完成。
-5. 任一退出条件未通过，不得归档任务为 completed，不得以“后续补齐”越过闸门。
-6. holdout 仍锁定在 Phase 8 且只运行一次；Phase 6 的运行边界必须实测确定。批次化不放宽这两条（[D012](./DECISIONS.md#d012)）。
+1. 前一批次通过退出闸门后，才可开启下一批次。批次划分见 [D012](./DECISIONS.md#d012)：批次 1 = Phase 2+3，批次 2 = Phase 4+5，批次 3 = Phase 6+7，Phase 8 单独且最后。闸门由谁执行见 [D014](./DECISIONS.md#d014)。
+2. 开启一个批次仅表示可以创建该批次的任务级计划，不表示可以跳过计划直接写业务代码，也不表示下一批次已开启。
+3. 每个批次开始前必须有 Trellis `prd.md`；复杂批次还必须有 `design.md`、`implement.md` 和验证清单；确认后执行 `task.py start`。
+4. 每个批次完成后必须停下来做退出闸门自证，提交验证证据和风险，不得直接滑进下一批次。批次内部的 Phase 退出条件不变，逐条满足后才算该批次完成。
+5. 任一退出条件未通过，不得归档任务为 completed，不得以"后续补齐"越过闸门。验收条件只有通过与不通过，**部分通过必须如实记为部分通过**。
+6. holdout 仍锁定在 Phase 8 且只运行一次；Phase 6 的运行边界必须实测确定。批次化与评审委托都不放宽这两条（[D012](./DECISIONS.md#d012)、[D014](./DECISIONS.md#d014)）。
 
 ## 每阶段 `result.md` 验收模板
 
