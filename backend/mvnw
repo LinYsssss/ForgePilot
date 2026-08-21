@@ -1,0 +1,68 @@
+#!/bin/sh
+# Minimal, repository-local Maven entry point. It downloads the pinned Maven
+# distribution into the user's Maven cache and never relies on a global mvn.
+# .mvn/wrapper/maven-wrapper.properties is the single source of truth for the
+# distribution URL and its expected checksum; this script derives everything
+# from that file so editing it cannot silently become a no-op.
+set -eu
+
+BASE_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+PROPERTIES="$BASE_DIR/.mvn/wrapper/maven-wrapper.properties"
+
+if [ ! -f "$PROPERTIES" ]; then
+    echo "mvnw: missing $PROPERTIES" >&2
+    exit 1
+fi
+
+read_property() {
+    sed -n "s/^$1=//p" "$PROPERTIES" | tail -n 1
+}
+
+MAVEN_URL=$(read_property distributionUrl)
+MAVEN_SHA256=$(read_property distributionSha256Sum)
+
+if [ -z "$MAVEN_URL" ]; then
+    echo "mvnw: distributionUrl is not set in $PROPERTIES" >&2
+    exit 1
+fi
+
+ARCHIVE_NAME=${MAVEN_URL##*/}
+MAVEN_VERSION=${ARCHIVE_NAME#apache-maven-}
+MAVEN_VERSION=${MAVEN_VERSION%-bin.zip}
+
+if [ -z "$MAVEN_VERSION" ] || [ "$MAVEN_VERSION" = "$ARCHIVE_NAME" ]; then
+    echo "mvnw: cannot derive a Maven version from $MAVEN_URL" >&2
+    exit 1
+fi
+
+CACHE_DIR="${MAVEN_USER_HOME:-${HOME:-/tmp}/.m2}/wrapper/dists/apache-maven-${MAVEN_VERSION}"
+MAVEN_HOME="$CACHE_DIR/apache-maven-${MAVEN_VERSION}"
+
+verify_archive() {
+    [ -n "$MAVEN_SHA256" ] || return 0
+    if command -v sha256sum >/dev/null 2>&1; then
+        echo "$MAVEN_SHA256  $1" | sha256sum -c - >/dev/null
+    elif command -v shasum >/dev/null 2>&1; then
+        echo "$MAVEN_SHA256  $1" | shasum -a 256 -c - >/dev/null
+    else
+        echo "mvnw: no sha256 tool available to verify $1" >&2
+        return 1
+    fi
+}
+
+if [ ! -x "$MAVEN_HOME/bin/mvn" ]; then
+    mkdir -p "$CACHE_DIR"
+    ARCHIVE="$CACHE_DIR/$ARCHIVE_NAME"
+    if [ ! -f "$ARCHIVE" ]; then
+        curl --fail --location --silent --show-error "$MAVEN_URL" --output "$ARCHIVE"
+    fi
+    if ! verify_archive "$ARCHIVE"; then
+        echo "mvnw: checksum mismatch for $ARCHIVE" >&2
+        rm -f -- "$ARCHIVE"
+        exit 1
+    fi
+    (cd "$CACHE_DIR" && jar xf "$ARCHIVE")
+    chmod +x "$MAVEN_HOME/bin/mvn"
+fi
+
+exec "$MAVEN_HOME/bin/mvn" -f "$BASE_DIR/pom.xml" "$@"
