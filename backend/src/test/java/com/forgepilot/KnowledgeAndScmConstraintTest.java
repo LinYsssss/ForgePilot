@@ -218,16 +218,68 @@ class KnowledgeAndScmConstraintTest extends PostgresTestBase {
      */
     @Test
     void aiCallLogHasNoReviewForeignKeyYetAndNoRowsUsingIt() {
+        // Asserted against the column the key would have to include, not against
+        // the constraint's name: a batch 3 constraint called anything else would
+        // slip past a name check.
+        assertThat(jdbc.queryForObject(
+                "select count(*) from pg_constraint c "
+                        + "join pg_attribute a on a.attrelid = c.conrelid and a.attnum = any (c.conkey) "
+                        + "where c.conrelid = 'ai_call_log'::regclass and c.contype = 'f' "
+                        + "and a.attname = 'review_id'", Integer.class))
+                .as("no foreign key may involve review_id until review exists")
+                .isZero();
         assertThat(jdbc.queryForList(
                 "select conname from pg_constraint where conrelid = 'ai_call_log'::regclass "
                         + "and contype = 'f'", String.class))
-                .isNotEmpty()
-                .noneSatisfy(name -> assertThat(name).contains("review"));
+                .as("the other composite keys must still be there")
+                .isNotEmpty();
 
         assertThat(jdbc.queryForObject(
                 "select count(*) from ai_call_log where review_id is not null", Integer.class))
                 .as("batch 3 may only add the foreign key while this stays zero")
                 .isZero();
+    }
+
+    // ------------------------------------------------- cross-project, by the database
+
+    /**
+     * AC1's point is that isolation is enforced by the schema and not by a service
+     * check somebody could route around, so every one of these writes goes straight
+     * through JdbcTemplate.
+     */
+    @Test
+    void noProjectScopedRowMayReachAcrossProjects() {
+        Fixture mine = new Fixture();
+        Fixture theirs = new Fixture();
+        long myRepository = mine.repository();
+        long myPullRequest = mine.pullRequest(myRepository, 1, mine.member());
+        long theirRepository = theirs.repository();
+        long theirPullRequest = theirs.pullRequest(theirRepository, 1, theirs.member());
+
+        // A pull request cannot borrow another project's repository...
+        assertThat(sqlStateOf(() -> mine.pullRequest(theirRepository, 2, mine.member())))
+                .isEqualTo(FOREIGN_KEY_VIOLATION);
+
+        // ...nor link to another project's requirement.
+        assertThat(sqlStateOf(() -> jdbc.update(
+                "update pull_request set requirement_id = ? where id = ?",
+                theirs.requirement, myPullRequest)))
+                .isEqualTo(FOREIGN_KEY_VIOLATION);
+        jdbc.update("update pull_request set requirement_id = ? where id = ?",
+                mine.requirement, myPullRequest);
+
+        // An audit row cannot point at another project's pull request...
+        assertThat(sqlStateOf(() -> mine.event(theirPullRequest, "SYSTEM", null, null, mine.requirement)))
+                .isEqualTo(FOREIGN_KEY_VIOLATION);
+
+        // ...nor at another project's requirement.
+        assertThat(sqlStateOf(() -> mine.event(myPullRequest, "SYSTEM", null, null, theirs.requirement)))
+                .isEqualTo(FOREIGN_KEY_VIOLATION);
+
+        // And a call log cannot name another project's requirement.
+        assertThat(sqlStateOf(() -> mine.callLog(theirs.requirement)))
+                .isEqualTo(FOREIGN_KEY_VIOLATION);
+        mine.callLog(mine.requirement);
     }
 
     // ------------------------------------------------------------------ helpers
@@ -316,6 +368,12 @@ class KnowledgeAndScmConstraintTest extends PostgresTestBase {
                             + "values (?, ?, ?, 'base', 'head', 'fp', '[]'::jsonb, ?, ?, ?) returning id",
                     Long.class, project, repositoryId, number,
                     "gh-" + authorUserId, "dev-" + authorUserId, authorUserId));
+        }
+
+        private void callLog(Long requirementId) {
+            jdbc.update("insert into ai_call_log (project_id, requirement_id, use_case, model, "
+                    + "latency_ms, status) values (?, ?, 'EMBEDDING', 'stub-model', 1, 'SUCCESS')",
+                    project, requirementId);
         }
 
         private void event(long pullRequestId, String actorType, Long actorUserId, Long from, Long to) {
