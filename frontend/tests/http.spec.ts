@@ -1,4 +1,27 @@
-import { HttpError, requestJson } from "../src/lib/http";
+import { HttpError, requestJson, setUnauthorizedHandler } from "../src/lib/http";
+
+interface RecordedCall {
+  path: string;
+  init: RequestInit;
+}
+
+function recordingFetch(response: () => Response): RecordedCall[] {
+  const calls: RecordedCall[] = [];
+  vi.stubGlobal(
+    "fetch",
+    vi.fn((path: string | URL | Request, init?: RequestInit) => {
+      calls.push({ path: String(path), init: init ?? {} });
+      return Promise.resolve(response());
+    }),
+  );
+  return calls;
+}
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+  setUnauthorizedHandler(() => undefined);
+  document.cookie = "XSRF-TOKEN=; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+});
 
 describe("same-origin request boundary", () => {
   it("uses same-origin credentials and JSON headers without adding retries", async () => {
@@ -55,5 +78,34 @@ describe("same-origin request boundary", () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(null, { status: 204 })));
 
     await expect(requestJson("/api/health")).resolves.toBeUndefined();
+  });
+
+  it("sends the XSRF-TOKEN cookie as the CSRF header on writes and not on reads", async () => {
+    document.cookie = "XSRF-TOKEN=csrf-token-42";
+    const calls = recordingFetch(() => new Response(null, { status: 204 }));
+
+    await requestJson("/api/projects", { method: "POST", body: JSON.stringify({ name: "a" }) });
+    await requestJson("/api/projects");
+
+    expect(new Headers(calls[0].init.headers).get("X-XSRF-TOKEN")).toBe("csrf-token-42");
+    expect(new Headers(calls[1].init.headers).has("X-XSRF-TOKEN")).toBe(false);
+  });
+
+  it("notifies the single unauthorized handler for a 401 and still throws", async () => {
+    const onUnauthorized = vi.fn();
+    setUnauthorizedHandler(onUnauthorized);
+    recordingFetch(
+      () =>
+        new Response(JSON.stringify({ code: "UNAUTHORIZED", message: "未登录", traceId: "t" }), {
+          status: 401,
+          headers: { "Content-Type": "application/json" },
+        }),
+    );
+
+    const error = await requestJson("/api/projects").catch((reason: unknown) => reason);
+
+    expect(onUnauthorized).toHaveBeenCalledTimes(1);
+    expect(error).toBeInstanceOf(HttpError);
+    expect(error).toMatchObject({ status: 401 });
   });
 });

@@ -1,4 +1,4 @@
-import { mount } from "@vue/test-utils";
+import { flushPromises, mount } from "@vue/test-utils";
 import { createMemoryHistory } from "vue-router";
 
 import App from "../src/App.vue";
@@ -7,8 +7,41 @@ import {
   PRODUCT_ROUTE_PATHS,
   TOP_LEVEL_NAVIGATION,
 } from "../src/app/routes";
+import { bootstrapSession, clearSession } from "../src/features/auth/session";
 
-describe("foundation route contract", () => {
+function jsonResponse(body: unknown): Response {
+  return new Response(JSON.stringify(body), {
+    status: 200,
+    headers: { "Content-Type": "application/json" },
+  });
+}
+
+async function mountSignedInShell() {
+  clearSession();
+  vi.stubGlobal(
+    "fetch",
+    vi.fn((path: string | URL | Request) =>
+      Promise.resolve(
+        String(path) === "/api/auth/me"
+          ? jsonResponse({ id: 1, username: "lead" })
+          : jsonResponse([]),
+      ),
+    ),
+  );
+
+  await bootstrapSession();
+  const router = createAppRouter(createMemoryHistory());
+  await router.push("/");
+  const wrapper = mount(App, { global: { plugins: [router] } });
+  await flushPromises();
+  return { router, wrapper };
+}
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
+
+describe("route and shell contract", () => {
   it("keeps exactly the seven approved product paths and three top-level entries", () => {
     expect(PRODUCT_ROUTE_PATHS).toEqual([
       "/projects",
@@ -26,29 +59,18 @@ describe("foundation route contract", () => {
     ]);
   });
 
-  it("redirects root and renders a semantic, business-free shell", async () => {
-    const router = createAppRouter(createMemoryHistory());
-    await router.push("/");
-    await router.isReady();
-
-    const wrapper = mount(App, { global: { plugins: [router] } });
+  it("redirects root to the project screen inside the semantic shell", async () => {
+    const { router, wrapper } = await mountSignedInShell();
 
     expect(router.currentRoute.value.path).toBe("/projects");
     expect(wrapper.find("header").exists()).toBe(true);
     expect(wrapper.find('nav[aria-label="主导航"]').exists()).toBe(true);
     expect(wrapper.findAll(".nav-link")).toHaveLength(3);
     expect(wrapper.find("main h1").text()).toBe("项目");
-    expect(wrapper.text()).toContain("当前仅为工程底座");
-    expect(wrapper.findAll("form")).toHaveLength(0);
-    expect(wrapper.findAll("button")).toHaveLength(0);
   });
 
   it("exposes a skip link that targets the main landmark", async () => {
-    const router = createAppRouter(createMemoryHistory());
-    await router.push("/");
-    await router.isReady();
-
-    const wrapper = mount(App, { global: { plugins: [router] } });
+    const { wrapper } = await mountSignedInShell();
 
     const skipLink = wrapper.find("a.skip-link");
     expect(skipLink.exists()).toBe(true);

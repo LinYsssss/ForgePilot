@@ -1,7 +1,16 @@
 <script setup lang="ts">
-import { RouterLink, RouterView } from "vue-router";
+import { RouterLink, RouterView, useRouter } from "vue-router";
 
-import { HOME_ROUTE_PATH, TOP_LEVEL_NAVIGATION } from "../app/routes";
+import { HOME_ROUTE_PATH, LOGIN_ROUTE_PATH, TOP_LEVEL_NAVIGATION } from "../app/routes";
+import { signOut, useSession } from "../features/auth/session";
+
+const router = useRouter();
+const { account } = useSession();
+
+async function logout(): Promise<void> {
+  await signOut();
+  await router.replace(LOGIN_ROUTE_PATH);
+}
 </script>
 
 <template>
@@ -16,7 +25,7 @@ import { HOME_ROUTE_PATH, TOP_LEVEL_NAVIGATION } from "../app/routes";
         </span>
       </RouterLink>
 
-      <nav aria-label="主导航">
+      <nav v-if="account" aria-label="主导航">
         <RouterLink
           v-for="item in TOP_LEVEL_NAVIGATION"
           :key="item.to"
@@ -26,6 +35,11 @@ import { HOME_ROUTE_PATH, TOP_LEVEL_NAVIGATION } from "../app/routes";
           {{ item.label }}
         </RouterLink>
       </nav>
+
+      <div v-if="account" class="session-area">
+        <span class="session-user">{{ account.username }}</span>
+        <button type="button" class="button button-inverse" @click="logout">退出登录</button>
+      </div>
     </header>
 
     <main id="app-main" tabindex="-1">
