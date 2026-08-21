@@ -27,3 +27,6 @@ pgdata/
 # Evaluation outputs
 evaluation/results/*
 !evaluation/results/.gitkeep
+
+# Claude Code machine-local settings
+.claude/settings.local.json
