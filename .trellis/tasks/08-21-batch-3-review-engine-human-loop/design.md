@@ -211,14 +211,175 @@ Review 详情页本就展示其 PR，关联下拉框放在该页头部。
 让它承重的是那条「同空或同非空」的 CHECK——与批次 2 `requirement_attachment` 的 NOT NULL 同型
 （[D015.2](../../../docs/v2/DECISIONS.md#d015)）。**删掉那条 CHECK，外键会静默失效。**
 
-## 5. 执行器与调度
+## 5. 执行器与调度（实测支撑，见 `research/after-commit-scheduling-measured.md`）
 
-**待 `research/after-commit-scheduling-measured.md` 落地后填写。**
+### 5.1 触发必须是**两个方法**，不是一个方法挂两个注解
 
-已经确定的边界：
+实测：同一方法同时标注 `@EventListener` 与 `@TransactionalEventListener(AFTER_COMMIT)` 时
+**只被调用一次，且在提交之后**——事务内那一半被静默丢掉。
 
-- 不新增运行时依赖 → 执行器只能用 Spring 自带的 `TaskExecutor` 系列。
-- 并发上限**必须实测冻结为 1 或 2**，不得预写常量（[D012](../../../docs/v2/DECISIONS.md#d012) 第 2 条、
-  [D014](../../../docs/v2/DECISIONS.md#d014) 第 6 条，两处都明确不可放松）。
-- reconciliation 用 `@Scheduled`，只恢复**已落库**的 PENDING/RUNNING，**禁止补建**。
-  它不属于被禁的「兜底分支」：`ARCHITECTURE.md:181` 与 `:265` 明文要求它存在。
+**裁定**：
+
+```text
+@EventListener                                  → 同事务内幂等创建/取得 Review(PENDING)
+@TransactionalEventListener(AFTER_COMMIT)       → 提交后才把它交给执行器
+```
+
+两个方法各自成立，缺一不可。写成一个方法会让 `ARCHITECTURE.md:261`
+「监听失败则整个 SCM 事务回滚」**永远不可能触发**——因为那一半根本没跑。
+
+### 5.2 AFTER_COMMIT 里绝不能用 EntityManager，也绝不能用裸 JdbcTemplate
+
+实测三个反直觉读数：AFTER_COMMIT 阶段 `isActualTransactionActive()` 仍返回 `true`、
+`isConnectionTransactional()` 也返回 `true`，但物理连接的 `autoCommit` 已被恢复成 `true`。
+
+- `EntityManager.persist` / `Repository.saveAndFlush` → 显式失败（`No active transaction`）。**好事**。
+- 裸 `JdbcTemplate.update` → **成功并立即提交**，落在一条已提交连接上、单语句自动提交、无法回滚。
+
+**裁定**：AFTER_COMMIT 回调内若需写库，**只能** `REQUIRES_NEW`。
+禁止用 `isActualTransactionActive()` 判断「我在不在事务里」——实测它必然判错。
+
+### 5.3 调度失败对调用方不可见，reconciliation 是唯一恢复路径
+
+实测：AFTER_COMMIT 监听器抛出的异常由 Spring 的
+`TransactionSynchronizationUtils.invokeAfterCompletion` `catch (Throwable)` 掉，只打一条 ERROR 日志。
+webhook 依然返回 **202**，PR 行与 PENDING Review **已提交**，调用方看不到任何异常。
+执行器满时的 `TaskRejectedException` 走同一条静默路径。
+
+这与 `ARCHITECTURE.md:263` 完全一致（「after-commit 提交失败不回滚已提交的 PR/PENDING，
+而是保留 PENDING 供 reconciliation 恢复」）——**实测确认这不是缺陷，是设计**。
+但它意味着：**reconciliation 不是兜底，是唯一恢复路径**，必须有测试证明它真的恢复。
+
+### 5.4 并发上限必须落在 `corePoolSize` —— 这是本批次最隐蔽的一个坑
+
+实测 Boot 4.1 的默认 `applicationTaskExecutor` 是 `core=8 / max=2147483647 / queue=2147483647`，
+**直接复用等于 8 路并发 + 无界积压**，与「冻结为 1 或 2」正面冲突。
+
+更要命的是：`ThreadPoolExecutor` **只有队列满了才会扩到 `maxPoolSize`**，
+而默认队列无界 → 永远不满 → 永远只有 `corePoolSize` 个线程。
+实测 `core=1 / max=4 / 默认队列` 提交 8 个任务，池中**始终只有 1 个线程**。
+
+> **裁定**：并发上限写在 `corePoolSize`，并**必须同时显式设 `queueCapacity`**。
+> 只写 `setMaxPoolSize(2)` 是一个**看起来正确、实测无效**的写法，
+> 而且任何「跑通一个 Review」的测试都会给它报绿——正是 `prd.md` §7 风险 3 的具体实例。
+> 因此本批次**必须有一条断言直接检查执行器的 `corePoolSize`**，而不是只断言「Review 能跑完」。
+
+### 5.5 声明自己的 Executor 会让 Boot 的默认 Executor 整个消失
+
+实测：上下文里存在**任何** `Executor` 类型的 bean，Boot 的 `applicationTaskExecutor` 就不再创建。
+
+ForgePilot 当前不用 MVC async（无 `Callable` / `DeferredResult` / SSE），因此**当前无实害**。
+**裁定**：接受这个后果，但在 `ReviewExecutorConfig` 的 javadoc 里写明——
+它是一个「以后加 SSE 时会突然踩到」的雷，留一句注释比留一个惊喜便宜。
+本批次明确不建 SSE（`prd.md` §3），所以不为它提前加规避。
+
+### 5.6 连接池是并发的硬天花板
+
+`application.yml:9`：`maximum-pool-size: ${FORGEPILOT_DB_POOL_SIZE:5}`（我已核实）。
+并发 Review 会占用连接：并发 2 就只剩 3 条给 Web 层。
+**这个交互必须一起进 §6 的 4 GB 实测**，不能只量内存。
+
+### 5.7 reconciliation 的禁令用一条**结构规则**执行
+
+`ARCHITECTURE.md:265` 禁止「按当前 head + 当前上下文无 Review 补建缺失 Review」。
+实测对照：以 `pull_request` 为驱动表的 `NOT EXISTS` 补建查询返回一行（会建出不该有的 Review），
+以 `review` 为唯一驱动表的恢复查询返回空。
+
+> **裁定**：reconciliation 的查询里，**`FROM` 子句只准出现 `review`**。
+> 这条规则可以被 code review 一眼检查，比「记得不要补建」可靠。
+
+## 6. fencing 与并发（实测支撑，见 `research/fencing-and-concurrency-measured.md`）
+
+### 6.1 旧 Worker 插入 Finding 由**数据库**拒绝，不靠应用层查 attempt
+
+实测：只靠应用层「先查 token 再插入」存在**真实 TOCTOU 破口**——
+陈旧 attempt 的 Finding 能落到活 Review 下。
+
+**裁定**：`finding` 上加复合外键
+`(project_id, review_id, review_attempt) → review(project_id, id, execution_attempt)`，
+配套 `review` 上的 `UNIQUE(project_id, id, execution_attempt)`。
+实测控制组证明两个对象缺一不可：三列 UNIQUE 让 `execution_attempt` 成为键列从而产生**阻塞**，
+三列 FK 才产生**拒绝**。
+
+这条 fence 是**预防性**的：Worker 正在写 Finding 时，并发 re-claim 会**阻塞**而非抢走。
+
+### 6.2 fence 的代价必须正面处理，否则崩溃的 Worker 会把 Review 永久钉死
+
+实测：attempt 1 崩溃时已写了部分 Finding，reconciliation re-claim 递增 attempt 会撞外键：
+
+```
+ERROR: update or delete on table "review" violates foreign key constraint
+       "fk_finding_review_attempt" on table "finding"
+```
+
+**裁定**：re-claim **同事务**先删除被放弃 attempt 的 Finding，再领取。
+实测确认历史不受影响——`COMPLETED` 的 Review 根本领不到（领取条件只匹配 PENDING 或过期 RUNNING），
+其 Finding 一行不动。
+
+**禁止用 `ON UPDATE CASCADE`**：实测它把陈旧 attempt 的 Finding **静默改标**成新 attempt 的产出——
+比没有 fence 更糟，它伪造证据。
+
+### 6.3 Decision 的三件套缺一不可，尤其那把 PR 行锁
+
+实测（最高危）：不加 `SELECT ... FOR UPDATE`，闸门的条件更新**不会阻塞**在并发的 SCM head 更新上，
+而是对着**陈旧的 PR 快照**求值前置 3/4/5，于是在 head 已经推进到 `head2` 之后
+仍然对 `head1` 的 Review 放行了 `APPROVE`：
+
+```
+ id | review_head | decision | pr_head_now
+----+-------------+----------+-------------
+  1 | head1       | APPROVE  | head2
+```
+
+机制：条件更新的 EvalPlanQual 只重查**目标行**（`review`），
+连接进来的 `pull_request` 是普通快照读，不阻塞、不重算。
+加锁后同一交错返回 0 行，正确拒绝。
+
+**裁定**：`ARCHITECTURE.md:277` 的写法逐字照做，一个字都不省。
+并且**必须有一条并发测试**证明「不加锁会放行」是被挡住的——单线程绿在这里毫无意义。
+
+### 6.4 前置 5 必须写 `IS NOT DISTINCT FROM`
+
+实测：写成 `=` 时，两侧都为 NULL 得 NULL，条件更新**永远 0 行**——
+未关联需求的 PR 将**永远无法做出任何终局决定**。
+读侧（activity 判定）与写侧（唯一键 `NULLS NOT DISTINCT`）用的是配对语义，**必须两侧都做**。
+
+### 6.5 Decision Gate 必须是**派生**的，不能在 `pull_request` 上存布尔位
+
+实测三种常见写错（看最新一条 Decision / 看有无 APPROVE / 判定里不带 head）
+**都会错误解除封锁**。而 force-push 回旧 head 时，派生式判定会自动重新封锁，
+布尔位则不会——那等于放行一个已被退回的 head。
+
+**裁定**：Gate 判定恒为
+`∃ review WHERE pull_request_id = ? AND head_sha = <PR 当前 head> AND decision = 'REQUEST_CHANGES'`。
+不缓存、不存位、不看 Review 的新旧顺序。
+
+### 6.6 `now()` 是事务开始时间（失活陷阱，非越权）
+
+实测：长事务里 `lease_until < now()` 会漏判过期。这不会造成越权，只会让恢复变慢。
+**裁定**：reconciliation 的领取查询保持短事务；不为此引入 `clock_timestamp()`——
+它会让同一语句内多次求值不一致，代价大于收益。
+
+### 6.7 `finding_event` 的 `is_a_change` 必须按 `action` 分支
+
+实测：该表同时审计**状态**与**指派**两个维度，一条笼统的
+「from 与 to 不相等」CHECK 在指派事件上会误判。
+**裁定**：CHECK 按 `action` 分支写，与批次 2 `pull_request_requirement_event` 的
+`ck_..._is_a_change` 同型但更细。
+
+### 6.8 「只有继承的 SUPPRESSED 可重开」需要约束触发器
+
+实测：`CHECK` 不能带子查询，表达不了这条；约束触发器可以。
+但本项目 §2.1 **只为 `finding` 的上下文一致性授权了一个约束触发器**。
+
+**裁定**：这条规则**由 Service 执行**，如实记为「非数据库执行」，
+不为它新增第二个约束触发器——§2.1 的授权是逐个给的，不是给了一类。
+Service 侧必须有条件更新（`WHERE status='REJECTED' AND continuity='SUPPRESSED'`）
+而不是先查后写，并有并发测试。
+
+### 6.9 审计行的 `from_status` 只有配合条件更新才是真的
+
+实测：先查后写时，并发下会记录**两条互相矛盾的转移**（都声称从 OPEN 出发）。
+**裁定**：所有 Finding 状态流转一律用
+`UPDATE ... WHERE id = ? AND status = <期望的 from>` 条件更新，影响行数必须为 1，否则 409；
+审计行的 `from_status` 取自该条件，而非取自先前那次读。
