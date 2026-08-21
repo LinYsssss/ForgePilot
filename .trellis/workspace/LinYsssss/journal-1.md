@@ -61,3 +61,57 @@ Reviewed the Phase 1 slices with three read-only agents and verified every claim
 ### Status
 
 [OK] **Completed**
+
+
+## Session 3: 批次 1：Auth / Project / Requirement 三个切片落地
+
+**Date**: 2026-08-21
+**Task**: 批次 1：Auth / Project / Requirement 三个切片落地
+**Branch**: `main`
+
+### Summary
+
+Phase 2+3 完成：六张表、三个后端切片、七条 ArchUnit 规则、五个前端界面；59 个后端测试与前端五条命令全绿，Compose 冷启动与 CI 四个 job 全绿。
+
+### Main Changes
+
+- V2/V3 两条迁移建六张表，项目内引用一律复合外键；requirement 自引用键保持 MATCH SIMPLE + NOT DEFERRABLE，创建走三步回填
+- 实体统一 D013.1 变体 A（关联只读、标量写入），ddl-auto=validate 在启动期即验证映射形态
+- auth：表单登录 + 进程内 HttpSession + cookie CSRF + session_version 撤销；失败响应体对未知用户与错误口令完全一致
+- project：ProjectAccessService 为唯一授权入口；LEADER 转移改为先锁 project 行再查角色，堵住失败方基于陈旧读继续操作的缺陷
+- requirement：Revision 冻结、ac_key 跨版本稳定、状态机以数据编码，IN_DEVELOPMENT 只能由首次指派进入
+- ArchUnit 增至七条（子包白名单、Spring Data 类型识别 Repository），两条新规则各配反证 fixture
+- 前端五个界面填入既有路由外壳，未新增一级菜单、未新增依赖
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `5954f1c` | (see git log) |
+| `c303586` | (see git log) |
+| `f1d02e1` | (see git log) |
+| `248d3ee` | (see git log) |
+| `351ebf4` | (see git log) |
+| `22cb740` | (see git log) |
+| `e2bc73b` | (see git log) |
+| `be836f7` | (see git log) |
+| `f6c93b2` | (see git log) |
+
+### Testing
+
+- [OK] backend: mvnw verify — Tests run 59, Failures 0, Errors 0, Skipped 0
+- [OK] frontend: npm ci / lint / typecheck / test --run / build 五条全部退出码 0（15 个测试）
+- [OK] BatchOneApiTest 跨切片 HTTP 闭环首次运行即全绿，证明三个独立编写的切片契约一致
+- [OK] Compose 空库冷启动通过，public 下恰好预期六张表，/actuator/metrics 仍为 404
+- [OK] curl 沿 nginx 代理跑通完整业务流程，补上 JVM 内测试证明不了的那一跳
+- [OK] CI run 32471329945：四个 job 全部 success（Phase 1 遗留项闭环）
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- 批次 2（Phase 4+5）尚未授权，需人工评审批次 1 后单独授权
+- 批次 2 前须先回答：成员移出项目时 requirement.assignee 如何处置
+- 若引入禁用账户接口，必须同时递增 session_version，否则已存在会话不会失效

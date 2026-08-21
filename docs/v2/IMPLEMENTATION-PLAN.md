@@ -2,7 +2,7 @@
 
 规范依据：[ARCHITECTURE.md](./ARCHITECTURE.md)（技术规则）+ [PRD.md](./PRD.md)（产品规则）+ [DECISIONS.md](./DECISIONS.md)（决策理由）。本文只定义实施顺序、授权闸门、验证纪律和退出条件，不重复字段或业务规则。
 
-状态：**R2.3 文档基线已于 2026-08-20 验收；Phase 1 最小绿地底座已于 2026-08-21 完成并验收**，证据见 `.trellis/tasks/08-20-phase-1-foundation/result.md`。后续按 [D012](./DECISIONS.md#d012) 批次化授权，批次 1（Phase 2+3）已获授权进入任务级规划；其实现仍须先确认 Trellis 计划再执行 `task.py start`。批次 2 及以后必须在前一批次通过人工评审后单独授权。
+状态：**R2.3 文档基线已于 2026-08-20 验收；Phase 1 最小绿地底座已于 2026-08-21 完成并验收；批次 1（Phase 2+3）已于 2026-08-21 完成**，证据分别见 `.trellis/tasks/08-20-phase-1-foundation/result.md` 与 `.trellis/tasks/08-21-batch-1-auth-project-requirement/result.md`。后续按 [D012](./DECISIONS.md#d012) 批次化授权，**批次 2（Phase 4+5）尚未授权**，须在批次 1 通过人工评审后单独授权。
 
 ## 不可违反的实施纪律
 
@@ -115,8 +115,20 @@
 - 评测固定模型、温度、Prompt 版本和语料；只在 development 集调参，holdout 只在 Phase 8 配置冻结后首次运行，不得泄漏。
 - 任何新增表、模块、一级页面、运行时依赖或改变已接受决策的行为都必须先补充并批准新的决策记录。
 
-## 下一步：批次 1（Phase 2 + Phase 3）
+## 下一步：批次 2（Phase 4 + Phase 5）——**尚未授权**
 
-Phase 1 已完成并验收。下一步不是直接实现，而是按 [D012](./DECISIONS.md#d012) 创建批次 1 的独立 Trellis 任务，提交其 `prd.md`、`design.md`、`implement.md` 和验证清单供用户确认；确认后才执行 `task.py start`，只实现 Phase 2 与 Phase 3 定义的范围，并在批次退出闸门处停止。
+批次 1 已完成：六张表、Auth/Project/Requirement 三个切片、七条 ArchUnit 规则、五个前端界面，
+`mvnw verify` 59 个测试全绿、前端五条命令全绿、Compose 空库冷启动通过、CI 四个 job 全绿。
+证据见 `.trellis/tasks/08-21-batch-1-auth-project-requirement/result.md`。
 
-批次 1 开始前必须处理的 Phase 1 遗留前置条件（详见任务 `result.md` 第 7 节）：推送后确认 CI 四个 job 全绿；引入业务类的同时补齐 ArchUnit 的子包深度与 Repository 识别规则；`common.web` 错误契约落地时填写 `.trellis/spec/backend/error-handling.md` 与 `logging-guidelines.md`。
+Phase 1 遗留的三条前置条件在批次 1 中已全部闭环：CI 首次真实运行四个 job 全绿；
+ArchUnit 补齐子包白名单与 Spring Data Repository 识别（各有反证 fixture）；
+`.trellis/spec/backend/error-handling.md` 已按真实代码填写。
+
+**批次 2 需要单独的显式授权。** 获得授权后才创建其 Trellis 任务，提交 `prd.md`、`design.md`、
+`implement.md` 与验证清单供确认，确认后才 `task.py start`。批次 2 开始前必须先回答的开放项
+（详见批次 1 `result.md` §10）：
+
+1. 成员移出项目的语义——`requirement.assignee` 如何处置，决定了成员删除接口能否存在。
+2. 若引入禁用账户的接口，必须同时递增 `session_version`，否则已存在的会话不会被踢掉。
+3. 需求状态审计若确有需要，须带正式决策新增第 17 张表（[D013.3](./DECISIONS.md#d013) 已把它列为 MVP 缺口）。

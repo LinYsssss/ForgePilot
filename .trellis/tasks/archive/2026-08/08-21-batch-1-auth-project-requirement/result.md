@@ -16,8 +16,8 @@
 | ArchUnit 加固至七条 | 完成 |
 | 前端五个界面与登录态处理 | 完成 |
 | 跨切片 HTTP 闭环测试 | 完成 |
-| Compose 空库冷启动 | 见 §4 |
-| CI 四个 job | 见 §4 |
+| Compose 空库冷启动 | 完成（见 §4） |
+| CI 四个 job | 完成（见 §4） |
 
 未完成、且**有意**不做的，见 §6 边界。
 
@@ -109,8 +109,28 @@ cd /root/ForgePilot/frontend && npm run lint && npm run typecheck && npm run tes
 
 四条全部退出码 0。`Test Files 5 passed (5), Tests 15 passed (15)`；
 构建 52 modules，`index-DB71gMCW.js 117.18 kB`（gzip 42.93 kB）。
+上述是**删掉 `node_modules` 后 `npm ci` 全新安装**跑的（`found 0 vulnerabilities`），不是增量环境。
 `git diff --stat frontend/package.json frontend/package-lock.json` 为空——**未新增任何依赖**。
 一级导航仍严格三项（`项目` / `研发需求` / `代码审查`）。
+
+### 浏览器实际网络路径（nginx `/api/` 那一跳）
+
+`BatchOneApiTest` 证明的是 JVM 内的闭环，证明不了前端容器到后端的代理这一跳。
+用 curl 沿浏览器完全相同的路径（打到 frontend 端口）在 compose 上跑了一次真实流程：
+
+| 请求 | 结果 |
+|---|---|
+| `GET /api/auth/me`（冷启动） | `401`，且**下发了 `XSRF-TOKEN` cookie** |
+| `POST /api/auth/register` | `201` |
+| `POST /api/auth/login`（表单） | `200` |
+| `POST /api/projects` | `201` |
+| `POST /api/projects/1/requirements` | `201` |
+| `GET /api/projects` | 返回真实数据，`myRole: LEADER` |
+| `POST /api/projects` **不带 CSRF 头** | `403` |
+| `GET /requirements`（SPA 深链接） | `200`（回落 index.html，不是 404） |
+
+这是一次性验证脚本，跑完即弃、未进仓库：它相对 `BatchOneApiTest` 唯一新增的信息就是代理那一跳，
+为它长期维护第二套 E2E 装置不值得。
 
 ### 复核用的针对性检查
 
@@ -150,6 +170,17 @@ Spring Security 接入后有一处曾会打破 smoke 的坑，已在实现期拦
 另有一条容器级细节：404 要送达客户端需要一次 ERROR dispatch 到 `/error`，该 dispatch 会被重新鉴权，
 因此必须放行 `DispatcherType.ERROR`；客户端无法自行触发它，因为鉴权入口用 `setStatus` 而非 `sendError`。
 
+CI 在推送 `f6c93b2` 后运行 `32471329945`，**四个 job 全部 success**：
+
+| Job | 结论 |
+|---|---|
+| Backend foundation | success（7 步） |
+| Frontend foundation | success（11 步） |
+| Evaluation contract | success（10 步） |
+| Empty-stack Compose smoke | success（5 步） |
+
+这条是 Phase 1 的遗留项（当时 CI 从未真实跑过），本批次已闭环。CI 仍不依赖任何 AI/SCM 凭据或仓库秘密。
+
 ## 5. Legacy 使用依据
 
 本批次**未复制任何 Legacy 代码**。`LEGACY-MIGRATION-MATRIX.md` 中与本批次相关的条目按 REWRITE/REFERENCE 处理：
@@ -178,16 +209,43 @@ Legacy 的私有 Token 协议是 REFERENCE，按 [D013.7](../../../docs/v2/DECIS
    彻底堵住需要持久化已退休编号，即新增列或新增表，本批次禁止。
 5. **需求正文无乐观锁**：两个并发发布由 `uq_requirement_revision_requirement_seq` 串行化（失败方 409），
    两个并发 DRAFT 编辑是后写覆盖。超出本批次范围。
-6. **smoke 脚本名与内容已错位**：文件仍叫 `phase1-compose-smoke.sh`、仍要求项目名以 `forgepilot-phase1-` 开头，
+6. **没有自动化的浏览器点击闭环**。前端有 15 个单元/交互测试、typecheck 与生产构建，
+   API 闭环由 `BatchOneApiTest` 在 HTTP 层证明，代理那一跳由上面的 curl 流程证明。
+   真正的「点开页面走一遍」没有自动化，因为那需要引入 Playwright 之类的浏览器驱动，
+   而本批次明确不新增依赖。**这是一个如实记录的缺口，不是已覆盖项。**
+7. **smoke 脚本名与内容已错位**：文件仍叫 `phase1-compose-smoke.sh`、仍要求项目名以 `forgepilot-phase1-` 开头，
    但断言的已是批次 1 的六张表。没有改名是因为 CI 引用该路径；属可择日清理的命名债，不影响正确性。
 
-## 8. 回滚
+## 8. 验收条件逐条
+
+| AC | 结论 | 证据 |
+|---|---|---|
+| AC1 六张表、复合外键、跨项目写入被数据库拒绝 | 通过 | `FoundationDatabaseTest`（表集合与迁移历史）、`DatabaseConstraintTest` 16 条（真实 SQLState） |
+| AC2 注册/登录/登出/改密/CSRF/口令不回显 | 通过 | `AuthApiTest` 6 条，口令与哈希检查是每个方法响应体的 `@AfterEach` |
+| AC3 创建者同事务成 LEADER、拒绝第二个、转移、并发只有一个成功 | 通过 | `ProjectAuthorizationTest`（含双线程并发转移） |
+| AC4 `(project_id,user_id)` 与 SCM 身份唯一、仅 LEADER 可配、授权不读 `scm_username` | 通过 | `DatabaseConstraintTest` + `ProjectAuthorizationTest`；grep 确认无处读取 `scmUsername` 做判定 |
+| AC5 跨项目猜 id 全部被拒且不泄漏存在性 | 通过 | `ProjectAuthorizationTest` 与 `BatchOneApiTest`（HTTP 层断言「不存在」与「无权」同解） |
+| AC6 DEVELOPER/REVIEWER 越权全部被拒 | 通过 | `ProjectAuthorizationTest` 角色矩阵、`RequirementLifecycleTest`、`BatchOneApiTest` |
+| AC7 三步回填、指向别的需求/项目被拒 | 通过 | `DatabaseConstraintTest`（23503）、`RequirementLifecycleTest` |
+| AC8 DRAFT 原地编辑清空 `quality_json`、READY 后冻结 | 通过 | 夹具先 seed 非空值并断言 seed 本身，清空断言因此不会空转 |
+| AC9 `ac_key` 跨 Revision 稳定、改顺序不变、唯一性由库保证 | 通过 | `RequirementLifecycleTest` + `BatchOneApiTest`（发新版本时打乱顺序仍保 key） |
+| AC10 状态机、首次指派同事务、换人不改状态、非法转换逐条被拒 | 通过 | 转换表以数据形式编码；`RequirementLifecycleTest` 逐对断言 |
+| AC11 前端闭环、五条命令全绿、无新一级菜单 | **部分通过** | 五条命令全绿、导航仍三项、无新依赖；API 闭环与代理跳已证明，但**浏览器点击闭环未自动化**（见 §7.6） |
+| AC12 ArchUnit 七条、新增两条各有反证 | 通过 | `ArchitectureRulesTest` 8 个测试，两条新规则各配反证 fixture |
+| AC13 后端与前端全套命令、Compose 冷启动、CI 四 job | 通过 | 见 §4 |
+| AC14 `result.md` 完整、未触发 D013 之外的新决策 | 通过 | 本文；三项契约补充与一项守卫均属 `design.md`/`api-contract.md` 层面，未改动 16 表定义，未新增 D0xx |
+
+**AC11 只记部分通过。** 五条命令、导航约束、依赖约束、以及数据流都已验证，
+但「登录 → 建项目 → 加成员 → 写需求 → 置 READY → 指派 → 看版本历史」这一串**点击**没有自动化断言。
+把它记成"通过"会让这份报告在最需要可复现证据的地方失真。
+
+## 9. 回滚
 
 按文件组独立回滚：迁移+实体、auth、project、requirement、ArchUnit、前端各自成组。
 数据库回滚等价于重建空库（本批次尚无生产数据，且 `clean-disabled: true`，回滚靠丢卷而非 `flyway clean`）。
 `V2`/`V3` 一旦被任何环境应用过就不得编辑或重编号——只能追加 `V4`。
 
-## 9. 批次 2 的前置条件
+## 10. 批次 2 的前置条件
 
 1. 成员移出项目的语义（`requirement.assignee` 如何处置）必须先有决策，才能实现成员删除。
 2. 若引入禁用账户，必须同时递增 `session_version`（见 §7.3）。
