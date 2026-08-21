@@ -59,6 +59,36 @@ passes because nothing is selected is not enforcement.
 - Do not add coverage thresholds, style plugins, or extra static-analysis
   gates without a concrete failure they would have caught.
 
+### Outbound calls are stubbed, never credentialed
+
+CI holds no AI provider key, no SCM token and no repository secret, and
+`.github/workflows/ci.yml` references no `secrets.*`. That is a property to
+preserve, not an accident: a test suite that needs a credential cannot run for a
+contributor who lacks one, and a credential in CI is a credential that can leak.
+
+Two stubs are already available and **no HTTP-mocking dependency may be added**:
+
+| Use | What |
+|---|---|
+| Timeouts, retry counts, malformed responses, real status lines | `com.sun.net.httpserver.HttpServer` — in the JDK (`jdk.httpserver`), a real loopback socket |
+| Request shape: path, headers, JSON body | `org.springframework.test.web.client.MockRestServiceServer` — already transitive via `spring-boot-starter-test` |
+
+Bind port 0 and inject the address with `@DynamicPropertySource`, the mechanism
+`PostgresTestBase` already uses, so nothing collides in CI. WireMock and
+MockWebServer are absent on purpose: the rule above requires a new gate to name
+the real failure it would have caught, and the JDK server covers every case.
+
+**This only works while no client hardcodes a host.** The provider base URI comes
+from configuration, and the SCM base URI from `scm_repository.api_base`. That is
+the same property D010 needs for self-hosted instances, so production
+requirement and test seam are one thing — hardcode a host and both break at once.
+
+A stub on `127.0.0.1` and an SSRF policy that blocks loopback are in direct
+conflict, and the wrong resolution is to disable the policy under test, which
+ships a protection that never executed. The policy stays on, denies by default,
+and reads an explicit allowlist that is empty in production; tests add the one
+host they need, and a separate test with an empty allowlist pins the denials.
+
 ## Configuration and secrets
 
 - Credentials come from the environment only. In `application.yml`,

@@ -82,6 +82,43 @@ Two consequences follow from the same decision:
   `flush()` → promote** inside one transaction, with the `project` row locked
   first so concurrent transfers serialise and the loser re-reads its own role.
 
+## Vectors
+
+`knowledge_chunk.embedding` is `vector` with **no dimension**. D001 makes the
+model's dimension deployment configuration, so binding it in the schema would
+let one Flyway version produce different structures in different environments.
+
+Three consequences, all measured rather than assumed:
+
+- **No vector index can exist on that column.** `ivfflat` and `hnsw` both fail
+  with `22023: column does not have dimensions`. The route to an index is an
+  expression index, and it arrives with the phase that freezes an embedding
+  profile — not before.
+- **Until an index exists, the database does not check dimensions at all.** A
+  column-level `CHECK (embedding IS NULL OR dimension = vector_dims(embedding))`
+  proves a single row is self-consistent and nothing more; it cannot see the
+  other rows. One row embedded at a different dimension makes **every** TopK
+  query in that project fail with `22000`. So the application-side check — does
+  this vector match the dimension this project already uses? — is the entire
+  defence, not a nicety. It lives in `ChunkSearchRepository.writeEmbedding`.
+- **The column is deliberately not mapped by the entity.** Of the four spellings
+  that were tried, `String` fails at startup, `float[]` without a type code fails
+  at startup, `@JdbcTypeCode(SqlTypes.VECTOR) float[]` works but needs the
+  `hibernate-vector` dependency, and `String` + `columnDefinition = "vector"`
+  is the trap: `ddl-auto: validate` passes and **every write then fails at
+  runtime** with `42804`. Never use that one. `validate` only inspects columns an
+  entity maps, so leaving it unmapped is safe at startup, and retrieval needs
+  native SQL either way.
+
+`::vector` and the distance operators appear in exactly one class,
+`ChunkSearchRepository`. Cosine (`<=>`) is the chosen operator; when an index is
+finally added it must use `vector_cosine_ops` **and** the query's left-hand side
+must match the index expression exactly, or the index is dead weight.
+
+`project_id` is a hard filter in retrieval, and measurement confirms it is
+evaluated before the ordering expression — so another project's rows can neither
+appear in nor poison a result.
+
 ## Database tests
 
 Database behavior is proven against a real PostgreSQL with pgvector, never a
