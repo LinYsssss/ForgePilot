@@ -1,51 +1,25 @@
 # Logging Guidelines
 
-> How logging is done in this project.
+## Current state
 
----
+The backend has no logging implementation and no logging convention. There is
+no logger declaration, no logging configuration file, and no log format,
+correlation field, or level policy in the repository. The only log output today
+is Spring Boot's own startup logging under the framework defaults.
 
-## Overview
+Nothing here should be treated as an existing convention, because none exists
+yet.
 
-<!--
-Document your project's logging conventions here.
+## Rules that already apply
 
-Questions to answer:
-- What logging library do you use?
-- What are the log levels and when to use each?
-- What should be logged?
-- What should NOT be logged (PII, secrets)?
--->
+- Never log credentials, tokens, or any value read from
+  `FORGEPILOT_DB_PASSWORD`. This also applies to CI output and captured
+  evidence; see [quality-guidelines.md](./quality-guidelines.md).
+- The error/trace fields returned to clients are defined in
+  [ARCHITECTURE.md](../../../docs/v2/ARCHITECTURE.md) §2.4, not here.
 
-(To be filled by the team)
+## Ownership
 
----
-
-## Log Levels
-
-<!-- When to use each level: debug, info, warn, error -->
-
-(To be filled by the team)
-
----
-
-## Structured Logging
-
-<!-- Log format, required fields -->
-
-(To be filled by the team)
-
----
-
-## What to Log
-
-<!-- Important events to log -->
-
-(To be filled by the team)
-
----
-
-## What NOT to Log
-
-<!-- Sensitive data, PII, secrets -->
-
-(To be filled by the team)
+This guide is filled by the phase that introduces a real logging need,
+alongside `common.web`. That change must record the actual levels, structure,
+and correlation fields it implements, and point at the code that produces them.
