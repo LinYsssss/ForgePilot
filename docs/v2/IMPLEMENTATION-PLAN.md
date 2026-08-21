@@ -27,7 +27,7 @@
 - 只建立底座所需最小 schema；业务表随对应纵向 Phase 增加，首个可发布版本前再 squash 为干净初始化迁移。
 - 前端路由、请求层、设计令牌、基础组件和三方向视觉对比；用户选定的视觉方向、动效基线、`prefers-reduced-motion` 与设计漂移清单写入 `.trellis/spec/frontend/`。
 - 评测契约与确定性评分器骨架；从既有 development 26 例中选 10–15 例快速集，不调用尚不存在的 Review Engine，不运行 holdout。
-- 目标 4 GB 部署机容量基线：PostgreSQL + 空后端 + 前端静态服务与现有常驻服务连续稳定至少 30 分钟；记录 RSS/PSS、JVM heap/direct memory、Postgres 参数、可用内存和 swap/OOM 情况。空载后至少保留 1 GB 可用内存。
+- 目标 4 GB 部署机容量基线：PostgreSQL + 空后端 + 前端静态服务与现有常驻服务完成 5 分钟基线、2 分钟预热和至少 4 分钟稳定窗口；稳定窗口每 15 秒采样，至少 17 组。记录 RSS/PSS、JVM heap/direct memory、Postgres 参数、可用内存和 swap/OOM 情况，空载后至少保留 1 GB 可用内存。该短窗口由用户于 2026-08-20 明确批准，只证明 Phase 1 空栈的短时容量，不外推长期稳定性。
 
 ### 明确禁止
 
