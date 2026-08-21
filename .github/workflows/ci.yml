@@ -87,6 +87,7 @@ jobs:
       FORGEPILOT_BACKEND_PORT: "18080"
       FORGEPILOT_FRONTEND_PORT: "18081"
       FORGEPILOT_DB_PASSWORD: forgepilot-phase1-ci-only
+      FORGEPILOT_SCM_SECRET_KEY: forgepilot-ci-only-not-a-real-key
     steps:
       - uses: actions/checkout@v4
       - name: Run two fresh-volume cold starts

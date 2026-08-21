@@ -40,6 +40,11 @@ services:
       FORGEPILOT_DB_USERNAME: ${FORGEPILOT_DB_USERNAME:-forgepilot}
       FORGEPILOT_DB_PASSWORD: ${FORGEPILOT_DB_PASSWORD:-forgepilot-phase1-local-only}
       FORGEPILOT_DB_POOL_SIZE: ${FORGEPILOT_DB_POOL_SIZE:-5}
+      # The application declares this with no fallback, so a missing key stops
+      # startup rather than silently encrypting with a weak default. The value
+      # here is local/CI only and is never a real key, exactly as with the
+      # database password above.
+      FORGEPILOT_SCM_SECRET_KEY: ${FORGEPILOT_SCM_SECRET_KEY:-forgepilot-local-only-not-a-real-key}
       JAVA_TOOL_OPTIONS: ${FORGEPILOT_JAVA_TOOL_OPTIONS:--Xms128m -Xmx384m -XX:MaxDirectMemorySize=128m -XX:MaxMetaspaceSize=128m -XX:+UseSerialGC -XX:NativeMemoryTracking=summary}
       SPRING_PROFILES_ACTIVE: ${FORGEPILOT_SPRING_PROFILES_ACTIVE:-}
       SERVER_PORT: 8080
