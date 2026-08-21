@@ -1,0 +1,12 @@
+{"_example": "Fill with {\"file\": \"<path>\", \"reason\": \"<why>\"}. Put spec/research files only — no code paths. Run `python .trellis/scripts/get_context.py --mode packages` to list available specs. Delete this line once real entries are added."}
+{"file": ".trellis/spec/backend/index.md", "reason": "Backend quality/check entry point."}
+{"file": ".trellis/spec/backend/database-guidelines.md", "reason": "Database and migration checks."}
+{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "Backend forbidden-pattern and test checks."}
+{"file": ".trellis/spec/frontend/index.md", "reason": "Frontend quality/check entry point."}
+{"file": ".trellis/spec/frontend/component-guidelines.md", "reason": "Frontend accessibility/component checks."}
+{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "Frontend drift and quality checks."}
+{"file": ".trellis/spec/frontend/type-safety.md", "reason": "Frontend type-safety checks."}
+{"file": ".trellis/spec/guides/cross-layer-thinking-guide.md", "reason": "Cross-layer integration check guidance."}
+{"file": ".trellis/tasks/08-20-phase-1-foundation/research/backend-foundation.md", "reason": "Backend evidence for review."}
+{"file": ".trellis/tasks/08-20-phase-1-foundation/research/frontend-evaluation.md", "reason": "Frontend/evaluation evidence for review."}
+{"file": ".trellis/tasks/08-20-phase-1-foundation/research/capacity-governance.md", "reason": "Capacity/governance evidence for review."}

@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ForgePilot · Phase 1 visual directions</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#preview">跳到预览</a>
+    <header class="research-header">
+      <div>
+        <p class="kicker">FORGEPILOT / PHASE 1 RESEARCH FIXTURE</p>
+        <h1>Choose the visual language for evidence-led review.</h1>
+        <p class="intro">同一份中性审查样例，三种不同的信息组织方式。这里比较的是结构、密度与阅读节奏，不是调色板。</p>
+      </div>
+      <p class="fixture-label">VISUAL ONLY<br /><span>No product state changes</span></p>
+    </header>
+
+    <section class="controls" aria-label="视觉比较控制">
+      <div class="control-group" role="group" aria-label="视觉方向">
+        <span class="control-label">Direction</span>
+        <button class="direction-button is-active" data-direction="ledger" type="button">A · Evidence Ledger</button>
+        <button class="direction-button" data-direction="console" type="button">B · Precision Console</button>
+        <button class="direction-button" data-direction="causal" type="button">C · Causal Trace</button>
+      </div>
+      <div class="control-group" role="group" aria-label="视口预览">
+        <span class="control-label">Viewport</span>
+        <button class="viewport-button is-active" data-viewport="wide" type="button">Wide</button>
+        <button class="viewport-button" data-viewport="tablet" type="button">Tablet</button>
+        <button class="viewport-button" data-viewport="phone" type="button">Phone</button>
+      </div>
+      <label class="motion-toggle"><input id="reduced-motion" type="checkbox" /> Reduced motion</label>
+      <button id="focus-locator" class="utility-button" type="button">Focus evidence locator</button>
+      <button id="toggle-diff" class="utility-button" type="button" aria-pressed="false">Show long diff</button>
+    </section>
+
+    <main id="preview" tabindex="-1">
+      <div id="direction-note" class="direction-note" aria-live="polite"></div>
+      <div id="preview-frame" class="preview-frame viewport-wide" data-direction="ledger"></div>
+    </main>
+
+    <section class="comparison-notes" aria-labelledby="notes-title">
+      <h2 id="notes-title">Decision notes</h2>
+      <div class="note-grid">
+        <article><h3>Commercial fit</h3><p id="fit-note"></p></article>
+        <article><h3>Density & type</h3><p id="density-note"></p></article>
+        <article><h3>Memory point</h3><p id="memory-note"></p></article>
+        <article><h3>Forbidden mode</h3><p id="forbidden-note"></p></article>
+      </div>
+    </section>
+
+    <script src="app.js"></script>
+  </body>
+</html>

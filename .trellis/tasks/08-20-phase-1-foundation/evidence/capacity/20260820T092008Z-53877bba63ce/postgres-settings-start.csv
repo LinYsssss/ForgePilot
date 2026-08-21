@@ -1,0 +1,18 @@
+server_version_num
+150019
+extversion
+0.8.6
+name,setting,unit,source
+autovacuum_work_mem,65536,kB,command line
+effective_cache_size,524288,8kB,default
+huge_pages,try,,default
+jit,on,,default
+maintenance_work_mem,65536,kB,command line
+max_connections,30,,command line
+max_parallel_workers,8,,default
+max_parallel_workers_per_gather,2,,default
+max_worker_processes,8,,default
+shared_buffers,16384,8kB,command line
+temp_buffers,1024,8kB,default
+wal_buffers,512,8kB,default
+work_mem,4096,kB,command line

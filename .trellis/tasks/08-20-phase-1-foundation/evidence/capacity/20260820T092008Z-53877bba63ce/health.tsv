@@ -1,0 +1,12 @@
+timestamp	sample	backend_http	frontend_http	proxy_http	postgres_exit	backend_body
+2026-08-20T09:26:05Z	0	200	200	200	0	{"groups":["liveness","readiness"],"status":"UP"}
+2026-08-20T09:28:15Z	1	200	200	200	0	{"groups":["liveness","readiness"],"status":"UP"}
+2026-08-20T09:28:30Z	2	200	200	200	0	{"groups":["liveness","readiness"],"status":"UP"}
+2026-08-20T09:28:59Z	4	200	200	200	0	{"groups":["liveness","readiness"],"status":"UP"}
+2026-08-20T09:29:29Z	6	200	200	200	0	{"groups":["liveness","readiness"],"status":"UP"}
+2026-08-20T09:30:00Z	8	200	200	200	0	{"groups":["liveness","readiness"],"status":"UP"}
+2026-08-20T09:30:29Z	10	200	200	200	0	{"groups":["liveness","readiness"],"status":"UP"}
+2026-08-20T09:30:59Z	12	200	200	200	0	{"groups":["liveness","readiness"],"status":"UP"}
+2026-08-20T09:31:29Z	14	200	200	200	0	{"groups":["liveness","readiness"],"status":"UP"}
+2026-08-20T09:31:59Z	16	200	200	200	0	{"groups":["liveness","readiness"],"status":"UP"}
+2026-08-20T09:32:14Z	17	200	200	200	0	{"groups":["liveness","readiness"],"status":"UP"}

@@ -1,0 +1,103 @@
+name: forgepilot-phase1-cap-20260820t092008z-53877bba63ce
+networks:
+  default:
+    name: forgepilot-phase1-cap-20260820t092008z-53877bba63ce_default
+services:
+  backend:
+    build:
+      context: /root/ForgePilot/backend
+      dockerfile: Dockerfile
+    depends_on:
+      postgres:
+        condition: service_healthy
+        required: true
+    environment:
+      FORGEPILOT_DB_PASSWORD: ${FORGEPILOT_DB_PASSWORD:-forgepilot-phase1-local-only}
+      FORGEPILOT_DB_POOL_SIZE: ${FORGEPILOT_DB_POOL_SIZE:-5}
+      FORGEPILOT_DB_URL: jdbc:postgresql://postgres:5432/${FORGEPILOT_DB_NAME:-forgepilot}
+      FORGEPILOT_DB_USERNAME: ${FORGEPILOT_DB_USERNAME:-forgepilot}
+      JAVA_TOOL_OPTIONS: ${FORGEPILOT_JAVA_TOOL_OPTIONS:--Xms128m -Xmx384m -XX:MaxDirectMemorySize=128m
+        -XX:MaxMetaspaceSize=128m -XX:+UseSerialGC -XX:NativeMemoryTracking=summary}
+      SERVER_PORT: 8080
+      SPRING_PROFILES_ACTIVE: ${FORGEPILOT_SPRING_PROFILES_ACTIVE:-}
+    healthcheck:
+      interval: 5s
+      retries: 24
+      start_period: 30s
+      test:
+        - CMD
+        - curl
+        - --fail
+        - --silent
+        - http://127.0.0.1:8080/actuator/health/readiness
+      timeout: 3s
+    mem_limit: 768m
+    networks:
+      default: null
+    ports:
+      - ${FORGEPILOT_BIND_ADDRESS:-127.0.0.1}:${FORGEPILOT_BACKEND_PORT:-18080}:8080
+    restart: unless-stopped
+  frontend:
+    build:
+      context: /root/ForgePilot/frontend
+      dockerfile: Dockerfile
+    depends_on:
+      backend:
+        condition: service_healthy
+        required: true
+    healthcheck:
+      interval: 5s
+      retries: 12
+      start_period: 10s
+      test:
+        - CMD
+        - wget
+        - --quiet
+        - --spider
+        - http://127.0.0.1:8080/healthz
+      timeout: 3s
+    mem_limit: 64m
+    networks:
+      default: null
+    ports:
+      - ${FORGEPILOT_BIND_ADDRESS:-127.0.0.1}:${FORGEPILOT_FRONTEND_PORT:-18081}:8080
+    restart: unless-stopped
+  postgres:
+    command:
+      - postgres
+      - -c
+      - shared_buffers=128MB
+      - -c
+      - work_mem=4MB
+      - -c
+      - maintenance_work_mem=64MB
+      - -c
+      - autovacuum_work_mem=64MB
+      - -c
+      - max_connections=30
+    environment:
+      POSTGRES_DB: ${FORGEPILOT_DB_NAME:-forgepilot}
+      POSTGRES_PASSWORD: ${FORGEPILOT_DB_PASSWORD:-forgepilot-phase1-local-only}
+      POSTGRES_USER: ${FORGEPILOT_DB_USERNAME:-forgepilot}
+    healthcheck:
+      interval: 5s
+      retries: 20
+      start_period: 15s
+      test:
+        - CMD-SHELL
+        - pg_isready --username "$${POSTGRES_USER}" --dbname "$${POSTGRES_DB}"
+      timeout: 3s
+    image: pgvector/pgvector:0.8.6-pg15-bookworm@sha256:a947c45cdc5906a1bc951f20a8709e321256343ee0f251e4ae00b5e7def4e6da
+    mem_limit: 512m
+    networks:
+      default: null
+    restart: unless-stopped
+    shm_size: 160m
+    volumes:
+      - source: postgres-data
+        target: /var/lib/postgresql/data
+        type: volume
+        volume: {}
+volumes:
+  postgres-data:
+    name: forgepilot-phase1-cap-20260820t092008z-53877bba63ce_postgres-data

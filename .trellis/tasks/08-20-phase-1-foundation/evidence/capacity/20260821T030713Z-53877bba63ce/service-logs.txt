@@ -1,0 +1,175 @@
+frontend-1  | 2026-08-21T03:12:43.135102213Z /docker-entrypoint.sh: /docker-entrypoint.d/ is not empty, will attempt to perform configuration
+frontend-1  | 2026-08-21T03:12:43.135152690Z /docker-entrypoint.sh: Looking for shell scripts in /docker-entrypoint.d/
+frontend-1  | 2026-08-21T03:12:43.137812643Z /docker-entrypoint.sh: Launching /docker-entrypoint.d/10-listen-on-ipv6-by-default.sh
+frontend-1  | 2026-08-21T03:12:43.146964354Z 10-listen-on-ipv6-by-default.sh: info: Getting the checksum of /etc/nginx/conf.d/default.conf
+frontend-1  | 2026-08-21T03:12:43.183345496Z 10-listen-on-ipv6-by-default.sh: info: /etc/nginx/conf.d/default.conf differs from the packaged version
+frontend-1  | 2026-08-21T03:12:43.183925028Z /docker-entrypoint.sh: Sourcing /docker-entrypoint.d/15-local-resolvers.envsh
+frontend-1  | 2026-08-21T03:12:43.184030088Z /docker-entrypoint.sh: Launching /docker-entrypoint.d/20-envsubst-on-templates.sh
+frontend-1  | 2026-08-21T03:12:43.194221330Z /docker-entrypoint.sh: Launching /docker-entrypoint.d/30-tune-worker-processes.sh
+frontend-1  | 2026-08-21T03:12:43.197385133Z /docker-entrypoint.sh: Configuration complete; ready for start up
+frontend-1  | 2026-08-21T03:12:43.213446349Z 2026/08/21 03:12:43 [notice] 1#1: using the "epoll" event method
+frontend-1  | 2026-08-21T03:12:43.213479271Z 2026/08/21 03:12:43 [notice] 1#1: nginx/1.29.8
+frontend-1  | 2026-08-21T03:12:43.213484778Z 2026/08/21 03:12:43 [notice] 1#1: built by gcc 15.2.0 (Alpine 15.2.0)
+frontend-1  | 2026-08-21T03:12:43.213490040Z 2026/08/21 03:12:43 [notice] 1#1: OS: Linux 5.15.0-187-generic
+frontend-1  | 2026-08-21T03:12:43.213495029Z 2026/08/21 03:12:43 [notice] 1#1: getrlimit(RLIMIT_NOFILE): 1024:524288
+frontend-1  | 2026-08-21T03:12:43.213647047Z 2026/08/21 03:12:43 [notice] 1#1: start worker processes
+frontend-1  | 2026-08-21T03:12:43.213964621Z 2026/08/21 03:12:43 [notice] 1#1: start worker process 29
+frontend-1  | 2026-08-21T03:12:43.214194739Z 2026/08/21 03:12:43 [notice] 1#1: start worker process 30
+frontend-1  | 2026-08-21T03:12:43.214479495Z 2026/08/21 03:12:43 [notice] 1#1: start worker process 31
+frontend-1  | 2026-08-21T03:12:43.214869257Z 2026/08/21 03:12:43 [notice] 1#1: start worker process 32
+frontend-1  | 2026-08-21T03:12:51.456356664Z 172.18.0.1 - - [21/Aug/2026:03:12:51 +0000] "GET / HTTP/1.1" 200 481 "-" "curl/7.81.0" "-"
+frontend-1  | 2026-08-21T03:12:51.488969758Z 172.18.0.1 - - [21/Aug/2026:03:12:51 +0000] "GET /api/actuator/health HTTP/1.1" 200 60 "-" "curl/7.81.0" "-"
+frontend-1  | 2026-08-21T03:12:53.892836849Z 172.18.0.1 - - [21/Aug/2026:03:12:53 +0000] "GET / HTTP/1.1" 200 481 "-" "curl/7.81.0" "-"
+frontend-1  | 2026-08-21T03:12:58.949536335Z 172.18.0.1 - - [21/Aug/2026:03:12:58 +0000] "GET / HTTP/1.1" 200 481 "-" "curl/7.81.0" "-"
+frontend-1  | 2026-08-21T03:13:04.004059182Z 172.18.0.1 - - [21/Aug/2026:03:13:04 +0000] "GET / HTTP/1.1" 200 481 "-" "curl/7.81.0" "-"
+frontend-1  | 2026-08-21T03:13:09.077732130Z 172.18.0.1 - - [21/Aug/2026:03:13:09 +0000] "GET / HTTP/1.1" 200 481 "-" "curl/7.81.0" "-"
+frontend-1  | 2026-08-21T03:13:14.131641957Z 172.18.0.1 - - [21/Aug/2026:03:13:14 +0000] "GET / HTTP/1.1" 200 481 "-" "curl/7.81.0" "-"
+frontend-1  | 2026-08-21T03:13:19.191012760Z 172.18.0.1 - - [21/Aug/2026:03:13:19 +0000] "GET / HTTP/1.1" 200 481 "-" "curl/7.81.0" "-"
+frontend-1  | 2026-08-21T03:13:24.240694727Z 172.18.0.1 - - [21/Aug/2026:03:13:24 +0000] "GET / HTTP/1.1" 200 481 "-" "curl/7.81.0" "-"
+frontend-1  | 2026-08-21T03:13:29.300822843Z 172.18.0.1 - - [21/Aug/2026:03:13:29 +0000] "GET / HTTP/1.1" 200 481 "-" "curl/7.81.0" "-"
+frontend-1  | 2026-08-21T03:13:34.360576362Z 172.18.0.1 - - [21/Aug/2026:03:13:34 +0000] "GET / HTTP/1.1" 200 481 "-" "curl/7.81.0" "-"
+frontend-1  | 2026-08-21T03:13:39.412871311Z 172.18.0.1 - - [21/Aug/2026:03:13:39 +0000] "GET / HTTP/1.1" 200 481 "-" "curl/7.81.0" "-"
+frontend-1  | 2026-08-21T03:13:44.470969799Z 172.18.0.1 - - [21/Aug/2026:03:13:44 +0000] "GET / HTTP/1.1" 200 481 "-" "curl/7.81.0" "-"
+frontend-1  | 2026-08-21T03:13:49.526847766Z 172.18.0.1 - - [21/Aug/2026:03:13:49 +0000] "GET / HTTP/1.1" 200 481 "-" "curl/7.81.0" "-"
+frontend-1  | 2026-08-21T03:13:54.586342261Z 172.18.0.1 - - [21/Aug/2026:03:13:54 +0000] "GET / HTTP/1.1" 200 481 "-" "curl/7.81.0" "-"
+frontend-1  | 2026-08-21T03:13:59.656215218Z 172.18.0.1 - - [21/Aug/2026:03:13:59 +0000] "GET / HTTP/1.1" 200 481 "-" "curl/7.81.0" "-"
+frontend-1  | 2026-08-21T03:14:04.726149981Z 172.18.0.1 - - [21/Aug/2026:03:14:04 +0000] "GET / HTTP/1.1" 200 481 "-" "curl/7.81.0" "-"
+frontend-1  | 2026-08-21T03:14:09.782195422Z 172.18.0.1 - - [21/Aug/2026:03:14:09 +0000] "GET / HTTP/1.1" 200 481 "-" "curl/7.81.0" "-"
+frontend-1  | 2026-08-21T03:14:14.872843171Z 172.18.0.1 - - [21/Aug/2026:03:14:14 +0000] "GET / HTTP/1.1" 200 481 "-" "curl/7.81.0" "-"
+frontend-1  | 2026-08-21T03:14:19.962199946Z 172.18.0.1 - - [21/Aug/2026:03:14:19 +0000] "GET / HTTP/1.1" 200 481 "-" "curl/7.81.0" "-"
+frontend-1  | 2026-08-21T03:14:25.020304784Z 172.18.0.1 - - [21/Aug/2026:03:14:25 +0000] "GET / HTTP/1.1" 200 481 "-" "curl/7.81.0" "-"
+frontend-1  | 2026-08-21T03:14:30.072677752Z 172.18.0.1 - - [21/Aug/2026:03:14:30 +0000] "GET / HTTP/1.1" 200 481 "-" "curl/7.81.0" "-"
+frontend-1  | 2026-08-21T03:14:35.129435832Z 172.18.0.1 - - [21/Aug/2026:03:14:35 +0000] "GET / HTTP/1.1" 200 481 "-" "curl/7.81.0" "-"
+frontend-1  | 2026-08-21T03:14:40.193128417Z 172.18.0.1 - - [21/Aug/2026:03:14:40 +0000] "GET / HTTP/1.1" 200 481 "-" "curl/7.81.0" "-"
+frontend-1  | 2026-08-21T03:14:45.256488110Z 172.18.0.1 - - [21/Aug/2026:03:14:45 +0000] "GET / HTTP/1.1" 200 481 "-" "curl/7.81.0" "-"
+frontend-1  | 2026-08-21T03:14:50.309891618Z 172.18.0.1 - - [21/Aug/2026:03:14:50 +0000] "GET / HTTP/1.1" 200 481 "-" "curl/7.81.0" "-"
+frontend-1  | 2026-08-21T03:14:59.178645009Z 172.18.0.1 - - [21/Aug/2026:03:14:59 +0000] "GET / HTTP/1.1" 200 481 "-" "curl/7.81.0" "-"
+frontend-1  | 2026-08-21T03:14:59.208079013Z 172.18.0.1 - - [21/Aug/2026:03:14:59 +0000] "GET /api/actuator/health HTTP/1.1" 200 60 "-" "curl/7.81.0" "-"
+frontend-1  | 2026-08-21T03:15:14.095430980Z 172.18.0.1 - - [21/Aug/2026:03:15:14 +0000] "GET / HTTP/1.1" 200 481 "-" "curl/7.81.0" "-"
+frontend-1  | 2026-08-21T03:15:14.143535718Z 172.18.0.1 - - [21/Aug/2026:03:15:14 +0000] "GET /api/actuator/health HTTP/1.1" 200 60 "-" "curl/7.81.0" "-"
+frontend-1  | 2026-08-21T03:15:44.000277237Z 172.18.0.1 - - [21/Aug/2026:03:15:43 +0000] "GET / HTTP/1.1" 200 481 "-" "curl/7.81.0" "-"
+frontend-1  | 2026-08-21T03:15:44.036204402Z 172.18.0.1 - - [21/Aug/2026:03:15:44 +0000] "GET /api/actuator/health HTTP/1.1" 200 60 "-" "curl/7.81.0" "-"
+frontend-1  | 2026-08-21T03:16:13.954472580Z 172.18.0.1 - - [21/Aug/2026:03:16:13 +0000] "GET / HTTP/1.1" 200 481 "-" "curl/7.81.0" "-"
+frontend-1  | 2026-08-21T03:16:13.991125916Z 172.18.0.1 - - [21/Aug/2026:03:16:13 +0000] "GET /api/actuator/health HTTP/1.1" 200 60 "-" "curl/7.81.0" "-"
+frontend-1  | 2026-08-21T03:16:44.011401182Z 172.18.0.1 - - [21/Aug/2026:03:16:44 +0000] "GET / HTTP/1.1" 200 481 "-" "curl/7.81.0" "-"
+frontend-1  | 2026-08-21T03:16:44.038278258Z 172.18.0.1 - - [21/Aug/2026:03:16:44 +0000] "GET /api/actuator/health HTTP/1.1" 200 60 "-" "curl/7.81.0" "-"
+frontend-1  | 2026-08-21T03:17:13.971689730Z 172.18.0.1 - - [21/Aug/2026:03:17:13 +0000] "GET / HTTP/1.1" 200 481 "-" "curl/7.81.0" "-"
+frontend-1  | 2026-08-21T03:17:14.010064690Z 172.18.0.1 - - [21/Aug/2026:03:17:14 +0000] "GET /api/actuator/health HTTP/1.1" 200 60 "-" "curl/7.81.0" "-"
+frontend-1  | 2026-08-21T03:17:44.058467236Z 172.18.0.1 - - [21/Aug/2026:03:17:44 +0000] "GET / HTTP/1.1" 200 481 "-" "curl/7.81.0" "-"
+frontend-1  | 2026-08-21T03:17:44.093051005Z 172.18.0.1 - - [21/Aug/2026:03:17:44 +0000] "GET /api/actuator/health HTTP/1.1" 200 60 "-" "curl/7.81.0" "-"
+frontend-1  | 2026-08-21T03:18:13.949642452Z 172.18.0.1 - - [21/Aug/2026:03:18:13 +0000] "GET / HTTP/1.1" 200 481 "-" "curl/7.81.0" "-"
+frontend-1  | 2026-08-21T03:18:13.971810544Z 172.18.0.1 - - [21/Aug/2026:03:18:13 +0000] "GET /api/actuator/health HTTP/1.1" 200 60 "-" "curl/7.81.0" "-"
+frontend-1  | 2026-08-21T03:18:43.915914719Z 172.18.0.1 - - [21/Aug/2026:03:18:43 +0000] "GET / HTTP/1.1" 200 481 "-" "curl/7.81.0" "-"
+frontend-1  | 2026-08-21T03:18:43.939967185Z 172.18.0.1 - - [21/Aug/2026:03:18:43 +0000] "GET /api/actuator/health HTTP/1.1" 200 60 "-" "curl/7.81.0" "-"
+frontend-1  | 2026-08-21T03:18:58.917058779Z 172.18.0.1 - - [21/Aug/2026:03:18:58 +0000] "GET / HTTP/1.1" 200 481 "-" "curl/7.81.0" "-"
+frontend-1  | 2026-08-21T03:18:58.940211762Z 172.18.0.1 - - [21/Aug/2026:03:18:58 +0000] "GET /api/actuator/health HTTP/1.1" 200 60 "-" "curl/7.81.0" "-"
+backend-1   | 2026-08-21T03:12:26.707827652Z Picked up JAVA_TOOL_OPTIONS: -Xms128m -Xmx384m -XX:MaxDirectMemorySize=128m -XX:MaxMetaspaceSize=128m -XX:+UseSerialGC -XX:NativeMemoryTracking=summary
+backend-1   | 2026-08-21T03:12:29.608723969Z
+backend-1   | 2026-08-21T03:12:29.608952411Z   .   ____          _            __ _ _
+backend-1   | 2026-08-21T03:12:29.608965190Z  /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+backend-1   | 2026-08-21T03:12:29.608971503Z ( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+backend-1   | 2026-08-21T03:12:29.608977481Z  \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+backend-1   | 2026-08-21T03:12:29.608983867Z   '  |____| .__|_| |_|_| |_\__, | / / / /
+backend-1   | 2026-08-21T03:12:29.608989697Z  =========|_|==============|___/=/_/_/_/
+backend-1   | 2026-08-21T03:12:29.608995288Z
+backend-1   | 2026-08-21T03:12:29.609608182Z  :: Spring Boot ::                (v4.1.0)
+backend-1   | 2026-08-21T03:12:29.609639315Z
+backend-1   | 2026-08-21T03:12:29.834967797Z 2026-08-21T03:12:29.827Z  INFO 1 --- [forgepilot-backend] [           main] com.forgepilot.ForgePilotApplication     : Starting ForgePilotApplication v0.1.0-SNAPSHOT using Java 21.0.11 with PID 1 (/app/forgepilot-backend.jar started by forgepilot in /app)
+backend-1   | 2026-08-21T03:12:29.837855504Z 2026-08-21T03:12:29.837Z  INFO 1 --- [forgepilot-backend] [           main] com.forgepilot.ForgePilotApplication     : The following 1 profile is active: "capacity"
+backend-1   | 2026-08-21T03:12:32.339327905Z 2026-08-21T03:12:32.338Z  INFO 1 --- [forgepilot-backend] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+backend-1   | 2026-08-21T03:12:32.387659427Z 2026-08-21T03:12:32.386Z  INFO 1 --- [forgepilot-backend] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 32 ms. Found 0 JPA repository interfaces.
+backend-1   | 2026-08-21T03:12:33.869714554Z 2026-08-21T03:12:33.867Z  INFO 1 --- [forgepilot-backend] [           main] o.s.boot.tomcat.TomcatWebServer          : Tomcat initialized with port 8080 (http)
+backend-1   | 2026-08-21T03:12:33.913301619Z 2026-08-21T03:12:33.912Z  INFO 1 --- [forgepilot-backend] [           main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+backend-1   | 2026-08-21T03:12:33.918392466Z 2026-08-21T03:12:33.913Z  INFO 1 --- [forgepilot-backend] [           main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/11.0.22]
+backend-1   | 2026-08-21T03:12:34.000054307Z 2026-08-21T03:12:33.999Z  INFO 1 --- [forgepilot-backend] [           main] b.w.c.s.WebApplicationContextInitializer : Root WebApplicationContext: initialization completed in 3889 ms
+backend-1   | 2026-08-21T03:12:35.240110594Z 2026-08-21T03:12:35.239Z  INFO 1 --- [forgepilot-backend] [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+backend-1   | 2026-08-21T03:12:35.933809474Z 2026-08-21T03:12:35.932Z  INFO 1 --- [forgepilot-backend] [           main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection org.postgresql.jdbc.PgConnection@6d7b001b
+backend-1   | 2026-08-21T03:12:35.937758394Z 2026-08-21T03:12:35.937Z  INFO 1 --- [forgepilot-backend] [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+backend-1   | 2026-08-21T03:12:35.999518477Z 2026-08-21T03:12:35.998Z  INFO 1 --- [forgepilot-backend] [           main] org.flywaydb.core.FlywayExecutor         : Database: jdbc:postgresql://postgres:5432/forgepilot (PostgreSQL 15.19)
+backend-1   | 2026-08-21T03:12:36.195776178Z 2026-08-21T03:12:36.189Z  INFO 1 --- [forgepilot-backend] [           main] o.f.c.i.s.JdbcTableSchemaHistory         : Schema history table "public"."flyway_schema_history" does not exist yet
+backend-1   | 2026-08-21T03:12:36.199693551Z 2026-08-21T03:12:36.198Z  INFO 1 --- [forgepilot-backend] [           main] o.f.core.internal.command.DbValidate     : Successfully validated 1 migration (execution time 00:00.058s)
+backend-1   | 2026-08-21T03:12:36.243225149Z 2026-08-21T03:12:36.241Z  INFO 1 --- [forgepilot-backend] [           main] o.f.c.i.s.JdbcTableSchemaHistory         : Creating Schema History table "public"."flyway_schema_history" ...
+backend-1   | 2026-08-21T03:12:36.386253625Z 2026-08-21T03:12:36.385Z  INFO 1 --- [forgepilot-backend] [           main] o.f.core.internal.command.DbMigrate      : Current version of schema "public": << Empty Schema >>
+backend-1   | 2026-08-21T03:12:36.410516121Z 2026-08-21T03:12:36.409Z  INFO 1 --- [forgepilot-backend] [           main] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "1 - foundation"
+backend-1   | 2026-08-21T03:12:36.536973773Z 2026-08-21T03:12:36.536Z  INFO 1 --- [forgepilot-backend] [           main] o.f.core.internal.command.DbMigrate      : Successfully applied 1 migration to schema "public", now at version v1 (execution time 00:00.066s)
+backend-1   | 2026-08-21T03:12:36.859003135Z 2026-08-21T03:12:36.858Z  INFO 1 --- [forgepilot-backend] [           main] org.hibernate.orm.jpa                    : HHH008540: Processing PersistenceUnitInfo [name: default]
+backend-1   | 2026-08-21T03:12:37.038027807Z 2026-08-21T03:12:37.037Z  INFO 1 --- [forgepilot-backend] [           main] org.hibernate.orm.core                   : HHH000001: Hibernate ORM core version 7.4.1.Final
+backend-1   | 2026-08-21T03:12:38.336605618Z 2026-08-21T03:12:38.335Z  INFO 1 --- [forgepilot-backend] [           main] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+backend-1   | 2026-08-21T03:12:38.612807154Z 2026-08-21T03:12:38.611Z  INFO 1 --- [forgepilot-backend] [           main] org.hibernate.orm.connections.pooling    : HHH10001005: Database info:
+backend-1   | 2026-08-21T03:12:38.612867108Z 	Database JDBC URL [jdbc:postgresql://postgres:5432/forgepilot]
+backend-1   | 2026-08-21T03:12:38.612876346Z 	Database driver: PostgreSQL JDBC Driver
+backend-1   | 2026-08-21T03:12:38.612906187Z 	Database dialect: PostgreSQLDialect
+backend-1   | 2026-08-21T03:12:38.612914126Z 	Database version: 15.19
+backend-1   | 2026-08-21T03:12:38.612920759Z 	Default catalog/schema: forgepilot/public
+backend-1   | 2026-08-21T03:12:38.612928149Z 	Autocommit mode: undefined/unknown
+backend-1   | 2026-08-21T03:12:38.612935104Z 	Isolation level: READ_COMMITTED [default READ_COMMITTED]
+backend-1   | 2026-08-21T03:12:38.612941509Z 	JDBC fetch size: none
+backend-1   | 2026-08-21T03:12:38.612947940Z 	Pool: DataSourceConnectionProvider
+backend-1   | 2026-08-21T03:12:38.612954445Z 	Minimum pool size: undefined/unknown
+backend-1   | 2026-08-21T03:12:38.612966404Z 	Maximum pool size: undefined/unknown
+backend-1   | 2026-08-21T03:12:39.751293138Z 2026-08-21T03:12:39.747Z  INFO 1 --- [forgepilot-backend] [           main] org.hibernate.orm.core                   : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+backend-1   | 2026-08-21T03:12:39.843644404Z 2026-08-21T03:12:39.842Z  INFO 1 --- [forgepilot-backend] [           main] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+backend-1   | 2026-08-21T03:12:41.297725001Z 2026-08-21T03:12:41.291Z  INFO 1 --- [forgepilot-backend] [           main] o.s.b.a.e.web.EndpointLinksResolver      : Exposing 2 endpoints beneath base path '/actuator'
+backend-1   | 2026-08-21T03:12:41.485046988Z 2026-08-21T03:12:41.484Z  INFO 1 --- [forgepilot-backend] [           main] o.s.boot.tomcat.TomcatWebServer          : Tomcat started on port 8080 (http) with context path '/'
+backend-1   | 2026-08-21T03:12:41.522419008Z 2026-08-21T03:12:41.521Z  INFO 1 --- [forgepilot-backend] [           main] com.forgepilot.ForgePilotApplication     : Started ForgePilotApplication in 13.065 seconds (process running for 14.815)
+backend-1   | 2026-08-21T03:12:42.297400574Z 2026-08-21T03:12:42.296Z  INFO 1 --- [forgepilot-backend] [nio-8080-exec-1] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
+backend-1   | 2026-08-21T03:12:42.298400561Z 2026-08-21T03:12:42.297Z  INFO 1 --- [forgepilot-backend] [nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+backend-1   | 2026-08-21T03:12:42.302796845Z 2026-08-21T03:12:42.302Z  INFO 1 --- [forgepilot-backend] [nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Completed initialization in 3 ms
+postgres-1  | 2026-08-21T03:12:21.002760957Z The files belonging to this database system will be owned by user "postgres".
+postgres-1  | 2026-08-21T03:12:21.002845098Z This user must also own the server process.
+postgres-1  | 2026-08-21T03:12:21.002854235Z
+postgres-1  | 2026-08-21T03:12:21.010161237Z The database cluster will be initialized with locale "en_US.utf8".
+postgres-1  | 2026-08-21T03:12:21.010238410Z The default database encoding has accordingly been set to "UTF8".
+postgres-1  | 2026-08-21T03:12:21.010247588Z The default text search configuration will be set to "english".
+postgres-1  | 2026-08-21T03:12:21.010270482Z
+postgres-1  | 2026-08-21T03:12:21.010278472Z Data page checksums are disabled.
+postgres-1  | 2026-08-21T03:12:21.010286363Z
+postgres-1  | 2026-08-21T03:12:21.010293316Z fixing permissions on existing directory /var/lib/postgresql/data ... ok
+postgres-1  | 2026-08-21T03:12:21.010300594Z creating subdirectories ... ok
+postgres-1  | 2026-08-21T03:12:21.010307818Z selecting dynamic shared memory implementation ... posix
+postgres-1  | 2026-08-21T03:12:21.066972093Z selecting default max_connections ... 100
+postgres-1  | 2026-08-21T03:12:21.128240911Z selecting default shared_buffers ... 128MB
+postgres-1  | 2026-08-21T03:12:21.177788138Z selecting default time zone ... Etc/UTC
+postgres-1  | 2026-08-21T03:12:21.177839393Z creating configuration files ... ok
+postgres-1  | 2026-08-21T03:12:21.654278124Z running bootstrap script ... ok
+postgres-1  | 2026-08-21T03:12:22.692518519Z performing post-bootstrap initialization ... ok
+postgres-1  | 2026-08-21T03:12:22.946792397Z syncing data to disk ... ok
+postgres-1  | 2026-08-21T03:12:22.946844659Z
+postgres-1  | 2026-08-21T03:12:22.946851583Z
+postgres-1  | 2026-08-21T03:12:22.946857113Z Success. You can now start the database server using:
+postgres-1  | 2026-08-21T03:12:22.946862992Z
+postgres-1  | 2026-08-21T03:12:22.946868892Z     pg_ctl -D /var/lib/postgresql/data -l logfile start
+postgres-1  | 2026-08-21T03:12:22.946874587Z
+postgres-1  | 2026-08-21T03:12:22.946801697Z initdb: warning: enabling "trust" authentication for local connections
+postgres-1  | 2026-08-21T03:12:22.946895634Z initdb: hint: You can change this by editing pg_hba.conf or using the option -A, or --auth-local and --auth-host, the next time you run initdb.
+postgres-1  | 2026-08-21T03:12:23.061020048Z waiting for server to start....2026-08-21 03:12:23.060 UTC [48] LOG:  starting PostgreSQL 15.19 (Debian 15.19-1.pgdg12+2) on x86_64-pc-linux-gnu, compiled by gcc (Debian 12.2.0-14+deb12u1) 12.2.0, 64-bit
+postgres-1  | 2026-08-21T03:12:23.063394890Z 2026-08-21 03:12:23.063 UTC [48] LOG:  listening on Unix socket "/var/run/postgresql/.s.PGSQL.5432"
+postgres-1  | 2026-08-21T03:12:23.071982133Z 2026-08-21 03:12:23.071 UTC [51] LOG:  database system was shut down at 2026-08-21 03:12:22 UTC
+postgres-1  | 2026-08-21T03:12:23.082547378Z 2026-08-21 03:12:23.082 UTC [48] LOG:  database system is ready to accept connections
+postgres-1  | 2026-08-21T03:12:23.114386649Z  done
+postgres-1  | 2026-08-21T03:12:23.114444930Z server started
+postgres-1  | 2026-08-21T03:12:23.426800249Z CREATE DATABASE
+postgres-1  | 2026-08-21T03:12:23.428805494Z
+postgres-1  | 2026-08-21T03:12:23.429187406Z
+postgres-1  | 2026-08-21T03:12:23.429216064Z /usr/local/bin/docker-entrypoint.sh: ignoring /docker-entrypoint-initdb.d/*
+postgres-1  | 2026-08-21T03:12:23.429225170Z
+postgres-1  | 2026-08-21T03:12:23.432894227Z waiting for server to shut down....2026-08-21 03:12:23.432 UTC [48] LOG:  received fast shutdown request
+postgres-1  | 2026-08-21T03:12:23.437896333Z 2026-08-21 03:12:23.435 UTC [48] LOG:  aborting any active transactions
+postgres-1  | 2026-08-21T03:12:23.440829676Z 2026-08-21 03:12:23.440 UTC [48] LOG:  background worker "logical replication launcher" (PID 54) exited with exit code 1
+postgres-1  | 2026-08-21T03:12:23.442312906Z 2026-08-21 03:12:23.442 UTC [49] LOG:  shutting down
+postgres-1  | 2026-08-21T03:12:23.443980101Z 2026-08-21 03:12:23.443 UTC [49] LOG:  checkpoint starting: shutdown immediate
+postgres-1  | 2026-08-21T03:12:23.539719280Z 2026-08-21 03:12:23.539 UTC [49] LOG:  checkpoint complete: wrote 918 buffers (5.6%); 0 WAL file(s) added, 0 removed, 0 recycled; write=0.033 s, sync=0.056 s, total=0.098 s; sync files=301, longest=0.020 s, average=0.001 s; distance=4222 kB, estimate=4222 kB
+postgres-1  | 2026-08-21T03:12:23.553400302Z 2026-08-21 03:12:23.553 UTC [48] LOG:  database system is shut down
+postgres-1  | 2026-08-21T03:12:23.633782637Z  done
+postgres-1  | 2026-08-21T03:12:23.633837443Z server stopped
+postgres-1  | 2026-08-21T03:12:23.636501739Z
+postgres-1  | 2026-08-21T03:12:23.636545340Z PostgreSQL init process complete; ready for start up.
+postgres-1  | 2026-08-21T03:12:23.636552205Z
+postgres-1  | 2026-08-21T03:12:23.694077234Z 2026-08-21 03:12:23.688 UTC [1] LOG:  starting PostgreSQL 15.19 (Debian 15.19-1.pgdg12+2) on x86_64-pc-linux-gnu, compiled by gcc (Debian 12.2.0-14+deb12u1) 12.2.0, 64-bit
+postgres-1  | 2026-08-21T03:12:23.694142987Z 2026-08-21 03:12:23.689 UTC [1] LOG:  listening on IPv4 address "0.0.0.0", port 5432
+postgres-1  | 2026-08-21T03:12:23.694153384Z 2026-08-21 03:12:23.689 UTC [1] LOG:  listening on IPv6 address "::", port 5432
+postgres-1  | 2026-08-21T03:12:23.706275283Z 2026-08-21 03:12:23.705 UTC [1] LOG:  listening on Unix socket "/var/run/postgresql/.s.PGSQL.5432"
+postgres-1  | 2026-08-21T03:12:23.716923105Z 2026-08-21 03:12:23.716 UTC [64] LOG:  database system was shut down at 2026-08-21 03:12:23 UTC
+postgres-1  | 2026-08-21T03:12:23.729580671Z 2026-08-21 03:12:23.729 UTC [1] LOG:  database system is ready to accept connections
+postgres-1  | 2026-08-21T03:17:23.807588217Z 2026-08-21 03:17:23.807 UTC [62] LOG:  checkpoint starting: time
+postgres-1  | 2026-08-21T03:17:48.959087495Z 2026-08-21 03:17:48.958 UTC [62] LOG:  checkpoint complete: wrote 252 buffers (1.5%); 0 WAL file(s) added, 0 removed, 0 recycled; write=25.125 s, sync=0.017 s, total=25.152 s; sync files=103, longest=0.002 s, average=0.001 s; distance=1366 kB, estimate=1366 kB

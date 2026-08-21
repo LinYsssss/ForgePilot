@@ -1,0 +1,18 @@
+2026-08-20T07:45:46Z	docker compose --project-name forgepilot-phase1-cap-20260820t074544z-53877bba63ce build
+2026-08-20T07:51:53Z	docker compose --project-name forgepilot-phase1-cap-20260820t074544z-53877bba63ce up --detach --no-build --wait
+ Container forgepilot-phase1-cap-20260820t074544z-53877bba63ce-frontend-1 Stopping
+ Container forgepilot-phase1-cap-20260820t074544z-53877bba63ce-frontend-1 Stopped
+ Container forgepilot-phase1-cap-20260820t074544z-53877bba63ce-frontend-1 Removing
+ Container forgepilot-phase1-cap-20260820t074544z-53877bba63ce-frontend-1 Removed
+ Container forgepilot-phase1-cap-20260820t074544z-53877bba63ce-backend-1 Stopping
+ Container forgepilot-phase1-cap-20260820t074544z-53877bba63ce-backend-1 Stopped
+ Container forgepilot-phase1-cap-20260820t074544z-53877bba63ce-backend-1 Removing
+ Container forgepilot-phase1-cap-20260820t074544z-53877bba63ce-backend-1 Removed
+ Container forgepilot-phase1-cap-20260820t074544z-53877bba63ce-postgres-1 Stopping
+ Container forgepilot-phase1-cap-20260820t074544z-53877bba63ce-postgres-1 Stopped
+ Container forgepilot-phase1-cap-20260820t074544z-53877bba63ce-postgres-1 Removing
+ Container forgepilot-phase1-cap-20260820t074544z-53877bba63ce-postgres-1 Removed
+ Network forgepilot-phase1-cap-20260820t074544z-53877bba63ce_default Removing
+ Volume forgepilot-phase1-cap-20260820t074544z-53877bba63ce_postgres-data Removing
+ Volume forgepilot-phase1-cap-20260820t074544z-53877bba63ce_postgres-data Removed
+ Network forgepilot-phase1-cap-20260820t074544z-53877bba63ce_default Removed

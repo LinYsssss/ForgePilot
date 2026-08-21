@@ -1,0 +1,51 @@
+ M .gitignore
+ M .trellis/spec/backend/database-guidelines.md
+ M .trellis/spec/backend/directory-structure.md
+ M .trellis/spec/backend/error-handling.md
+ M .trellis/spec/backend/index.md
+ M .trellis/spec/backend/logging-guidelines.md
+ M .trellis/spec/backend/quality-guidelines.md
+ M .trellis/spec/frontend/component-guidelines.md
+ M .trellis/spec/frontend/directory-structure.md
+ M .trellis/spec/frontend/hook-guidelines.md
+ M .trellis/spec/frontend/index.md
+ M .trellis/spec/frontend/quality-guidelines.md
+ M .trellis/spec/frontend/state-management.md
+ M .trellis/spec/frontend/type-safety.md
+ M backend/README.md
+ M docs/v2/IMPLEMENTATION-PLAN.md
+ M evaluation/README.md
+ M frontend/README.md
+?? .env.example
+?? .github/
+?? .trellis/spec/frontend/design-contract.md
+?? .trellis/spec/frontend/motion.md
+?? .trellis/tasks/08-20-phase-1-foundation/
+?? backend/.mvn/
+?? backend/Dockerfile
+?? backend/mvnw
+?? backend/mvnw.cmd
+?? backend/pom.xml
+?? backend/src/
+?? compose.yaml
+?? evaluation/.gitignore
+?? evaluation/case-sets/
+?? evaluation/cases/
+?? evaluation/contracts/
+?? evaluation/fixtures/
+?? evaluation/manifest.quick.json
+?? evaluation/reference-runs/
+?? evaluation/tools/
+?? frontend/.dockerignore
+?? frontend/Dockerfile
+?? frontend/index.html
+?? frontend/nginx.conf
+?? frontend/package-lock.json
+?? frontend/package.json
+?? frontend/scripts/
+?? frontend/src/
+?? frontend/tests/
+?? frontend/tsconfig.app.json
+?? frontend/tsconfig.json
+?? frontend/vite.config.ts
+?? scripts/

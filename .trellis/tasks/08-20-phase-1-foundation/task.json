@@ -1,0 +1,33 @@
+{
+  "id": "phase-1-foundation",
+  "name": "phase-1-foundation",
+  "title": "Phase 1 minimal greenfield foundation",
+  "description": "",
+  "status": "in_progress",
+  "dev_type": null,
+  "scope": "foundation",
+  "package": null,
+  "priority": "P2",
+  "creator": "claude",
+  "assignee": "claude",
+  "createdAt": "2026-08-20",
+  "completedAt": null,
+  "branch": null,
+  "base_branch": "main",
+  "worktree_path": null,
+  "commit": null,
+  "pr_url": null,
+  "subtasks": [],
+  "children": [],
+  "parent": null,
+  "relatedFiles": [],
+  "notes": "",
+  "meta": {
+    "phase": "1",
+    "authorization": "phase1-execute-approved-2026-08-20",
+    "visual_gate": "selected-B-precision-review-console-2026-08-20",
+    "visual_direction": "B-precision-review-console",
+    "capacity_gate": "user-approved-5m-baseline-2m-warmup-4m-steady-2026-08-20",
+    "capacity_claim_boundary": "short-window-empty-stack-only"
+  }
+}

@@ -1,0 +1,13 @@
+{"_example": "Fill with {\"file\": \"<path>\", \"reason\": \"<why>\"}. Put spec/research files only — no code paths. Run `python .trellis/scripts/get_context.py --mode packages` to list available specs. Delete this line once real entries are added."}
+{"file": ".trellis/spec/backend/index.md", "reason": "Backend spec index and checklist for the foundation implementation."}
+{"file": ".trellis/spec/backend/directory-structure.md", "reason": "Backend package/file boundary guidance for the greenfield skeleton."}
+{"file": ".trellis/spec/backend/database-guidelines.md", "reason": "Flyway, PostgreSQL, and migration guidance for the foundation."}
+{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "Backend testing and forbidden-pattern guidance."}
+{"file": ".trellis/spec/frontend/index.md", "reason": "Frontend spec entry point for the scaffold and visual contract."}
+{"file": ".trellis/spec/frontend/component-guidelines.md", "reason": "Component and accessibility guidance for the foundation shell."}
+{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "Frontend quality, reduced-motion, and drift checks."}
+{"file": ".trellis/spec/frontend/type-safety.md", "reason": "TypeScript/type-check guidance."}
+{"file": ".trellis/spec/guides/cross-layer-thinking-guide.md", "reason": "Cross-layer contract checklist for backend/frontend/evaluation boundaries."}
+{"file": ".trellis/tasks/08-20-phase-1-foundation/research/backend-foundation.md", "reason": "Repository evidence for the backend foundation slice."}
+{"file": ".trellis/tasks/08-20-phase-1-foundation/research/frontend-evaluation.md", "reason": "Repository evidence for frontend and evaluation boundaries."}
+{"file": ".trellis/tasks/08-20-phase-1-foundation/research/capacity-governance.md", "reason": "Capacity, smoke, and Trellis governance evidence."}

@@ -1,0 +1,134 @@
+[
+  {
+    "Id": "7789b34384da6b780337bc39937ec8e6a140dad94b43505033bb30c5634019d8",
+    "Name": "/cpa-manager-plus",
+    "Created": "2026-08-20T08:22:26.634545738Z",
+    "Image": "sha256:9e01830bb2dae48ed85111e5a95520b0a1b9e65055c56a732f035fe8dadea244",
+    "Path": "cpa-manager-plus",
+    "State": {
+      "Status": "running",
+      "Running": true,
+      "OOMKilled": false,
+      "StartedAt": "2026-08-20T08:22:27.730086223Z",
+      "FinishedAt": "0001-01-01T00:00:00Z",
+      "Health": {
+        "Status": "healthy",
+        "FailingStreak": 0,
+        "Log": [
+          {
+            "Start": "2026-08-21T03:18:15.45869623Z",
+            "End": "2026-08-21T03:18:15.553420271Z",
+            "ExitCode": 0,
+            "Output": "{\"ok\":true,\"service\":\"cpa-manager-plus\"}\n"
+          },
+          {
+            "Start": "2026-08-21T03:18:25.560720303Z",
+            "End": "2026-08-21T03:18:25.671401406Z",
+            "ExitCode": 0,
+            "Output": "{\"ok\":true,\"service\":\"cpa-manager-plus\"}\n"
+          },
+          {
+            "Start": "2026-08-21T03:18:35.672775817Z",
+            "End": "2026-08-21T03:18:35.755185629Z",
+            "ExitCode": 0,
+            "Output": "{\"ok\":true,\"service\":\"cpa-manager-plus\"}\n"
+          },
+          {
+            "Start": "2026-08-21T03:18:45.756879629Z",
+            "End": "2026-08-21T03:18:45.845297425Z",
+            "ExitCode": 0,
+            "Output": "{\"ok\":true,\"service\":\"cpa-manager-plus\"}\n"
+          },
+          {
+            "Start": "2026-08-21T03:18:55.847075981Z",
+            "End": "2026-08-21T03:18:55.931894886Z",
+            "ExitCode": 0,
+            "Output": "{\"ok\":true,\"service\":\"cpa-manager-plus\"}\n"
+          }
+        ]
+      }
+    },
+    "RestartCount": 0,
+    "HostConfig": {
+      "Memory": 536870912,
+      "MemorySwap": 1073741824,
+      "NanoCpus": 0,
+      "PidsLimit": null
+    },
+    "Config": {
+      "Image": "seakee/cpa-manager-plus:v1.12.1",
+      "Healthcheck": {
+        "Test": [
+          "CMD",
+          "wget",
+          "-qO-",
+          "http://127.0.0.1:18317/health"
+        ],
+        "Interval": 10000000000,
+        "Timeout": 3000000000,
+        "Retries": 5
+      },
+      "Labels": {
+        "com.docker.compose.config-hash": "011a0c42b01b70575a1e68301f4fca20af36a32dc381829e366e04306c067cb5",
+        "com.docker.compose.container-number": "1",
+        "com.docker.compose.depends_on": "",
+        "com.docker.compose.image": "sha256:9e01830bb2dae48ed85111e5a95520b0a1b9e65055c56a732f035fe8dadea244",
+        "com.docker.compose.oneoff": "False",
+        "com.docker.compose.project": "cpa-manager-plus",
+        "com.docker.compose.project.config_files": "/root/cpa-manager-plus/docker-compose.yml",
+        "com.docker.compose.project.working_dir": "/root/cpa-manager-plus",
+        "com.docker.compose.replace": "cpa-manager-plus",
+        "com.docker.compose.service": "cpa-manager-plus",
+        "com.docker.compose.version": "5.3.1",
+        "org.opencontainers.image.created": "2026-08-18T06:09:42.680Z",
+        "org.opencontainers.image.description": "CPA Manager Plus Manager Server container image",
+        "org.opencontainers.image.documentation": "https://github.com/seakee/CPA-Manager-Plus#readme",
+        "org.opencontainers.image.licenses": "MIT",
+        "org.opencontainers.image.revision": "220185654fdd5b38677774d4d7a3c78784ad55d9",
+        "org.opencontainers.image.source": "https://github.com/seakee/CPA-Manager-Plus",
+        "org.opencontainers.image.title": "CPA Manager Plus",
+        "org.opencontainers.image.url": "https://github.com/seakee/CPA-Manager-Plus",
+        "org.opencontainers.image.version": "1.12.1"
+      }
+    }
+  },
+  {
+    "Id": "a546b8a1c4b21e21f13ce06dfa998f26064326db92ca8323b1b3021ef72dae51",
+    "Name": "/cli-proxy-api",
+    "Created": "2026-08-20T08:21:51.093849369Z",
+    "Image": "sha256:591a09c19de769be09a2e56277365cd568b83fc7d98c94d2e7e7bef7069f7422",
+    "Path": "./CLIProxyAPI",
+    "State": {
+      "Status": "running",
+      "Running": true,
+      "OOMKilled": false,
+      "StartedAt": "2026-08-20T08:21:52.085885824Z",
+      "FinishedAt": "0001-01-01T00:00:00Z",
+      "Health": null
+    },
+    "RestartCount": 0,
+    "HostConfig": {
+      "Memory": 268435456,
+      "MemorySwap": 536870912,
+      "NanoCpus": 0,
+      "PidsLimit": null
+    },
+    "Config": {
+      "Image": "eceasy/cli-proxy-api:latest",
+      "Healthcheck": null,
+      "Labels": {
+        "com.docker.compose.config-hash": "d00c70d64f3a4c4bb9851f30e37a3cabe47393470a53ebb0f4ded34b11cf05cd",
+        "com.docker.compose.container-number": "1",
+        "com.docker.compose.depends_on": "",
+        "com.docker.compose.image": "sha256:591a09c19de769be09a2e56277365cd568b83fc7d98c94d2e7e7bef7069f7422",
+        "com.docker.compose.oneoff": "False",
+        "com.docker.compose.project": "cpa",
+        "com.docker.compose.project.config_files": "/root/cpa/docker-compose.yml",
+        "com.docker.compose.project.working_dir": "/root/cpa",
+        "com.docker.compose.replace": "cli-proxy-api",
+        "com.docker.compose.service": "cli-proxy-api",
+        "com.docker.compose.version": "5.3.1"
+      }
+    }
+  }
+]

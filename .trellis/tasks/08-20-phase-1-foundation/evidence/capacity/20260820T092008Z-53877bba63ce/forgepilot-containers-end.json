@@ -1,0 +1,259 @@
+[
+  {
+    "Id": "5a428f79b9dbf2e200ce5ad82022b1dcbbb72dba55273eaed19d35d184c1111e",
+    "Name": "/forgepilot-phase1-cap-20260820t092008z-53877bba63ce-postgres-1",
+    "Created": "2026-08-20T09:25:19.460300747Z",
+    "Image": "sha256:a947c45cdc5906a1bc951f20a8709e321256343ee0f251e4ae00b5e7def4e6da",
+    "Path": "docker-entrypoint.sh",
+    "State": {
+      "Status": "running",
+      "Running": true,
+      "OOMKilled": false,
+      "StartedAt": "2026-08-20T09:25:19.961529058Z",
+      "FinishedAt": "0001-01-01T00:00:00Z",
+      "Health": {
+        "Status": "healthy",
+        "FailingStreak": 0,
+        "Log": [
+          {
+            "Start": "2026-08-20T09:31:54.920313686Z",
+            "End": "2026-08-20T09:31:55.13241614Z",
+            "ExitCode": 0,
+            "Output": "/var/run/postgresql:5432 - accepting connections\n"
+          },
+          {
+            "Start": "2026-08-20T09:32:00.136501633Z",
+            "End": "2026-08-20T09:32:00.344975572Z",
+            "ExitCode": 0,
+            "Output": "/var/run/postgresql:5432 - accepting connections\n"
+          },
+          {
+            "Start": "2026-08-20T09:32:05.346739131Z",
+            "End": "2026-08-20T09:32:05.543114994Z",
+            "ExitCode": 0,
+            "Output": "/var/run/postgresql:5432 - accepting connections\n"
+          },
+          {
+            "Start": "2026-08-20T09:32:10.545443232Z",
+            "End": "2026-08-20T09:32:10.734465081Z",
+            "ExitCode": 0,
+            "Output": "/var/run/postgresql:5432 - accepting connections\n"
+          },
+          {
+            "Start": "2026-08-20T09:32:15.73562553Z",
+            "End": "2026-08-20T09:32:15.95178401Z",
+            "ExitCode": 0,
+            "Output": "/var/run/postgresql:5432 - accepting connections\n"
+          }
+        ]
+      }
+    },
+    "RestartCount": 0,
+    "HostConfig": {
+      "Memory": 536870912,
+      "MemorySwap": 1073741824,
+      "NanoCpus": 0,
+      "PidsLimit": null
+    },
+    "Config": {
+      "Image": "pgvector/pgvector:0.8.6-pg15-bookworm@sha256:a947c45cdc5906a1bc951f20a8709e321256343ee0f251e4ae00b5e7def4e6da",
+      "Healthcheck": {
+        "Test": [
+          "CMD-SHELL",
+          "pg_isready --username \"${POSTGRES_USER}\" --dbname \"${POSTGRES_DB}\""
+        ],
+        "Interval": 5000000000,
+        "Timeout": 3000000000,
+        "StartPeriod": 15000000000,
+        "Retries": 20
+      },
+      "Labels": {
+        "com.docker.compose.config-hash": "a0ec44b71989a2942b3b6bdb57db49a9ebbccb8b89140783296083b927140c2d",
+        "com.docker.compose.container-number": "1",
+        "com.docker.compose.depends_on": "",
+        "com.docker.compose.image": "sha256:a947c45cdc5906a1bc951f20a8709e321256343ee0f251e4ae00b5e7def4e6da",
+        "com.docker.compose.oneoff": "False",
+        "com.docker.compose.project": "forgepilot-phase1-cap-20260820t092008z-53877bba63ce",
+        "com.docker.compose.project.config_files": "/root/ForgePilot/compose.yaml",
+        "com.docker.compose.project.working_dir": "/root/ForgePilot",
+        "com.docker.compose.service": "postgres",
+        "com.docker.compose.version": "5.3.1"
+      }
+    }
+  },
+  {
+    "Id": "fde7ceec2d6b852c8416b9bc622ccb3436a2a298cc3e1daa5efcefb303dfab97",
+    "Name": "/forgepilot-phase1-cap-20260820t092008z-53877bba63ce-backend-1",
+    "Created": "2026-08-20T09:25:19.66837473Z",
+    "Image": "sha256:620510a66f52d17c5a878ebca115406a0a770dd25c5e508f3dae9cc1adb57b8b",
+    "Path": "java",
+    "State": {
+      "Status": "running",
+      "Running": true,
+      "OOMKilled": false,
+      "StartedAt": "2026-08-20T09:25:25.949018617Z",
+      "FinishedAt": "0001-01-01T00:00:00Z",
+      "Health": {
+        "Status": "healthy",
+        "FailingStreak": 0,
+        "Log": [
+          {
+            "Start": "2026-08-20T09:31:52.169975295Z",
+            "End": "2026-08-20T09:31:52.352000594Z",
+            "ExitCode": 0,
+            "Output": "{\"status\":\"UP\"}"
+          },
+          {
+            "Start": "2026-08-20T09:31:57.354440968Z",
+            "End": "2026-08-20T09:31:57.481056886Z",
+            "ExitCode": 0,
+            "Output": "{\"status\":\"UP\"}"
+          },
+          {
+            "Start": "2026-08-20T09:32:02.482762413Z",
+            "End": "2026-08-20T09:32:02.63636996Z",
+            "ExitCode": 0,
+            "Output": "{\"status\":\"UP\"}"
+          },
+          {
+            "Start": "2026-08-20T09:32:07.637947686Z",
+            "End": "2026-08-20T09:32:07.769578243Z",
+            "ExitCode": 0,
+            "Output": "{\"status\":\"UP\"}"
+          },
+          {
+            "Start": "2026-08-20T09:32:12.777101607Z",
+            "End": "2026-08-20T09:32:12.94609436Z",
+            "ExitCode": 0,
+            "Output": "{\"status\":\"UP\"}"
+          }
+        ]
+      }
+    },
+    "RestartCount": 0,
+    "HostConfig": {
+      "Memory": 805306368,
+      "MemorySwap": 1610612736,
+      "NanoCpus": 0,
+      "PidsLimit": null
+    },
+    "Config": {
+      "Image": "forgepilot-phase1-cap-20260820t092008z-53877bba63ce-backend",
+      "Healthcheck": {
+        "Test": [
+          "CMD",
+          "curl",
+          "--fail",
+          "--silent",
+          "http://127.0.0.1:8080/actuator/health/readiness"
+        ],
+        "Interval": 5000000000,
+        "Timeout": 3000000000,
+        "StartPeriod": 30000000000,
+        "Retries": 24
+      },
+      "Labels": {
+        "com.docker.compose.config-hash": "1a9e7ef44aaf2ff134e668dfd40efa0724e080d7661f1cb63a707cc5c109ccbc",
+        "com.docker.compose.container-number": "1",
+        "com.docker.compose.depends_on": "postgres:service_healthy:false",
+        "com.docker.compose.image": "sha256:620510a66f52d17c5a878ebca115406a0a770dd25c5e508f3dae9cc1adb57b8b",
+        "com.docker.compose.oneoff": "False",
+        "com.docker.compose.project": "forgepilot-phase1-cap-20260820t092008z-53877bba63ce",
+        "com.docker.compose.project.config_files": "/root/ForgePilot/compose.yaml",
+        "com.docker.compose.project.working_dir": "/root/ForgePilot",
+        "com.docker.compose.service": "backend",
+        "com.docker.compose.version": "5.3.1",
+        "org.opencontainers.image.created": "2026-08-17T09:02:45.677319+00:00",
+        "org.opencontainers.image.description": "The Ubuntu container image maintained by Canonical\n\nUbuntu is a Debian-based Linux operating system that runs from the desktop to the cloud, to all your internet connected things.\nIt is the world's most popular operating system across public clouds and OpenStack clouds.\nIt is the number one platform for containers; from Docker to Kubernetes to LXD, Ubuntu can run your containers at scale.\nFast, secure and simple, Ubuntu powers millions of PCs worldwide.\n",
+        "org.opencontainers.image.title": "ubuntu",
+        "org.opencontainers.image.version": "26.04"
+      }
+    }
+  },
+  {
+    "Id": "e44eaa96b862eb5b6727261a3e10a3adfa5f70e3882f3ac28377c35761c78966",
+    "Name": "/forgepilot-phase1-cap-20260820t092008z-53877bba63ce-frontend-1",
+    "Created": "2026-08-20T09:25:19.812431359Z",
+    "Image": "sha256:873520498120f97322ebe848b564d8a4f4c8d16ada1171566d6c2f9f246b4371",
+    "Path": "/docker-entrypoint.sh",
+    "State": {
+      "Status": "running",
+      "Running": true,
+      "OOMKilled": false,
+      "StartedAt": "2026-08-20T09:25:54.60004741Z",
+      "FinishedAt": "0001-01-01T00:00:00Z",
+      "Health": {
+        "Status": "healthy",
+        "FailingStreak": 0,
+        "Log": [
+          {
+            "Start": "2026-08-20T09:31:55.680840868Z",
+            "End": "2026-08-20T09:31:55.814617646Z",
+            "ExitCode": 0,
+            "Output": ""
+          },
+          {
+            "Start": "2026-08-20T09:32:00.818766197Z",
+            "End": "2026-08-20T09:32:00.913457798Z",
+            "ExitCode": 0,
+            "Output": ""
+          },
+          {
+            "Start": "2026-08-20T09:32:05.915521757Z",
+            "End": "2026-08-20T09:32:06.065952561Z",
+            "ExitCode": 0,
+            "Output": ""
+          },
+          {
+            "Start": "2026-08-20T09:32:11.067445894Z",
+            "End": "2026-08-20T09:32:11.221705682Z",
+            "ExitCode": 0,
+            "Output": ""
+          },
+          {
+            "Start": "2026-08-20T09:32:16.223593975Z",
+            "End": "2026-08-20T09:32:16.394681723Z",
+            "ExitCode": 0,
+            "Output": ""
+          }
+        ]
+      }
+    },
+    "RestartCount": 0,
+    "HostConfig": {
+      "Memory": 67108864,
+      "MemorySwap": 134217728,
+      "NanoCpus": 0,
+      "PidsLimit": null
+    },
+    "Config": {
+      "Image": "forgepilot-phase1-cap-20260820t092008z-53877bba63ce-frontend",
+      "Healthcheck": {
+        "Test": [
+          "CMD",
+          "wget",
+          "--quiet",
+          "--spider",
+          "http://127.0.0.1:8080/healthz"
+        ],
+        "Interval": 5000000000,
+        "Timeout": 3000000000,
+        "StartPeriod": 10000000000,
+        "Retries": 12
+      },
+      "Labels": {
+        "com.docker.compose.config-hash": "e9e6787b24906b5fccd975028f5a312155e5e68bdbec2bee85643a59fa06fb55",
+        "com.docker.compose.container-number": "1",
+        "com.docker.compose.depends_on": "backend:service_healthy:false",
+        "com.docker.compose.image": "sha256:873520498120f97322ebe848b564d8a4f4c8d16ada1171566d6c2f9f246b4371",
+        "com.docker.compose.oneoff": "False",
+        "com.docker.compose.project": "forgepilot-phase1-cap-20260820t092008z-53877bba63ce",
+        "com.docker.compose.project.config_files": "/root/ForgePilot/compose.yaml",
+        "com.docker.compose.project.working_dir": "/root/ForgePilot",
+        "com.docker.compose.service": "frontend",
+        "com.docker.compose.version": "5.3.1",
+        "maintainer": "NGINX Docker Maintainers <docker-maint@nginx.com>"
+      }
+    }
+  }
+]

@@ -1,0 +1,152 @@
+{
+  "name": "forgepilot-phase1-cap-20260820t074544z-53877bba63ce",
+  "networks": {
+    "default": {
+      "name": "forgepilot-phase1-cap-20260820t074544z-53877bba63ce_default",
+      "ipam": {}
+    }
+  },
+  "services": {
+    "backend": {
+      "build": {
+        "context": "/root/ForgePilot/backend",
+        "dockerfile": "Dockerfile"
+      },
+      "command": null,
+      "depends_on": {
+        "postgres": {
+          "condition": "service_healthy",
+          "required": true
+        }
+      },
+      "entrypoint": null,
+      "environment": {
+        "FORGEPILOT_DB_PASSWORD": "[REDACTED]",
+        "FORGEPILOT_DB_POOL_SIZE": "5",
+        "FORGEPILOT_DB_URL": "jdbc:postgresql://postgres:5432/forgepilot",
+        "FORGEPILOT_DB_USERNAME": "forgepilot",
+        "JAVA_TOOL_OPTIONS": "-Xms128m -Xmx384m -XX:MaxDirectMemorySize=128m -XX:MaxMetaspaceSize=128m -XX:+UseSerialGC -XX:NativeMemoryTracking=summary",
+        "SERVER_PORT": "8080"
+      },
+      "healthcheck": {
+        "test": [
+          "CMD",
+          "curl",
+          "--fail",
+          "--silent",
+          "http://127.0.0.1:8080/actuator/health/readiness"
+        ],
+        "timeout": "3s",
+        "interval": "5s",
+        "retries": 24,
+        "start_period": "30s"
+      },
+      "mem_limit": "805306368",
+      "networks": {
+        "default": null
+      },
+      "ports": [
+        {
+          "mode": "ingress",
+          "host_ip": "127.0.0.1",
+          "target": 8080,
+          "published": "18080",
+          "protocol": "tcp"
+        }
+      ],
+      "restart": "unless-stopped"
+    },
+    "frontend": {
+      "build": {
+        "context": "/root/ForgePilot/frontend",
+        "dockerfile": "Dockerfile"
+      },
+      "command": null,
+      "depends_on": {
+        "backend": {
+          "condition": "service_healthy",
+          "required": true
+        }
+      },
+      "entrypoint": null,
+      "healthcheck": {
+        "test": [
+          "CMD",
+          "wget",
+          "--quiet",
+          "--spider",
+          "http://127.0.0.1:8080/healthz"
+        ],
+        "timeout": "3s",
+        "interval": "5s",
+        "retries": 12,
+        "start_period": "10s"
+      },
+      "mem_limit": "67108864",
+      "networks": {
+        "default": null
+      },
+      "ports": [
+        {
+          "mode": "ingress",
+          "host_ip": "127.0.0.1",
+          "target": 8080,
+          "published": "18081",
+          "protocol": "tcp"
+        }
+      ],
+      "restart": "unless-stopped"
+    },
+    "postgres": {
+      "command": [
+        "postgres",
+        "-c",
+        "shared_buffers=128MB",
+        "-c",
+        "work_mem=4MB",
+        "-c",
+        "maintenance_work_mem=64MB",
+        "-c",
+        "autovacuum_work_mem=64MB",
+        "-c",
+        "max_connections=30"
+      ],
+      "entrypoint": null,
+      "environment": {
+        "POSTGRES_DB": "forgepilot",
+        "POSTGRES_PASSWORD": "[REDACTED]",
+        "POSTGRES_USER": "forgepilot"
+      },
+      "healthcheck": {
+        "test": [
+          "CMD-SHELL",
+          "pg_isready --username \"$${POSTGRES_USER}\" --dbname \"$${POSTGRES_DB}\""
+        ],
+        "timeout": "3s",
+        "interval": "5s",
+        "retries": 20,
+        "start_period": "15s"
+      },
+      "image": "pgvector/pgvector:0.8.6-pg15-bookworm@sha256:a947c45cdc5906a1bc951f20a8709e321256343ee0f251e4ae00b5e7def4e6da",
+      "mem_limit": "536870912",
+      "networks": {
+        "default": null
+      },
+      "restart": "unless-stopped",
+      "shm_size": "167772160",
+      "volumes": [
+        {
+          "type": "volume",
+          "source": "postgres-data",
+          "target": "/var/lib/postgresql/data",
+          "volume": {}
+        }
+      ]
+    }
+  },
+  "volumes": {
+    "postgres-data": {
+      "name": "forgepilot-phase1-cap-20260820t074544z-53877bba63ce_postgres-data"
+    }
+  }
+}

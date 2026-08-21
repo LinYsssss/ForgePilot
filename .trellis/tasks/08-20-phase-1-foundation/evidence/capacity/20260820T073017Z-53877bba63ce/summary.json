@@ -1,0 +1,87 @@
+{
+  "badDockerEvents": [],
+  "baselineElapsedSeconds": 355,
+  "baselineSamples": 21,
+  "checks": {
+    "baseline_duration": true,
+    "container_headroom": true,
+    "docker_events": true,
+    "empty_schema": true,
+    "existing_services": true,
+    "flyway": true,
+    "health": true,
+    "kernel_oom": true,
+    "mem_available": true,
+    "oom_killed": true,
+    "pgvector": true,
+    "postgres_version": true,
+    "restarts": true,
+    "steady_duration": true,
+    "steady_samples": true,
+    "swap_activity": false,
+    "swap_growth": true
+  },
+  "existingServicesPreserved": true,
+  "healthSamples": 11,
+  "kernelOomMarkersFound": false,
+  "maxForgePilotContainerMemoryPercent": 35.87,
+  "memAvailableKiB": {
+    "final": 2754060,
+    "max": 2779936,
+    "median": 2765012,
+    "min": 2754060
+  },
+  "oomKilled": {
+    "forgepilot-phase1-cap-20260820t073017z-53877bba63ce-backend-1": false,
+    "forgepilot-phase1-cap-20260820t073017z-53877bba63ce-frontend-1": false,
+    "forgepilot-phase1-cap-20260820t073017z-53877bba63ce-postgres-1": false
+  },
+  "pssByService": {
+    "cli-proxy-api": {
+      "maxKiB": 39276,
+      "medianKiB": 39220,
+      "minKiB": 38612
+    },
+    "cloudflared": {
+      "maxKiB": 26104,
+      "medianKiB": 26052,
+      "minKiB": 25976
+    },
+    "cpa-manager-plus": {
+      "maxKiB": 39624,
+      "medianKiB": 39256,
+      "minKiB": 38604
+    },
+    "forgepilot-phase1-cap-20260820t073017z-53877bba63ce-backend-1": {
+      "maxKiB": 293128,
+      "medianKiB": 291760,
+      "minKiB": 288868
+    },
+    "forgepilot-phase1-cap-20260820t073017z-53877bba63ce-frontend-1": {
+      "maxKiB": 8223,
+      "medianKiB": 8052,
+      "minKiB": 7941
+    },
+    "forgepilot-phase1-cap-20260820t073017z-53877bba63ce-postgres-1": {
+      "maxKiB": 46872,
+      "medianKiB": 46714,
+      "minKiB": 45995
+    }
+  },
+  "restartDelta": {
+    "forgepilot-phase1-cap-20260820t073017z-53877bba63ce-backend-1": 0,
+    "forgepilot-phase1-cap-20260820t073017z-53877bba63ce-frontend-1": 0,
+    "forgepilot-phase1-cap-20260820t073017z-53877bba63ce-postgres-1": 0
+  },
+  "status": "FAIL",
+  "steadyElapsedSeconds": 318,
+  "steadySamples": 17,
+  "swapUsedKiB": {
+    "baselineMedian": 22000,
+    "pageInDelta": 3,
+    "pageOutDelta": 1,
+    "steadyFinal": 22000,
+    "steadyMax": 22000,
+    "steadyMin": 22000
+  }
+}

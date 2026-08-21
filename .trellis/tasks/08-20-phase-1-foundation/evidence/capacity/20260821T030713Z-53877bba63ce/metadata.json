@@ -1,0 +1,19 @@
+{
+  "runId": "20260821T030713Z-53877bba63ce",
+  "project": "forgepilot-phase1-cap-20260821t030713z-53877bba63ce",
+  "startUtc": "2026-08-21T03:07:13Z",
+  "steadyStartUtc": "2026-08-21T03:14:55Z",
+  "steadyEndUtc": "2026-08-21T03:18:59Z",
+  "status": "PASS",
+  "gitHead": "53877bba63ceca5d598533ec1a742502600569c1",
+  "composeSha256": "2dd6d1d4ae602baddb056c2538846a0ce079f93b155802aa930c0299cc9bb22c",
+  "baselineSamples": 21,
+  "steadySamples": 17,
+  "sampleIntervalSeconds": 15,
+  "warmupSeconds": 120,
+  "requiredSteadySeconds": 240,
+  "steadyElapsedSeconds": 244,
+  "elapsedClock": "/proc/uptime monotonic milliseconds",
+  "samplingSchedule": "monotonic deadline",
+  "claimBoundary": "Four-minute empty-stack capacity evidence only; not a long-term stability claim."
+}
