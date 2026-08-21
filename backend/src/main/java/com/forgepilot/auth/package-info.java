@@ -1,2 +1,2 @@
-/** Authentication boundary reserved for a later authorized phase. */
+/** Authentication mechanics: local accounts, sessions and the read-only user directory. */
 package com.forgepilot.auth;
