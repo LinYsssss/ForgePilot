@@ -127,7 +127,13 @@ postgres_15_or_newer="$(query_postgres "select current_setting('server_version_n
 vector_version="$(query_postgres "select extversion from pg_extension where extname = 'vector';")"
 vector_distance="$(query_postgres "select '[1,2,3]'::vector <-> '[1,2,4]'::vector;")"
 flyway_v1="$(query_postgres "select success from flyway_schema_history where version = '1';")"
-application_table_count="$(query_postgres "select count(*) from information_schema.tables where table_schema = 'public' and table_type = 'BASE TABLE' and table_name <> 'flyway_schema_history';")"
+failed_migrations="$(query_postgres "select count(*) from flyway_schema_history where success is false;")"
+application_tables="$(query_postgres "select string_agg(table_name, ',' order by table_name) from information_schema.tables where table_schema = 'public' and table_type = 'BASE TABLE' and table_name <> 'flyway_schema_history';")"
+
+# Batch 1 migrations V2/V3 create exactly these six. The remaining ten of the
+# sixteen tables arrive with their own authorized phase, so an extra table here
+# means something was added outside the plan.
+expected_tables='acceptance_criterion,project,project_member,requirement,requirement_revision,user_account'
 
 [[ "$postgres_15_or_newer" == "t" ]] || {
   printf 'PostgreSQL server is older than 15.\n' >&2
@@ -141,9 +147,15 @@ application_table_count="$(query_postgres "select count(*) from information_sche
   printf 'Flyway foundation migration was not successful.\n' >&2
   exit 1
 }
-[[ "$application_table_count" == "0" ]] || {
-  printf 'Expected an empty Phase 1 application schema, found %s tables.\n' "$application_table_count" >&2
+[[ "$failed_migrations" == "0" ]] || {
+  printf 'Flyway reported %s failed migrations.\n' "$failed_migrations" >&2
+  exit 1
+}
+[[ "$application_tables" == "$expected_tables" ]] || {
+  printf 'Unexpected application schema.\n  expected: %s\n  found:    %s\n' \
+    "$expected_tables" "$application_tables" >&2
   exit 1
 }
 
-printf 'Phase 1 Compose smoke passed for project %s (pgvector %s).\n' "$project" "$vector_version"
+printf 'Compose smoke passed for project %s (pgvector %s, %s application tables).\n' \
+  "$project" "$vector_version" "$(printf '%s' "$application_tables" | awk -F, '{print NF}')"
