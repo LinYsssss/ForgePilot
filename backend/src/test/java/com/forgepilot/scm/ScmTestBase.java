@@ -8,6 +8,11 @@ import org.springframework.test.context.DynamicPropertySource;
  * The two properties the SCM slice needs, contributed the same way
  * {@link PostgresTestBase} contributes the database.
  *
+ * <p>{@code forgepilot.scm.secret-key} has no default anywhere, so a context that
+ * does not supply it fails to start — that is the point of it. Compose and CI pass
+ * {@code FORGEPILOT_SCM_SECRET_KEY} for the same reason, and this is the test
+ * equivalent of that.
+ *
  * <p>{@code forgepilot.scm.allowed-hosts} is the narrow, explicit exception that
  * makes a loopback stub provider reachable while {@link OutboundUrlPolicy} stays
  * switched on for everything else. The alternative — turning the policy off in
@@ -17,8 +22,8 @@ import org.springframework.test.context.DynamicPropertySource;
  */
 public abstract class ScmTestBase extends PostgresTestBase {
 
-    /** Base64 of the 32 ASCII bytes {@code forgepilot-scm-test-key-32-bytes}. Test only, and not a credential. */
-    static final String SECRET_KEY = "Zm9yZ2VwaWxvdC1zY20tdGVzdC1rZXktMzItYnl0ZXM=";
+    /** Deliberately fake, and deliberately not a 32 byte key: the cipher derives one. */
+    static final String SECRET_KEY = "forgepilot-scm-test-only-not-a-real-key";
 
     @DynamicPropertySource
     static void scmProperties(DynamicPropertyRegistry registry) {

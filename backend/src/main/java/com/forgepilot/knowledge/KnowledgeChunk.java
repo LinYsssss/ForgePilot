@@ -24,6 +24,9 @@ import org.hibernate.type.SqlTypes;
  * maps, so leaving it out is safe at startup. Every read and write of the vector
  * lives in {@link ChunkSearchRepository}, the only place allowed to name
  * {@code ::vector}.
+ *
+ * <p>{@code dimension} is unmapped for the same reason — see
+ * {@link #recordEmbeddingProfile}.
  */
 @Entity
 @Table(name = "knowledge_chunk")
@@ -57,10 +60,6 @@ public class KnowledgeChunk {
 
     @Column(name = "version", length = 64)
     private String version;
-
-    /** Kept consistent with the stored vector by a database CHECK using vector_dims. */
-    @Column(name = "dimension")
-    private Integer dimension;
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
@@ -113,23 +112,21 @@ public class KnowledgeChunk {
         return version;
     }
 
-    public Integer getDimension() {
-        return dimension;
-    }
-
     public Instant getCreatedAt() {
         return createdAt;
     }
 
     /**
-     * Records which profile produced the vector. The vector itself is written
-     * separately through {@link ChunkSearchRepository}; the dimension recorded here
-     * must equal that vector's, and the database CHECK refuses the row otherwise.
+     * Records which profile produced the vector. The {@code dimension} column is
+     * deliberately absent from this entity, like {@code embedding}: the two are one
+     * unit and {@link ChunkSearchRepository} writes them together. Mapping
+     * dimension here would be a trap — Hibernate updates every mapped column, so
+     * flushing this entity would null the dimension out from under a stored vector
+     * and the CHECK would reject the row.
      */
-    public void recordEmbeddingProfile(String provider, String model, String version, int dimension) {
+    public void recordEmbeddingProfile(String provider, String model, String version) {
         this.provider = provider;
         this.model = model;
         this.version = version;
-        this.dimension = dimension;
     }
 }

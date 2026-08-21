@@ -2,6 +2,8 @@ package com.forgepilot.scm;
 
 import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.util.Base64;
 
@@ -15,37 +17,39 @@ import org.springframework.stereotype.Component;
 /**
  * Encrypts the provider token and the webhook secret at rest (design.md 3.3).
  *
- * <p>AES-256-GCM under one symmetric key, supplied as base64 of 32 bytes through
- * {@code forgepilot.scm.secret-key}, which relaxed binding reads from the
- * {@code FORGEPILOT_SCM_SECRET_KEY} environment variable. <strong>There is no
- * fallback key.</strong> Without one this bean refuses to encrypt or decrypt
- * anything, so no repository can be registered and no delivery can be verified —
- * the dangerous shape, quietly encrypting under a weak built-in default, cannot
- * occur.
+ * <p>AES-256-GCM under one symmetric key, taken from {@code forgepilot.scm.secret-key}
+ * — which relaxed binding reads from the {@code FORGEPILOT_SCM_SECRET_KEY}
+ * environment variable — and derived from it with SHA-256, so the deployment may
+ * supply a secret of any length. <strong>There is no fallback and no default.</strong>
+ * The value is read in this constructor, so a deployment without one fails at
+ * startup rather than the first time someone connects a repository, exactly as
+ * {@code FORGEPILOT_DB_PASSWORD} already behaves. The dangerous shape — quietly
+ * encrypting under a weak built-in default — is therefore unreachable.
  *
- * <p>Deviation from design.md 3.3, recorded rather than hidden: that ruling asks
- * for the application to <em>fail at startup</em> when the key is missing, matching
- * {@code FORGEPILOT_DB_PASSWORD}. Doing that needs the property declared in
- * {@code application.yml}, and a property with no default would break the startup
- * of every other Spring context in this repository. This slice may not edit that
- * file, so the refusal happens at first use instead of at startup.
+ * <p>SHA-256 spreads the secret over the full key, it does not create entropy: a
+ * deployment that supplies a guessable phrase has a guessable key. Compose and CI
+ * carry deliberately fake local-only values for that reason.
  *
- * <p>Batch 2 does not rotate keys: a rotation needs a key version column and a
- * re-encryption pass, which is new structure.
+ * <p>Batch 2 does not rotate keys. Rotation needs a key version column and a
+ * re-encryption pass, which is new structure; the gap is recorded rather than
+ * papered over with a second key that is silently tried on failure.
  */
 @Component
 public class ScmSecretCipher {
 
     private static final String TRANSFORMATION = "AES/GCM/NoPadding";
-    private static final int KEY_BYTES = 32;
     private static final int IV_BYTES = 12;
     private static final int TAG_BITS = 128;
 
     private final SecureRandom random = new SecureRandom();
     private final byte[] key;
 
-    ScmSecretCipher(@Value("${forgepilot.scm.secret-key:}") String configuredKey) {
-        this.key = configuredKey.isBlank() ? null : Base64.getDecoder().decode(configuredKey);
+    ScmSecretCipher(@Value("${forgepilot.scm.secret-key}") String secret) {
+        if (secret.isBlank()) {
+            throw new IllegalStateException(
+                    "forgepilot.scm.secret-key (FORGEPILOT_SCM_SECRET_KEY) must not be empty.");
+        }
+        this.key = sha256(secret.getBytes(StandardCharsets.UTF_8));
     }
 
     public String encrypt(String plaintext) {
@@ -68,17 +72,21 @@ public class ScmSecretCipher {
     }
 
     private byte[] apply(int mode, byte[] iv, byte[] input) {
-        if (key == null || key.length != KEY_BYTES) {
-            throw new IllegalStateException(
-                    "forgepilot.scm.secret-key must hold base64 of 32 bytes; SCM credentials are unusable without it.");
-        }
         try {
             Cipher cipher = Cipher.getInstance(TRANSFORMATION);
             cipher.init(mode, new SecretKeySpec(key, "AES"), new GCMParameterSpec(TAG_BITS, iv));
             return cipher.doFinal(input);
         } catch (GeneralSecurityException failure) {
-            // The message never carries the key, the plaintext or the ciphertext.
+            // Never carries the key, the plaintext or the ciphertext.
             throw new IllegalStateException("An SCM credential could not be processed.");
+        }
+    }
+
+    private static byte[] sha256(byte[] input) {
+        try {
+            return MessageDigest.getInstance("SHA-256").digest(input);
+        } catch (NoSuchAlgorithmException impossible) {
+            throw new IllegalStateException(impossible);
         }
     }
 }

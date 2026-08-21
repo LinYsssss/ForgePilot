@@ -6,14 +6,21 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.Mockito.when;
+
 import com.forgepilot.PostgresTestBase;
+import com.forgepilot.ai.AiGateway;
 import com.forgepilot.common.ApiException;
 import com.forgepilot.project.ProjectRole;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 /** Ingestion, D005's copy-on-promote rule, and the role and project boundaries. */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
@@ -33,8 +40,25 @@ class KnowledgeServiceTest extends PostgresTestBase {
     @Autowired
     private JdbcTemplate jdbc;
 
+    /**
+     * The gateway's own HTTP behaviour — timeout, the single retry, malformed
+     * answers — is proved against a real socket in AiGatewayTest. What belongs
+     * here is knowledge's orchestration, so the provider is replaced rather than
+     * re-tested at this level.
+     */
+    @MockitoBean
+    private AiGateway ai;
+
+    @BeforeEach
+    void embeddingsAreFourDimensional() {
+        when(ai.embed(anyList(), any(), any())).thenAnswer(call -> {
+            List<String> texts = call.getArgument(0);
+            return texts.stream().map(text -> new float[] {0.1f, 0.2f, 0.3f, 0.4f}).toList();
+        });
+    }
+
     @Test
-    void ingestingSplitsTheTextAndLeavesTheDocumentPendingUntilItHasVectors() {
+    void ingestingSplitsTheTextEmbedsEveryPieceAndOnlyThenBecomesReady() {
         Fixture fixture = new Fixture();
         String text = "第一段。\n".repeat(400);
 
@@ -42,11 +66,20 @@ class KnowledgeServiceTest extends PostgresTestBase {
 
         assertThat(documents.findByProjectIdAndId(fixture.project, document))
                 .get().extracting(KnowledgeDocument::getStatus)
-                // Not READY: nothing has been embedded, so it must not look retrievable.
-                .isEqualTo(KnowledgeStatus.PENDING);
-        assertThat(chunks.findByProjectIdAndDocumentIdOrderBySeqAsc(fixture.project, document))
-                .hasSizeGreaterThan(1)
+                .isEqualTo(KnowledgeStatus.READY);
+
+        List<KnowledgeChunk> stored =
+                chunks.findByProjectIdAndDocumentIdOrderBySeqAsc(fixture.project, document);
+        assertThat(stored).hasSizeGreaterThan(1)
                 .allSatisfy(chunk -> assertThat(chunk.getContent()).isNotBlank());
+
+        // READY has to mean retrievable: every chunk carries a vector, and the
+        // document would otherwise return nothing while looking like an empty corpus.
+        assertThat(jdbc.queryForObject(
+                "select count(*) from knowledge_chunk where document_id = ? and embedding is null",
+                Integer.class, document)).isZero();
+        assertThat(knowledge.search(fixture.project, fixture.leader,
+                new float[] {0.1f, 0.2f, 0.3f, 0.4f}, 10)).hasSize(stored.size());
     }
 
     @Test

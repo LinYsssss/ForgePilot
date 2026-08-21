@@ -35,5 +35,11 @@ public abstract class PostgresTestBase {
         registry.add("spring.datasource.url", POSTGRES::getJdbcUrl);
         registry.add("spring.datasource.username", POSTGRES::getUsername);
         registry.add("spring.datasource.password", POSTGRES::getPassword);
+        // Declared with no fallback in production, so the context cannot start
+        // without it. Supplied here rather than given a default in application.yml:
+        // a default would be a weak key that silently works everywhere, which is
+        // exactly what fail-closed exists to prevent. Compose and CI inject their
+        // own equally fake value.
+        registry.add("forgepilot.scm.secret-key", () -> "test-only-not-a-real-key");
     }
 }

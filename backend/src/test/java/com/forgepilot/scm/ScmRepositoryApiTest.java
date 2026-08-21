@@ -198,14 +198,16 @@ class ScmRepositoryApiTest extends ScmTestBase {
         // Another project's id and an id that was never issued answer identically,
         // so existence cannot be probed by trying ids.
         String never = String.valueOf(foreignRepository + 9_000);
-        assertThat(outsider.patchExpecting("/api/projects/" + own + "/scm/repositories/" + foreignRepository,
-                "{}", status().isNotFound()).getResponse().getContentAsString())
-                .isEqualTo(sameShapeAs(outsider.patchExpecting(
-                        "/api/projects/" + own + "/scm/repositories/" + never, "{}", status().isNotFound())));
+        assertThat(withoutTraceId(outsider.patchExpecting(
+                "/api/projects/" + own + "/scm/repositories/" + foreignRepository, "{}",
+                status().isNotFound())))
+                .isEqualTo(withoutTraceId(outsider.patchExpecting(
+                        "/api/projects/" + own + "/scm/repositories/" + never, "{}",
+                        status().isNotFound())));
 
-        assertThat(outsider.readExpecting("/api/projects/" + own + "/pull-requests/" + foreignPullRequest,
-                status().isNotFound()).getResponse().getContentAsString())
-                .isEqualTo(sameShapeAs(outsider.readExpecting(
+        assertThat(withoutTraceId(outsider.readExpecting(
+                "/api/projects/" + own + "/pull-requests/" + foreignPullRequest, status().isNotFound())))
+                .isEqualTo(withoutTraceId(outsider.readExpecting(
                         "/api/projects/" + own + "/pull-requests/" + (foreignPullRequest + 9_000),
                         status().isNotFound())));
 
