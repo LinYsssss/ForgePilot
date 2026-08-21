@@ -178,7 +178,7 @@ grep -rn "AiUseCase.REVIEW" …/main/java                             → 无（
 
 **判断**：不静默截断这一条的实质（Review 绝不会被告知一份残缺的 diff 是完整的）已经达成，
 但「标记」这半条确实没做。补它需要在 `pull_request` 上再加一列——那超出本批次授权的 §2.1 扩充范围。
-**这半条记为未实现，不记为通过。**
+**这半条记为未实现，不记为通过。** 已正式化为 [D016.1](../../../docs/v2/DECISIONS.md#d016)。
 
 **并且该路径完全没有测试**：`MAX_TOTAL_CHARS` 在测试代码中零引用。超限分支从未被执行过。
 
@@ -187,7 +187,8 @@ grep -rn "AiUseCase.REVIEW" …/main/java                             → 无（
 `PUT /api/projects/{p}/pull-requests/{id}/requirement` 目前**只有 LEADER 能到达**。
 PRD P1 的另一半——「本人 PR 且当前 head 尚无人工终局 Decision」——**故意没做**：
 批次 2 没有 `review` 表，「尚无终局 Decision」无法表达；写一个恒答「没有终局」的判断会**多授权**，
-比不做更危险。理由已写进 service javadoc 与 `design.md` §4.1。**批次 3 建 `review` 后必须补上。**
+比不做更危险。理由已写进 service javadoc 与 `design.md` §4.1，并正式化为
+[D016.2](../../../docs/v2/DECISIONS.md#d016)。**批次 3 建 `review` 后必须补上。**
 
 对照：`POST …/requirements/{id}/guidance` 的 DEVELOPER 规则**已实现**（限本人被指派的需求），
 因为 `assignee_id` 今天就存在，规则可以完整表达。这个不对称是有理由的，不是随手。
@@ -255,18 +256,43 @@ PRD P1 的另一半——「本人 PR 且当前 head 尚无人工终局 Decision
    但它是一个产品级授权范围的收窄，只写在 `design.md` §4.1 和 javadoc 里，没有升格为决策。
 
 把 AC20 记成「通过」会让这份报告在**它自己要求诚实的那一条上**失真。两处偏离都已在上面写清，
-批次 3 开始前应当补一条 D016 把它们正式化——尤其是 §7.3，因为批次 3 建 `review` 之后它必须被补上。
+并已补为 [D016](../../../docs/v2/DECISIONS.md#d016)（D016.1 超限只拒绝不标记、D016.2 P1 半条推迟到批次 3）。
+D016 是在写这份报告的过程中补的，**不是**批次 2 施工时就有的授权——记为部分通过正是因为这个时间差。
 
-## 9. 回滚
+## 9. 退出闸门自证（[D014](../../../docs/v2/DECISIONS.md#d014)）
+
+D014 把评审职责委托给编排会话，但标准不降低，且必须以**可复现的命令与真实输出**为准。逐条：
+
+| # | D014 标准 | 结论 | 证据 |
+|---|---|---|---|
+| 1 | 构建与测试全绿且**无 skip** | ✅ 成立 | `Tests run: 155, Failures: 0, Errors: 0, Skipped: 0` / `BUILD SUCCESS`，跑在当前工作树上（§4） |
+| 2 | Compose **空库冷启动**通过 | ✅ 成立 | 退出码 0，新建卷，三容器 healthy，十三张表逐名比对（§4） |
+| 3 | CI **全部 job** 绿 | ✅ 成立 | `2892059` run 32507656571 success。`7daf632` 曾红并已如实记入 §7.1 |
+| 4 | 边界检查：无计划外的表 / 顶层包 / 一级菜单 / 运行时依赖 | ✅ 成立 | 13 表、8 包、前端零改动、`pom.xml` 自批次 1 未动（§1、§4） |
+| 5 | `result.md` 如实记录偏差与缺口，**部分通过标为部分通过** | ✅ 成立 | AC20 标为部分通过；§7 列出 6 类缺口含 4 条未测路径；§2 单列 §2.1 补列；§3 标注非库执行 |
+
+**五条全部成立，闸门通过，可以进入批次 3。**
+
+需要说清楚的一点：**AC20 是部分通过，但闸门仍然通过**——这不是放水。D014 第 5 条要求的是
+「如实记录、部分通过标为部分通过」，不是「所有 AC 必须全绿」。批次 1 也是带着一条部分通过（AC11）
+过闸的。真正会挡下闸门的，是把部分通过写成通过；而那正是本报告拒绝做的事。
+
+D012 的三条不可放松规则本批次未被触碰：holdout 仍锁死在 Phase 8（本批次未读取、未运行）；
+Phase 6 的运行边界仍未预写为常量（本批次不含 Phase 6 代码）；[D006](../../../docs/v2/DECISIONS.md#d006)
+的 schema 反馈回路被实际使用了两次——`requirement_attachment` 的 NOT NULL（[D015.2](../../../docs/v2/DECISIONS.md#d015)）
+与 `knowledge_chunk.dimension` 不映射（[D015.4](../../../docs/v2/DECISIONS.md#d015)）都是撞了约束之后**回到决策**，
+而不是在代码里加兼容分支。
+
+## 10. 回滚
 
 按文件组独立回滚：`V4`/`V5` 迁移+实体、`ai`、`knowledge`、`scm`、`requirement` 的 facade 与 guidance 各自成组。
 `V2`–`V5` 一旦被任何环境应用过就不得编辑或重编号——只能追加 `V6`。
 数据库回滚等价于重建空库（尚无生产数据，`clean-disabled: true`，靠丢卷而非 `flyway clean`）。
 
-## 10. 批次 3 的前置条件
+## 11. 批次 3 的前置条件
 
-1. **必须先补 D016**，把 §7.2、§7.3 两处偏离正式化（见 AC20）。
-2. 建 `review` 表的同一批次内，**必须**补上 P1 的 DEVELOPER 半条授权（§7.3），并补 `ai_call_log.review_id`
+1. [D016](../../../docs/v2/DECISIONS.md#d016) 已补，两处偏离已正式化（D016.1 / D016.2）。
+2. 建 `review` 表的同一批次内，**必须**补上 P1 的 DEVELOPER 半条授权（§7.3 / D016.2），并补 `ai_call_log.review_id`
    的外键（[D015.1](../../../docs/v2/DECISIONS.md#d015)）——`aiCallLogHasNoReviewForeignKeyYetAndNoRowsUsingIt`
    已经把「此刻全为 NULL」这个前置条件钉死，补外键不会撞上历史数据。
 3. `review` 是十六张表里的第 14 张；`finding`、`finding_event` 是第 15、16 张。**批次 3 之后不得再有新表。**
