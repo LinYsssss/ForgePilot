@@ -1,0 +1,87 @@
+services:
+  postgres:
+    image: pgvector/pgvector:0.8.6-pg15-bookworm@sha256:a947c45cdc5906a1bc951f20a8709e321256343ee0f251e4ae00b5e7def4e6da
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${FORGEPILOT_DB_NAME:-forgepilot}
+      POSTGRES_USER: ${FORGEPILOT_DB_USERNAME:-forgepilot}
+      POSTGRES_PASSWORD: ${FORGEPILOT_DB_PASSWORD:-forgepilot-phase1-local-only}
+    command:
+      - postgres
+      - -c
+      - shared_buffers=128MB
+      - -c
+      - work_mem=4MB
+      - -c
+      - maintenance_work_mem=64MB
+      - -c
+      - autovacuum_work_mem=64MB
+      - -c
+      - max_connections=30
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    shm_size: 160m
+    mem_limit: 512m
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready --username "$${POSTGRES_USER}" --dbname "$${POSTGRES_DB}"
+      interval: 5s
+      timeout: 3s
+      start_period: 15s
+      retries: 20
+
+  backend:
+    build:
+      context: ./backend
+    restart: unless-stopped
+    environment:
+      FORGEPILOT_DB_URL: jdbc:postgresql://postgres:5432/${FORGEPILOT_DB_NAME:-forgepilot}
+      FORGEPILOT_DB_USERNAME: ${FORGEPILOT_DB_USERNAME:-forgepilot}
+      FORGEPILOT_DB_PASSWORD: ${FORGEPILOT_DB_PASSWORD:-forgepilot-phase1-local-only}
+      FORGEPILOT_DB_POOL_SIZE: ${FORGEPILOT_DB_POOL_SIZE:-5}
+      JAVA_TOOL_OPTIONS: ${FORGEPILOT_JAVA_TOOL_OPTIONS:--Xms128m -Xmx384m -XX:MaxDirectMemorySize=128m -XX:MaxMetaspaceSize=128m -XX:+UseSerialGC -XX:NativeMemoryTracking=summary}
+      SPRING_PROFILES_ACTIVE: ${FORGEPILOT_SPRING_PROFILES_ACTIVE:-}
+      SERVER_PORT: 8080
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "${FORGEPILOT_BIND_ADDRESS:-127.0.0.1}:${FORGEPILOT_BACKEND_PORT:-18080}:8080"
+    mem_limit: 768m
+    healthcheck:
+      test:
+        - CMD
+        - curl
+        - --fail
+        - --silent
+        - http://127.0.0.1:8080/actuator/health/readiness
+      interval: 5s
+      timeout: 3s
+      start_period: 30s
+      retries: 24
+
+  frontend:
+    build:
+      context: ./frontend
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "${FORGEPILOT_BIND_ADDRESS:-127.0.0.1}:${FORGEPILOT_FRONTEND_PORT:-18081}:8080"
+    mem_limit: 64m
+    healthcheck:
+      test:
+        - CMD
+        - wget
+        - --quiet
+        - --spider
+        - http://127.0.0.1:8080/healthz
+      interval: 5s
+      timeout: 3s
+      start_period: 10s
+      retries: 12
+
+volumes:
+  postgres-data:
