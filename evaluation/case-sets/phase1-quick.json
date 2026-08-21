@@ -1,0 +1,21 @@
+{
+  "schemaVersion": "forgepilot-evaluation-case-set-v1",
+  "caseSetVersion": "phase1-quick-v1",
+  "manifestSchemaVersion": "forgepilot-evaluation-manifest-v1",
+  "sourceCommit": "96137dd3b43e14c5e8881c99688663afd979cf4e",
+  "allowedSplit": "development",
+  "caseIds": [
+    "java-sql-resource-leak",
+    "typescript-ambiguous-null",
+    "java-broken-build",
+    "biz-fee-rate-hardcoded",
+    "biz-status-machine-bypass",
+    "eng-contract-drift-dual-encode",
+    "eng-transactional-self-invocation",
+    "biz-currency-unchecked",
+    "fp-java-whitelist-order-by",
+    "fp-python-chore-gitignore-cleanup",
+    "miss-template-share-authz",
+    "sec-java-customer-search-sqli"
+  ]
+}

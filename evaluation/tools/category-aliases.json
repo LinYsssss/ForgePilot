@@ -1,0 +1,7 @@
+{
+  "contractVersion": "forgepilot-category-aliases-v1",
+  "aliases": {
+    "RESOURCE_LEAK": ["PERFORMANCE_RISK", "UNKNOWN"],
+    "NULLABILITY": ["NULL_POINTER"]
+  }
+}

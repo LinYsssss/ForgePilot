@@ -1,0 +1,110 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "forgepilot-evaluation-manifest-v1",
+  "title": "ForgePilot quick evaluation manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "corpusVersion", "source", "cases"],
+  "properties": {
+    "schemaVersion": { "const": "forgepilot-evaluation-manifest-v1" },
+    "corpusVersion": { "type": "string", "minLength": 1 },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["repository", "commit", "migrationPolicy"],
+      "properties": {
+        "repository": { "type": "string", "minLength": 1 },
+        "commit": { "const": "96137dd3b43e14c5e8881c99688663afd979cf4e" },
+        "migrationPolicy": { "const": "REWRITE_KEEP_DATA" }
+      }
+    },
+    "cases": {
+      "type": "array",
+      "minItems": 12,
+      "maxItems": 12,
+      "items": { "$ref": "#/$defs/case" }
+    }
+  },
+  "$defs": {
+    "finding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["findingType", "category", "severity", "filePath", "lineStart", "lineEnd"],
+      "properties": {
+        "findingType": { "enum": ["REQUIREMENT", "CODE_QUALITY"] },
+        "category": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]*$" },
+        "severity": { "enum": ["LOW", "MEDIUM", "HIGH"] },
+        "filePath": { "type": "string", "minLength": 1 },
+        "lineStart": { "type": "integer", "minimum": 1 },
+        "lineEnd": { "type": "integer", "minimum": 1 },
+        "categoryAliases": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]*$" }
+        }
+      }
+    },
+    "acceptanceCriterion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["acKey", "text"],
+      "properties": {
+        "acKey": { "type": "string", "pattern": "^AC-[0-9]{4}$" },
+        "text": { "type": "string", "minLength": 1 }
+      }
+    },
+    "acTruth": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["acKey", "verdict"],
+      "properties": {
+        "acKey": { "type": "string", "pattern": "^AC-[0-9]{4}$" },
+        "verdict": { "enum": ["COVERED", "NOT_FOUND", "AT_RISK"] }
+      }
+    },
+    "case": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id", "split", "language", "fixture", "fixtureLayout", "selectionReason",
+        "requirement", "acceptanceCriteria", "expectedAcVerdicts", "expectedFindings", "nonFindings"
+      ],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$" },
+        "split": { "const": "development" },
+        "language": { "enum": ["JAVA", "TYPESCRIPT", "PYTHON"] },
+        "fixture": { "type": "string", "pattern": "^cases/[a-z0-9-]+$" },
+        "fixtureLayout": { "enum": ["single", "base-head"] },
+        "selectionReason": { "type": "string", "minLength": 1 },
+        "requirement": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["title", "background", "description"],
+          "properties": {
+            "title": { "type": "string", "minLength": 1 },
+            "background": { "type": "string", "minLength": 1 },
+            "description": { "type": "string", "minLength": 1 }
+          }
+        },
+        "acceptanceCriteria": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/acceptanceCriterion" }
+        },
+        "expectedAcVerdicts": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/acTruth" }
+        },
+        "expectedFindings": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/finding" }
+        },
+        "nonFindings": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        }
+      }
+    }
+  }
+}

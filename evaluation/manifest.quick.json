@@ -1,0 +1,574 @@
+{
+  "schemaVersion": "forgepilot-evaluation-manifest-v1",
+  "corpusVersion": "forgepilot-phase1-quick-v1",
+  "source": {
+    "repository": "LinYsssss/reposage",
+    "commit": "96137dd3b43e14c5e8881c99688663afd979cf4e",
+    "migrationPolicy": "REWRITE_KEEP_DATA"
+  },
+  "cases": [
+    {
+      "id": "java-sql-resource-leak",
+      "split": "development",
+      "language": "JAVA",
+      "fixture": "cases/java-sql-resource-leak",
+      "fixtureLayout": "single",
+      "selectionReason": "Java resource-safety positive case; exercises exact line matching and RESOURCE_LEAK aliasing.",
+      "requirement": {
+        "title": "审查 java sql resource leak 变更并保持代码契约",
+        "background": "该 JAVA development 案例用于验证增量代码审查对 RESOURCE_LEAK 及明确非目标行为的识别边界。",
+        "description": "针对 java-sql-resource-leak 的 fixture/diff，检查变更是否满足下列 AC；模型只能基于真实代码证据给出覆盖、未发现或存在风险的结论。"
+      },
+      "acceptanceCriteria": [
+        {
+          "acKey": "AC-0001",
+          "text": "[RESOURCE_LEAK] 所有资源句柄、流和客户端响应都必须在成功与异常路径中正确关闭；重点核验 src/App.java 第 7-7 行。"
+        },
+        {
+          "acKey": "AC-0002",
+          "text": "非目标约束：hardcoded test database URL"
+        }
+      ],
+      "expectedAcVerdicts": [
+        {
+          "acKey": "AC-0001",
+          "verdict": "AT_RISK"
+        },
+        {
+          "acKey": "AC-0002",
+          "verdict": "COVERED"
+        }
+      ],
+      "expectedFindings": [
+        {
+          "findingType": "CODE_QUALITY",
+          "category": "RESOURCE_LEAK",
+          "severity": "HIGH",
+          "filePath": "src/App.java",
+          "lineStart": 7,
+          "lineEnd": 7
+        }
+      ],
+      "nonFindings": [
+        "hardcoded test database URL"
+      ]
+    },
+    {
+      "id": "typescript-ambiguous-null",
+      "split": "development",
+      "language": "TYPESCRIPT",
+      "fixture": "cases/typescript-ambiguous-null",
+      "fixtureLayout": "single",
+      "selectionReason": "TypeScript nullability case; exercises a non-Java language and line-anchored finding.",
+      "requirement": {
+        "title": "审查 typescript ambiguous null 变更并保持代码契约",
+        "background": "该 TYPESCRIPT development 案例用于验证增量代码审查对 NULLABILITY 及明确非目标行为的识别边界。",
+        "description": "针对 typescript-ambiguous-null 的 fixture/diff，检查变更是否满足下列 AC；模型只能基于真实代码证据给出覆盖、未发现或存在风险的结论。"
+      },
+      "acceptanceCriteria": [
+        {
+          "acKey": "AC-0001",
+          "text": "[NULLABILITY] 对可能为空的值必须进行显式校验或安全降级；重点核验 src/user.ts 第 3-3 行。"
+        },
+        {
+          "acKey": "AC-0002",
+          "text": "非目标约束：must not block without verifier evidence"
+        }
+      ],
+      "expectedAcVerdicts": [
+        {
+          "acKey": "AC-0001",
+          "verdict": "AT_RISK"
+        },
+        {
+          "acKey": "AC-0002",
+          "verdict": "COVERED"
+        }
+      ],
+      "expectedFindings": [
+        {
+          "findingType": "CODE_QUALITY",
+          "category": "NULLABILITY",
+          "severity": "MEDIUM",
+          "filePath": "src/user.ts",
+          "lineStart": 3,
+          "lineEnd": 3
+        }
+      ],
+      "nonFindings": [
+        "must not block without verifier evidence"
+      ]
+    },
+    {
+      "id": "java-broken-build",
+      "split": "development",
+      "language": "JAVA",
+      "fixture": "cases/java-broken-build",
+      "fixtureLayout": "single",
+      "selectionReason": "Clean development case; verifies an empty Finding set is a valid completed result.",
+      "requirement": {
+        "title": "审查 java broken build 变更并保持代码契约",
+        "background": "该 JAVA development 案例用于验证增量代码审查对 未标注新增缺陷 及明确非目标行为的识别边界。",
+        "description": "针对 java-broken-build 的 fixture/diff，检查变更是否满足下列 AC；模型只能基于真实代码证据给出覆盖、未发现或存在风险的结论。"
+      },
+      "acceptanceCriteria": [
+        {
+          "acKey": "AC-0001",
+          "text": "非目标约束：broken build is an environment or build result, not a fabricated code defect"
+        }
+      ],
+      "expectedAcVerdicts": [
+        {
+          "acKey": "AC-0001",
+          "verdict": "COVERED"
+        }
+      ],
+      "expectedFindings": [],
+      "nonFindings": [
+        "broken build is an environment or build result, not a fabricated code defect"
+      ]
+    },
+    {
+      "id": "biz-fee-rate-hardcoded",
+      "split": "development",
+      "language": "JAVA",
+      "fixture": "cases/biz-fee-rate-hardcoded",
+      "fixtureLayout": "base-head",
+      "selectionReason": "Business-rule case with project knowledge and base/head layout.",
+      "requirement": {
+        "title": "审查 biz fee rate hardcoded 变更并保持代码契约",
+        "background": "该 JAVA development 案例用于验证增量代码审查对 BUSINESS_RULE_RISK 及明确非目标行为的识别边界。",
+        "description": "针对 biz-fee-rate-hardcoded 的 fixture/diff，检查变更是否满足下列 AC；模型只能基于真实代码证据给出覆盖、未发现或存在风险的结论。"
+      },
+      "acceptanceCriteria": [
+        {
+          "acKey": "AC-0001",
+          "text": "[BUSINESS_RULE_RISK] 实现必须遵守该领域的金额、状态、顺序或业务规则；重点核验 src/main/java/com/acme/clearing/service/InstantSettlementService.java 第 13-26 行。"
+        },
+        {
+          "acKey": "AC-0002",
+          "text": "非目标约束：基仓 FeeCalculator 走 fee_rate_config 配置表的既有实现不许报"
+        },
+        {
+          "acKey": "AC-0003",
+          "text": "非目标约束：幂等键由调用方传入属正确设计，不许报"
+        }
+      ],
+      "expectedAcVerdicts": [
+        {
+          "acKey": "AC-0001",
+          "verdict": "AT_RISK"
+        },
+        {
+          "acKey": "AC-0002",
+          "verdict": "COVERED"
+        },
+        {
+          "acKey": "AC-0003",
+          "verdict": "COVERED"
+        }
+      ],
+      "expectedFindings": [
+        {
+          "findingType": "REQUIREMENT",
+          "category": "BUSINESS_RULE_RISK",
+          "severity": "HIGH",
+          "filePath": "src/main/java/com/acme/clearing/service/InstantSettlementService.java",
+          "lineStart": 13,
+          "lineEnd": 26,
+          "categoryAliases": [
+            "UNKNOWN"
+          ]
+        }
+      ],
+      "nonFindings": [
+        "基仓 FeeCalculator 走 fee_rate_config 配置表的既有实现不许报",
+        "幂等键由调用方传入属正确设计，不许报"
+      ]
+    },
+    {
+      "id": "biz-status-machine-bypass",
+      "split": "development",
+      "language": "JAVA",
+      "fixture": "cases/biz-status-machine-bypass",
+      "fixtureLayout": "base-head",
+      "selectionReason": "Business status-transition case with a category-level alias.",
+      "requirement": {
+        "title": "审查 biz status machine bypass 变更并保持代码契约",
+        "background": "该 JAVA development 案例用于验证增量代码审查对 BUSINESS_RULE_RISK 及明确非目标行为的识别边界。",
+        "description": "针对 biz-status-machine-bypass 的 fixture/diff，检查变更是否满足下列 AC；模型只能基于真实代码证据给出覆盖、未发现或存在风险的结论。"
+      },
+      "acceptanceCriteria": [
+        {
+          "acKey": "AC-0001",
+          "text": "[BUSINESS_RULE_RISK] 实现必须遵守该领域的金额、状态、顺序或业务规则；重点核验 src/main/java/com/acme/clearing/payout/service/ExpressPayoutService.java 第 20-29 行。"
+        },
+        {
+          "acKey": "AC-0002",
+          "text": "非目标约束：小额免排队的产品策略与额度上限本身不许报"
+        }
+      ],
+      "expectedAcVerdicts": [
+        {
+          "acKey": "AC-0001",
+          "verdict": "AT_RISK"
+        },
+        {
+          "acKey": "AC-0002",
+          "verdict": "COVERED"
+        }
+      ],
+      "expectedFindings": [
+        {
+          "findingType": "REQUIREMENT",
+          "category": "BUSINESS_RULE_RISK",
+          "severity": "HIGH",
+          "filePath": "src/main/java/com/acme/clearing/payout/service/ExpressPayoutService.java",
+          "lineStart": 20,
+          "lineEnd": 29,
+          "categoryAliases": [
+            "TRANSACTION_RISK",
+            "UNKNOWN"
+          ]
+        }
+      ],
+      "nonFindings": [
+        "小额免排队的产品策略与额度上限本身不许报"
+      ]
+    },
+    {
+      "id": "eng-contract-drift-dual-encode",
+      "split": "development",
+      "language": "JAVA",
+      "fixture": "cases/eng-contract-drift-dual-encode",
+      "fixtureLayout": "base-head",
+      "selectionReason": "Engineering contract case with compatibility context and a range finding.",
+      "requirement": {
+        "title": "审查 eng contract drift dual encode 变更并保持代码契约",
+        "background": "该 JAVA development 案例用于验证增量代码审查对 CONTRACT_DRIFT 及明确非目标行为的识别边界。",
+        "description": "针对 eng-contract-drift-dual-encode 的 fixture/diff，检查变更是否满足下列 AC；模型只能基于真实代码证据给出覆盖、未发现或存在风险的结论。"
+      },
+      "acceptanceCriteria": [
+        {
+          "acKey": "AC-0001",
+          "text": "[CONTRACT_DRIFT] 所有生产与消费路径必须保持同一数据契约和兼容边界；重点核验 src/main/java/com/acme/report/ReportLinkRenderer.java 第 8-10 行。"
+        },
+        {
+          "acKey": "AC-0002",
+          "text": "非目标约束：the legacy bucket:objectKey decode fallback in AssetReferenceCodec is deliberate backward compatibility and must not be reported"
+        }
+      ],
+      "expectedAcVerdicts": [
+        {
+          "acKey": "AC-0001",
+          "verdict": "AT_RISK"
+        },
+        {
+          "acKey": "AC-0002",
+          "verdict": "COVERED"
+        }
+      ],
+      "expectedFindings": [
+        {
+          "findingType": "CODE_QUALITY",
+          "category": "CONTRACT_DRIFT",
+          "severity": "HIGH",
+          "filePath": "src/main/java/com/acme/report/ReportLinkRenderer.java",
+          "lineStart": 8,
+          "lineEnd": 10,
+          "categoryAliases": [
+            "BUSINESS_RULE_RISK",
+            "UNKNOWN"
+          ]
+        }
+      ],
+      "nonFindings": [
+        "the legacy bucket:objectKey decode fallback in AssetReferenceCodec is deliberate backward compatibility and must not be reported"
+      ]
+    },
+    {
+      "id": "eng-transactional-self-invocation",
+      "split": "development",
+      "language": "JAVA",
+      "fixture": "cases/eng-transactional-self-invocation",
+      "fixtureLayout": "base-head",
+      "selectionReason": "Transactional-boundary case with a multi-line Java finding.",
+      "requirement": {
+        "title": "审查 eng transactional self invocation 变更并保持代码契约",
+        "background": "该 JAVA development 案例用于验证增量代码审查对 TRANSACTION_RISK 及明确非目标行为的识别边界。",
+        "description": "针对 eng-transactional-self-invocation 的 fixture/diff，检查变更是否满足下列 AC；模型只能基于真实代码证据给出覆盖、未发现或存在风险的结论。"
+      },
+      "acceptanceCriteria": [
+        {
+          "acKey": "AC-0001",
+          "text": "[TRANSACTION_RISK] 事务边界必须通过代理或显式事务入口保持一致；重点核验 src/main/java/com/acme/inventory/InventoryService.java 第 31-39 行。"
+        },
+        {
+          "acKey": "AC-0002",
+          "text": "非目标约束：the existing single-item path (controller to adjustStock through the Spring proxy) keeps correct transactional semantics and must not be reported"
+        },
+        {
+          "acKey": "AC-0003",
+          "text": "非目标约束：continuing the batch after one failed item (partial-success semantics) is intentional and must not be reported"
+        }
+      ],
+      "expectedAcVerdicts": [
+        {
+          "acKey": "AC-0001",
+          "verdict": "AT_RISK"
+        },
+        {
+          "acKey": "AC-0002",
+          "verdict": "COVERED"
+        },
+        {
+          "acKey": "AC-0003",
+          "verdict": "COVERED"
+        }
+      ],
+      "expectedFindings": [
+        {
+          "findingType": "CODE_QUALITY",
+          "category": "TRANSACTION_RISK",
+          "severity": "HIGH",
+          "filePath": "src/main/java/com/acme/inventory/InventoryService.java",
+          "lineStart": 31,
+          "lineEnd": 39
+        }
+      ],
+      "nonFindings": [
+        "the existing single-item path (controller to adjustStock through the Spring proxy) keeps correct transactional semantics and must not be reported",
+        "continuing the batch after one failed item (partial-success semantics) is intentional and must not be reported"
+      ]
+    },
+    {
+      "id": "biz-currency-unchecked",
+      "split": "development",
+      "language": "JAVA",
+      "fixture": "cases/biz-currency-unchecked",
+      "fixtureLayout": "base-head",
+      "selectionReason": "Business currency-rule case with project knowledge and a medium-severity finding.",
+      "requirement": {
+        "title": "审查 biz currency unchecked 变更并保持代码契约",
+        "background": "该 JAVA development 案例用于验证增量代码审查对 BUSINESS_RULE_RISK 及明确非目标行为的识别边界。",
+        "description": "针对 biz-currency-unchecked 的 fixture/diff，检查变更是否满足下列 AC；模型只能基于真实代码证据给出覆盖、未发现或存在风险的结论。"
+      },
+      "acceptanceCriteria": [
+        {
+          "acKey": "AC-0001",
+          "text": "[BUSINESS_RULE_RISK] 实现必须遵守该领域的金额、状态、顺序或业务规则；重点核验 src/main/java/com/acme/clearing/service/SettlementService.java 第 26-37 行。"
+        },
+        {
+          "acKey": "AC-0002",
+          "text": "非目标约束：为跨境接入预留 currency 参数的 API 演进方向本身不许报"
+        }
+      ],
+      "expectedAcVerdicts": [
+        {
+          "acKey": "AC-0001",
+          "verdict": "AT_RISK"
+        },
+        {
+          "acKey": "AC-0002",
+          "verdict": "COVERED"
+        }
+      ],
+      "expectedFindings": [
+        {
+          "findingType": "REQUIREMENT",
+          "category": "BUSINESS_RULE_RISK",
+          "severity": "MEDIUM",
+          "filePath": "src/main/java/com/acme/clearing/service/SettlementService.java",
+          "lineStart": 26,
+          "lineEnd": 37,
+          "categoryAliases": [
+            "UNKNOWN"
+          ]
+        }
+      ],
+      "nonFindings": [
+        "为跨境接入预留 currency 参数的 API 演进方向本身不许报"
+      ]
+    },
+    {
+      "id": "fp-java-whitelist-order-by",
+      "split": "development",
+      "language": "JAVA",
+      "fixture": "cases/fp-java-whitelist-order-by",
+      "fixtureLayout": "base-head",
+      "selectionReason": "False-positive guard case for parameterized SQL and enum allowlisting.",
+      "requirement": {
+        "title": "审查 fp java whitelist order by 变更并保持代码契约",
+        "background": "该 JAVA development 案例用于验证增量代码审查对 未标注新增缺陷 及明确非目标行为的识别边界。",
+        "description": "针对 fp-java-whitelist-order-by 的 fixture/diff，检查变更是否满足下列 AC；模型只能基于真实代码证据给出覆盖、未发现或存在风险的结论。"
+      },
+      "acceptanceCriteria": [
+        {
+          "acKey": "AC-0001",
+          "text": "非目标约束：关键字始终经 PreparedStatement 占位符绑定（LIKE 通配符拼接发生在参数值侧且已转义），不得报 SQL 注入"
+        },
+        {
+          "acKey": "AC-0002",
+          "text": "非目标约束：ORDER BY 片段仅来自 AuditSortField 枚举白名单常量（请求原文只用于白名单查找，未匹配回落默认值），不得报注入或未校验输入"
+        }
+      ],
+      "expectedAcVerdicts": [
+        {
+          "acKey": "AC-0001",
+          "verdict": "COVERED"
+        },
+        {
+          "acKey": "AC-0002",
+          "verdict": "COVERED"
+        }
+      ],
+      "expectedFindings": [],
+      "nonFindings": [
+        "关键字始终经 PreparedStatement 占位符绑定（LIKE 通配符拼接发生在参数值侧且已转义），不得报 SQL 注入",
+        "ORDER BY 片段仅来自 AuditSortField 枚举白名单常量（请求原文只用于白名单查找，未匹配回落默认值），不得报注入或未校验输入"
+      ]
+    },
+    {
+      "id": "fp-python-chore-gitignore-cleanup",
+      "split": "development",
+      "language": "PYTHON",
+      "fixture": "cases/fp-python-chore-gitignore-cleanup",
+      "fixtureLayout": "base-head",
+      "selectionReason": "False-positive guard case in Python for generated-file cleanup.",
+      "requirement": {
+        "title": "审查 fp python chore gitignore cleanup 变更并保持代码契约",
+        "background": "该 PYTHON development 案例用于验证增量代码审查对 未标注新增缺陷 及明确非目标行为的识别边界。",
+        "description": "针对 fp-python-chore-gitignore-cleanup 的 fixture/diff，检查变更是否满足下列 AC；模型只能基于真实代码证据给出覆盖、未发现或存在风险的结论。"
+      },
+      "acceptanceCriteria": [
+        {
+          "acKey": "AC-0001",
+          "text": "非目标约束：scripts/reports/layout-report.json 是 scan_layout.py 可随时重建的生成物，删除不构成功能回归或数据丢失"
+        },
+        {
+          "acKey": "AC-0002",
+          "text": "非目标约束：.gitignore 新增 __pycache__/、*.pyc 与 scripts/reports/ 忽略规则属常规工程卫生，不得报配置风险或掩盖问题"
+        }
+      ],
+      "expectedAcVerdicts": [
+        {
+          "acKey": "AC-0001",
+          "verdict": "COVERED"
+        },
+        {
+          "acKey": "AC-0002",
+          "verdict": "COVERED"
+        }
+      ],
+      "expectedFindings": [],
+      "nonFindings": [
+        "scripts/reports/layout-report.json 是 scan_layout.py 可随时重建的生成物，删除不构成功能回归或数据丢失",
+        ".gitignore 新增 __pycache__/、*.pyc 与 scripts/reports/ 忽略规则属常规工程卫生，不得报配置风险或掩盖问题"
+      ]
+    },
+    {
+      "id": "miss-template-share-authz",
+      "split": "development",
+      "language": "TYPESCRIPT",
+      "fixture": "cases/miss-template-share-authz",
+      "fixtureLayout": "base-head",
+      "selectionReason": "Authorization boundary case in TypeScript with an explicit requirement risk.",
+      "requirement": {
+        "title": "审查 miss template share authz 变更并保持代码契约",
+        "background": "该 TYPESCRIPT development 案例用于验证增量代码审查对 AUTH_RISK 及明确非目标行为的识别边界。",
+        "description": "针对 miss-template-share-authz 的 fixture/diff，检查变更是否满足下列 AC；模型只能基于真实代码证据给出覆盖、未发现或存在风险的结论。"
+      },
+      "acceptanceCriteria": [
+        {
+          "acKey": "AC-0001",
+          "text": "[AUTH_RISK] 每个对象访问和敏感操作必须保持租户、组织或主体边界；重点核验 src/templates.ts 第 81-85 行。"
+        },
+        {
+          "acKey": "AC-0002",
+          "text": "非目标约束：listSharedWithMe 仅返回分享授权命中且同租户的模板，不得报越权读取"
+        },
+        {
+          "acKey": "AC-0003",
+          "text": "非目标约束：bulkExport 对每个 id 逐一 assertOwnership 且单次上限 50 条，不得报批量越权"
+        }
+      ],
+      "expectedAcVerdicts": [
+        {
+          "acKey": "AC-0001",
+          "verdict": "AT_RISK"
+        },
+        {
+          "acKey": "AC-0002",
+          "verdict": "COVERED"
+        },
+        {
+          "acKey": "AC-0003",
+          "verdict": "COVERED"
+        }
+      ],
+      "expectedFindings": [
+        {
+          "findingType": "CODE_QUALITY",
+          "category": "AUTH_RISK",
+          "severity": "HIGH",
+          "filePath": "src/templates.ts",
+          "lineStart": 81,
+          "lineEnd": 85,
+          "categoryAliases": [
+            "UNKNOWN"
+          ]
+        }
+      ],
+      "nonFindings": [
+        "listSharedWithMe 仅返回分享授权命中且同租户的模板，不得报越权读取",
+        "bulkExport 对每个 id 逐一 assertOwnership 且单次上限 50 条，不得报批量越权"
+      ]
+    },
+    {
+      "id": "sec-java-customer-search-sqli",
+      "split": "development",
+      "language": "JAVA",
+      "fixture": "cases/sec-java-customer-search-sqli",
+      "fixtureLayout": "base-head",
+      "selectionReason": "SQL injection case with a minimal changed-file range.",
+      "requirement": {
+        "title": "审查 sec java customer search sqli 变更并保持代码契约",
+        "background": "该 JAVA development 案例用于验证增量代码审查对 SQL_INJECTION 及明确非目标行为的识别边界。",
+        "description": "针对 sec-java-customer-search-sqli 的 fixture/diff，检查变更是否满足下列 AC；模型只能基于真实代码证据给出覆盖、未发现或存在风险的结论。"
+      },
+      "acceptanceCriteria": [
+        {
+          "acKey": "AC-0001",
+          "text": "[SQL_INJECTION] 外部输入必须参数化或通过白名单安全进入查询；重点核验 src/main/java/com/acme/customers/CustomerSearchRepository.java 第 14-15 行。"
+        },
+        {
+          "acKey": "AC-0002",
+          "text": "非目标约束：固定 select 字段和表名不是风险；缺陷仅为 email 直接拼接进 SQL"
+        }
+      ],
+      "expectedAcVerdicts": [
+        {
+          "acKey": "AC-0001",
+          "verdict": "AT_RISK"
+        },
+        {
+          "acKey": "AC-0002",
+          "verdict": "COVERED"
+        }
+      ],
+      "expectedFindings": [
+        {
+          "findingType": "CODE_QUALITY",
+          "category": "SQL_INJECTION",
+          "severity": "HIGH",
+          "filePath": "src/main/java/com/acme/customers/CustomerSearchRepository.java",
+          "lineStart": 14,
+          "lineEnd": 15
+        }
+      ],
+      "nonFindings": [
+        "固定 select 字段和表名不是风险；缺陷仅为 email 直接拼接进 SQL"
+      ]
+    }
+  ]
+}

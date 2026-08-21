@@ -1,0 +1,885 @@
+{
+  "acVerdict": {
+    "accuracy": 1.0,
+    "byVerdict": {
+      "AT_RISK": {
+        "expected": 9,
+        "falseNegative": 0,
+        "falsePositive": 0,
+        "precision": 1.0,
+        "predicted": 9,
+        "recall": 1.0,
+        "truePositive": 9
+      },
+      "COVERED": {
+        "expected": 17,
+        "falseNegative": 0,
+        "falsePositive": 0,
+        "precision": 1.0,
+        "predicted": 17,
+        "recall": 1.0,
+        "truePositive": 17
+      },
+      "NOT_FOUND": {
+        "expected": 0,
+        "falseNegative": 0,
+        "falsePositive": 0,
+        "precision": null,
+        "predicted": 0,
+        "recall": null,
+        "truePositive": 0
+      }
+    },
+    "exactHits": 26,
+    "expected": 26,
+    "predicted": 26
+  },
+  "arm": "DIFF_REQUIREMENT_AC_KNOWLEDGE",
+  "byCategory": {
+    "AUTH_RISK": {
+      "expected": 1,
+      "falseReportRate": 0.0,
+      "missRate": 0.0,
+      "missed": 0,
+      "predicted": 1,
+      "unmatched": 0
+    },
+    "BUSINESS_RULE_RISK": {
+      "expected": 3,
+      "falseReportRate": 0.0,
+      "missRate": 0.0,
+      "missed": 0,
+      "predicted": 3,
+      "unmatched": 0
+    },
+    "CONTRACT_DRIFT": {
+      "expected": 1,
+      "falseReportRate": 0.0,
+      "missRate": 0.0,
+      "missed": 0,
+      "predicted": 1,
+      "unmatched": 0
+    },
+    "NULLABILITY": {
+      "expected": 1,
+      "falseReportRate": 0.0,
+      "missRate": 0.0,
+      "missed": 0,
+      "predicted": 1,
+      "unmatched": 0
+    },
+    "RESOURCE_LEAK": {
+      "expected": 1,
+      "falseReportRate": 0.0,
+      "missRate": 0.0,
+      "missed": 0,
+      "predicted": 1,
+      "unmatched": 0
+    },
+    "SQL_INJECTION": {
+      "expected": 1,
+      "falseReportRate": 0.0,
+      "missRate": 0.0,
+      "missed": 0,
+      "predicted": 1,
+      "unmatched": 0
+    },
+    "TRANSACTION_RISK": {
+      "expected": 1,
+      "falseReportRate": 0.0,
+      "missRate": 0.0,
+      "missed": 0,
+      "predicted": 1,
+      "unmatched": 0
+    }
+  },
+  "caseSetVersion": "phase1-quick-v1",
+  "cases": [
+    {
+      "acVerdict": {
+        "accuracy": 1.0,
+        "byVerdict": {
+          "AT_RISK": {
+            "falseNegative": 0,
+            "falsePositive": 0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "truePositive": 1
+          },
+          "COVERED": {
+            "falseNegative": 0,
+            "falsePositive": 0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "truePositive": 1
+          },
+          "NOT_FOUND": {
+            "falseNegative": 0,
+            "falsePositive": 0,
+            "precision": null,
+            "recall": null,
+            "truePositive": 0
+          }
+        },
+        "exactHits": 2,
+        "expected": 2,
+        "missing": [],
+        "predicted": 2,
+        "unexpected": []
+      },
+      "caseId": "java-sql-resource-leak",
+      "expected": 1,
+      "matched": 1,
+      "matchedPairs": [
+        {
+          "expected": {
+            "category": "RESOURCE_LEAK",
+            "filePath": "src/App.java",
+            "findingType": "CODE_QUALITY",
+            "lineEnd": 7,
+            "lineStart": 7,
+            "severity": "HIGH"
+          },
+          "predicted": {
+            "category": "RESOURCE_LEAK",
+            "filePath": "src/App.java",
+            "findingType": "CODE_QUALITY",
+            "lineEnd": 7,
+            "lineStart": 7
+          }
+        }
+      ],
+      "missed": 0,
+      "missedExpected": [],
+      "nonFindingAlerts": [],
+      "nonFindings": [
+        "hardcoded test database URL"
+      ],
+      "predicted": 1,
+      "status": "COMPLETED",
+      "unmatched": 0,
+      "unmatchedFindings": []
+    },
+    {
+      "acVerdict": {
+        "accuracy": 1.0,
+        "byVerdict": {
+          "AT_RISK": {
+            "falseNegative": 0,
+            "falsePositive": 0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "truePositive": 1
+          },
+          "COVERED": {
+            "falseNegative": 0,
+            "falsePositive": 0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "truePositive": 1
+          },
+          "NOT_FOUND": {
+            "falseNegative": 0,
+            "falsePositive": 0,
+            "precision": null,
+            "recall": null,
+            "truePositive": 0
+          }
+        },
+        "exactHits": 2,
+        "expected": 2,
+        "missing": [],
+        "predicted": 2,
+        "unexpected": []
+      },
+      "caseId": "typescript-ambiguous-null",
+      "expected": 1,
+      "matched": 1,
+      "matchedPairs": [
+        {
+          "expected": {
+            "category": "NULLABILITY",
+            "filePath": "src/user.ts",
+            "findingType": "CODE_QUALITY",
+            "lineEnd": 3,
+            "lineStart": 3,
+            "severity": "MEDIUM"
+          },
+          "predicted": {
+            "category": "NULLABILITY",
+            "filePath": "src/user.ts",
+            "findingType": "CODE_QUALITY",
+            "lineEnd": 3,
+            "lineStart": 3
+          }
+        }
+      ],
+      "missed": 0,
+      "missedExpected": [],
+      "nonFindingAlerts": [],
+      "nonFindings": [
+        "must not block without verifier evidence"
+      ],
+      "predicted": 1,
+      "status": "COMPLETED",
+      "unmatched": 0,
+      "unmatchedFindings": []
+    },
+    {
+      "acVerdict": {
+        "accuracy": 1.0,
+        "byVerdict": {
+          "AT_RISK": {
+            "falseNegative": 0,
+            "falsePositive": 0,
+            "precision": null,
+            "recall": null,
+            "truePositive": 0
+          },
+          "COVERED": {
+            "falseNegative": 0,
+            "falsePositive": 0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "truePositive": 1
+          },
+          "NOT_FOUND": {
+            "falseNegative": 0,
+            "falsePositive": 0,
+            "precision": null,
+            "recall": null,
+            "truePositive": 0
+          }
+        },
+        "exactHits": 1,
+        "expected": 1,
+        "missing": [],
+        "predicted": 1,
+        "unexpected": []
+      },
+      "caseId": "java-broken-build",
+      "expected": 0,
+      "matched": 0,
+      "matchedPairs": [],
+      "missed": 0,
+      "missedExpected": [],
+      "nonFindingAlerts": [],
+      "nonFindings": [
+        "broken build is an environment or build result, not a fabricated code defect"
+      ],
+      "predicted": 0,
+      "status": "COMPLETED",
+      "unmatched": 0,
+      "unmatchedFindings": []
+    },
+    {
+      "acVerdict": {
+        "accuracy": 1.0,
+        "byVerdict": {
+          "AT_RISK": {
+            "falseNegative": 0,
+            "falsePositive": 0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "truePositive": 1
+          },
+          "COVERED": {
+            "falseNegative": 0,
+            "falsePositive": 0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "truePositive": 2
+          },
+          "NOT_FOUND": {
+            "falseNegative": 0,
+            "falsePositive": 0,
+            "precision": null,
+            "recall": null,
+            "truePositive": 0
+          }
+        },
+        "exactHits": 3,
+        "expected": 3,
+        "missing": [],
+        "predicted": 3,
+        "unexpected": []
+      },
+      "caseId": "biz-fee-rate-hardcoded",
+      "expected": 1,
+      "matched": 1,
+      "matchedPairs": [
+        {
+          "expected": {
+            "category": "BUSINESS_RULE_RISK",
+            "categoryAliases": [
+              "UNKNOWN"
+            ],
+            "filePath": "src/main/java/com/acme/clearing/service/InstantSettlementService.java",
+            "findingType": "REQUIREMENT",
+            "lineEnd": 26,
+            "lineStart": 13,
+            "severity": "HIGH"
+          },
+          "predicted": {
+            "category": "BUSINESS_RULE_RISK",
+            "filePath": "src/main/java/com/acme/clearing/service/InstantSettlementService.java",
+            "findingType": "REQUIREMENT",
+            "lineEnd": 26,
+            "lineStart": 13
+          }
+        }
+      ],
+      "missed": 0,
+      "missedExpected": [],
+      "nonFindingAlerts": [],
+      "nonFindings": [
+        "基仓 FeeCalculator 走 fee_rate_config 配置表的既有实现不许报",
+        "幂等键由调用方传入属正确设计，不许报"
+      ],
+      "predicted": 1,
+      "status": "COMPLETED",
+      "unmatched": 0,
+      "unmatchedFindings": []
+    },
+    {
+      "acVerdict": {
+        "accuracy": 1.0,
+        "byVerdict": {
+          "AT_RISK": {
+            "falseNegative": 0,
+            "falsePositive": 0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "truePositive": 1
+          },
+          "COVERED": {
+            "falseNegative": 0,
+            "falsePositive": 0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "truePositive": 1
+          },
+          "NOT_FOUND": {
+            "falseNegative": 0,
+            "falsePositive": 0,
+            "precision": null,
+            "recall": null,
+            "truePositive": 0
+          }
+        },
+        "exactHits": 2,
+        "expected": 2,
+        "missing": [],
+        "predicted": 2,
+        "unexpected": []
+      },
+      "caseId": "biz-status-machine-bypass",
+      "expected": 1,
+      "matched": 1,
+      "matchedPairs": [
+        {
+          "expected": {
+            "category": "BUSINESS_RULE_RISK",
+            "categoryAliases": [
+              "TRANSACTION_RISK",
+              "UNKNOWN"
+            ],
+            "filePath": "src/main/java/com/acme/clearing/payout/service/ExpressPayoutService.java",
+            "findingType": "REQUIREMENT",
+            "lineEnd": 29,
+            "lineStart": 20,
+            "severity": "HIGH"
+          },
+          "predicted": {
+            "category": "BUSINESS_RULE_RISK",
+            "filePath": "src/main/java/com/acme/clearing/payout/service/ExpressPayoutService.java",
+            "findingType": "REQUIREMENT",
+            "lineEnd": 29,
+            "lineStart": 20
+          }
+        }
+      ],
+      "missed": 0,
+      "missedExpected": [],
+      "nonFindingAlerts": [],
+      "nonFindings": [
+        "小额免排队的产品策略与额度上限本身不许报"
+      ],
+      "predicted": 1,
+      "status": "COMPLETED",
+      "unmatched": 0,
+      "unmatchedFindings": []
+    },
+    {
+      "acVerdict": {
+        "accuracy": 1.0,
+        "byVerdict": {
+          "AT_RISK": {
+            "falseNegative": 0,
+            "falsePositive": 0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "truePositive": 1
+          },
+          "COVERED": {
+            "falseNegative": 0,
+            "falsePositive": 0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "truePositive": 1
+          },
+          "NOT_FOUND": {
+            "falseNegative": 0,
+            "falsePositive": 0,
+            "precision": null,
+            "recall": null,
+            "truePositive": 0
+          }
+        },
+        "exactHits": 2,
+        "expected": 2,
+        "missing": [],
+        "predicted": 2,
+        "unexpected": []
+      },
+      "caseId": "eng-contract-drift-dual-encode",
+      "expected": 1,
+      "matched": 1,
+      "matchedPairs": [
+        {
+          "expected": {
+            "category": "CONTRACT_DRIFT",
+            "categoryAliases": [
+              "BUSINESS_RULE_RISK",
+              "UNKNOWN"
+            ],
+            "filePath": "src/main/java/com/acme/report/ReportLinkRenderer.java",
+            "findingType": "CODE_QUALITY",
+            "lineEnd": 10,
+            "lineStart": 8,
+            "severity": "HIGH"
+          },
+          "predicted": {
+            "category": "CONTRACT_DRIFT",
+            "filePath": "src/main/java/com/acme/report/ReportLinkRenderer.java",
+            "findingType": "CODE_QUALITY",
+            "lineEnd": 10,
+            "lineStart": 8
+          }
+        }
+      ],
+      "missed": 0,
+      "missedExpected": [],
+      "nonFindingAlerts": [],
+      "nonFindings": [
+        "the legacy bucket:objectKey decode fallback in AssetReferenceCodec is deliberate backward compatibility and must not be reported"
+      ],
+      "predicted": 1,
+      "status": "COMPLETED",
+      "unmatched": 0,
+      "unmatchedFindings": []
+    },
+    {
+      "acVerdict": {
+        "accuracy": 1.0,
+        "byVerdict": {
+          "AT_RISK": {
+            "falseNegative": 0,
+            "falsePositive": 0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "truePositive": 1
+          },
+          "COVERED": {
+            "falseNegative": 0,
+            "falsePositive": 0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "truePositive": 2
+          },
+          "NOT_FOUND": {
+            "falseNegative": 0,
+            "falsePositive": 0,
+            "precision": null,
+            "recall": null,
+            "truePositive": 0
+          }
+        },
+        "exactHits": 3,
+        "expected": 3,
+        "missing": [],
+        "predicted": 3,
+        "unexpected": []
+      },
+      "caseId": "eng-transactional-self-invocation",
+      "expected": 1,
+      "matched": 1,
+      "matchedPairs": [
+        {
+          "expected": {
+            "category": "TRANSACTION_RISK",
+            "filePath": "src/main/java/com/acme/inventory/InventoryService.java",
+            "findingType": "CODE_QUALITY",
+            "lineEnd": 39,
+            "lineStart": 31,
+            "severity": "HIGH"
+          },
+          "predicted": {
+            "category": "TRANSACTION_RISK",
+            "filePath": "src/main/java/com/acme/inventory/InventoryService.java",
+            "findingType": "CODE_QUALITY",
+            "lineEnd": 39,
+            "lineStart": 31
+          }
+        }
+      ],
+      "missed": 0,
+      "missedExpected": [],
+      "nonFindingAlerts": [],
+      "nonFindings": [
+        "the existing single-item path (controller to adjustStock through the Spring proxy) keeps correct transactional semantics and must not be reported",
+        "continuing the batch after one failed item (partial-success semantics) is intentional and must not be reported"
+      ],
+      "predicted": 1,
+      "status": "COMPLETED",
+      "unmatched": 0,
+      "unmatchedFindings": []
+    },
+    {
+      "acVerdict": {
+        "accuracy": 1.0,
+        "byVerdict": {
+          "AT_RISK": {
+            "falseNegative": 0,
+            "falsePositive": 0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "truePositive": 1
+          },
+          "COVERED": {
+            "falseNegative": 0,
+            "falsePositive": 0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "truePositive": 1
+          },
+          "NOT_FOUND": {
+            "falseNegative": 0,
+            "falsePositive": 0,
+            "precision": null,
+            "recall": null,
+            "truePositive": 0
+          }
+        },
+        "exactHits": 2,
+        "expected": 2,
+        "missing": [],
+        "predicted": 2,
+        "unexpected": []
+      },
+      "caseId": "biz-currency-unchecked",
+      "expected": 1,
+      "matched": 1,
+      "matchedPairs": [
+        {
+          "expected": {
+            "category": "BUSINESS_RULE_RISK",
+            "categoryAliases": [
+              "UNKNOWN"
+            ],
+            "filePath": "src/main/java/com/acme/clearing/service/SettlementService.java",
+            "findingType": "REQUIREMENT",
+            "lineEnd": 37,
+            "lineStart": 26,
+            "severity": "MEDIUM"
+          },
+          "predicted": {
+            "category": "BUSINESS_RULE_RISK",
+            "filePath": "src/main/java/com/acme/clearing/service/SettlementService.java",
+            "findingType": "REQUIREMENT",
+            "lineEnd": 37,
+            "lineStart": 26
+          }
+        }
+      ],
+      "missed": 0,
+      "missedExpected": [],
+      "nonFindingAlerts": [],
+      "nonFindings": [
+        "为跨境接入预留 currency 参数的 API 演进方向本身不许报"
+      ],
+      "predicted": 1,
+      "status": "COMPLETED",
+      "unmatched": 0,
+      "unmatchedFindings": []
+    },
+    {
+      "acVerdict": {
+        "accuracy": 1.0,
+        "byVerdict": {
+          "AT_RISK": {
+            "falseNegative": 0,
+            "falsePositive": 0,
+            "precision": null,
+            "recall": null,
+            "truePositive": 0
+          },
+          "COVERED": {
+            "falseNegative": 0,
+            "falsePositive": 0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "truePositive": 2
+          },
+          "NOT_FOUND": {
+            "falseNegative": 0,
+            "falsePositive": 0,
+            "precision": null,
+            "recall": null,
+            "truePositive": 0
+          }
+        },
+        "exactHits": 2,
+        "expected": 2,
+        "missing": [],
+        "predicted": 2,
+        "unexpected": []
+      },
+      "caseId": "fp-java-whitelist-order-by",
+      "expected": 0,
+      "matched": 0,
+      "matchedPairs": [],
+      "missed": 0,
+      "missedExpected": [],
+      "nonFindingAlerts": [],
+      "nonFindings": [
+        "关键字始终经 PreparedStatement 占位符绑定（LIKE 通配符拼接发生在参数值侧且已转义），不得报 SQL 注入",
+        "ORDER BY 片段仅来自 AuditSortField 枚举白名单常量（请求原文只用于白名单查找，未匹配回落默认值），不得报注入或未校验输入"
+      ],
+      "predicted": 0,
+      "status": "COMPLETED",
+      "unmatched": 0,
+      "unmatchedFindings": []
+    },
+    {
+      "acVerdict": {
+        "accuracy": 1.0,
+        "byVerdict": {
+          "AT_RISK": {
+            "falseNegative": 0,
+            "falsePositive": 0,
+            "precision": null,
+            "recall": null,
+            "truePositive": 0
+          },
+          "COVERED": {
+            "falseNegative": 0,
+            "falsePositive": 0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "truePositive": 2
+          },
+          "NOT_FOUND": {
+            "falseNegative": 0,
+            "falsePositive": 0,
+            "precision": null,
+            "recall": null,
+            "truePositive": 0
+          }
+        },
+        "exactHits": 2,
+        "expected": 2,
+        "missing": [],
+        "predicted": 2,
+        "unexpected": []
+      },
+      "caseId": "fp-python-chore-gitignore-cleanup",
+      "expected": 0,
+      "matched": 0,
+      "matchedPairs": [],
+      "missed": 0,
+      "missedExpected": [],
+      "nonFindingAlerts": [],
+      "nonFindings": [
+        "scripts/reports/layout-report.json 是 scan_layout.py 可随时重建的生成物，删除不构成功能回归或数据丢失",
+        ".gitignore 新增 __pycache__/、*.pyc 与 scripts/reports/ 忽略规则属常规工程卫生，不得报配置风险或掩盖问题"
+      ],
+      "predicted": 0,
+      "status": "COMPLETED",
+      "unmatched": 0,
+      "unmatchedFindings": []
+    },
+    {
+      "acVerdict": {
+        "accuracy": 1.0,
+        "byVerdict": {
+          "AT_RISK": {
+            "falseNegative": 0,
+            "falsePositive": 0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "truePositive": 1
+          },
+          "COVERED": {
+            "falseNegative": 0,
+            "falsePositive": 0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "truePositive": 2
+          },
+          "NOT_FOUND": {
+            "falseNegative": 0,
+            "falsePositive": 0,
+            "precision": null,
+            "recall": null,
+            "truePositive": 0
+          }
+        },
+        "exactHits": 3,
+        "expected": 3,
+        "missing": [],
+        "predicted": 3,
+        "unexpected": []
+      },
+      "caseId": "miss-template-share-authz",
+      "expected": 1,
+      "matched": 1,
+      "matchedPairs": [
+        {
+          "expected": {
+            "category": "AUTH_RISK",
+            "categoryAliases": [
+              "UNKNOWN"
+            ],
+            "filePath": "src/templates.ts",
+            "findingType": "CODE_QUALITY",
+            "lineEnd": 85,
+            "lineStart": 81,
+            "severity": "HIGH"
+          },
+          "predicted": {
+            "category": "AUTH_RISK",
+            "filePath": "src/templates.ts",
+            "findingType": "CODE_QUALITY",
+            "lineEnd": 85,
+            "lineStart": 81
+          }
+        }
+      ],
+      "missed": 0,
+      "missedExpected": [],
+      "nonFindingAlerts": [],
+      "nonFindings": [
+        "listSharedWithMe 仅返回分享授权命中且同租户的模板，不得报越权读取",
+        "bulkExport 对每个 id 逐一 assertOwnership 且单次上限 50 条，不得报批量越权"
+      ],
+      "predicted": 1,
+      "status": "COMPLETED",
+      "unmatched": 0,
+      "unmatchedFindings": []
+    },
+    {
+      "acVerdict": {
+        "accuracy": 1.0,
+        "byVerdict": {
+          "AT_RISK": {
+            "falseNegative": 0,
+            "falsePositive": 0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "truePositive": 1
+          },
+          "COVERED": {
+            "falseNegative": 0,
+            "falsePositive": 0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "truePositive": 1
+          },
+          "NOT_FOUND": {
+            "falseNegative": 0,
+            "falsePositive": 0,
+            "precision": null,
+            "recall": null,
+            "truePositive": 0
+          }
+        },
+        "exactHits": 2,
+        "expected": 2,
+        "missing": [],
+        "predicted": 2,
+        "unexpected": []
+      },
+      "caseId": "sec-java-customer-search-sqli",
+      "expected": 1,
+      "matched": 1,
+      "matchedPairs": [
+        {
+          "expected": {
+            "category": "SQL_INJECTION",
+            "filePath": "src/main/java/com/acme/customers/CustomerSearchRepository.java",
+            "findingType": "CODE_QUALITY",
+            "lineEnd": 15,
+            "lineStart": 14,
+            "severity": "HIGH"
+          },
+          "predicted": {
+            "category": "SQL_INJECTION",
+            "filePath": "src/main/java/com/acme/customers/CustomerSearchRepository.java",
+            "findingType": "CODE_QUALITY",
+            "lineEnd": 15,
+            "lineStart": 14
+          }
+        }
+      ],
+      "missed": 0,
+      "missedExpected": [],
+      "nonFindingAlerts": [],
+      "nonFindings": [
+        "固定 select 字段和表名不是风险；缺陷仅为 email 直接拼接进 SQL"
+      ],
+      "predicted": 1,
+      "status": "COMPLETED",
+      "unmatched": 0,
+      "unmatchedFindings": []
+    }
+  ],
+  "config": {
+    "model": "synthetic-reference",
+    "promptVersion": "phase1-scorer-reference-v1",
+    "temperature": 0
+  },
+  "contractVersion": "forgepilot-evaluation-score-report-v1",
+  "corpusVersion": "forgepilot-phase1-quick-v1",
+  "execution": {
+    "attempted": 12,
+    "completed": 12,
+    "failed": 0,
+    "notRun": 0,
+    "notRunCases": [],
+    "structureFailureRate": 0.0,
+    "structureFailures": 0
+  },
+  "findingMetrics": {
+    "falseNegative": 0,
+    "falsePositive": 0,
+    "falseReportRate": 0.0,
+    "missRate": 0.0,
+    "precision": 1.0,
+    "recall": 1.0,
+    "truePositive": 9
+  },
+  "matchRuleVersion": "forgepilot-deterministic-match-v1",
+  "requirementViolationRecall": 1.0,
+  "runKind": "SYNTHETIC_REFERENCE",
+  "usage": {
+    "casesWithUsage": 12,
+    "completedCases": 12,
+    "inputTokensTotal": 1860,
+    "latencyMsTotal": 18600,
+    "meanInputTokens": 155.0,
+    "meanLatencyMs": 1550.0,
+    "meanOutputTokens": 67.5,
+    "outputTokensTotal": 810
+  }
+}

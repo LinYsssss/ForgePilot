@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "forgepilot-evaluation-score-report-v1",
+  "title": "ForgePilot deterministic score report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "contractVersion", "matchRuleVersion", "corpusVersion", "caseSetVersion", "runKind", "arm", "config",
+    "findingMetrics", "requirementViolationRecall", "acVerdict", "execution", "usage", "byCategory", "cases"
+  ],
+  "properties": {
+    "contractVersion": { "const": "forgepilot-evaluation-score-report-v1" },
+    "matchRuleVersion": { "const": "forgepilot-deterministic-match-v1" },
+    "corpusVersion": { "type": "string" },
+    "caseSetVersion": { "type": "string" },
+    "runKind": { "type": "string" },
+    "arm": { "type": "string" },
+    "config": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["model", "temperature", "promptVersion"],
+      "properties": {
+        "model": { "type": "string", "minLength": 1 },
+        "temperature": { "type": "number" },
+        "promptVersion": { "type": "string", "minLength": 1 }
+      }
+    },
+    "findingMetrics": { "$ref": "#/$defs/findingMetrics" },
+    "requirementViolationRecall": { "type": ["number", "null"], "minimum": 0, "maximum": 1 },
+    "acVerdict": { "$ref": "#/$defs/acMetrics" },
+    "execution": { "type": "object" },
+    "usage": { "type": "object" },
+    "byCategory": { "type": "object" },
+    "cases": { "type": "array", "items": { "type": "object" } }
+  },
+  "$defs": {
+    "findingMetrics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["truePositive", "falsePositive", "falseNegative", "precision", "recall", "falseReportRate", "missRate"],
+      "properties": {
+        "truePositive": { "type": "integer", "minimum": 0 },
+        "falsePositive": { "type": "integer", "minimum": 0 },
+        "falseNegative": { "type": "integer", "minimum": 0 },
+        "precision": { "type": ["number", "null"], "minimum": 0, "maximum": 1 },
+        "recall": { "type": ["number", "null"], "minimum": 0, "maximum": 1 },
+        "falseReportRate": { "type": ["number", "null"], "minimum": 0, "maximum": 1 },
+        "missRate": { "type": ["number", "null"], "minimum": 0, "maximum": 1 }
+      }
+    },
+    "acMetrics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["expected", "predicted", "exactHits", "accuracy", "byVerdict"],
+      "properties": {
+        "expected": { "type": "integer", "minimum": 0 },
+        "predicted": { "type": "integer", "minimum": 0 },
+        "exactHits": { "type": "integer", "minimum": 0 },
+        "accuracy": { "type": ["number", "null"], "minimum": 0, "maximum": 1 },
+        "byVerdict": { "type": "object" }
+      }
+    }
+  }
+}

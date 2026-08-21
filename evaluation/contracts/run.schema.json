@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "forgepilot-evaluation-run-v1",
+  "title": "ForgePilot normalized evaluation run",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["contractVersion", "corpusVersion", "caseSetVersion", "runKind", "arm", "config", "cases"],
+  "properties": {
+    "contractVersion": { "const": "forgepilot-evaluation-run-v1" },
+    "corpusVersion": { "type": "string", "minLength": 1 },
+    "caseSetVersion": { "type": "string", "minLength": 1 },
+    "runKind": { "enum": ["SYNTHETIC_REFERENCE", "MODEL_EVALUATION"] },
+    "arm": { "enum": ["DIFF_ONLY", "DIFF_REQUIREMENT_AC", "DIFF_REQUIREMENT_AC_KNOWLEDGE"] },
+    "config": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["model", "temperature", "promptVersion"],
+      "properties": {
+        "model": { "type": "string", "minLength": 1 },
+        "temperature": { "type": "number" },
+        "promptVersion": { "type": "string", "minLength": 1 }
+      }
+    },
+    "cases": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/caseResult" }
+    }
+  },
+  "$defs": {
+    "finding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["findingType", "category", "filePath", "lineStart", "lineEnd"],
+      "properties": {
+        "findingType": { "enum": ["REQUIREMENT", "CODE_QUALITY"] },
+        "category": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]*$" },
+        "filePath": { "type": "string", "minLength": 1 },
+        "lineStart": { "type": ["integer", "null"], "minimum": 1 },
+        "lineEnd": { "type": ["integer", "null"], "minimum": 1 }
+      }
+    },
+    "acVerdict": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["acKey", "verdict"],
+      "properties": {
+        "acKey": { "type": "string", "pattern": "^AC-[0-9]{4}$" },
+        "verdict": { "enum": ["COVERED", "NOT_FOUND", "AT_RISK"] }
+      }
+    },
+    "usage": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": ["inputTokens", "outputTokens", "latencyMs"],
+      "properties": {
+        "inputTokens": { "type": "integer", "minimum": 0 },
+        "outputTokens": { "type": "integer", "minimum": 0 },
+        "latencyMs": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "caseResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["caseId", "status", "failureKind", "failureReason", "findings", "acVerdicts", "usage"],
+      "properties": {
+        "caseId": { "type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$" },
+        "status": { "enum": ["COMPLETED", "FAILED", "NOT_RUN"] },
+        "failureKind": { "enum": ["STRUCTURE", "PROVIDER", "TIMEOUT", "OTHER", null] },
+        "failureReason": { "type": ["string", "null"] },
+        "findings": { "type": "array", "items": { "$ref": "#/$defs/finding" } },
+        "acVerdicts": { "type": "array", "items": { "$ref": "#/$defs/acVerdict" } },
+        "usage": { "$ref": "#/$defs/usage" }
+      }
+    }
+  }
+}
+
