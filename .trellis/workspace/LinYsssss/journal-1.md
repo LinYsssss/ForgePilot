@@ -160,3 +160,44 @@ AI Gateway、Knowledge、GitHub SCM 三条切片落地；13/16 表；155 测试�
 ### Next Steps
 
 - 批次 3（Phase 6+7）：review / finding / finding_event 三张表，补 P1 DEVELOPER 半条与 ai_call_log.review_id 外键
+
+
+## Session 5: 批次 3（Phase 6+7）完成并过闸
+
+**Date**: 2026-08-22
+**Task**: 批次 3（Phase 6+7）完成并过闸
+**Branch**: `main`
+
+### Summary
+
+Review Engine、人工闭环、容量冻结、development 三臂评测和独立 Provider 落地；D014 四 job CI 全绿并归档
+
+### Main Changes
+
+- 落地唯一 Review Engine、fencing、Finding continuity 与 Decision 闭环
+- 最大预算实测冻结并发为 2，并完成 gpt-5.6-luna development 三臂评测
+- Chat/Embedding 独立 Provider 与 Requirement Quality 真实业务烟测通过
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `04b1af2` | (see git log) |
+| `75ac88e` | (see git log) |
+| `47bfe6f` | (see git log) |
+| `fa82bda` | (see git log) |
+| `e657bf2` | (see git log) |
+| `072d986` | (see git log) |
+
+### Testing
+
+- [OK] JDK 21 verify：298 tests，0 failure/error/skip
+- [OK] CI run 32574477108：Evaluation、Frontend、Backend、Compose 四 job 全绿
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- 单独规划 Phase 8；holdout 只在配置冻结后运行一次
