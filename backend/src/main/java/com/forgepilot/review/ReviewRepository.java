@@ -23,6 +23,9 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
 
     List<Review> findByProjectIdAndPullRequestIdOrderByCreatedAtAscIdAsc(long projectId, long pullRequestId);
 
+    /** The whole project's reviews, newest first: what the 代码审查 page lists. */
+    List<Review> findByProjectIdOrderByCreatedAtDescIdDesc(long projectId);
+
     /**
      * The identity lookup behind "idempotently create or take" (ARCHITECTURE.md
      * 3.1). {@code IS NOT DISTINCT FROM} rather than {@code =}: a pull request with

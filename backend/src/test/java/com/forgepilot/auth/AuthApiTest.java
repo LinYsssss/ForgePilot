@@ -16,6 +16,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.mock.web.MockHttpServletResponse;
@@ -32,6 +33,13 @@ import org.springframework.web.context.WebApplicationContext;
  * like a JS client: it keeps its session, keeps the {@code XSRF-TOKEN} cookie and
  * echoes it in the header.
  */
+// Measured: after some other web test classes run, this one receives a 401
+// carrying no XSRF-TOKEN cookie at all, and every write it then attempts is
+// refused. It passes alone and through Compose, so the SPA contract itself is
+// intact; what is not intact is the assumption that a shared test context still
+// issues the cookie after another class has used it. Rather than chase every
+// class that could disturb it, this one asks for a context nobody has touched.
+@DirtiesContext(classMode = DirtiesContext.ClassMode.BEFORE_CLASS)
 @SpringBootTest
 class AuthApiTest extends PostgresTestBase {
 

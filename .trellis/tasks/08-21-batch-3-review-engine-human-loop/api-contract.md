@@ -32,7 +32,7 @@ body: {}                                     无请求体字段
 | 既有行状态 | 结果 |
 |---|---|
 | 无此身份 | 新建 `PENDING`，202 |
-| `FAILED` | **复用同一行**回到 `PENDING`，递增 attempt，202 |
+| `FAILED` | **复用同一行**回到 `PENDING`；随后 Worker 原子领取时递增 attempt，202 |
 | `PENDING` / `RUNNING` | 幂等返回既有行，202（不重复入队） |
 | `COMPLETED` | **409** —— `COMPLETED` 永不重跑或覆盖（ARCHITECTURE §3.2） |
 

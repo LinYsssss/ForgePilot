@@ -39,6 +39,10 @@ public class PullRequest {
     @Column(name = "external_number", nullable = false)
     private Integer externalNumber;
 
+    /** Provider-reported current title; prompt input, never Review identity. */
+    @Column(name = "title", nullable = false, length = 512)
+    private String title;
+
     @Column(name = "base_sha", nullable = false, length = 64)
     private String baseSha;
 
@@ -94,11 +98,12 @@ public class PullRequest {
     protected PullRequest() {
     }
 
-    PullRequest(Long projectId, Long repositoryId, Integer externalNumber, String authorExternalUserId,
-            String authorUsername) {
+    PullRequest(Long projectId, Long repositoryId, Integer externalNumber, String title,
+            String authorExternalUserId, String authorUsername) {
         this.projectId = projectId;
         this.repositoryId = repositoryId;
         this.externalNumber = externalNumber;
+        this.title = title;
         this.authorExternalUserId = authorExternalUserId;
         this.authorUsername = authorUsername;
     }
@@ -117,6 +122,10 @@ public class PullRequest {
 
     public Integer getExternalNumber() {
         return externalNumber;
+    }
+
+    public String getTitle() {
+        return title;
     }
 
     public String getBaseSha() {
@@ -164,10 +173,11 @@ public class PullRequest {
     }
 
     /** Base, head, the manifest and the fingerprint move together or not at all. */
-    void applySnapshot(String baseSha, String headSha, String reviewInputFingerprint, String changedFiles,
-            String sourceRevision, Instant sourceUpdatedAt) {
+    void applySnapshot(String baseSha, String headSha, String title, String reviewInputFingerprint,
+            String changedFiles, String sourceRevision, Instant sourceUpdatedAt) {
         this.baseSha = baseSha;
         this.headSha = headSha;
+        this.title = title;
         this.reviewInputFingerprint = reviewInputFingerprint;
         this.changedFiles = changedFiles;
         this.sourceRevision = sourceRevision;

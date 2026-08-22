@@ -125,6 +125,7 @@ class GitHubWebhookIngestionTest extends ScmTestBase {
         assertThat(jdbc.queryForMap("select * from pull_request where id = ?", pullRequest))
                 .containsEntry("base_sha", BASE_SHA)
                 .containsEntry("head_sha", HEAD_SHA)
+                .containsEntry("title", "A pull request")
                 .containsEntry("author_external_user_id", "424242")
                 .containsEntry("author_username", "octocat")
                 .containsEntry("requirement_id", fixture.requirement)
@@ -362,7 +363,7 @@ class GitHubWebhookIngestionTest extends ScmTestBase {
     }
 
     private java.util.Map<String, Object> snapshotColumns(long pullRequest) {
-        return jdbc.queryForMap("select base_sha, head_sha, review_input_fingerprint, source_revision, "
+        return jdbc.queryForMap("select title, base_sha, head_sha, review_input_fingerprint, source_revision, "
                 + "source_updated_at, changed_files::text, requirement_id from pull_request where id = ?",
                 pullRequest);
     }

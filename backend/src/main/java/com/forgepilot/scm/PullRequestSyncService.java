@@ -73,7 +73,16 @@ public class PullRequestSyncService {
         // pull request to a repository whose identity had just moved -- storing a
         // fingerprint computed from the old triple, which is exactly the
         // irreproducibility design.md 3.7 exists to prevent.
-        ScmRepository repository = repositories.findById(detached.getId())
+        //
+        // Locked, not merely re-read. An unlocked read narrows that window without
+        // closing it: measured, an identity update can still commit between this
+        // read and the insert below, because the insert only takes FOR KEY SHARE on
+        // this row and the updater's freeze check runs while no pull request exists
+        // yet. The result is a stored fingerprint that can never be recomputed from
+        // the row it belongs to. project_id is taken from the row authenticate()
+        // already resolved: a repository never moves between projects.
+        ScmRepository repository = repositories
+                .findWithLockByProjectIdAndId(detached.getProjectId(), detached.getId())
                 .orElseThrow(PullRequestSyncService::unauthenticated);
         long projectId = repository.getProjectId();
         String fingerprint = ReviewInputFingerprint.of(repository.getProvider().name(),
@@ -89,17 +98,17 @@ public class PullRequestSyncService {
             if (isOlderThan(snapshot.sourceUpdatedAt(), existing.getSourceUpdatedAt())) {
                 return;
             }
-            existing.applySnapshot(snapshot.baseSha(), snapshot.headSha(), fingerprint, manifest,
-                    snapshot.sourceRevision(), snapshot.sourceUpdatedAt());
+            existing.applySnapshot(snapshot.baseSha(), snapshot.headSha(), snapshot.title(), fingerprint,
+                    manifest, snapshot.sourceRevision(), snapshot.sourceUpdatedAt());
             pullRequests.flush();
             publish(existing);
             return;
         }
 
         PullRequest created = new PullRequest(projectId, repository.getId(), snapshot.externalNumber(),
-                snapshot.authorExternalUserId(), snapshot.authorUsername());
-        created.applySnapshot(snapshot.baseSha(), snapshot.headSha(), fingerprint, manifest,
-                snapshot.sourceRevision(), snapshot.sourceUpdatedAt());
+                snapshot.title(), snapshot.authorExternalUserId(), snapshot.authorUsername());
+        created.applySnapshot(snapshot.baseSha(), snapshot.headSha(), snapshot.title(), fingerprint,
+                manifest, snapshot.sourceRevision(), snapshot.sourceUpdatedAt());
         // Parsed once, when the row is created. A later delivery must not re-parse
         // over a human correction, and D007 gives the page the last word on the
         // association; an unresolvable reference simply leaves it null and never
