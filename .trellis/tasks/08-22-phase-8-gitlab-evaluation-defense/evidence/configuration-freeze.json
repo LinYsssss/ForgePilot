@@ -1,0 +1,54 @@
+{
+  "apiKeyPresent": true,
+  "config": {
+    "arms": [
+      "DIFF_ONLY",
+      "DIFF_REQUIREMENT_AC",
+      "DIFF_REQUIREMENT_AC_KNOWLEDGE"
+    ],
+    "configVersion": "forgepilot-formal-evaluation-config-v1",
+    "corpusWorkspace": "evaluation/private-formal-corpus",
+    "expectedCases": {
+      "development": 26,
+      "holdout": 12
+    },
+    "formalCaseSetVersion": "phase8-formal-38-v1",
+    "freezeArtifact": ".trellis/tasks/08-22-phase-8-gitlab-evaluation-defense/evidence/configuration-freeze.json",
+    "holdoutLedger": "evaluation/results/formal/holdout-ledger.json",
+    "matchRuleVersion": "forgepilot-deterministic-match-v1",
+    "promptVersion": "phase8-formal-three-arm-v1",
+    "provider": {
+      "endpointIdentity": "https://api.openai.com/v1/chat/completions",
+      "model": "gpt-5.6-luna",
+      "retryCount": 1,
+      "temperature": 0.0,
+      "timeoutSeconds": 120.0
+    },
+    "runContractVersion": "forgepilot-evaluation-run-v1",
+    "source": {
+      "commit": "96137dd3b43e14c5e8881c99688663afd979cf4e",
+      "repository": "https://github.com/LinYsssss/reposage"
+    }
+  },
+  "files": {
+    "evaluation/contracts/formal-manifest.schema.json": "9db810f1d2e961343a0121a22b683cc0cf61d0c0909b0207fce72d6924a5e067",
+    "evaluation/contracts/metrics.md": "22dd93b81decaf4d4b647caddaa02f552ee913061cf304a2bac18c3cfd95b080",
+    "evaluation/contracts/run.schema.json": "e00b730affbab916afd7d2ef3dc9e150502209f2eb84ef33707ea4c4274834aa",
+    "evaluation/contracts/score-report.schema.json": "86b04b0545f6a1a095f87f43a1f7dc062e9d72ab935ba1cfff3bf0024ec35292",
+    "evaluation/formal/config.json": "c7598570cff7bc12415551f1326f95b4da66edd9af82fd16f902b529cb6936b5",
+    "evaluation/tools/category-aliases.json": "7128d645ad0148f2423f28cbdb23a4522345908586af7b5e951c88ffafe095e3",
+    "evaluation/tools/formal_evaluation.py": "6a88b2321968ba03e9640953fa0c3ca0228aa57fc0cebe82125938500575ed93",
+    "evaluation/tools/run_development.py": "cab62c7175f27a236e561fe62cec84c0547e61c715a5ee35552fc5ac3e8b5a66",
+    "evaluation/tools/score.py": "a39bea127b1f100b0b4428adb8b0649981f32dd7c441429dfe748f5e74b22573"
+  },
+  "forgePilotCommit": "71c25e4fde2f12be2ac400ee3d296db83e38016f",
+  "freezeHash": "55fc3176b6c843d214aa405781c1fe404ee7663c3e177f8a3cd67d9b22021e5d",
+  "freezeVersion": "forgepilot-configuration-freeze-v1",
+  "frozenAt": "2026-08-22T13:57:14.083757Z",
+  "holdoutStateBeforeFreeze": {
+    "corpusWorkspaceExists": false,
+    "ledgerExists": false
+  },
+  "promptSchemaSha256": "a1026f865a44b7c665a082e3a8e367df4d3a4bf8f8e0b3ba880197f4bc4db173",
+  "trackedWorktreeClean": true
+}
