@@ -6,12 +6,6 @@ import { parseId, projectMembersRoute, requirementsRoute } from "../../app/route
 import { formatDateTime } from "../../lib/datetime";
 import { apiErrorMessage } from "../../lib/http";
 import {
-  checkQuality,
-  listRequirements,
-  type QualityReport,
-  type RequirementSummary,
-} from "../requirement/api";
-import {
   registerScmRepository,
   updateScmRepository,
   SCM_PROVIDER_DEFAULTS,
@@ -26,7 +20,6 @@ const route = useRoute();
 const projectId = computed(() => parseId(route.params.id));
 
 const project = ref<Project | null>(null);
-const requirements = ref<RequirementSummary[]>([]);
 const loading = ref(true);
 const loadError = ref<string | null>(null);
 
@@ -66,11 +59,6 @@ watch(registerProvider, (provider) => {
   registerApiBase.value = SCM_PROVIDER_DEFAULTS[provider];
 });
 
-const qualitySelection = ref<number | null>(null);
-const qualityPending = ref(false);
-const qualityError = ref<string | null>(null);
-const qualityReport = ref<QualityReport | null>(null);
-
 // Watched rather than mounted: vue-router reuses this component when only the
 // `:id` changes, so an `onMounted` load would keep showing the previous project.
 watch(
@@ -79,21 +67,13 @@ watch(
     loading.value = true;
     loadError.value = null;
     project.value = null;
-    requirements.value = [];
     repository.value = null;
-    qualityReport.value = null;
-    qualitySelection.value = null;
     if (id === null) {
       loading.value = false;
       return;
     }
     try {
-      const [loadedProject, loadedRequirements] = await Promise.all([
-        getProject(id),
-        listRequirements(id),
-      ]);
-      project.value = loadedProject;
-      requirements.value = loadedRequirements;
+      project.value = await getProject(id);
     } catch (failure: unknown) {
       loadError.value = apiErrorMessage(failure);
     } finally {
@@ -168,22 +148,6 @@ async function update(): Promise<void> {
   }
 }
 
-async function runQualityCheck(): Promise<void> {
-  const id = projectId.value;
-  const requirementId = qualitySelection.value;
-  if (id === null || requirementId === null) {
-    return;
-  }
-  qualityPending.value = true;
-  qualityError.value = null;
-  try {
-    qualityReport.value = await checkQuality(id, requirementId);
-  } catch (failure: unknown) {
-    qualityError.value = apiErrorMessage(failure);
-  } finally {
-    qualityPending.value = false;
-  }
-}
 </script>
 
 <template>
@@ -198,7 +162,7 @@ async function runQualityCheck(): Promise<void> {
         <RouterLink class="button" :to="projectMembersRoute(projectId)">成员管理</RouterLink>
         <RouterLink class="button" :to="requirementsRoute(projectId)">研发需求</RouterLink>
       </div>
-      <p class="lede">配置真实 SCM 接入，查看项目知识能力边界，并对具体需求版本运行质量检查。</p>
+      <p class="lede">配置真实 SCM 接入并查看项目知识能力边界；需求质量与实现建议回到对应需求详情中操作。</p>
     </div>
 
     <p v-if="projectId === null" class="alert" role="alert">路由缺少有效的项目 id。</p>
@@ -365,79 +329,6 @@ async function runQualityCheck(): Promise<void> {
         </p>
       </section>
 
-      <section class="panel settings-section quality-section" aria-labelledby="quality-title">
-        <h2 id="quality-title" class="panel-title">需求质量检查</h2>
-        <p class="field-hint">
-          结果归属被检查的那个需求版本；草稿正文一改就作废。质量检查是建议，不推进任何状态。
-        </p>
-
-        <p v-if="!isLeader" class="empty-state">只有项目负责人可以运行需求质量检查。</p>
-        <p v-else-if="requirements.length === 0" class="empty-state">该项目还没有需求。</p>
-
-        <template v-else>
-          <form class="inline-form" @submit.prevent="runQualityCheck">
-            <div class="field">
-              <label for="quality-requirement">选择需求</label>
-              <select id="quality-requirement" v-model="qualitySelection">
-                <option :value="null" disabled>请选择需求</option>
-                <option v-for="item in requirements" :key="item.id" :value="item.id">
-                  {{ item.title }}
-                </option>
-              </select>
-            </div>
-            <button
-              type="submit"
-              class="button button-primary"
-              :disabled="qualityPending || qualitySelection === null"
-            >
-              运行质量检查
-            </button>
-          </form>
-          <p v-if="qualityError" class="alert" role="alert">{{ qualityError }}</p>
-
-          <div v-if="qualityReport" class="quality-report">
-            <dl class="meta-list">
-              <div>
-                <dt>检查的版本</dt>
-                <dd class="quality-revision">
-                  v{{ qualityReport.revisionSeq }}（版本 {{ qualityReport.revisionId }}）
-                </dd>
-              </div>
-              <div>
-                <dt>规则集版本</dt>
-                <dd>{{ qualityReport.qualityVersion }}</dd>
-              </div>
-              <div>
-                <dt>检查时间</dt>
-                <dd>{{ formatDateTime(qualityReport.checkedAt) }}</dd>
-              </div>
-            </dl>
-
-            <h3 class="subsection-title">确定性规则</h3>
-            <p v-if="qualityReport.rules.length === 0" class="muted">规则没有发现问题。</p>
-            <ul v-else class="quality-list">
-              <li v-for="(rule, index) in qualityReport.rules" :key="index">
-                <span class="badge badge-warning">{{ rule.rule }}</span>
-                <span v-if="rule.acKey" class="badge badge-neutral">{{ rule.acKey }}</span>
-                {{ rule.message }}
-              </li>
-            </ul>
-
-            <h3 class="subsection-title">AI 结构化评估</h3>
-            <p v-if="qualityReport.ai === null" class="muted">本次没有返回 AI 评估。</p>
-            <template v-else>
-              <p class="muted">{{ qualityReport.ai.summary ?? "AI 没有给出总结。" }}</p>
-              <p v-if="qualityReport.ai.issues.length === 0" class="muted">AI 没有发现问题。</p>
-              <ul v-else class="quality-list">
-                <li v-for="(issue, index) in qualityReport.ai.issues" :key="index">
-                  <span v-if="issue.acKey" class="badge badge-neutral">{{ issue.acKey }}</span>
-                  {{ issue.message }}
-                </li>
-              </ul>
-            </template>
-          </div>
-        </template>
-      </section>
       </div>
     </template>
   </section>
@@ -478,19 +369,6 @@ async function runQualityCheck(): Promise<void> {
 .subsection-title {
   margin: var(--fp-space-6) 0 var(--fp-space-2);
   font-size: 0.9375rem;
-}
-
-.quality-report {
-  margin-top: var(--fp-space-4);
-}
-
-.quality-list {
-  display: grid;
-  gap: var(--fp-space-2);
-  margin: var(--fp-space-2) 0 0;
-  padding: 0;
-  list-style: none;
-  line-height: 1.6;
 }
 
 @media (max-width: 64rem) {

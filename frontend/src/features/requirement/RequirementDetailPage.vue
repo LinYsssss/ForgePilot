@@ -1,21 +1,36 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from "vue";
+import { computed, ref, watch } from "vue";
 import { RouterLink, useRoute } from "vue-router";
 
 import { parseId, requirementsRoute, PROJECT_QUERY_KEY } from "../../app/routes";
 import { formatDateTime } from "../../lib/datetime";
 import { apiErrorMessage } from "../../lib/http";
+import { useSession } from "../auth/session";
 import { getProject, listMembers, type Member, type Project } from "../project/api";
+import {
+  getRequirementReviewActivity,
+  type ActivityView,
+} from "../review/api";
+import {
+  PULL_REQUEST_ACTIVITIES,
+  PULL_REQUEST_ACTIVITY_LABELS,
+  REVIEW_ACTIVITY_LABELS,
+  REVIEW_ACTIVITY_TONES,
+} from "../review/labels";
 import AcceptanceCriteriaEditor from "./AcceptanceCriteriaEditor.vue";
 import {
   assign,
+  checkQuality,
   changeStatus,
   editDraft,
+  generateGuidance,
   getRequirement,
   listRevisions,
   publishRevision,
   toDraft,
   type AcceptanceCriterionDraft,
+  type ImplementationGuidance,
+  type QualityReport,
   type RequirementDetail,
   type Revision,
   type RevisionContent,
@@ -29,6 +44,7 @@ import {
 } from "./status";
 
 const route = useRoute();
+const { account } = useSession();
 
 const projectId = computed(() => parseId(route.query[PROJECT_QUERY_KEY]));
 const requirementId = computed(() => parseId(route.params.id));
@@ -37,6 +53,7 @@ const project = ref<Project | null>(null);
 const members = ref<Member[]>([]);
 const detail = ref<RequirementDetail | null>(null);
 const revisions = ref<Revision[]>([]);
+const reviewActivity = ref<ActivityView | null>(null);
 const loading = ref(true);
 const loadError = ref<string | null>(null);
 
@@ -50,10 +67,26 @@ const assigneeSelection = ref<number | null>(null);
 const actionError = ref<string | null>(null);
 const actionPending = ref(false);
 
+const qualityReport = ref<QualityReport | null>(null);
+const qualityPending = ref(false);
+const qualityError = ref<string | null>(null);
+const guidance = ref<ImplementationGuidance | null>(null);
+const guidancePending = ref(false);
+const guidanceError = ref<string | null>(null);
+let detailLoadToken = 0;
+
 const isLeader = computed(() => project.value?.myRole === "LEADER");
 const isDraft = computed(() => detail.value?.status === "DRAFT");
 const editable = computed(
   () => isLeader.value && detail.value !== null && !isTerminal(detail.value.status),
+);
+const canCheckQuality = computed(() => isLeader.value);
+const canGenerateGuidance = computed(
+  () =>
+    isLeader.value ||
+    (project.value?.myRole === "DEVELOPER" &&
+      detail.value?.assigneeId !== null &&
+      detail.value?.assigneeId === account.value?.id),
 );
 
 function target(): { projectId: number; requirementId: number } | null {
@@ -65,6 +98,10 @@ function target(): { projectId: number; requirementId: number } | null {
 const hasContext = computed(() => target() !== null);
 
 function applyDetail(loaded: RequirementDetail): void {
+  if (detail.value?.currentRevision.id !== loaded.currentRevision.id) {
+    qualityReport.value = null;
+    guidance.value = null;
+  }
   detail.value = loaded;
   assigneeSelection.value = loaded.assigneeId;
   const content = toDraft(loaded.currentRevision);
@@ -75,32 +112,53 @@ function applyDetail(loaded: RequirementDetail): void {
   changeReason.value = "";
 }
 
-onMounted(async () => {
+async function load(): Promise<void> {
+  const token = ++detailLoadToken;
   const ids = target();
+  loading.value = true;
+  loadError.value = null;
+  detail.value = null;
+  revisions.value = [];
+  reviewActivity.value = null;
+  qualityReport.value = null;
+  guidance.value = null;
   if (ids === null) {
     loading.value = false;
     return;
   }
   try {
-    const [loadedProject, loadedMembers, loadedDetail, loadedRevisions] = await Promise.all([
-      getProject(ids.projectId),
-      listMembers(ids.projectId),
-      getRequirement(ids.projectId, ids.requirementId),
-      listRevisions(ids.projectId, ids.requirementId),
-    ]);
+    const [loadedProject, loadedMembers, loadedDetail, loadedRevisions, loadedActivity] =
+      await Promise.all([
+        getProject(ids.projectId),
+        listMembers(ids.projectId),
+        getRequirement(ids.projectId, ids.requirementId),
+        listRevisions(ids.projectId, ids.requirementId),
+        getRequirementReviewActivity(ids.projectId, ids.requirementId),
+      ]);
+    if (token !== detailLoadToken) {
+      return;
+    }
     project.value = loadedProject;
     members.value = loadedMembers;
     revisions.value = loadedRevisions;
+    reviewActivity.value = loadedActivity;
     applyDetail(loadedDetail);
   } catch (failure: unknown) {
-    loadError.value = apiErrorMessage(failure);
+    if (token === detailLoadToken) {
+      loadError.value = apiErrorMessage(failure);
+    }
   } finally {
-    loading.value = false;
+    if (token === detailLoadToken) {
+      loading.value = false;
+    }
   }
-});
+}
+
+watch([projectId, requirementId], load, { immediate: true });
 
 async function run(
   action: (ids: { projectId: number; requirementId: number }) => Promise<RequirementDetail>,
+  clearAdvice = false,
 ): Promise<void> {
   const ids = target();
   if (ids === null) {
@@ -110,11 +168,47 @@ async function run(
   actionError.value = null;
   try {
     applyDetail(await action(ids));
+    if (clearAdvice) {
+      qualityReport.value = null;
+      guidance.value = null;
+    }
     revisions.value = await listRevisions(ids.projectId, ids.requirementId);
   } catch (failure: unknown) {
     actionError.value = apiErrorMessage(failure);
   } finally {
     actionPending.value = false;
+  }
+}
+
+async function runQualityCheck(): Promise<void> {
+  const ids = target();
+  if (ids === null || !canCheckQuality.value) {
+    return;
+  }
+  qualityPending.value = true;
+  qualityError.value = null;
+  try {
+    qualityReport.value = await checkQuality(ids.projectId, ids.requirementId);
+  } catch (failure: unknown) {
+    qualityError.value = apiErrorMessage(failure);
+  } finally {
+    qualityPending.value = false;
+  }
+}
+
+async function runGuidance(): Promise<void> {
+  const ids = target();
+  if (ids === null || !canGenerateGuidance.value) {
+    return;
+  }
+  guidancePending.value = true;
+  guidanceError.value = null;
+  try {
+    guidance.value = await generateGuidance(ids.projectId, ids.requirementId);
+  } catch (failure: unknown) {
+    guidanceError.value = apiErrorMessage(failure);
+  } finally {
+    guidancePending.value = false;
   }
 }
 
@@ -125,10 +219,12 @@ function saveContent(): Promise<void> {
     description: draftDescription.value === "" ? null : draftDescription.value,
     acceptanceCriteria: draftCriteria.value,
   };
-  return run((ids) =>
-    isDraft.value
-      ? editDraft(ids.projectId, ids.requirementId, content)
-      : publishRevision(ids.projectId, ids.requirementId, content, changeReason.value),
+  return run(
+    (ids) =>
+      isDraft.value
+        ? editDraft(ids.projectId, ids.requirementId, content)
+        : publishRevision(ids.projectId, ids.requirementId, content, changeReason.value),
+    true,
   );
 }
 
@@ -186,6 +282,18 @@ function saveAssignee(): Promise<void> {
             <dd>{{ detail.assigneeUsername ?? "未指派" }}</dd>
           </div>
           <div>
+            <dt>评审活动</dt>
+            <dd class="review-activity">
+              <span
+                v-if="reviewActivity"
+                :class="['badge', `badge-${REVIEW_ACTIVITY_TONES[reviewActivity.activity]}`]"
+              >
+                {{ REVIEW_ACTIVITY_LABELS[reviewActivity.activity] }}
+              </span>
+              <span v-else class="badge badge-neutral">未返回</span>
+            </dd>
+          </div>
+          <div>
             <dt>当前版本</dt>
             <dd>v{{ detail.currentRevision.seq }}</dd>
           </div>
@@ -211,6 +319,64 @@ function saveAssignee(): Promise<void> {
           </li>
         </ol>
       </section>
+      </div>
+
+      <section v-if="reviewActivity" class="panel activity-section" aria-labelledby="activity-title">
+        <h2 id="activity-title" class="panel-title">关联 PR 活动分布</h2>
+        <p class="field-hint">需求状态由人维护；这里是 PR 与 Review 的只读派生量。</p>
+        <dl class="activity-counts">
+          <div v-for="state in PULL_REQUEST_ACTIVITIES" :key="state">
+            <dt>{{ PULL_REQUEST_ACTIVITY_LABELS[state] }}</dt>
+            <dd>{{ reviewActivity.counts[state] }}</dd>
+          </div>
+        </dl>
+      </section>
+
+      <div class="requirement-intelligence-grid">
+        <section class="panel quality-section" aria-labelledby="quality-title">
+          <div class="section-action-head">
+            <div>
+              <p class="eyebrow">Revision advice</p>
+              <h2 id="quality-title" class="panel-title">需求质量检查</h2>
+            </div>
+            <button v-if="canCheckQuality" type="button" class="button button-primary" :disabled="qualityPending" @click="runQualityCheck">运行检查</button>
+          </div>
+          <p class="field-hint">结果只属于当前需求版本，是建议而不是状态门禁；草稿内容变化后旧结果会失效。</p>
+          <p v-if="!canCheckQuality" class="empty-state">只有项目负责人可以运行质量检查。</p>
+          <p v-if="qualityError" class="alert" role="alert">{{ qualityError }}</p>
+          <div v-if="qualityReport" class="quality-report">
+            <dl class="meta-list">
+              <div><dt>检查版本</dt><dd>v{{ qualityReport.revisionSeq }}</dd></div>
+              <div><dt>规则集</dt><dd>{{ qualityReport.qualityVersion }}</dd></div>
+              <div><dt>检查时间</dt><dd>{{ formatDateTime(qualityReport.checkedAt) }}</dd></div>
+            </dl>
+            <h3 class="subsection-title">确定性规则</h3>
+            <p v-if="qualityReport.rules.length === 0" class="muted">规则没有发现问题。</p>
+            <ul v-else class="advice-list">
+              <li v-for="(rule, index) in qualityReport.rules" :key="index"><span class="badge badge-warning">{{ rule.rule }}</span> <span v-if="rule.acKey" class="badge badge-neutral">{{ rule.acKey }}</span> {{ rule.message }}</li>
+            </ul>
+            <h3 class="subsection-title">AI 结构化评估</h3>
+            <p v-if="qualityReport.ai === null" class="muted">本次没有返回 AI 评估。</p>
+            <template v-else>
+              <p class="muted">{{ qualityReport.ai.summary ?? "AI 没有给出总结。" }}</p>
+              <p v-if="qualityReport.ai.issues.length === 0" class="muted">AI 没有发现问题。</p>
+              <ul v-else class="advice-list">
+                <li v-for="(issue, index) in qualityReport.ai.issues" :key="index"><span v-if="issue.acKey" class="badge badge-neutral">{{ issue.acKey }}</span> {{ issue.message }}</li>
+              </ul>
+            </template>
+          </div>
+        </section>
+
+        <section class="panel guidance-section" aria-labelledby="guidance-title">
+          <div class="section-action-head">
+            <div><p class="eyebrow">One-shot guidance</p><h2 id="guidance-title" class="panel-title">实现建议</h2></div>
+            <button v-if="canGenerateGuidance" type="button" class="button button-primary" :disabled="guidancePending" @click="runGuidance">生成建议</button>
+          </div>
+          <p class="field-hint">对当前不可变版本生成一次性实现建议；没有对话历史，也不会自动修改需求状态或代码。</p>
+          <p v-if="!canGenerateGuidance" class="empty-state">项目负责人或该需求已指派的开发可以生成实现建议。</p>
+          <p v-if="guidanceError" class="alert" role="alert">{{ guidanceError }}</p>
+          <div v-if="guidance" class="guidance-result"><p class="muted">基于 v{{ guidance.revisionSeq }}（版本 {{ guidance.revisionId }}）</p><pre>{{ guidance.guidance }}</pre></div>
+        </section>
       </div>
 
       <div class="requirement-edit-grid">
@@ -304,11 +470,28 @@ function saveAssignee(): Promise<void> {
 
 <style scoped>
 .requirement-overview-grid,
-.requirement-edit-grid {
+.requirement-edit-grid,
+.requirement-intelligence-grid {
   display: grid;
   align-items: start;
   gap: var(--fp-space-6);
   grid-template-columns: minmax(18rem, 0.7fr) minmax(0, 1.3fr);
+}
+
+.requirement-intelligence-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.requirement-overview-grid {
+  grid-template-areas: "overview current";
+}
+
+.requirement-overview {
+  grid-area: overview;
+}
+
+.current-revision {
+  grid-area: current;
 }
 
 .requirement-overview,
@@ -320,6 +503,86 @@ function saveAssignee(): Promise<void> {
 
 .current-revision {
   border-color: var(--fp-color-border-accent);
+}
+
+.quality-section,
+.guidance-section {
+  border-color: var(--fp-color-border-accent);
+}
+
+.section-action-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--fp-space-4);
+  margin-bottom: var(--fp-space-3);
+}
+
+.section-action-head .eyebrow {
+  margin-bottom: var(--fp-space-2);
+}
+
+.section-action-head .panel-title {
+  margin-bottom: 0;
+}
+
+.quality-report,
+.guidance-result {
+  margin-top: var(--fp-space-5);
+}
+
+.subsection-title {
+  margin: var(--fp-space-5) 0 var(--fp-space-2);
+  font-size: 0.9375rem;
+}
+
+.advice-list {
+  display: grid;
+  gap: var(--fp-space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  line-height: 1.6;
+}
+
+.guidance-result pre {
+  max-height: 30rem;
+  margin: var(--fp-space-3) 0 0;
+  padding: var(--fp-space-4);
+  overflow: auto;
+  border: 0.0625rem solid var(--fp-color-border);
+  border-left: 0.1875rem solid var(--fp-color-accent);
+  border-radius: var(--fp-radius-sm);
+  background: var(--fp-color-canvas-muted);
+  color: var(--fp-color-text);
+  line-height: 1.65;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.activity-counts {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: var(--fp-space-3);
+  margin: var(--fp-space-4) 0 0;
+}
+
+.activity-counts > div {
+  padding: var(--fp-space-3);
+  border: 0.0625rem solid var(--fp-color-border);
+  border-radius: var(--fp-radius-sm);
+  background: var(--fp-color-canvas-muted);
+}
+
+.activity-counts dt {
+  color: var(--fp-color-text-muted);
+  font-size: 0.75rem;
+}
+
+.activity-counts dd {
+  margin: var(--fp-space-1) 0 0;
+  color: var(--fp-color-accent-inverse);
+  font: 800 1.25rem/1 var(--fp-font-mono);
 }
 
 .requirement-actions {
@@ -363,12 +626,33 @@ function saveAssignee(): Promise<void> {
 
 @media (max-width: 64rem) {
   .requirement-overview-grid,
-  .requirement-edit-grid {
+  .requirement-edit-grid,
+  .requirement-intelligence-grid {
     grid-template-columns: 1fr;
+  }
+
+  .requirement-overview-grid {
+    grid-template-areas:
+      "overview"
+      "current";
+  }
+
+  .activity-counts {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .requirement-actions {
     position: static;
+  }
+}
+
+@media (max-width: 42rem) {
+  .section-action-head {
+    flex-direction: column;
+  }
+
+  .activity-counts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 </style>

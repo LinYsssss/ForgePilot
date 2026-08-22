@@ -6,24 +6,13 @@ export type RequirementStatus =
   | "DONE"
   | "CANCELED";
 
-/**
- * Read-only derived review activity of a requirement, aggregated over its pull
- * requests. Eight values at this level; a single pull request has only six —
- * `NO_PR` and `MIXED` exist only once there is something to aggregate.
- *
- * Served by its own endpoint rather than on the requirement payload: it is
- * derived from pull requests and reviews, and `requirement` may not reach into
- * those.
- */
-export type ReviewActivity =
-  | "NO_PR"
-  | "REVIEW_REQUIRED"
-  | "FAILED"
-  | "CHANGES_REQUESTED"
-  | "REVIEWING"
-  | "PENDING"
-  | "APPROVED"
-  | "MIXED";
+export const REQUIREMENT_STATUSES: readonly RequirementStatus[] = [
+  "DRAFT",
+  "READY",
+  "IN_DEVELOPMENT",
+  "DONE",
+  "CANCELED",
+];
 
 export const REQUIREMENT_STATUS_LABELS: Record<RequirementStatus, string> = {
   DRAFT: "草稿",
@@ -31,17 +20,6 @@ export const REQUIREMENT_STATUS_LABELS: Record<RequirementStatus, string> = {
   IN_DEVELOPMENT: "开发中",
   DONE: "已完成",
   CANCELED: "已取消",
-};
-
-export const REVIEW_ACTIVITY_LABELS: Record<ReviewActivity, string> = {
-  NO_PR: "无关联 PR",
-  REVIEW_REQUIRED: "待审查",
-  FAILED: "审查失败",
-  CHANGES_REQUESTED: "已退回",
-  REVIEWING: "审查中",
-  PENDING: "排队中",
-  APPROVED: "已通过",
-  MIXED: "多个状态",
 };
 
 /** Badge modifier per status, so state is never carried by color alone. */
@@ -69,3 +47,6 @@ export const STATUS_TRANSITIONS: Record<RequirementStatus, readonly RequirementS
 export function isTerminal(status: RequirementStatus): boolean {
   return status === "DONE" || status === "CANCELED";
 }
+
+// Kept for one migration commit so the previous ReviewsPage remains buildable.
+export { REVIEW_ACTIVITY_LABELS } from "../review/labels";

@@ -54,6 +54,21 @@ export async function register(username: string, password: string): Promise<void
   });
 }
 
+/**
+ * Changes the signed-in account's password. The backend advances the account's
+ * session version while adopting it into this HttpSession, so this tab remains
+ * signed in and every other session becomes invalid.
+ */
+export async function changePassword(
+  currentPassword: string,
+  newPassword: string,
+): Promise<void> {
+  await requestJson<void>("/api/auth/password", {
+    method: "POST",
+    body: JSON.stringify({ currentPassword, newPassword }),
+  });
+}
+
 export async function signOut(): Promise<void> {
   await requestJson<void>("/api/auth/logout", { method: "POST" });
   account.value = null;

@@ -1,5 +1,4 @@
 import { requestJson } from "../../lib/http";
-import type { ReviewActivity } from "../requirement/status";
 
 /** Execution state of a Review (api-contract.md §2.2). Orthogonal to `decision`. */
 export type ReviewStatus = "PENDING" | "RUNNING" | "COMPLETED" | "FAILED";
@@ -37,6 +36,17 @@ export type FindingAction =
   | "SEND_BACK"
   | "CLOSE"
   | "REOPEN";
+
+/** Requirement-level aggregation. `NO_PR` and `MIXED` do not exist per PR. */
+export type ReviewActivity =
+  | "NO_PR"
+  | "REVIEW_REQUIRED"
+  | "FAILED"
+  | "CHANGES_REQUESTED"
+  | "REVIEWING"
+  | "PENDING"
+  | "APPROVED"
+  | "MIXED";
 
 /** A single pull request has six values; `NO_PR` and `MIXED` exist only per requirement. */
 export type PullRequestActivity =
@@ -123,6 +133,19 @@ export interface ReviewSummary {
   createdAt: string;
 }
 
+/** One newest-first row returned by the project-wide Review index. */
+export interface ProjectReviewRow {
+  id: number;
+  pullRequestId: number;
+  pullRequestNumber: number;
+  headSha: string;
+  requirementId: number | null;
+  status: ReviewStatus;
+  decision: ReviewDecision;
+  isCurrent: boolean;
+  createdAt: string;
+}
+
 export interface ReviewRequested {
   reviewId: number;
   status: ReviewStatus;
@@ -161,6 +184,11 @@ function projectPath(projectId: number): string {
 
 export function getReview(projectId: number, reviewId: number): Promise<ReviewDetail> {
   return requestJson<ReviewDetail>(`${projectPath(projectId)}/reviews/${reviewId}`);
+}
+
+/** The primary 代码审查 index; the backend returns newest first. */
+export function listProjectReviews(projectId: number): Promise<ProjectReviewRow[]> {
+  return requestJson<ProjectReviewRow[]>(`${projectPath(projectId)}/reviews`);
 }
 
 export function listPullRequestReviews(

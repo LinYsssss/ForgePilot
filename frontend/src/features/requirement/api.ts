@@ -88,6 +88,14 @@ export interface QualityReport {
   ai: { summary: string | null; issues: QualityAiIssue[] } | null;
 }
 
+/** One provider answer about one immutable Requirement revision; never persisted. */
+export interface ImplementationGuidance {
+  requirementId: number;
+  revisionId: number;
+  revisionSeq: number;
+  guidance: string;
+}
+
 function requirementsPath(projectId: number): string {
   return `/api/projects/${projectId}/requirements`;
 }
@@ -195,6 +203,20 @@ export function checkQuality(
 ): Promise<QualityReport> {
   return requestJson<QualityReport>(
     `${requirementsPath(projectId)}/${requirementId}/quality`,
+    { method: "POST", body: JSON.stringify({}) },
+  );
+}
+
+/**
+ * Generates one implementation answer for the current revision. This deliberately
+ * has no conversation id, input box, history, or streaming path.
+ */
+export function generateGuidance(
+  projectId: number,
+  requirementId: number,
+): Promise<ImplementationGuidance> {
+  return requestJson<ImplementationGuidance>(
+    `${requirementsPath(projectId)}/${requirementId}/guidance`,
     { method: "POST", body: JSON.stringify({}) },
   );
 }

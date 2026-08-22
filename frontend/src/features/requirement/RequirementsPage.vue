@@ -11,6 +11,12 @@ import {
 import { formatDateTime } from "../../lib/datetime";
 import { apiErrorMessage } from "../../lib/http";
 import { listProjects, type Project } from "../project/api";
+import { listReviewActivity, type ActivityView } from "../review/api";
+import {
+  REVIEW_ACTIVITIES,
+  REVIEW_ACTIVITY_LABELS,
+  REVIEW_ACTIVITY_TONES,
+} from "../review/labels";
 import AcceptanceCriteriaEditor from "./AcceptanceCriteriaEditor.vue";
 import {
   createRequirement,
@@ -20,6 +26,7 @@ import {
 } from "./api";
 import {
   REQUIREMENT_STATUS_LABELS,
+  REQUIREMENT_STATUSES,
   REQUIREMENT_STATUS_TONES,
 } from "./status";
 
@@ -29,8 +36,12 @@ const router = useRouter();
 const projectId = computed(() => parseId(route.query[PROJECT_QUERY_KEY]));
 const projects = ref<Project[]>([]);
 const requirements = ref<RequirementSummary[]>([]);
+const activity = ref<Record<string, ActivityView>>({});
 const loading = ref(false);
 const loadError = ref<string | null>(null);
+const search = ref("");
+const statusFilter = ref("");
+const activityFilter = ref("");
 
 const title = ref("");
 const background = ref("");
@@ -38,11 +49,27 @@ const description = ref("");
 const criteria = ref<AcceptanceCriterionDraft[]>([{ text: "" }]);
 const creating = ref(false);
 const createError = ref<string | null>(null);
+let requirementsLoadToken = 0;
 
 const selectedProject = computed(
   () => projects.value.find((project) => project.id === projectId.value) ?? null,
 );
 const isLeader = computed(() => selectedProject.value?.myRole === "LEADER");
+
+const filteredRequirements = computed(() => {
+  const query = search.value.trim().toLocaleLowerCase();
+  return requirements.value.filter((item) => {
+    const reviewActivity = activity.value[String(item.id)]?.activity ?? null;
+    return (
+      (query === "" ||
+        item.title.toLocaleLowerCase().includes(query) ||
+        String(item.id).includes(query) ||
+        (item.assigneeUsername ?? "").toLocaleLowerCase().includes(query)) &&
+      (statusFilter.value === "" || item.status === statusFilter.value) &&
+      (activityFilter.value === "" || reviewActivity === activityFilter.value)
+    );
+  });
+});
 
 const selection = computed({
   get: () => projectId.value,
@@ -64,18 +91,32 @@ onMounted(async () => {
 watch(
   projectId,
   async (id) => {
+    const token = ++requirementsLoadToken;
     requirements.value = [];
+    activity.value = {};
     if (id === null) {
       return;
     }
     loading.value = true;
     loadError.value = null;
     try {
-      requirements.value = await listRequirements(id);
+      const [loadedRequirements, loadedActivity] = await Promise.all([
+        listRequirements(id),
+        listReviewActivity(id),
+      ]);
+      if (token !== requirementsLoadToken) {
+        return;
+      }
+      requirements.value = loadedRequirements;
+      activity.value = loadedActivity;
     } catch (failure: unknown) {
-      loadError.value = apiErrorMessage(failure);
+      if (token === requirementsLoadToken) {
+        loadError.value = apiErrorMessage(failure);
+      }
     } finally {
-      loading.value = false;
+      if (token === requirementsLoadToken) {
+        loading.value = false;
+      }
     }
   },
   { immediate: true },
@@ -131,41 +172,47 @@ async function create(): Promise<void> {
     <p v-if="projectId === null" class="empty-state">先选择一个项目，再查看它的需求。</p>
 
     <template v-if="projectId !== null">
-      <form v-if="isLeader" class="panel requirement-form requirement-create" @submit.prevent="create">
-        <div class="form-section-head">
-          <div>
-            <p class="eyebrow">New contract</p>
-            <h2 class="panel-title">新建需求</h2>
-          </div>
-          <p class="field-hint">创建后先处于草稿状态；发布就绪后内容以版本保存。</p>
-        </div>
-        <div class="field">
-          <label for="requirement-title">标题</label>
-          <input id="requirement-title" v-model="title" required maxlength="200" />
-        </div>
-        <div class="field">
-          <label for="requirement-background">背景</label>
-          <textarea id="requirement-background" v-model="background" rows="3"></textarea>
-        </div>
-        <div class="field">
-          <label for="requirement-description">描述</label>
-          <textarea id="requirement-description" v-model="description" rows="4"></textarea>
-        </div>
-        <AcceptanceCriteriaEditor v-model="criteria" id-prefix="create" />
-        <div class="form-actions">
-          <button type="submit" class="button button-primary" :disabled="creating">
-            创建需求
-          </button>
-        </div>
-        <p v-if="createError" class="alert" role="alert">{{ createError }}</p>
-      </form>
-
       <p v-if="loading" class="muted">正在加载需求…</p>
       <p v-else-if="loadError" class="alert" role="alert">{{ loadError }}</p>
       <p v-else-if="requirements.length === 0" class="empty-state">该项目还没有需求。</p>
 
+      <template v-else>
+      <section class="panel requirement-filters" aria-label="筛选需求">
+        <div class="field">
+          <label for="requirement-search">搜索</label>
+          <input
+            id="requirement-search"
+            v-model="search"
+            type="search"
+            placeholder="需求编号、标题或负责人"
+          />
+        </div>
+        <div class="field">
+          <label for="requirement-status-filter">需求状态</label>
+          <select id="requirement-status-filter" v-model="statusFilter">
+            <option value="">全部状态</option>
+            <option v-for="status in REQUIREMENT_STATUSES" :key="status" :value="status">
+              {{ REQUIREMENT_STATUS_LABELS[status] }}
+            </option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="requirement-activity-filter">评审活动</label>
+          <select id="requirement-activity-filter" v-model="activityFilter">
+            <option value="">全部活动</option>
+            <option v-for="state in REVIEW_ACTIVITIES" :key="state" :value="state">
+              {{ REVIEW_ACTIVITY_LABELS[state] }}
+            </option>
+          </select>
+        </div>
+      </section>
+
+      <p v-if="filteredRequirements.length === 0" class="empty-state">
+        没有符合当前筛选条件的需求。
+      </p>
+
       <ul v-else class="record-list requirement-list">
-        <li v-for="item in requirements" :key="item.id" class="record requirement-card">
+        <li v-for="item in filteredRequirements" :key="item.id" class="record requirement-card">
           <div class="record-head requirement-card-head">
             <span class="requirement-key">REQ-{{ item.id }}</span>
             <h2 class="record-title">
@@ -190,12 +237,58 @@ async function create(): Promise<void> {
               <dd>{{ item.assigneeUsername ?? "未指派" }}</dd>
             </div>
             <div>
+              <dt>评审活动</dt>
+              <dd class="review-activity">
+                <span
+                  v-if="activity[String(item.id)]"
+                  :class="[
+                    'badge',
+                    `badge-${REVIEW_ACTIVITY_TONES[activity[String(item.id)].activity]}`,
+                  ]"
+                >
+                  {{ REVIEW_ACTIVITY_LABELS[activity[String(item.id)].activity] }}
+                </span>
+                <span v-else class="badge badge-neutral">未返回</span>
+              </dd>
+            </div>
+            <div>
               <dt>更新时间</dt>
               <dd>{{ formatDateTime(item.updatedAt) }}</dd>
             </div>
           </dl>
         </li>
       </ul>
+      </template>
+
+      <details v-if="isLeader" class="panel requirement-create-disclosure">
+        <summary>新建需求</summary>
+        <form class="requirement-form requirement-create" @submit.prevent="create">
+          <div class="form-section-head">
+            <div>
+              <p class="eyebrow">New contract</p>
+              <h2 class="panel-title">创建需求契约</h2>
+            </div>
+            <p class="field-hint">创建后先处于草稿状态；发布就绪后内容以版本保存。</p>
+          </div>
+          <div class="field">
+            <label for="requirement-title">标题</label>
+            <input id="requirement-title" v-model="title" required maxlength="200" />
+          </div>
+          <div class="field">
+            <label for="requirement-background">背景</label>
+            <textarea id="requirement-background" v-model="background" rows="3"></textarea>
+          </div>
+          <div class="field">
+            <label for="requirement-description">描述</label>
+            <textarea id="requirement-description" v-model="description" rows="4"></textarea>
+          </div>
+          <AcceptanceCriteriaEditor v-model="criteria" id-prefix="create" />
+          <div class="form-actions">
+            <button type="submit" class="button button-primary" :disabled="creating">创建需求</button>
+          </div>
+          <p v-if="createError" class="alert" role="alert">{{ createError }}</p>
+        </form>
+      </details>
     </template>
   </section>
 </template>
@@ -217,7 +310,17 @@ async function create(): Promise<void> {
 }
 
 .requirement-create {
+  margin-top: var(--fp-space-5);
+}
+
+.requirement-create-disclosure {
   border-color: var(--fp-color-border-accent);
+}
+
+.requirement-create-disclosure > summary {
+  color: var(--fp-color-accent-inverse);
+  cursor: pointer;
+  font-weight: 750;
 }
 
 .form-section-head {
@@ -232,6 +335,13 @@ async function create(): Promise<void> {
 }
 
 .requirement-list {
+  gap: var(--fp-space-4);
+}
+
+.requirement-filters {
+  display: grid;
+  align-items: end;
+  grid-template-columns: minmax(16rem, 1.4fr) repeat(2, minmax(11rem, 0.7fr));
   gap: var(--fp-space-4);
 }
 
@@ -268,6 +378,7 @@ async function create(): Promise<void> {
 
 @media (max-width: 64rem) {
   .project-selector,
+  .requirement-filters,
   .requirement-card {
     grid-template-columns: 1fr;
   }

@@ -81,6 +81,38 @@ function respond(path: string, method: string): Response {
   if (path === "/api/projects/3/requirements/12/revisions") {
     return jsonResponse([revision]);
   }
+  if (path === "/api/projects/3/requirements/12/review-activity") {
+    return jsonResponse({
+      activity: "NO_PR",
+      counts: {
+        REVIEW_REQUIRED: 0,
+        FAILED: 0,
+        CHANGES_REQUESTED: 0,
+        REVIEWING: 0,
+        PENDING: 0,
+        APPROVED: 0,
+      },
+    });
+  }
+  if (path === "/api/projects/3/requirements/12/quality" && method === "POST") {
+    return jsonResponse({
+      requirementId: 12,
+      revisionId: 30,
+      revisionSeq: 1,
+      qualityVersion: "v1",
+      checkedAt: "2026-08-21T04:00:00Z",
+      rules: [],
+      ai: null,
+    });
+  }
+  if (path === "/api/projects/3/requirements/12/guidance" && method === "POST") {
+    return jsonResponse({
+      requirementId: 12,
+      revisionId: 30,
+      revisionSeq: 1,
+      guidance: "先统一错误语义，再补充路由测试。",
+    });
+  }
   if (path === "/api/projects/3/requirements/12") {
     return jsonResponse(method === "PATCH" ? { ...detail, updatedAt: "2026-08-21T03:00:00Z" } : detail);
   }
@@ -123,14 +155,9 @@ describe("requirement detail contract", () => {
 
     expect(status.text()).toBe("草稿");
 
-    // PRD 5 requires requirement status and review activity to be shown side by
-    // side and never merged. Batch 3 moved activity onto its own endpoint, since
-    // it is derived from pull requests and reviews and this module may not read
-    // those, so this page no longer carries it and the pairing cannot be asserted
-    // here yet. What is still assertable — and is the half that would actually
-    // regress — is that the status field has not quietly absorbed it.
+    // The two values come from different endpoints and stay in different cells.
     expect(status.text()).not.toContain("NO_PR");
-    expect(wrapper.find(".review-activity").exists()).toBe(false);
+    expect(wrapper.find(".review-activity").text()).toBe("无关联 PR");
   });
 
   it("keeps every existing acKey and never sends sortOrder when editing criteria", async () => {
@@ -153,5 +180,18 @@ describe("requirement detail contract", () => {
       ],
     });
     expect(write?.body).not.toContain("sortOrder");
+  });
+
+  it("keeps quality and one-shot guidance on the requirement they belong to", async () => {
+    const wrapper = await mountDetailPage();
+
+    await wrapper.get(".quality-section button").trigger("click");
+    await wrapper.get(".guidance-section button").trigger("click");
+    await flushPromises();
+
+    expect(calls.some((call) => call.path.endsWith("/quality") && call.method === "POST")).toBe(true);
+    expect(calls.some((call) => call.path.endsWith("/guidance") && call.method === "POST")).toBe(true);
+    expect(wrapper.get(".quality-report").text()).toContain("v1");
+    expect(wrapper.get(".guidance-result").text()).toContain("统一错误语义");
   });
 });
