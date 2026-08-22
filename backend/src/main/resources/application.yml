@@ -22,6 +22,47 @@ spring:
 server:
   port: ${SERVER_PORT:8080}
 
+forgepilot:
+  ai:
+    base-url: ${FORGEPILOT_AI_BASE_URL:}
+    api-key: ${FORGEPILOT_AI_API_KEY:}
+    chat-model: ${FORGEPILOT_AI_CHAT_MODEL:}
+    # Embeddings may use a dedicated compatible provider. Omitting either value
+    # preserves the original one-provider routing.
+    embedding-base-url: ${FORGEPILOT_EMBEDDING_BASE_URL:${FORGEPILOT_AI_BASE_URL:}}
+    embedding-api-key: ${FORGEPILOT_EMBEDDING_API_KEY:${FORGEPILOT_AI_API_KEY:}}
+    timeout: ${FORGEPILOT_AI_TIMEOUT:120s}
+    prompt-char-budget: ${FORGEPILOT_AI_PROMPT_CHAR_BUDGET:60000}
+  knowledge:
+    embedding:
+      provider: ${FORGEPILOT_KNOWLEDGE_EMBEDDING_PROVIDER:}
+      model: ${FORGEPILOT_KNOWLEDGE_EMBEDDING_MODEL:}
+      version: ${FORGEPILOT_KNOWLEDGE_EMBEDDING_VERSION:}
+  review:
+    # The concurrency limit has to sit on corePoolSize: a ThreadPoolExecutor only
+    # grows past it once the queue is full, so with a bounded queue maxPoolSize
+    # alone is unreachable and with an unbounded one it is never reached at all.
+    # Frozen at 2 by the Phase 6 maximum-budget measurement on a 4.10 GB host
+    # (D012 / D014). Hikari remains the ceiling at five total connections, leaving
+    # capacity for the web tier; tighter deployments may override this down to 1.
+    concurrency: ${FORGEPILOT_REVIEW_CONCURRENCY:2}
+    # Bounded, so a backlog is rejected rather than accumulated. A rejected review
+    # stays PENDING and reconciliation picks it up.
+    queue-capacity: ${FORGEPILOT_REVIEW_QUEUE_CAPACITY:64}
+    # How long a claim owns a review before reconciliation may take it away. It is
+    # also the heartbeat interval: renewing the lease is what proves the worker is
+    # still alive, so there is no second liveness signal.
+    lease-seconds: ${FORGEPILOT_REVIEW_LEASE_SECONDS:300}
+    # How long a PENDING row may sit unclaimed before it counts as stalled. Well
+    # above the queue's worst-case wait, or reconciliation would take rows that are
+    # merely waiting their turn.
+    pending-stall-seconds: ${FORGEPILOT_REVIEW_PENDING_STALL_SECONDS:600}
+    reconciliation-interval-ms: ${FORGEPILOT_REVIEW_RECONCILIATION_INTERVAL_MS:30000}
+    # How many project knowledge chunks one Review may cite. ARCHITECTURE.md 7.2,
+    # "检索 TopK | 8 | project-scoped" — the same number knowledge is retrieved with
+    # everywhere, not a second one invented for review.
+    knowledge-top-k: ${FORGEPILOT_REVIEW_KNOWLEDGE_TOP_K:8}
+
 management:
   endpoints:
     web:

@@ -27,12 +27,14 @@ class RequirementController {
 
     private final RequirementService requirements;
     private final ImplementationGuidanceService guidance;
+    private final RequirementQualityService quality;
     private final UserDirectory users;
 
     RequirementController(RequirementService requirements, ImplementationGuidanceService guidance,
-            UserDirectory users) {
+            RequirementQualityService quality, UserDirectory users) {
         this.requirements = requirements;
         this.guidance = guidance;
+        this.quality = quality;
         this.users = users;
     }
 
@@ -94,6 +96,18 @@ class RequirementController {
     ImplementationGuidance generateGuidance(@PathVariable long projectId,
             @PathVariable long requirementId, Principal principal) {
         return guidance.generate(projectId, userIdOf(principal), requirementId);
+    }
+
+    /**
+     * Requirement Quality: deterministic rules plus one structured AI call
+     * (api-contract 4). POST because it spends a provider call and writes the
+     * result onto the current revision. The answer is advice — this endpoint
+     * never moves the requirement's status (PRD 5).
+     */
+    @PostMapping("/{requirementId}/quality")
+    QualityReport checkQuality(@PathVariable long projectId, @PathVariable long requirementId,
+            Principal principal) {
+        return quality.check(projectId, userIdOf(principal), requirementId);
     }
 
     /**

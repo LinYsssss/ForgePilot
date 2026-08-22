@@ -55,6 +55,7 @@ class AiGatewayTest extends PostgresTestBase {
     private static final Duration TIMEOUT = Duration.ofSeconds(1);
     private static final Duration LONGER_THAN_THE_TIMEOUT = Duration.ofSeconds(3);
     private static final String API_KEY = "test-only-not-a-real-key";
+    private static final String EMBEDDING_API_KEY = "embedding-test-only-not-a-real-key";
     private static final String CHAT_MODEL = "stub-chat-model";
     private static final String EMBEDDING_MODEL = "stub-embedding-model";
 
@@ -63,6 +64,7 @@ class AiGatewayTest extends PostgresTestBase {
     private static final AtomicInteger COUNTER = new AtomicInteger();
     private static final List<String> AUTHORIZATION = Collections.synchronizedList(new ArrayList<>());
     private static final List<String> BODIES = Collections.synchronizedList(new ArrayList<>());
+    private static final List<String> PATHS = Collections.synchronizedList(new ArrayList<>());
     private static final AtomicReference<HttpHandler> BEHAVIOUR = new AtomicReference<>();
 
     static {
@@ -78,12 +80,15 @@ class AiGatewayTest extends PostgresTestBase {
             worker.setDaemon(true);
             return worker;
         }));
-        PROVIDER.createContext("/v1", exchange -> {
+        HttpHandler capture = exchange -> {
             REQUESTS.incrementAndGet();
             AUTHORIZATION.add(exchange.getRequestHeaders().getFirst("Authorization"));
             BODIES.add(new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8));
+            PATHS.add(exchange.getRequestURI().getPath());
             BEHAVIOUR.get().handle(exchange);
-        });
+        };
+        PROVIDER.createContext("/v1", capture);
+        PROVIDER.createContext("/embedding", capture);
         PROVIDER.start();
     }
 
@@ -92,6 +97,9 @@ class AiGatewayTest extends PostgresTestBase {
         registry.add("forgepilot.ai.base-url",
                 () -> "http://127.0.0.1:" + PROVIDER.getAddress().getPort() + "/v1");
         registry.add("forgepilot.ai.api-key", () -> API_KEY);
+        registry.add("forgepilot.ai.embedding-base-url",
+                () -> "http://127.0.0.1:" + PROVIDER.getAddress().getPort() + "/embedding");
+        registry.add("forgepilot.ai.embedding-api-key", () -> EMBEDDING_API_KEY);
         registry.add("forgepilot.ai.chat-model", () -> CHAT_MODEL);
         registry.add("forgepilot.ai.timeout", () -> TIMEOUT.toMillis() + "ms");
     }
@@ -113,6 +121,7 @@ class AiGatewayTest extends PostgresTestBase {
         REQUESTS.set(0);
         AUTHORIZATION.clear();
         BODIES.clear();
+        PATHS.clear();
     }
 
     // ------------------------------------------------------------- the one retry
@@ -279,6 +288,10 @@ class AiGatewayTest extends PostgresTestBase {
         assertThat(vectors).hasSize(2);
         assertThat(vectors.get(0)).containsExactly(0.5f, -0.25f);
         assertThat(vectors.get(1)).containsExactly(0.125f, 0.0625f);
+        assertThat(AUTHORIZATION).containsExactly("Bearer " + EMBEDDING_API_KEY);
+        assertThat(PATHS).containsExactly("/embedding/embeddings");
+        assertThat(BODIES).singleElement().satisfies(body ->
+                assertThat(body).contains("\"model\":\"" + EMBEDDING_MODEL + "\""));
         assertThat(callLogs.findByProjectIdOrderByIdAsc(fixture.project))
                 .singleElement()
                 .satisfies(attempt -> {

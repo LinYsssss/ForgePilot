@@ -34,10 +34,11 @@ import tools.jackson.databind.node.ObjectNode;
  * (ARCHITECTURE.md 1.3). Business prompts belong to their own features; there is
  * no prompt registry and no generic context builder here (ARCHITECTURE.md 4).
  *
- * <p>The base URI comes from {@code forgepilot.ai.base-url} and no host is
- * hardcoded anywhere (D015.8). That is a production requirement — D010 requires
- * supporting a self-hosted provider — and it is also the seam that lets the
- * whole slice be tested against a local stub with no credential in existence.
+ * <p>The chat URI comes from {@code forgepilot.ai.base-url}; embeddings may use
+ * their own {@code embedding-base-url} and credential, falling back to the chat
+ * route when omitted. No host is hardcoded (D015.8). This permits one technical
+ * gateway to reach two OpenAI-compatible providers without creating a second AI
+ * runtime or leaking provider routing into business services.
  *
  * <p>An unconfigured deployment fails closed at the call instead of at startup:
  * batch 2 must not stop the application from booting for features nobody has
@@ -54,8 +55,8 @@ public class AiGateway {
     private final ObjectMapper json;
     private final TransactionTemplate ownTransaction;
     private final HttpClient http;
-    private final String baseUrl;
-    private final String apiKey;
+    private final ProviderRoute chatRoute;
+    private final ProviderRoute embeddingRoute;
     private final String chatModel;
     private final Duration timeout;
     private final int promptCharBudget;
@@ -63,6 +64,8 @@ public class AiGateway {
     AiGateway(AiCallLogRepository callLogs, ObjectMapper json, PlatformTransactionManager transactions,
             @Value("${forgepilot.ai.base-url:}") String baseUrl,
             @Value("${forgepilot.ai.api-key:}") String apiKey,
+            @Value("${forgepilot.ai.embedding-base-url:${forgepilot.ai.base-url:}}") String embeddingBaseUrl,
+            @Value("${forgepilot.ai.embedding-api-key:${forgepilot.ai.api-key:}}") String embeddingApiKey,
             @Value("${forgepilot.ai.chat-model:}") String chatModel,
             // ARCHITECTURE.md 7.2, "LLM 单次调用超时 | 120 s".
             @Value("${forgepilot.ai.timeout:120s}") Duration timeout,
@@ -73,8 +76,8 @@ public class AiGateway {
             @Value("${forgepilot.ai.prompt-char-budget:60000}") int promptCharBudget) {
         this.callLogs = callLogs;
         this.json = json;
-        this.baseUrl = baseUrl;
-        this.apiKey = apiKey;
+        this.chatRoute = new ProviderRoute(baseUrl, apiKey);
+        this.embeddingRoute = new ProviderRoute(embeddingBaseUrl, embeddingApiKey);
         this.chatModel = chatModel;
         this.timeout = timeout;
         this.promptCharBudget = promptCharBudget;
@@ -100,9 +103,10 @@ public class AiGateway {
         if (schema != null) {
             ObjectNode format = request.putObject("response_format");
             format.put("type", "json_schema");
-            format.putObject("json_schema").put("name", "result").set("schema", parseSchema(schema));
+            format.putObject("json_schema").put("name", "result").put("strict", true)
+                    .set("schema", parseSchema(schema));
         }
-        return call(CHAT_PATH, request, chatModel, useCase, context, AiGateway::content);
+        return call(chatRoute, CHAT_PATH, request, chatModel, useCase, context, AiGateway::content);
     }
 
     /**
@@ -118,7 +122,7 @@ public class AiGateway {
         for (String text : texts) {
             input.add(PromptSanitizer.sanitize(text, promptCharBudget));
         }
-        return call(EMBEDDING_PATH, request, model, AiUseCase.EMBEDDING, context,
+        return call(embeddingRoute, EMBEDDING_PATH, request, model, AiUseCase.EMBEDDING, context,
                 answer -> vectors(answer, texts.size()));
     }
 
@@ -128,9 +132,9 @@ public class AiGateway {
      * decides anything, so a retried call is visible as two rows and a permanent
      * failure as one — the retry is auditable rather than asserted.
      */
-    private <T> T call(String path, ObjectNode request, String model, AiUseCase useCase,
+    private <T> T call(ProviderRoute route, String path, ObjectNode request, String model, AiUseCase useCase,
             AiCallContext context, Function<JsonNode, T> reader) {
-        HttpRequest post = post(endpoint(path), request.toString());
+        HttpRequest post = post(endpoint(route.baseUrl(), path), route.apiKey(), request.toString());
         for (int attempt = 1; attempt <= AiFailurePolicy.MAX_ATTEMPTS; attempt++) {
             long startedAt = System.nanoTime();
             try {
@@ -177,10 +181,11 @@ public class AiGateway {
         throw unavailable();
     }
 
-    private HttpRequest post(URI endpoint, String body) {
+    private HttpRequest post(URI endpoint, String apiKey, String body) {
         HttpRequest.Builder request = HttpRequest.newBuilder(endpoint)
                 .timeout(timeout)
                 .header("Content-Type", "application/json")
+                .header("User-Agent", "ForgePilot/0.1")
                 .POST(HttpRequest.BodyPublishers.ofString(body, StandardCharsets.UTF_8));
         if (!apiKey.isBlank()) {
             // There is no default key anywhere in this codebase. An unconfigured
@@ -191,7 +196,7 @@ public class AiGateway {
         return request.build();
     }
 
-    private URI endpoint(String path) {
+    private static URI endpoint(String baseUrl, String path) {
         if (baseUrl.isBlank()) {
             throw unconfigured();
         }
@@ -291,6 +296,14 @@ public class AiGateway {
 
         private MalformedAnswerException(String message) {
             super(message);
+        }
+    }
+
+    private record ProviderRoute(String baseUrl, String apiKey) {
+
+        private ProviderRoute {
+            baseUrl = baseUrl == null ? "" : baseUrl;
+            apiKey = apiKey == null ? "" : apiKey;
         }
     }
 }
