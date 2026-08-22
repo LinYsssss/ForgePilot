@@ -1,0 +1,8 @@
+{"file":".trellis/spec/frontend/index.md","reason":"Frontend guideline entry point and active contract index."}
+{"file":".trellis/spec/frontend/design-contract.md","reason":"Visual direction, token, responsive, accessibility, and route boundaries."}
+{"file":".trellis/spec/frontend/motion.md","reason":"Motion and reduced-motion lifecycle requirements that this task updates."}
+{"file":".trellis/spec/frontend/component-guidelines.md","reason":"Vue SFC structure, semantic composition, and styling constraints."}
+{"file":".trellis/spec/frontend/hook-guidelines.md","reason":"Lifecycle cleanup and non-reactive per-frame behavior."}
+{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"Required checks, forbidden dependencies, accessibility, and drift gates."}
+{"file":".trellis/spec/frontend/type-safety.md","reason":"Strict TypeScript and browser boundary typing."}
+{"file":".trellis/tasks/08-22-restore-full-dynamic-frontend/research/motion-inventory.md","reason":"Approved mapping from every reference motion family to the official application."}

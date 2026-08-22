@@ -1,0 +1,5 @@
+{"file":".trellis/spec/frontend/design-contract.md","reason":"Check visual completeness without route, data, or semantic drift."}
+{"file":".trellis/spec/frontend/motion.md","reason":"Check full normal motion and correct reduced-motion behavior."}
+{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"Run the complete frontend quality and accessibility gate."}
+{"file":".trellis/spec/frontend/type-safety.md","reason":"Check strict typing of canvas and browser lifecycle code."}
+{"file":".trellis/tasks/08-22-restore-full-dynamic-frontend/research/motion-inventory.md","reason":"Verify every approved reference motion family was integrated."}
