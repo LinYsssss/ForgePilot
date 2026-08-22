@@ -1,22 +1,22 @@
 # 批次 3 结果（Phase 6 + Phase 7）
 
 任务：`08-21-batch-3-review-engine-human-loop`
-授权依据：[D012](../../../docs/v2/DECISIONS.md#d012)、[D014](../../../docs/v2/DECISIONS.md#d014)。
+授权依据：[D012](../../../../../docs/v2/DECISIONS.md#d012)、[D014](../../../../../docs/v2/DECISIONS.md#d014)。
 
-> 验收条件只有通过、不通过和部分通过；浏览器、响应式、视觉与尚未运行的 CI 不以 jsdom 或本机结果替代。
+> 验收条件只有通过、不通过和部分通过；浏览器、响应式与视觉检查不以 jsdom 或 CI 结果替代。
 
 ## 1. 当前结论
 
 批次 3 的本地实现与实测已完成：固定的 16 张业务表、唯一 Review Engine、fencing、Finding 连续性、人工 Decision 闭环和三个前端实页均已落地。最大预算容量实测支持默认并发 `2`。真实 development 三臂评测及独立 Chat/Embedding Provider 配置已完成。
 
-任务仍保持 `in_progress`，原因只有收口流程：当前工作树尚未提交，因此当前批次没有可对应的远端 CI run。未获用户确认前不 commit、不 push；D014 的 CI 闸门据实记为待验证。
+实现按五个职责分组提交并推送；远端 CI run `32574477108` 的 Evaluation、Frontend、Backend 与 Empty-stack Compose smoke 四个 job 全部成功。D014 退出闸门已通过，本任务可以归档。
 
 | 项 | 结果 |
 |---|---|
 | 数据库 | **16 张**业务表；Flyway V1–V7，V7 仅给 PR 补 `title` 列 |
 | 后端全量 | 当前工作树 JDK 21 `verify`：**298 tests，0 failure/error/skip** |
 | 前端 | `npm ci`、lint、typecheck、15 tests、build 均退出 0 |
-| Compose | 16 表空库冷启动先前通过；当前 `fp-demo` 后端重建、V7 迁移和 readiness 均通过 |
+| Compose | CI 连续两次 fresh-volume 冷启动通过；当前 `fp-demo` 后端重建、V7 迁移和 readiness 均通过 |
 | 容量 | 2 个并发最大预算 Review 均完成；冻结默认并发 `2` |
 | 模型评测 | `gpt-5.6-luna` 三臂各 12/12 完成，0 structure failure |
 | Holdout | **未读取、未运行** |
@@ -92,8 +92,9 @@ REQUIREMENT_QUALITY | gpt-5.6-luna | SUCCESS | 8593 ms | prompt 257 | completion
 | Compose 空库冷启动 | 三服务 healthy；16 张业务表逐名比对 |
 | 当前演示部署 | backend healthy，Actuator `UP`，V7 迁移成功 |
 | 容量 | 有效轮 PASS；无 OOM、重启、截断或连接等待 |
+| CI `32574477108` | 四个 job 全绿；Compose job 连续两次 fresh-volume 冷启动 |
 
-最终收口：`task.py validate` 退出 `0`，`git diff --check` 退出 `0`；顶层包 8 个、唯一子包 `scm/github`、`CREATE TABLE` 数量 16，`ci.yml` 无 `secrets.*`。工作树仍 dirty 是因为等待用户确认 commit 分组。
+最终收口：`task.py validate` 退出 `0`，`git diff --check` 退出 `0`；顶层包 8 个、唯一子包 `scm/github`、`CREATE TABLE` 数量 16，`ci.yml` 无 `secrets.*`。
 
 ## 7. 非数据库执行与已知限制
 
@@ -102,7 +103,7 @@ REQUIREMENT_QUALITY | gpt-5.6-luna | SUCCESS | 8593 ms | prompt 257 | completion
 - 浏览器真实点击闭环、1440/768/390 响应式检查和视觉漂移检查均为 **部分通过**：jsdom journey 能证明交互状态和四类标记未被合并，不能代替真实浏览器验收。
 - Knowledge development arm 的质量下降未解决，只记录、不掩盖、不基于 holdout 调参。
 - 本机 smoke 证明协议、配置绑定与真实 Quality 业务调用；Knowledge 当前无公开上传 Controller，因此 Embedding 的业务级 HTTP 链路未伪造，采用独立 Provider 真实协议调用加 `AiGatewayTest` 路由断言。
-- 当前批次尚无远端 CI run；在用户批准 commit/push 前 D014 CI 项保持待验证。
+- GitHub Actions 提示 `actions/*` 的 Node 20 compatibility mode 与 `setup-java@v4` 已弃用；这是非阻断的 CI 维护提醒，本次四个 job 均成功。
 
 ## 8. 边界检查
 
@@ -121,8 +122,8 @@ REQUIREMENT_QUALITY | gpt-5.6-luna | SUCCESS | 8593 ms | prompt 257 | completion
 |---|---|---|---|
 | 1 | 构建与测试全绿、无 skip | ✅ 本地成立 | 最终当前工作树全量 298/298；`BUILD SUCCESS` |
 | 2 | Compose 空库冷启动 | ✅ 成立 | 三服务 healthy，16 表逐名比对 |
-| 3 | CI 全部 job 绿 | ⏳ 待验证 | 工作树未提交/推送，不能把旧提交 CI 冒充本批次 CI |
+| 3 | CI 全部 job 绿 | ✅ 成立 | run `32574477108`：Evaluation 7s、Frontend 24s、Backend 1m21s、Compose 1m33s，全部 success |
 | 4 | 边界干净 | ✅ 成立 | 见 §8 |
 | 5 | 偏差与部分通过如实记录 | ✅ 成立 | 见 §7；浏览器三项与关闭 PR 限制明确记录 |
 
-当前退出闸门尚不能宣告全绿。下一步是向用户提交 commit 分组方案并取得 commit/push 授权；推送后等待四个 CI job 全绿，再归档本任务并进入单独的 Phase 8。
+D014 五项全部成立，退出闸门通过。批次 3 可以归档；下一步是单独规划并授权 Phase 8，且 holdout 只在配置冻结后运行一次。
