@@ -48,7 +48,9 @@ npm run build
 cd ..
 python3 -m unittest \
   evaluation/tools/test_run_development.py \
-  evaluation/tools/test_formal_evaluation.py
+  evaluation/tools/test_formal_evaluation.py \
+  evaluation/tools/test_postfreeze_legacy_adapter.py \
+  evaluation/tools/test_postfreeze_provider_correction.py
 python3 evaluation/tools/score.py --selftest
 python3 evaluation/tools/score.py --guard-no-holdout --root evaluation
 ```
@@ -68,13 +70,16 @@ GitHub receives webhooks at `/api/scm/github/webhook`. GitLab receives them at `
 
 ## 4. Formal evidence and deterministic rescore
 
-The tracked configuration freeze identifies the model, endpoint identity, prompt/schema, runner, scorer, aliases, contracts, source commit, and retry/timeout policy by content hash. The private normalized corpus and raw model envelopes live in the ignored evaluation workspace on the evidence machine.
+The tracked original configuration freeze identifies the model, original endpoint identity, prompt/schema, runner, scorer, aliases, contracts, source commit, and retry/timeout policy by content hash. The available credential belonged to a third-party OpenAI-compatible service, so the original public endpoint failed with HTTP 401. A separate content-addressed correction records the effective endpoint and explicitly states that it was made after corpus import but before any holdout ledger or provider call. The private normalized corpus and raw model envelopes live in the ignored evaluation workspace on the evidence machine.
 
 Verify that no model-facing or scoring file changed:
 
 ```bash
 python3 evaluation/tools/formal_evaluation.py verify-freeze
+python3 evaluation/tools/postfreeze_provider_correction.py verify
 ```
+
+The first command proves the original model-facing and scoring files are unchanged. The second binds the effective endpoint while rejecting any model, temperature, prompt/scorer, corpus, or split change. `evidence/formal-run-evidence.json` records both hashes and the effective provider identity. The canonical summary JSON intentionally retains the original frozen config; consult that evidence record for the endpoint actually used.
 
 Recompute development, holdout, and full-corpus metrics plus 95% Wilson intervals from the preserved raw envelopes. This command performs no provider call and does not read `OPENAI_API_KEY`:
 

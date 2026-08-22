@@ -1,0 +1,20 @@
+{
+  "correctionVersion": "forgepilot-postfreeze-provider-correction-v1",
+  "createdAt": "2026-08-22T14:25:50Z",
+  "reason": "The supplied credential belongs to an OpenAI-compatible third-party service. The original freeze accidentally recorded the public OpenAI endpoint, which returned HTTP 401 for all development attempts. The corrected endpoint authenticated successfully before this correction was created. This operational error was discovered after corpus import but before any holdout ledger, output, or provider call.",
+  "originalFreezeHash": "55fc3176b6c843d214aa405781c1fe404ee7663c3e177f8a3cd67d9b22021e5d",
+  "originalEndpointIdentity": "https://api.openai.com/v1/chat/completions",
+  "correctedEndpointIdentity": "https://597965.xyz/v1/chat/completions",
+  "model": "gpt-5.6-luna",
+  "modelChanged": false,
+  "temperatureChanged": false,
+  "promptOrScorerChanged": false,
+  "corpusOrSplitChanged": false,
+  "holdoutStateBeforeCorrection": {
+    "ledgerExists": false,
+    "outputExists": false,
+    "providerCalls": 0
+  },
+  "runnerSha256": "9d3714ae1d413658e027b35492fce32c76e0f5b20021a75f04db3f8c033cb154",
+  "correctionHash": "8c2401958679866753b87926d8c1b28939a2390189c612b3421409139734100c"
+}

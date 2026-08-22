@@ -1,0 +1,29 @@
+{
+  "adapterSha256": "0c0bae54228ee2bce96e8ce30d5122fff8df1a14d01e78660304bc3b9159af26",
+  "adapterVersion": "forgepilot-postfreeze-legacy-adapter-v1",
+  "caseCount": 38,
+  "configurationChanged": false,
+  "createdAt": "2026-08-22T14:01:38.340045Z",
+  "freezeHash": "55fc3176b6c843d214aa405781c1fe404ee7663c3e177f8a3cd67d9b22021e5d",
+  "holdoutSplitChanged": false,
+  "mappingRules": [
+    "AC<n> -> AC-<n zero-padded to four digits>",
+    "consistencyTruth -> expectedAcVerdicts",
+    "path/line/lineEnd -> filePath/lineStart/lineEnd",
+    "categoryEquivalents -> categoryAliases",
+    "BUSINESS_RULE_RISK -> REQUIREMENT; all other categories -> CODE_QUALITY",
+    "missing fixtureLayout -> single",
+    "Legacy expectedPatch fields and referenced patch-answer files are omitted"
+  ],
+  "normalizedManifestSha256": "e00d9186537167443390c7c3d9852672602fea0d7d62f33b29f10af05ea03a0a",
+  "omittedTruthFiles": [
+    "cases/typescript-known-patch/expected.patch"
+  ],
+  "promptOrScorerChanged": false,
+  "sourceCommit": "96137dd3b43e14c5e8881c99688663afd979cf4e",
+  "sourceManifestSha256": "7b888c99b6949356228dbde78322e6fabb4be74d482825f0b32e00abbff4c5ae",
+  "splitCounts": {
+    "development": 26,
+    "holdout": 12
+  }
+}

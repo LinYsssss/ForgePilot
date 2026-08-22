@@ -31,19 +31,19 @@ The separate user-requested visual rebuild based on `ForgePilot-Frontend/` begin
 
 ## Acceptance criteria
 
-- [ ] AC1: `ScmProvider.GITLAB` is implemented through a GitLab adapter and the GitHub path remains green.
-- [ ] AC2: GitLab webhook tests cover raw-body authentication, malformed/unknown/invalid indistinguishability, non-MR no-op, valid MR sync, replay, out-of-order input, and zero writes/fetches before authentication.
-- [ ] AC3: GitLab API tests cover authoritative MR fields, URL-safe numeric project identity, changed-file pagination, stable source revision/order fields, missing or provider-truncated patches, malformed required fields, rate/error mapping, and explicit total-size rejection.
-- [ ] AC4: GitLab MR ingestion creates the same PENDING Review and supports the same requirement association and stable external-author mapping as GitHub.
-- [ ] AC5: project settings/API support GitHub and GitLab while credentials remain write-only and the information architecture stays at three top-level entries.
-- [ ] AC6: configuration-freeze evidence predates any holdout import/run and contains every non-secret reproducibility parameter plus hashes of the relevant runner, prompt/schema, scorer, and corpus contract.
-- [ ] AC7: the imported formal corpus validates as exactly 26 development and 12 holdout cases from the locked Legacy commit, with no split changes and no truth leakage into prompts.
-- [ ] AC8: one and only one preserved holdout run exists; the run ledger and artifact hashes prove the sequence, and no post-run tuning change exists.
-- [ ] AC9: raw runs and deterministic reports exist for development, holdout, and all 38 cases across all three arms, with failures/not-run entries preserved rather than converted to empty success.
-- [ ] AC10: the final report contains all PRD metrics, Wilson intervals for binomial rates where applicable, honest small-sample limitations, frozen model/configuration identifiers, and exact recomputation commands.
-- [ ] AC11: backend verify, frontend lint/typecheck/tests/build, evaluation tests/contracts, architecture/boundary checks, and a fresh-volume Compose cold start all pass with zero skipped tests.
-- [ ] AC12: a clean-environment defense guide reproduces deployment and rescoring without secrets; secret scans and Git status identify no leaked credential or generated private corpus.
-- [ ] AC13: `result.md` records completed and incomplete items, deviations, commands/results, CI state, the exact holdout count, and the handoff boundary for the later reference-frontend rebuild.
+- [x] AC1: `ScmProvider.GITLAB` is implemented through a GitLab adapter and the GitHub path remains green.
+- [x] AC2: GitLab webhook tests cover raw-body authentication, malformed/unknown/invalid indistinguishability, non-MR no-op, valid MR sync, replay, out-of-order input, and zero writes/fetches before authentication.
+- [x] AC3: GitLab API tests cover authoritative MR fields, URL-safe numeric project identity, changed-file pagination, stable source revision/order fields, missing or provider-truncated patches, malformed required fields, rate/error mapping, and explicit total-size rejection.
+- [x] AC4: GitLab MR ingestion creates the same PENDING Review and supports the same requirement association and stable external-author mapping as GitHub.
+- [x] AC5: project settings/API support GitHub and GitLab while credentials remain write-only and the information architecture stays at three top-level entries.
+- [x] AC6: the original configuration freeze predates holdout import/run and hashes the runner, prompt/schema, scorer, and corpus contract; the effective third-party endpoint is bound by a post-import, pre-holdout content-addressed correction and reported as a protocol deviation.
+- [x] AC7: the imported formal corpus validates as exactly 26 development and 12 holdout cases from the locked Legacy commit, with no split changes and no truth leakage into prompts.
+- [x] AC8: one and only one preserved holdout run exists; the run ledger and artifact hashes prove the sequence, and no post-run tuning change exists.
+- [x] AC9: raw runs and deterministic reports exist for development, holdout, and all 38 cases across all three arms, with failures/not-run entries preserved rather than converted to empty success.
+- [x] AC10: the final report contains all PRD metrics, Wilson intervals for binomial rates where applicable, honest small-sample limitations, frozen model/configuration identifiers, and exact recomputation commands.
+- [x] AC11: backend verify, frontend lint/typecheck/tests/build, evaluation tests/contracts, architecture/boundary checks, and a fresh-volume Compose cold start all pass with zero skipped tests.
+- [x] AC12: a clean-environment defense guide reproduces deployment and rescoring without secrets; secret scans and Git status identify no leaked credential or generated private corpus.
+- [x] AC13: `result.md` records completed and incomplete items, deviations, commands/results, CI state, the exact holdout count, and the handoff boundary for the later reference-frontend rebuild.
 
 ## Out of scope
 

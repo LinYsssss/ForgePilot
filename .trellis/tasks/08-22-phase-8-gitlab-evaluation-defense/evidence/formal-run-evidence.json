@@ -1,0 +1,99 @@
+{
+  "evidenceVersion": "forgepilot-phase8-formal-run-evidence-v1",
+  "createdAt": "2026-08-22T14:48:26Z",
+  "freezeHash": "55fc3176b6c843d214aa405781c1fe404ee7663c3e177f8a3cd67d9b22021e5d",
+  "providerCorrectionHash": "8c2401958679866753b87926d8c1b28939a2390189c612b3421409139734100c",
+  "effectiveProvider": {
+    "endpointIdentity": "https://597965.xyz/v1/chat/completions",
+    "model": "gpt-5.6-luna",
+    "temperature": 0.0,
+    "timeoutSeconds": 120.0,
+    "retryCount": 1
+  },
+  "corpus": {
+    "sourceCommit": "96137dd3b43e14c5e8881c99688663afd979cf4e",
+    "developmentCases": 26,
+    "holdoutCases": 12,
+    "manifestSha256": "e00d9186537167443390c7c3d9852672602fea0d7d62f33b29f10af05ea03a0a",
+    "integrityRecordSha256": "ac7051cefa1cbcfc84ca922549d1cd3946e232074c8572bd066a855febcf65b4"
+  },
+  "holdoutLedger": {
+    "attemptOrdinal": 1,
+    "status": "COMPLETE",
+    "startedAt": "2026-08-22T14:40:38.465685Z",
+    "completedAt": "2026-08-22T14:46:43.362026Z",
+    "sha256": "5de11b7c07778a6742d037a472e84ddeaef8693850e5080944c69e0b39e42783"
+  },
+  "execution": {
+    "development": {
+      "casesPerArm": 26,
+      "completedPerArm": 26,
+      "failedPerArm": 0,
+      "notRunPerArm": 0,
+      "structureFailuresPerArm": 0
+    },
+    "holdout": {
+      "casesPerArm": 12,
+      "completedPerArm": 12,
+      "failedPerArm": 0,
+      "notRunPerArm": 0,
+      "structureFailuresPerArm": 0
+    }
+  },
+  "rawRunSha256": {
+    "evaluation/results/formal/development/diff_only/runs/run.json": "e0e087743c33fb42602fb3c92728031a83a64e233e19add151be5090aaec17f4",
+    "evaluation/results/formal/development/diff_requirement_ac/runs/run.json": "e8a63bb111c3047a3032c49b95d549bd56104e41f1eb360fe1e94307c051433f",
+    "evaluation/results/formal/development/diff_requirement_ac_knowledge/runs/run.json": "8957d04cc582ba5a508d1b65005381ba428dde2710dd457619bf1bcb7b4bb2fb",
+    "evaluation/results/formal/holdout/diff_only/runs/run.json": "84541c6055d395a05648ce9f2f3332778eeee845b3049be179b65f74dbbfd68f",
+    "evaluation/results/formal/holdout/diff_requirement_ac/runs/run.json": "8812d1d82ea4b9e126a01726bc5bf2b961e7706c89c3f151209951c564ec9dc6",
+    "evaluation/results/formal/holdout/diff_requirement_ac_knowledge/runs/run.json": "6e763ad493959d4d6aebd0685286091fd921a9378ff2a704f793d42d431886b5"
+  },
+  "holdoutMetrics": {
+    "DIFF_ONLY": {
+      "precision": 0.083333,
+      "recall": 0.111111,
+      "falseReportRate": 0.916667,
+      "missRate": 0.888889,
+      "requirementViolationRecall": 0.0,
+      "acAccuracy": 0.0,
+      "inputTokens": 12579,
+      "outputTokens": 5234,
+      "meanLatencyMs": 9537.416667
+    },
+    "DIFF_REQUIREMENT_AC": {
+      "precision": 0.066667,
+      "recall": 0.111111,
+      "falseReportRate": 0.933333,
+      "missRate": 0.888889,
+      "requirementViolationRecall": 0.333333,
+      "acAccuracy": 0.96,
+      "inputTokens": 14452,
+      "outputTokens": 6794,
+      "meanLatencyMs": 11453.75
+    },
+    "DIFF_REQUIREMENT_AC_KNOWLEDGE": {
+      "precision": 0.2,
+      "recall": 0.222222,
+      "falseReportRate": 0.8,
+      "missRate": 0.777778,
+      "requirementViolationRecall": 0.666667,
+      "acAccuracy": 0.92,
+      "inputTokens": 15252,
+      "outputTokens": 5291,
+      "meanLatencyMs": 9322.25
+    }
+  },
+  "reports": {
+    "canonicalSummaryJsonSha256": "c7d1772f5db991736b0acb485b62ba09728ec34d560a35f1a3ad623d09fc3bc1",
+    "canonicalSummaryMarkdownSha256": "8eeb842f2bee7ca66116562fe4e72c485b71f90f28479744cfc625fed9be7563",
+    "normalizedTreeSha256": "89ee9ee4dc1aeb3d1975e9c4b66289d11cbed0fcc5bc10123e18409bcd0a26c0",
+    "files": 23,
+    "independentRescoreTreeSha256": "89ee9ee4dc1aeb3d1975e9c4b66289d11cbed0fcc5bc10123e18409bcd0a26c0",
+    "comparison": "All report files are byte-identical except formal-summary.json generatedAt; after removing that timestamp, both 23-file trees have the same aggregate hash."
+  },
+  "limitations": [
+    "The effective endpoint correction was recorded after private corpus import, although before any holdout ledger or provider call; it changes provider identity only and is a protocol deviation from the original endpoint freeze.",
+    "The holdout contains only 12 hand-constructed cases, so arm differences are descriptive and Wilson intervals are wide.",
+    "Finding matching is strict on finding type, normalized category, path, and overlapping line range; semantically similar but non-matching labels remain false positives and false negatives."
+  ]
+}

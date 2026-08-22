@@ -1,0 +1,68 @@
+{
+  "evidenceVersion": "forgepilot-phase8-postfreeze-validation-v1",
+  "completedAt": "2026-08-22T14:48:26Z",
+  "commit": "f87cacbbbb278aa6721e7cc809ce9f12e9e076ac",
+  "backend": {
+    "command": "docker run --rm --network host -v /root/ForgePilot/backend:/workspace -v /root/.m2:/root/.m2 -v /var/run/docker.sock:/var/run/docker.sock -w /workspace eclipse-temurin:21-jdk ./mvnw -B -ntp verify",
+    "tests": 307,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "result": "BUILD SUCCESS"
+  },
+  "frontend": {
+    "commands": [
+      "npm ci",
+      "npm run lint",
+      "npm run typecheck",
+      "npm test -- --run",
+      "npm run build"
+    ],
+    "testFiles": 7,
+    "tests": 20,
+    "result": "PASS"
+  },
+  "evaluation": {
+    "commands": [
+      "python3 evaluation/tools/formal_evaluation.py verify-freeze",
+      "formal_evaluation.validate_formal_corpus(evaluation/private-formal-corpus)",
+      "python3 -m unittest discover -s evaluation/tools -p test_*.py",
+      "python3 evaluation/tools/score.py --selftest"
+    ],
+    "unitTests": 18,
+    "scorerSelfChecks": 30,
+    "corpus": {
+      "cases": 38,
+      "development": 26,
+      "holdout": 12
+    },
+    "result": "PASS"
+  },
+  "composeColdStart": {
+    "command": "FORGEPILOT_BACKEND_PORT=28080 FORGEPILOT_FRONTEND_PORT=28081 scripts/phase1-compose-smoke.sh forgepilot-phase1-phase8-postfreeze-cold",
+    "postgres": "healthy",
+    "backend": "healthy",
+    "frontend": "healthy",
+    "pgvectorVersion": "0.8.6",
+    "businessTables": 16,
+    "cleanup": "The isolated containers, network, and postgres-data volume were removed by the smoke script.",
+    "result": "PASS"
+  },
+  "boundaryAudit": {
+    "topLevelBackendPackages": 8,
+    "topLevelNavigationEntries": 3,
+    "approvedProductRoutePaths": 7,
+    "flywayMigrations": 7,
+    "businessTables": 16,
+    "trackedOpenAIKeyPatternMatches": 0,
+    "gitDiffCheck": "PASS",
+    "architectureRules": "Covered by the passing backend verify suite."
+  },
+  "ci": {
+    "branch": "main",
+    "remoteComparison": "origin/main...HEAD = 0 behind, 5 ahead",
+    "pushed": false,
+    "externalCiProven": false,
+    "reason": "The authorized commits are local-only and the user did not authorize a push."
+  }
+}

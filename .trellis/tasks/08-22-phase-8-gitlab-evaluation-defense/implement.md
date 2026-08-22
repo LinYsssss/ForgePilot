@@ -29,30 +29,30 @@
 
 ## Gate 3: configuration freeze
 
-- [x] Resolve the exact model, temperature, endpoint identity, prompt/schema, runner, scorer, aliases, corpus source commit, timeout/retry, and arms.
-- [ ] Ensure all output-affecting and scoring files are final and the relevant tracked worktree is clean/committed or fully content-addressed.
-- [ ] Write the freeze artifact and verify all recorded hashes.
-- [ ] Record proof that holdout has not yet been imported, read, or run.
+- [x] Resolve the exact model, temperature, endpoint identity, prompt/schema, runner, scorer, aliases, corpus source commit, timeout/retry, and arms; preserve the original public-endpoint mistake and its content-addressed third-party endpoint correction as an explicit deviation.
+- [x] Ensure all output-affecting and scoring files are final and the relevant tracked worktree is clean/committed or fully content-addressed.
+- [x] Write the freeze artifact and verify all recorded hashes.
+- [x] Record proof that holdout has not yet been imported, read, or run.
 
 ## Slice 4: one-time formal run
 
-- [ ] Acquire the locked original corpus only after Gate 3.
-- [ ] Validate source commit, fixture hashes, and exact 26/12 split without changing it.
-- [ ] Run all three arms on development and preserve raw outputs.
-- [ ] Start the atomic holdout ledger, run all three arms exactly once, and preserve partial failures/not-run entries if any.
-- [ ] Generate deterministic development, holdout, and full reports plus uncertainty summary.
-- [ ] Verify no prompt/scorer/config change occurred after freeze and no second holdout run exists.
+- [x] Acquire the locked original corpus only after Gate 3.
+- [x] Validate source commit, fixture hashes, and exact 26/12 split without changing it.
+- [x] Run all three arms on development and preserve raw outputs.
+- [x] Start the atomic holdout ledger, run all three arms exactly once, and preserve partial failures/not-run entries if any.
+- [x] Generate deterministic development, holdout, and full reports plus uncertainty summary.
+- [x] Verify no prompt/scorer/corpus/truth change occurred after freeze, record the sole endpoint correction, and prove no second holdout run exists.
 
 ## Slice 5: defense reproduction and exit gate
 
-- [ ] Write clean deployment, demo, rescore, and secret-handling instructions.
-- [ ] Run backend `./mvnw -B -ntp verify` with zero skips.
-- [ ] Run frontend `npm ci`, lint, typecheck, tests, and build.
-- [ ] Run evaluation unit tests, schema/corpus validation, scorer self-test, and raw-output report recomputation.
-- [ ] Run a fresh-volume Compose cold start and verify all three services plus exactly sixteen tables.
-- [ ] Run architecture, dependency, route/menu, migration/table, credential, and `git diff --check` audits.
-- [ ] Confirm CI state when a pushed commit exists; otherwise record that CI is not yet externally proven.
-- [ ] Complete `result.md` with evidence, deviations, limitations, rollback, and the explicit handoff to the later `ForgePilot-Frontend/` visual rebuild.
+- [x] Write clean deployment, demo, rescore, and secret-handling instructions.
+- [x] Run backend `./mvnw -B -ntp verify` with zero skips.
+- [x] Run frontend `npm ci`, lint, typecheck, tests, and build.
+- [x] Run evaluation unit tests, schema/corpus validation, scorer self-test, and raw-output report recomputation.
+- [x] Run a fresh-volume Compose cold start and verify all three services plus exactly sixteen tables.
+- [x] Run architecture, dependency, route/menu, migration/table, credential, and `git diff --check` audits.
+- [x] Confirm CI state when a pushed commit exists; otherwise record that CI is not yet externally proven.
+- [x] Complete `result.md` with evidence, deviations, limitations, rollback, and the explicit handoff to the later `ForgePilot-Frontend/` visual rebuild.
 
 ## Rollback points
 

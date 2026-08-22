@@ -1,0 +1,34 @@
+{
+  "evidenceVersion": "forgepilot-formal-development-provider-failure-v1",
+  "observedAt": "2026-08-22T14:04:08Z",
+  "attemptStartedAt": "2026-08-22T14:02:04.792159Z",
+  "command": "python3 evaluation/tools/formal_evaluation.py run --split development",
+  "freezeHash": "55fc3176b6c843d214aa405781c1fe404ee7663c3e177f8a3cd67d9b22021e5d",
+  "provider": {
+    "endpointIdentity": "https://api.openai.com/v1/chat/completions",
+    "model": "gpt-5.6-luna",
+    "temperature": 0.0
+  },
+  "result": {
+    "attemptedPerArm": 26,
+    "completedPerArm": 0,
+    "failedPerArm": 26,
+    "failureKind": "PROVIDER",
+    "failureReason": "provider HTTP 401",
+    "holdoutLedgerCreated": false,
+    "holdoutRunStarted": false
+  },
+  "preservedAt": "evaluation/results/formal/attempts/development-provider-401-20260822T140204Z",
+  "rawOutputSha256": {
+    "evaluation/results/formal/attempts/development-provider-401-20260822T140204Z/diff_only/runs/run.json": "c6274d3e261467e5a1a864c2de1b03d8ac607c1ca61ed8af211850c3ba96e0c7",
+    "evaluation/results/formal/attempts/development-provider-401-20260822T140204Z/diff_only/score.json": "2b3b9df94515288bfaf0d1397d172a0d77d0b0e2dce1f1b50cf7693ad6dd8d03",
+    "evaluation/results/formal/attempts/development-provider-401-20260822T140204Z/diff_only/score.md": "9bde2a8bfefbca6c8efefbf989db639e8a80e6300fe50fc2fdc0687207e3bdf3",
+    "evaluation/results/formal/attempts/development-provider-401-20260822T140204Z/diff_requirement_ac/runs/run.json": "75bc1a6b69c72bdc2b8c1fabae087b8b655e11983c80cf3f48cfaef17873a5a7",
+    "evaluation/results/formal/attempts/development-provider-401-20260822T140204Z/diff_requirement_ac/score.json": "6e56575a8fea95b8a6f7c64376d6bdb6d0bc15e5ae59d1a9a15010d9bcb55853",
+    "evaluation/results/formal/attempts/development-provider-401-20260822T140204Z/diff_requirement_ac/score.md": "68508317734ead11858b3b67c53bc5ff93a51b2d6553dc99c8d06a4b2535a54d",
+    "evaluation/results/formal/attempts/development-provider-401-20260822T140204Z/diff_requirement_ac_knowledge/runs/run.json": "131eaddb682a7f4da56753b277b3d5e2dce8c6b697bac80c573acedc544241e6",
+    "evaluation/results/formal/attempts/development-provider-401-20260822T140204Z/diff_requirement_ac_knowledge/score.json": "54c33db4c54c3c0e6396dcc62cef3e3b74820639e69bbf52b2e48b9c3cc40b2e",
+    "evaluation/results/formal/attempts/development-provider-401-20260822T140204Z/diff_requirement_ac_knowledge/score.md": "3a29390f968e3c7a2714163345e7598a68259dd77143adac3163c415dd45f182"
+  },
+  "secretHandling": "No API key bytes, prefixes, suffixes, hashes, or provider response body are recorded."
+}
