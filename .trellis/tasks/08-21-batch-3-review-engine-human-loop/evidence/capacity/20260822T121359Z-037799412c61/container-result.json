@@ -1,0 +1,24 @@
+[
+  {
+    "Name": "/forgepilot-batch3-cap-20260822t121359z-037799412c61-backend-1",
+    "State": {
+      "Status": "running",
+      "Running": true,
+      "OOMKilled": false,
+      "ExitCode": 0
+    },
+    "RestartCount": 0,
+    "MemoryLimit": 805306368
+  },
+  {
+    "Name": "/forgepilot-batch3-cap-20260822t121359z-037799412c61-postgres-1",
+    "State": {
+      "Status": "running",
+      "Running": true,
+      "OOMKilled": false,
+      "ExitCode": 0
+    },
+    "RestartCount": 0,
+    "MemoryLimit": 536870912
+  }
+]

@@ -1,0 +1,61 @@
+ M .trellis/tasks/08-21-batch-3-review-engine-human-loop/api-contract.md
+ M backend/src/main/java/com/forgepilot/requirement/RequirementController.java
+ M backend/src/main/java/com/forgepilot/review/ReviewRepository.java
+ M backend/src/main/java/com/forgepilot/scm/PullRequest.java
+ M backend/src/main/java/com/forgepilot/scm/PullRequestSyncService.java
+ M backend/src/main/resources/application.yml
+ M backend/src/test/java/com/forgepilot/FoundationDatabaseTest.java
+ M backend/src/test/java/com/forgepilot/auth/AuthApiTest.java
+ M backend/src/test/java/com/forgepilot/scm/GitHubWebhookIngestionTest.java
+ M docs/v2/ARCHITECTURE.md
+ M frontend/src/app/routes.ts
+ M frontend/src/features/project/ProjectsPage.vue
+ M frontend/src/features/requirement/api.ts
+?? .trellis/tasks/08-21-batch-3-review-engine-human-loop/evidence/
+?? ForgePilot-Frontend/
+?? backend/src/main/java/com/forgepilot/requirement/QualityReport.java
+?? backend/src/main/java/com/forgepilot/requirement/RequirementQualityService.java
+?? backend/src/main/java/com/forgepilot/review/AcVerdict.java
+?? backend/src/main/java/com/forgepilot/review/ChangedFileBatcher.java
+?? backend/src/main/java/com/forgepilot/review/DecisionRepository.java
+?? backend/src/main/java/com/forgepilot/review/FindingContinuityCalculator.java
+?? backend/src/main/java/com/forgepilot/review/FindingController.java
+?? backend/src/main/java/com/forgepilot/review/FindingKeys.java
+?? backend/src/main/java/com/forgepilot/review/FindingLifecycleService.java
+?? backend/src/main/java/com/forgepilot/review/FindingLineageRepository.java
+?? backend/src/main/java/com/forgepilot/review/PullRequestChangedListener.java
+?? backend/src/main/java/com/forgepilot/review/ReviewActivityController.java
+?? backend/src/main/java/com/forgepilot/review/ReviewActivityRepository.java
+?? backend/src/main/java/com/forgepilot/review/ReviewActivityService.java
+?? backend/src/main/java/com/forgepilot/review/ReviewClaimRepository.java
+?? backend/src/main/java/com/forgepilot/review/ReviewController.java
+?? backend/src/main/java/com/forgepilot/review/ReviewDecisionService.java
+?? backend/src/main/java/com/forgepilot/review/ReviewExecutor.java
+?? backend/src/main/java/com/forgepilot/review/ReviewExecutorConfig.java
+?? backend/src/main/java/com/forgepilot/review/ReviewOutput.java
+?? backend/src/main/java/com/forgepilot/review/ReviewOutputValidator.java
+?? backend/src/main/java/com/forgepilot/review/ReviewPipeline.java
+?? backend/src/main/java/com/forgepilot/review/ReviewPrompts.java
+?? backend/src/main/java/com/forgepilot/review/ReviewReconciliationScheduler.java
+?? backend/src/main/java/com/forgepilot/review/ReviewService.java
+?? backend/src/main/java/com/forgepilot/review/ReviewViews.java
+?? backend/src/main/resources/db/migration/V7__pull_request_title.sql
+?? backend/src/test/java/com/forgepilot/requirement/RequirementQualityTest.java
+?? backend/src/test/java/com/forgepilot/review/ChangedFileBatcherTest.java
+?? backend/src/test/java/com/forgepilot/review/FindingContinuityTest.java
+?? backend/src/test/java/com/forgepilot/review/FindingLifecycleTest.java
+?? backend/src/test/java/com/forgepilot/review/ReviewActivityTest.java
+?? backend/src/test/java/com/forgepilot/review/ReviewDecisionTest.java
+?? backend/src/test/java/com/forgepilot/review/ReviewEngineTest.java
+?? backend/src/test/java/com/forgepilot/review/ReviewFencingTest.java
+?? backend/src/test/java/com/forgepilot/review/ReviewOutputValidatorTest.java
+?? backend/src/test/java/com/forgepilot/review/ReviewPipelineIntegrationTest.java
+?? backend/src/test/java/com/forgepilot/scm/ChangedFileLimitTest.java
+?? backend/src/test/java/com/forgepilot/scm/GitHubClientGuardTest.java
+?? backend/src/test/java/com/forgepilot/scm/ScmIdentityFreezeConcurrencyTest.java
+?? backend/src/test/java/com/forgepilot/scm/ScmSecretKeyStartupTest.java
+?? frontend/MANUAL-ACCEPTANCE.md
+?? frontend/src/features/project/ProjectSettingsPage.vue
+?? frontend/src/features/review/
+?? frontend/src/features/scm/
+?? frontend/tests/journey.spec.ts

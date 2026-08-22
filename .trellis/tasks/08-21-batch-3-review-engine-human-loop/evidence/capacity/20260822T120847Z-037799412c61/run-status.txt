@@ -1,0 +1,1 @@
+INVALID	exit=0	time=2026-08-22T12:11:02Z	reason=canonical-manifest-over-product-limit

@@ -1,0 +1,122 @@
+{
+  "arm": "DIFF_ONLY",
+  "caseSetVersion": "phase1-quick-v1",
+  "cases": [
+    {
+      "acVerdicts": [],
+      "caseId": "java-sql-resource-leak",
+      "failureKind": "PROVIDER",
+      "failureReason": "provider HTTP 403",
+      "findings": [],
+      "status": "FAILED",
+      "usage": null
+    },
+    {
+      "acVerdicts": [],
+      "caseId": "typescript-ambiguous-null",
+      "failureKind": "PROVIDER",
+      "failureReason": "provider HTTP 403",
+      "findings": [],
+      "status": "FAILED",
+      "usage": null
+    },
+    {
+      "acVerdicts": [],
+      "caseId": "java-broken-build",
+      "failureKind": "PROVIDER",
+      "failureReason": "provider HTTP 403",
+      "findings": [],
+      "status": "FAILED",
+      "usage": null
+    },
+    {
+      "acVerdicts": [],
+      "caseId": "biz-fee-rate-hardcoded",
+      "failureKind": "PROVIDER",
+      "failureReason": "provider HTTP 403",
+      "findings": [],
+      "status": "FAILED",
+      "usage": null
+    },
+    {
+      "acVerdicts": [],
+      "caseId": "biz-status-machine-bypass",
+      "failureKind": "PROVIDER",
+      "failureReason": "provider HTTP 403",
+      "findings": [],
+      "status": "FAILED",
+      "usage": null
+    },
+    {
+      "acVerdicts": [],
+      "caseId": "eng-contract-drift-dual-encode",
+      "failureKind": "PROVIDER",
+      "failureReason": "provider HTTP 403",
+      "findings": [],
+      "status": "FAILED",
+      "usage": null
+    },
+    {
+      "acVerdicts": [],
+      "caseId": "eng-transactional-self-invocation",
+      "failureKind": "PROVIDER",
+      "failureReason": "provider HTTP 403",
+      "findings": [],
+      "status": "FAILED",
+      "usage": null
+    },
+    {
+      "acVerdicts": [],
+      "caseId": "biz-currency-unchecked",
+      "failureKind": "PROVIDER",
+      "failureReason": "provider HTTP 403",
+      "findings": [],
+      "status": "FAILED",
+      "usage": null
+    },
+    {
+      "acVerdicts": [],
+      "caseId": "fp-java-whitelist-order-by",
+      "failureKind": "PROVIDER",
+      "failureReason": "provider HTTP 403",
+      "findings": [],
+      "status": "FAILED",
+      "usage": null
+    },
+    {
+      "acVerdicts": [],
+      "caseId": "fp-python-chore-gitignore-cleanup",
+      "failureKind": "PROVIDER",
+      "failureReason": "provider HTTP 403",
+      "findings": [],
+      "status": "FAILED",
+      "usage": null
+    },
+    {
+      "acVerdicts": [],
+      "caseId": "miss-template-share-authz",
+      "failureKind": "PROVIDER",
+      "failureReason": "provider HTTP 403",
+      "findings": [],
+      "status": "FAILED",
+      "usage": null
+    },
+    {
+      "acVerdicts": [],
+      "caseId": "sec-java-customer-search-sqli",
+      "failureKind": "PROVIDER",
+      "failureReason": "provider HTTP 403",
+      "findings": [],
+      "status": "FAILED",
+      "usage": null
+    }
+  ],
+  "config": {
+    "model": "gpt-5.6-luna",
+    "promptVersion": "phase6-development-three-arm-v1",
+    "temperature": 0.0
+  },
+  "contractVersion": "forgepilot-evaluation-run-v1",
+  "corpusVersion": "forgepilot-phase1-quick-v1",
+  "runKind": "MODEL_EVALUATION"
+}

@@ -1,0 +1,6 @@
+id,status,execution_attempt,engine,prompt_version,model,files,manifest_chars,truncated
+1,COMPLETED,1,forgepilot-review,review-1,capacity-stub-chat,300,4125900,false
+2,COMPLETED,1,forgepilot-review,review-1,capacity-stub-chat,300,4125900,false
+use_case,status,count
+EMBEDDING,SUCCESS,2
+REVIEW,SUCCESS,152

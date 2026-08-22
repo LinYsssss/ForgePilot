@@ -1,0 +1,2 @@
+{"timestamp":"2026-08-22T12:14:50Z","sample":1,"heapUsedBytes":49175912,"heapCommittedBytes":129892352,"directUsedBytes":75776,"hikariActive":0,"hikariPending":0,"statuses":"RUNNING|RUNNING"}
+{"timestamp":"2026-08-22T12:14:55Z","sample":2,"heapUsedBytes":83167816,"heapCommittedBytes":129892352,"directUsedBytes":428032,"hikariActive":1,"hikariPending":0,"statuses":"RUNNING|RUNNING"}

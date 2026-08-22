@@ -1,0 +1,6 @@
+INSERT 0 2
+ reviews | min_files | max_manifest_chars 
+---------+-----------+--------------------
+       2 |       300 |            3990900
+(1 row)
+

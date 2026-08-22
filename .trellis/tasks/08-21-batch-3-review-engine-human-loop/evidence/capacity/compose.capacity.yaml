@@ -1,0 +1,29 @@
+services:
+  ai-stub:
+    image: nginx:1.29-alpine
+    volumes:
+      - ./.trellis/tasks/08-21-batch-3-review-engine-human-loop/evidence/capacity/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    mem_limit: 32m
+    healthcheck:
+      test: [CMD, wget, --quiet, --spider, http://127.0.0.1:8080/healthz]
+      interval: 2s
+      timeout: 2s
+      retries: 20
+
+  backend:
+    environment:
+      SPRING_PROFILES_ACTIVE: capacity
+      FORGEPILOT_AI_BASE_URL: http://ai-stub:8080/v1
+      FORGEPILOT_AI_API_KEY: capacity-local-only
+      FORGEPILOT_AI_CHAT_MODEL: capacity-stub-chat
+      FORGEPILOT_KNOWLEDGE_EMBEDDING_PROVIDER: capacity-stub
+      FORGEPILOT_KNOWLEDGE_EMBEDDING_MODEL: capacity-stub-embedding
+      FORGEPILOT_KNOWLEDGE_EMBEDDING_VERSION: capacity-v1
+      FORGEPILOT_REVIEW_CONCURRENCY: 2
+      FORGEPILOT_REVIEW_QUEUE_CAPACITY: 4
+      FORGEPILOT_REVIEW_PENDING_STALL_SECONDS: 1
+      FORGEPILOT_REVIEW_RECONCILIATION_INTERVAL_MS: 1000
+    depends_on:
+      ai-stub:
+        condition: service_healthy
+

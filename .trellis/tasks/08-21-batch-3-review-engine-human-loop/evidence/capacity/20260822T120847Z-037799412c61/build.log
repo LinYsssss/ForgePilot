@@ -1,0 +1,188 @@
+ Image forgepilot-batch3-cap-20260822t120847z-037799412c61-backend Building 
+ Image forgepilot-batch3-cap-20260822t120847z-037799412c61-frontend Building 
+#1 [internal] load local bake definitions
+#1 reading from stdin 1.10kB done
+#1 DONE 0.0s
+
+#2 [frontend internal] load build definition from Dockerfile
+#2 transferring dockerfile: 452B 0.0s done
+#2 DONE 0.1s
+
+#3 [backend internal] load build definition from Dockerfile
+#3 transferring dockerfile: 882B 0.0s done
+#3 DONE 0.1s
+
+#4 [backend internal] load metadata for docker.io/library/eclipse-temurin:21-jdk
+#4 DONE 0.1s
+
+#5 [backend internal] load metadata for docker.io/library/eclipse-temurin:21-jre
+#5 ...
+
+#6 [frontend internal] load metadata for docker.io/library/nginx:1.29-alpine
+#6 DONE 0.8s
+
+#7 [frontend internal] load metadata for docker.io/library/node:24-bookworm-slim
+#7 DONE 0.8s
+
+#5 [backend internal] load metadata for docker.io/library/eclipse-temurin:21-jre
+#5 DONE 0.7s
+
+#8 [backend internal] load .dockerignore
+#8 transferring context: 2B done
+#8 DONE 0.0s
+
+#9 [frontend internal] load .dockerignore
+#9 transferring context: 69B 0.0s done
+#9 DONE 0.1s
+
+#10 [backend internal] load build context
+#10 DONE 0.0s
+
+#11 [frontend internal] load build context
+#11 DONE 0.0s
+
+#12 [frontend stage-1 1/3] FROM docker.io/library/nginx:1.29-alpine@sha256:5616878291a2eed594aee8db4dade5878cf7edcb475e59193904b198d9b830de
+#12 resolve docker.io/library/nginx:1.29-alpine@sha256:5616878291a2eed594aee8db4dade5878cf7edcb475e59193904b198d9b830de
+#12 ...
+
+#13 [backend build 1/4] FROM docker.io/library/eclipse-temurin:21-jdk@sha256:98155457fcdbeb0987472e8abf721657b698ede407aad52ac24ae42618c0931c
+#13 resolve docker.io/library/eclipse-temurin:21-jdk@sha256:98155457fcdbeb0987472e8abf721657b698ede407aad52ac24ae42618c0931c 0.2s done
+#13 DONE 0.3s
+
+#12 [frontend stage-1 1/3] FROM docker.io/library/nginx:1.29-alpine@sha256:5616878291a2eed594aee8db4dade5878cf7edcb475e59193904b198d9b830de
+#12 resolve docker.io/library/nginx:1.29-alpine@sha256:5616878291a2eed594aee8db4dade5878cf7edcb475e59193904b198d9b830de 0.2s done
+#12 DONE 0.2s
+
+#14 [backend stage-1 1/6] FROM docker.io/library/eclipse-temurin:21-jre@sha256:7a65df4b22d2de92d4e04056e884f3b9122d70b21e2847fd66084278bd0ce037
+#14 resolve docker.io/library/eclipse-temurin:21-jre@sha256:7a65df4b22d2de92d4e04056e884f3b9122d70b21e2847fd66084278bd0ce037 0.2s done
+#14 DONE 0.2s
+
+#15 [frontend build 1/6] FROM docker.io/library/node:24-bookworm-slim@sha256:3638d9a6fe4030bd716be989438248074489337ba3275657f93595428be4fc03
+#15 resolve docker.io/library/node:24-bookworm-slim@sha256:3638d9a6fe4030bd716be989438248074489337ba3275657f93595428be4fc03 0.2s done
+#15 DONE 0.2s
+
+#11 [frontend internal] load build context
+#11 transferring context: 2.48kB 0.0s done
+#11 DONE 0.0s
+
+#10 [backend internal] load build context
+#10 ...
+
+#16 [frontend stage-1 2/3] COPY nginx.conf /etc/nginx/conf.d/default.conf
+#16 CACHED
+
+#17 [frontend build 2/6] WORKDIR /workspace
+#17 CACHED
+
+#18 [frontend build 3/6] COPY package.json package-lock.json ./
+#18 CACHED
+
+#19 [frontend build 4/6] RUN npm ci
+#19 CACHED
+
+#20 [frontend build 5/6] COPY . .
+#20 CACHED
+
+#21 [frontend build 6/6] RUN npm run build
+#21 CACHED
+
+#22 [frontend stage-1 3/3] COPY --from=build /workspace/dist /usr/share/nginx/html
+#22 CACHED
+
+#10 [backend internal] load build context
+#10 ...
+
+#23 [frontend] exporting to image
+#23 exporting layers 0.0s done
+#23 exporting manifest sha256:bf079455b30c8d61467722a4eed92cf34445da69cb4adefd2ebd8d2a64443205 0.1s done
+#23 exporting config sha256:b5a680e1c1a966aaefcbded9cc7e657cd5edb51e43b98def438257e718837759 0.1s done
+#23 exporting attestation manifest sha256:eaa605dad628d0906e0de285be96ebf2e8953a72f9174283c797ef3d4bb3ea5d 0.2s done
+#23 exporting manifest list sha256:09036aea1b2662f11aa656867c65d7a775d8d69d1705526fa09681d9efc4067d 0.1s done
+#23 naming to docker.io/library/forgepilot-batch3-cap-20260822t120847z-037799412c61-frontend:latest done
+#23 unpacking to docker.io/library/forgepilot-batch3-cap-20260822t120847z-037799412c61-frontend:latest 0.1s done
+#23 DONE 0.8s
+
+#10 [backend internal] load build context
+#10 transferring context: 63.17MB 2.4s done
+#10 DONE 2.4s
+
+#24 [backend build 2/4] WORKDIR /workspace
+#24 CACHED
+
+#25 [frontend] resolving provenance for metadata file
+#25 DONE 0.0s
+
+#26 [backend build 3/4] COPY . .
+#26 DONE 1.5s
+
+#27 [backend build 4/4] RUN chmod +x mvnw && ./mvnw -B -ntp -DskipTests package
+#27 8.226 [INFO] Scanning for projects...
+#27 12.84 [INFO] 
+#27 12.84 [INFO] -----------------< com.forgepilot:forgepilot-backend >------------------
+#27 12.84 [INFO] Building forgepilot-backend 0.1.0-SNAPSHOT
+#27 12.84 [INFO]   from pom.xml
+#27 12.84 [INFO] --------------------------------[ jar ]---------------------------------
+#27 36.31 [INFO] 
+#27 36.32 [INFO] --- resources:3.5.0:resources (default-resources) @ forgepilot-backend ---
+#27 37.41 [INFO] Copying 2 resources from src/main/resources to target/classes
+#27 37.46 [INFO] Copying 7 resources from src/main/resources to target/classes
+#27 37.51 [INFO] 
+#27 37.51 [INFO] --- compiler:3.15.0:compile (default-compile) @ forgepilot-backend ---
+#27 38.89 [INFO] Nothing to compile - all classes are up to date.
+#27 38.89 [INFO] 
+#27 38.89 [INFO] --- resources:3.5.0:testResources (default-testResources) @ forgepilot-backend ---
+#27 38.90 [INFO] skip non existing resourceDirectory /workspace/src/test/resources
+#27 38.90 [INFO] 
+#27 38.90 [INFO] --- compiler:3.15.0:testCompile (default-testCompile) @ forgepilot-backend ---
+#27 38.96 [INFO] Nothing to compile - all classes are up to date.
+#27 38.96 [INFO] 
+#27 38.96 [INFO] --- surefire:3.5.6:test (default-test) @ forgepilot-backend ---
+#27 40.54 [INFO] Tests are skipped.
+#27 40.54 [INFO] 
+#27 40.54 [INFO] --- jar:3.5.0:jar (default-jar) @ forgepilot-backend ---
+#27 43.99 [INFO] Building jar: /workspace/target/forgepilot-backend.jar
+#27 44.65 [INFO] 
+#27 44.65 [INFO] --- spring-boot:4.1.0:repackage (repackage) @ forgepilot-backend ---
+#27 49.57 [INFO] Replacing main artifact /workspace/target/forgepilot-backend.jar with repackaged archive, adding nested dependencies in BOOT-INF/.
+#27 49.57 [INFO] The original artifact has been renamed to /workspace/target/forgepilot-backend.jar.original
+#27 49.58 [INFO] ------------------------------------------------------------------------
+#27 49.59 [INFO] BUILD SUCCESS
+#27 49.59 [INFO] ------------------------------------------------------------------------
+#27 49.59 [INFO] Total time:  41.424 s
+#27 49.59 [INFO] Finished at: 2026-08-22T12:09:44Z
+#27 49.59 [INFO] ------------------------------------------------------------------------
+#27 DONE 49.9s
+
+#28 [backend stage-1 2/6] RUN apt-get update     && apt-get install --no-install-recommends --yes curl     && rm -rf /var/lib/apt/lists/*
+#28 CACHED
+
+#29 [backend stage-1 3/6] WORKDIR /app
+#29 CACHED
+
+#30 [backend stage-1 4/6] RUN useradd --system --uid 10001 forgepilot
+#30 CACHED
+
+#31 [backend stage-1 5/6] COPY --from=build /workspace/target/forgepilot-backend.jar /app/forgepilot-backend.jar
+#31 DONE 0.3s
+
+#32 [backend stage-1 6/6] RUN chown -R forgepilot:forgepilot /app
+#32 DONE 0.7s
+
+#33 [backend] exporting to image
+#33 exporting layers
+#33 exporting layers 7.6s done
+#33 exporting manifest sha256:6833305e864574f01c4b97b80d4084693e528a2ce6e3576f8871cc0fb9e1f91f
+#33 exporting manifest sha256:6833305e864574f01c4b97b80d4084693e528a2ce6e3576f8871cc0fb9e1f91f 0.0s done
+#33 exporting config sha256:dd9688499106cf15ca642fdfe11f55a25ad1df9450bfafe0bd3fb3b837632ec4 0.0s done
+#33 exporting attestation manifest sha256:a7085934eeddac68a00bc08790c171596438583d8f6e30d957a6262e93d291eb
+#33 exporting attestation manifest sha256:a7085934eeddac68a00bc08790c171596438583d8f6e30d957a6262e93d291eb 0.1s done
+#33 exporting manifest list sha256:174fba8d294d588b88d40784c98aec38d96083ec5c9a7a18ef48e9160982aa9f 0.0s done
+#33 naming to docker.io/library/forgepilot-batch3-cap-20260822t120847z-037799412c61-backend:latest done
+#33 unpacking to docker.io/library/forgepilot-batch3-cap-20260822t120847z-037799412c61-backend:latest
+#33 unpacking to docker.io/library/forgepilot-batch3-cap-20260822t120847z-037799412c61-backend:latest 3.0s done
+#33 DONE 10.9s
+
+#34 [backend] resolving provenance for metadata file
+#34 DONE 0.1s
+ Image forgepilot-batch3-cap-20260822t120847z-037799412c61-backend Built 
+ Image forgepilot-batch3-cap-20260822t120847z-037799412c61-frontend Built 

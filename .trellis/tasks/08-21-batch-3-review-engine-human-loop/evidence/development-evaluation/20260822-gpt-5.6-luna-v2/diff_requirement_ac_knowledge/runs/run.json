@@ -1,0 +1,365 @@
+{
+  "arm": "DIFF_REQUIREMENT_AC_KNOWLEDGE",
+  "caseSetVersion": "phase1-quick-v1",
+  "cases": [
+    {
+      "acVerdicts": [
+        {
+          "acKey": "AC-0001",
+          "verdict": "AT_RISK"
+        },
+        {
+          "acKey": "AC-0002",
+          "verdict": "NOT_FOUND"
+        }
+      ],
+      "caseId": "java-sql-resource-leak",
+      "failureKind": null,
+      "failureReason": null,
+      "findings": [
+        {
+          "category": "RESOURCE_LEAK",
+          "filePath": "src/App.java",
+          "findingType": "REQUIREMENT",
+          "lineEnd": 7,
+          "lineStart": 5
+        }
+      ],
+      "status": "COMPLETED",
+      "usage": {
+        "inputTokens": 553,
+        "latencyMs": 5988,
+        "outputTokens": 279
+      }
+    },
+    {
+      "acVerdicts": [
+        {
+          "acKey": "AC-0001",
+          "verdict": "NOT_FOUND"
+        },
+        {
+          "acKey": "AC-0002",
+          "verdict": "COVERED"
+        }
+      ],
+      "caseId": "typescript-ambiguous-null",
+      "failureKind": null,
+      "failureReason": null,
+      "findings": [
+        {
+          "category": "NULLABILITY",
+          "filePath": "src/user.ts",
+          "findingType": "REQUIREMENT",
+          "lineEnd": 3,
+          "lineStart": 3
+        }
+      ],
+      "status": "COMPLETED",
+      "usage": {
+        "inputTokens": 527,
+        "latencyMs": 5088,
+        "outputTokens": 239
+      }
+    },
+    {
+      "acVerdicts": [
+        {
+          "acKey": "AC-0001",
+          "verdict": "COVERED"
+        }
+      ],
+      "caseId": "java-broken-build",
+      "failureKind": null,
+      "failureReason": null,
+      "findings": [],
+      "status": "COMPLETED",
+      "usage": {
+        "inputTokens": 460,
+        "latencyMs": 5563,
+        "outputTokens": 264
+      }
+    },
+    {
+      "acVerdicts": [
+        {
+          "acKey": "AC-0001",
+          "verdict": "AT_RISK"
+        },
+        {
+          "acKey": "AC-0002",
+          "verdict": "NOT_FOUND"
+        },
+        {
+          "acKey": "AC-0003",
+          "verdict": "NOT_FOUND"
+        }
+      ],
+      "caseId": "biz-fee-rate-hardcoded",
+      "failureKind": null,
+      "failureReason": null,
+      "findings": [
+        {
+          "category": "BUSINESS_RULE_RISK",
+          "filePath": "src/main/java/com/acme/clearing/service/InstantSettlementService.java",
+          "findingType": "REQUIREMENT",
+          "lineEnd": 13,
+          "lineStart": 13
+        },
+        {
+          "category": "BUSINESS_RULE_RISK",
+          "filePath": "src/main/java/com/acme/clearing/service/InstantSettlementService.java",
+          "findingType": "REQUIREMENT",
+          "lineEnd": 25,
+          "lineStart": 25
+        }
+      ],
+      "status": "COMPLETED",
+      "usage": {
+        "inputTokens": 1152,
+        "latencyMs": 9426,
+        "outputTokens": 436
+      }
+    },
+    {
+      "acVerdicts": [
+        {
+          "acKey": "AC-0001",
+          "verdict": "AT_RISK"
+        },
+        {
+          "acKey": "AC-0002",
+          "verdict": "COVERED"
+        }
+      ],
+      "caseId": "biz-status-machine-bypass",
+      "failureKind": null,
+      "failureReason": null,
+      "findings": [
+        {
+          "category": "BUSINESS_RULE_RISK",
+          "filePath": "src/main/java/com/acme/clearing/payout/service/ExpressPayoutService.java",
+          "findingType": "REQUIREMENT",
+          "lineEnd": 30,
+          "lineStart": 26
+        }
+      ],
+      "status": "COMPLETED",
+      "usage": {
+        "inputTokens": 988,
+        "latencyMs": 6482,
+        "outputTokens": 306
+      }
+    },
+    {
+      "acVerdicts": [
+        {
+          "acKey": "AC-0001",
+          "verdict": "AT_RISK"
+        },
+        {
+          "acKey": "AC-0002",
+          "verdict": "COVERED"
+        }
+      ],
+      "caseId": "eng-contract-drift-dual-encode",
+      "failureKind": null,
+      "failureReason": null,
+      "findings": [
+        {
+          "category": "CONTRACT_DRIFT",
+          "filePath": "src/main/java/com/acme/report/ReportLinkRenderer.java",
+          "findingType": "REQUIREMENT",
+          "lineEnd": 9,
+          "lineStart": 8
+        }
+      ],
+      "status": "COMPLETED",
+      "usage": {
+        "inputTokens": 1289,
+        "latencyMs": 7829,
+        "outputTokens": 395
+      }
+    },
+    {
+      "acVerdicts": [
+        {
+          "acKey": "AC-0001",
+          "verdict": "AT_RISK"
+        },
+        {
+          "acKey": "AC-0002",
+          "verdict": "COVERED"
+        },
+        {
+          "acKey": "AC-0003",
+          "verdict": "COVERED"
+        }
+      ],
+      "caseId": "eng-transactional-self-invocation",
+      "failureKind": null,
+      "failureReason": null,
+      "findings": [
+        {
+          "category": "TRANSACTION_RISK",
+          "filePath": "src/main/java/com/acme/inventory/InventoryService.java",
+          "findingType": "REQUIREMENT",
+          "lineEnd": 39,
+          "lineStart": 31
+        }
+      ],
+      "status": "COMPLETED",
+      "usage": {
+        "inputTokens": 1088,
+        "latencyMs": 7358,
+        "outputTokens": 328
+      }
+    },
+    {
+      "acVerdicts": [
+        {
+          "acKey": "AC-0001",
+          "verdict": "AT_RISK"
+        },
+        {
+          "acKey": "AC-0002",
+          "verdict": "COVERED"
+        }
+      ],
+      "caseId": "biz-currency-unchecked",
+      "failureKind": null,
+      "failureReason": null,
+      "findings": [
+        {
+          "category": "BUSINESS_RULE_RISK",
+          "filePath": "src/main/java/com/acme/clearing/service/SettlementService.java",
+          "findingType": "REQUIREMENT",
+          "lineEnd": 39,
+          "lineStart": 39
+        }
+      ],
+      "status": "COMPLETED",
+      "usage": {
+        "inputTokens": 1309,
+        "latencyMs": 9877,
+        "outputTokens": 498
+      }
+    },
+    {
+      "acVerdicts": [
+        {
+          "acKey": "AC-0001",
+          "verdict": "COVERED"
+        },
+        {
+          "acKey": "AC-0002",
+          "verdict": "COVERED"
+        }
+      ],
+      "caseId": "fp-java-whitelist-order-by",
+      "failureKind": null,
+      "failureReason": null,
+      "findings": [],
+      "status": "COMPLETED",
+      "usage": {
+        "inputTokens": 1615,
+        "latencyMs": 30521,
+        "outputTokens": 1606
+      }
+    },
+    {
+      "acVerdicts": [
+        {
+          "acKey": "AC-0001",
+          "verdict": "COVERED"
+        },
+        {
+          "acKey": "AC-0002",
+          "verdict": "COVERED"
+        }
+      ],
+      "caseId": "fp-python-chore-gitignore-cleanup",
+      "failureKind": null,
+      "failureReason": null,
+      "findings": [],
+      "status": "COMPLETED",
+      "usage": {
+        "inputTokens": 796,
+        "latencyMs": 3771,
+        "outputTokens": 149
+      }
+    },
+    {
+      "acVerdicts": [
+        {
+          "acKey": "AC-0001",
+          "verdict": "AT_RISK"
+        },
+        {
+          "acKey": "AC-0002",
+          "verdict": "COVERED"
+        },
+        {
+          "acKey": "AC-0003",
+          "verdict": "COVERED"
+        }
+      ],
+      "caseId": "miss-template-share-authz",
+      "failureKind": null,
+      "failureReason": null,
+      "findings": [
+        {
+          "category": "AUTHORIZATION_BYPASS",
+          "filePath": "src/templates.ts",
+          "findingType": "REQUIREMENT",
+          "lineEnd": 81,
+          "lineStart": 77
+        }
+      ],
+      "status": "COMPLETED",
+      "usage": {
+        "inputTokens": 2785,
+        "latencyMs": 20496,
+        "outputTokens": 1086
+      }
+    },
+    {
+      "acVerdicts": [
+        {
+          "acKey": "AC-0001",
+          "verdict": "AT_RISK"
+        },
+        {
+          "acKey": "AC-0002",
+          "verdict": "COVERED"
+        }
+      ],
+      "caseId": "sec-java-customer-search-sqli",
+      "failureKind": null,
+      "failureReason": null,
+      "findings": [
+        {
+          "category": "SQL_INJECTION",
+          "filePath": "src/main/java/com/acme/customers/CustomerSearchRepository.java",
+          "findingType": "REQUIREMENT",
+          "lineEnd": 15,
+          "lineStart": 15
+        }
+      ],
+      "status": "COMPLETED",
+      "usage": {
+        "inputTokens": 604,
+        "latencyMs": 4549,
+        "outputTokens": 201
+      }
+    }
+  ],
+  "config": {
+    "model": "gpt-5.6-luna",
+    "promptVersion": "phase6-development-three-arm-v1",
+    "temperature": 0.0
+  },
+  "contractVersion": "forgepilot-evaluation-run-v1",
+  "corpusVersion": "forgepilot-phase1-quick-v1",
+  "runKind": "MODEL_EVALUATION"
+}

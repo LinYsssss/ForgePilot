@@ -1,0 +1,232 @@
+backend-1  | Picked up JAVA_TOOL_OPTIONS: -Xms128m -Xmx384m -XX:MaxDirectMemorySize=128m -XX:MaxMetaspaceSize=128m -XX:+UseSerialGC -XX:NativeMemoryTracking=summary
+backend-1  | 
+backend-1  |   .   ____          _            __ _ _
+backend-1  |  /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+backend-1  | ( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+backend-1  |  \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+backend-1  |   '  |____| .__|_| |_|_| |_\__, | / / / /
+backend-1  |  =========|_|==============|___/=/_/_/_/
+backend-1  | 
+backend-1  |  :: Spring Boot ::                (v4.1.0)
+backend-1  | 
+backend-1  | 2026-08-22T12:14:14.822Z  INFO 1 --- [forgepilot-backend] [           main] com.forgepilot.ForgePilotApplication     : Starting ForgePilotApplication v0.1.0-SNAPSHOT using Java 21.0.12 with PID 1 (/app/forgepilot-backend.jar started by forgepilot in /app)
+backend-1  | 2026-08-22T12:14:14.833Z  INFO 1 --- [forgepilot-backend] [           main] com.forgepilot.ForgePilotApplication     : The following 1 profile is active: "capacity"
+backend-1  | 2026-08-22T12:14:18.524Z  INFO 1 --- [forgepilot-backend] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+backend-1  | 2026-08-22T12:14:18.839Z  INFO 1 --- [forgepilot-backend] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 285 ms. Found 19 JPA repository interfaces.
+backend-1  | 2026-08-22T12:14:21.359Z  INFO 1 --- [forgepilot-backend] [           main] o.s.boot.tomcat.TomcatWebServer          : Tomcat initialized with port 8080 (http)
+backend-1  | 2026-08-22T12:14:21.408Z  INFO 1 --- [forgepilot-backend] [           main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+backend-1  | 2026-08-22T12:14:21.410Z  INFO 1 --- [forgepilot-backend] [           main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/11.0.22]
+backend-1  | 2026-08-22T12:14:21.635Z  INFO 1 --- [forgepilot-backend] [           main] b.w.c.s.WebApplicationContextInitializer : Root WebApplicationContext: initialization completed in 6418 ms
+backend-1  | 2026-08-22T12:14:22.940Z  INFO 1 --- [forgepilot-backend] [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+backend-1  | 2026-08-22T12:14:23.624Z  INFO 1 --- [forgepilot-backend] [           main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection org.postgresql.jdbc.PgConnection@fd87c22
+backend-1  | 2026-08-22T12:14:23.629Z  INFO 1 --- [forgepilot-backend] [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+backend-1  | 2026-08-22T12:14:23.720Z  INFO 1 --- [forgepilot-backend] [           main] org.flywaydb.core.FlywayExecutor         : Database: jdbc:postgresql://postgres:5432/forgepilot (PostgreSQL 15.19)
+backend-1  | 2026-08-22T12:14:23.943Z  INFO 1 --- [forgepilot-backend] [           main] o.f.c.i.s.JdbcTableSchemaHistory         : Schema history table "public"."flyway_schema_history" does not exist yet
+backend-1  | 2026-08-22T12:14:23.954Z  INFO 1 --- [forgepilot-backend] [           main] o.f.core.internal.command.DbValidate     : Successfully validated 7 migrations (execution time 00:00.073s)
+backend-1  | 2026-08-22T12:14:24.008Z  INFO 1 --- [forgepilot-backend] [           main] o.f.c.i.s.JdbcTableSchemaHistory         : Creating Schema History table "public"."flyway_schema_history" ...
+backend-1  | 2026-08-22T12:14:24.240Z  INFO 1 --- [forgepilot-backend] [           main] o.f.core.internal.command.DbMigrate      : Current version of schema "public": << Empty Schema >>
+backend-1  | 2026-08-22T12:14:24.260Z  INFO 1 --- [forgepilot-backend] [           main] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "1 - foundation"
+backend-1  | 2026-08-22T12:14:24.413Z  INFO 1 --- [forgepilot-backend] [           main] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "2 - auth project"
+backend-1  | 2026-08-22T12:14:24.533Z  INFO 1 --- [forgepilot-backend] [           main] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "3 - requirement"
+backend-1  | 2026-08-22T12:14:24.763Z  INFO 1 --- [forgepilot-backend] [           main] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "4 - knowledge ai"
+backend-1  | 2026-08-22T12:14:24.931Z  INFO 1 --- [forgepilot-backend] [           main] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "5 - scm"
+backend-1  | 2026-08-22T12:14:25.349Z  INFO 1 --- [forgepilot-backend] [           main] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "6 - review"
+backend-1  | 2026-08-22T12:14:25.606Z  INFO 1 --- [forgepilot-backend] [           main] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "7 - pull request title"
+backend-1  | 2026-08-22T12:14:25.649Z  INFO 1 --- [forgepilot-backend] [           main] o.f.core.internal.command.DbMigrate      : Successfully applied 7 migrations to schema "public", now at version v7 (execution time 00:00.969s)
+backend-1  | 2026-08-22T12:14:26.258Z  INFO 1 --- [forgepilot-backend] [           main] org.hibernate.orm.jpa                    : HHH008540: Processing PersistenceUnitInfo [name: default]
+backend-1  | 2026-08-22T12:14:26.441Z  INFO 1 --- [forgepilot-backend] [           main] org.hibernate.orm.core                   : HHH000001: Hibernate ORM core version 7.4.1.Final
+backend-1  | 2026-08-22T12:14:28.127Z  INFO 1 --- [forgepilot-backend] [           main] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+backend-1  | 2026-08-22T12:14:28.406Z  INFO 1 --- [forgepilot-backend] [           main] org.hibernate.orm.connections.pooling    : HHH10001005: Database info:
+backend-1  | 	Database JDBC URL [jdbc:postgresql://postgres:5432/forgepilot]
+backend-1  | 	Database driver: PostgreSQL JDBC Driver
+backend-1  | 	Database dialect: PostgreSQLDialect
+backend-1  | 	Database version: 15.19
+backend-1  | 	Default catalog/schema: forgepilot/public
+backend-1  | 	Autocommit mode: undefined/unknown
+backend-1  | 	Isolation level: READ_COMMITTED [default READ_COMMITTED]
+backend-1  | 	JDBC fetch size: none
+backend-1  | 	Pool: DataSourceConnectionProvider
+backend-1  | 	Minimum pool size: undefined/unknown
+backend-1  | 	Maximum pool size: undefined/unknown
+backend-1  | 2026-08-22T12:14:32.613Z  INFO 1 --- [forgepilot-backend] [           main] org.hibernate.orm.core                   : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+backend-1  | 2026-08-22T12:14:32.780Z  INFO 1 --- [forgepilot-backend] [           main] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+backend-1  | 2026-08-22T12:14:33.023Z  INFO 1 --- [forgepilot-backend] [           main] o.s.d.j.r.query.QueryEnhancerFactories   : Hibernate is in classpath; If applicable, HQL parser will be used.
+backend-1  | 2026-08-22T12:14:37.542Z  INFO 1 --- [forgepilot-backend] [           main] r$InitializeUserDetailsManagerConfigurer : Global AuthenticationManager configured with UserDetailsService bean with name accountDetailsService
+backend-1  | 2026-08-22T12:14:39.639Z  INFO 1 --- [forgepilot-backend] [           main] o.s.b.a.e.web.EndpointLinksResolver      : Exposing 2 endpoints beneath base path '/actuator'
+backend-1  | 2026-08-22T12:14:39.921Z  INFO 1 --- [forgepilot-backend] [           main] o.s.boot.tomcat.TomcatWebServer          : Tomcat started on port 8080 (http) with context path '/'
+backend-1  | 2026-08-22T12:14:39.959Z  INFO 1 --- [forgepilot-backend] [           main] com.forgepilot.ForgePilotApplication     : Started ForgePilotApplication in 26.63 seconds (process running for 28.372)
+backend-1  | 2026-08-22T12:14:42.973Z  INFO 1 --- [forgepilot-backend] [nio-8080-exec-1] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
+backend-1  | 2026-08-22T12:14:42.974Z  INFO 1 --- [forgepilot-backend] [nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+backend-1  | 2026-08-22T12:14:42.980Z  INFO 1 --- [forgepilot-backend] [nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Completed initialization in 5 ms
+ai-stub-1  | /docker-entrypoint.sh: /docker-entrypoint.d/ is not empty, will attempt to perform configuration
+ai-stub-1  | /docker-entrypoint.sh: Looking for shell scripts in /docker-entrypoint.d/
+ai-stub-1  | /docker-entrypoint.sh: Launching /docker-entrypoint.d/10-listen-on-ipv6-by-default.sh
+ai-stub-1  | 10-listen-on-ipv6-by-default.sh: info: can not modify /etc/nginx/conf.d/default.conf (read-only file system?)
+ai-stub-1  | /docker-entrypoint.sh: Sourcing /docker-entrypoint.d/15-local-resolvers.envsh
+ai-stub-1  | /docker-entrypoint.sh: Launching /docker-entrypoint.d/20-envsubst-on-templates.sh
+ai-stub-1  | /docker-entrypoint.sh: Launching /docker-entrypoint.d/30-tune-worker-processes.sh
+ai-stub-1  | /docker-entrypoint.sh: Configuration complete; ready for start up
+ai-stub-1  | 2026/08/22 12:14:05 [notice] 1#1: using the "epoll" event method
+ai-stub-1  | 2026/08/22 12:14:05 [notice] 1#1: nginx/1.29.8
+ai-stub-1  | 2026/08/22 12:14:05 [notice] 1#1: built by gcc 15.2.0 (Alpine 15.2.0) 
+ai-stub-1  | 2026/08/22 12:14:05 [notice] 1#1: OS: Linux 5.15.0-190-generic
+ai-stub-1  | 2026/08/22 12:14:05 [notice] 1#1: getrlimit(RLIMIT_NOFILE): 1024:524288
+ai-stub-1  | 2026/08/22 12:14:05 [notice] 1#1: start worker processes
+ai-stub-1  | 2026/08/22 12:14:05 [notice] 1#1: start worker process 20
+ai-stub-1  | 2026/08/22 12:14:05 [notice] 1#1: start worker process 21
+ai-stub-1  | 2026/08/22 12:14:05 [notice] 1#1: start worker process 22
+ai-stub-1  | 2026/08/22 12:14:05 [notice] 1#1: start worker process 23
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:52 +0000] "POST /v1/embeddings HTTP/1.1" 200 87 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:52 +0000] "POST /v1/embeddings HTTP/1.1" 200 87 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:53 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:53 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:53 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:53 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:53 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:53 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:53 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:53 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:53 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:53 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:53 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:53 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:53 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:53 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:53 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:53 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:53 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:53 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:53 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:53 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:53 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:53 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:53 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:53 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:53 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:53 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:53 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:53 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:53 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:53 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:53 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:53 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:54 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:54 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:54 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:54 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:54 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:54 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:54 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:54 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:54 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:54 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:54 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:54 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:54 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:54 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:54 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:54 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:54 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:54 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:54 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:54 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:54 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:54 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:54 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:54 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:54 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:54 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:54 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:54 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:54 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:54 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:54 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:55 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:55 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:55 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:55 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:55 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:55 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:55 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:55 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:55 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:55 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:55 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:55 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:55 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:55 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:55 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:55 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:55 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:55 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:55 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:55 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:55 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:55 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:55 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:55 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:55 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:56 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:56 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:56 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:56 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:56 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:56 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:56 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:56 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:56 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:56 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:56 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:56 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:56 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:56 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:56 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:56 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:56 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:56 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:56 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:56 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:56 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:56 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:56 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:56 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:56 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:56 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:56 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:56 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:56 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:56 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:56 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:57 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:57 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:57 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:57 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:57 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:57 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:57 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:57 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:57 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:57 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:57 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:57 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:57 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:57 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:57 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:57 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:57 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:57 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:57 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:57 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:57 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:57 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:57 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:57 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:57 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:57 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:57 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:57 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:57 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:57 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:57 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:57 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"
+ai-stub-1  | 172.19.0.4 - - [22/Aug/2026:12:14:57 +0000] "POST /v1/chat/completions HTTP/1.1" 200 168 "-" "Java-http-client/21.0.12" "-"

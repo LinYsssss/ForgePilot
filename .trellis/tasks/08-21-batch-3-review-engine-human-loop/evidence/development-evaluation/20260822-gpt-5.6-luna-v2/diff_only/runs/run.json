@@ -1,0 +1,250 @@
+{
+  "arm": "DIFF_ONLY",
+  "caseSetVersion": "phase1-quick-v1",
+  "cases": [
+    {
+      "acVerdicts": [],
+      "caseId": "java-sql-resource-leak",
+      "failureKind": null,
+      "failureReason": null,
+      "findings": [
+        {
+          "category": "RESOURCE_LEAK",
+          "filePath": "src/App.java",
+          "findingType": "CODE_QUALITY",
+          "lineEnd": 6,
+          "lineStart": 4
+        }
+      ],
+      "status": "COMPLETED",
+      "usage": {
+        "inputTokens": 423,
+        "latencyMs": 3568,
+        "outputTokens": 120
+      }
+    },
+    {
+      "acVerdicts": [],
+      "caseId": "typescript-ambiguous-null",
+      "failureKind": null,
+      "failureReason": null,
+      "findings": [
+        {
+          "category": "UNSAFE_OPTIONAL_DEREFERENCE",
+          "filePath": "src/user.ts",
+          "findingType": "CODE_QUALITY",
+          "lineEnd": 3,
+          "lineStart": 3
+        }
+      ],
+      "status": "COMPLETED",
+      "usage": {
+        "inputTokens": 402,
+        "latencyMs": 4534,
+        "outputTokens": 195
+      }
+    },
+    {
+      "acVerdicts": [],
+      "caseId": "java-broken-build",
+      "failureKind": null,
+      "failureReason": null,
+      "findings": [
+        {
+          "category": "SYNTAX_ERROR",
+          "filePath": "src/Broken.java",
+          "findingType": "CODE_QUALITY",
+          "lineEnd": 1,
+          "lineStart": 1
+        }
+      ],
+      "status": "COMPLETED",
+      "usage": {
+        "inputTokens": 366,
+        "latencyMs": 2657,
+        "outputTokens": 93
+      }
+    },
+    {
+      "acVerdicts": [],
+      "caseId": "biz-fee-rate-hardcoded",
+      "failureKind": null,
+      "failureReason": null,
+      "findings": [
+        {
+          "category": "HARDCODED_BUSINESS_RULE",
+          "filePath": "src/main/java/com/acme/clearing/service/InstantSettlementService.java",
+          "findingType": "CODE_QUALITY",
+          "lineEnd": 13,
+          "lineStart": 12
+        }
+      ],
+      "status": "COMPLETED",
+      "usage": {
+        "inputTokens": 773,
+        "latencyMs": 5275,
+        "outputTokens": 242
+      }
+    },
+    {
+      "acVerdicts": [],
+      "caseId": "biz-status-machine-bypass",
+      "failureKind": null,
+      "failureReason": null,
+      "findings": [
+        {
+          "category": "BUSINESS_STATE_MACHINE_BYPASS",
+          "filePath": "src/main/java/com/acme/clearing/payout/service/ExpressPayoutService.java",
+          "findingType": "CODE_QUALITY",
+          "lineEnd": 29,
+          "lineStart": 25
+        }
+      ],
+      "status": "COMPLETED",
+      "usage": {
+        "inputTokens": 649,
+        "latencyMs": 11522,
+        "outputTokens": 589
+      }
+    },
+    {
+      "acVerdicts": [],
+      "caseId": "eng-contract-drift-dual-encode",
+      "failureKind": null,
+      "failureReason": null,
+      "findings": [
+        {
+          "category": "INCONSISTENT_ENCODING",
+          "filePath": "src/main/java/com/acme/report/ReportLinkRenderer.java",
+          "findingType": "CODE_QUALITY",
+          "lineEnd": 9,
+          "lineStart": 8
+        }
+      ],
+      "status": "COMPLETED",
+      "usage": {
+        "inputTokens": 1132,
+        "latencyMs": 7715,
+        "outputTokens": 381
+      }
+    },
+    {
+      "acVerdicts": [],
+      "caseId": "eng-transactional-self-invocation",
+      "failureKind": null,
+      "failureReason": null,
+      "findings": [
+        {
+          "category": "TRANSACTIONAL_SELF_INVOCATION",
+          "filePath": "src/main/java/com/acme/inventory/InventoryService.java",
+          "findingType": "CODE_QUALITY",
+          "lineEnd": 36,
+          "lineStart": 36
+        }
+      ],
+      "status": "COMPLETED",
+      "usage": {
+        "inputTokens": 900,
+        "latencyMs": 13251,
+        "outputTokens": 689
+      }
+    },
+    {
+      "acVerdicts": [],
+      "caseId": "biz-currency-unchecked",
+      "failureKind": null,
+      "failureReason": null,
+      "findings": [
+        {
+          "category": "INPUT_VALIDATION",
+          "filePath": "src/main/java/com/acme/clearing/service/SettlementService.java",
+          "findingType": "CODE_QUALITY",
+          "lineEnd": 38,
+          "lineStart": 37
+        }
+      ],
+      "status": "COMPLETED",
+      "usage": {
+        "inputTokens": 1005,
+        "latencyMs": 19011,
+        "outputTokens": 1007
+      }
+    },
+    {
+      "acVerdicts": [],
+      "caseId": "fp-java-whitelist-order-by",
+      "failureKind": null,
+      "failureReason": null,
+      "findings": [],
+      "status": "COMPLETED",
+      "usage": {
+        "inputTokens": 1440,
+        "latencyMs": 10573,
+        "outputTokens": 539
+      }
+    },
+    {
+      "acVerdicts": [],
+      "caseId": "fp-python-chore-gitignore-cleanup",
+      "failureKind": null,
+      "failureReason": null,
+      "findings": [],
+      "status": "COMPLETED",
+      "usage": {
+        "inputTokens": 627,
+        "latencyMs": 2082,
+        "outputTokens": 67
+      }
+    },
+    {
+      "acVerdicts": [],
+      "caseId": "miss-template-share-authz",
+      "failureKind": null,
+      "failureReason": null,
+      "findings": [
+        {
+          "category": "AUTHORIZATION_BYPASS",
+          "filePath": "src/templates.ts",
+          "findingType": "CODE_QUALITY",
+          "lineEnd": 84,
+          "lineStart": 80
+        }
+      ],
+      "status": "COMPLETED",
+      "usage": {
+        "inputTokens": 2599,
+        "latencyMs": 17752,
+        "outputTokens": 933
+      }
+    },
+    {
+      "acVerdicts": [],
+      "caseId": "sec-java-customer-search-sqli",
+      "failureKind": null,
+      "failureReason": null,
+      "findings": [
+        {
+          "category": "SQL_INJECTION",
+          "filePath": "src/main/java/com/acme/customers/CustomerSearchRepository.java",
+          "findingType": "CODE_QUALITY",
+          "lineEnd": 15,
+          "lineStart": 15
+        }
+      ],
+      "status": "COMPLETED",
+      "usage": {
+        "inputTokens": 452,
+        "latencyMs": 5839,
+        "outputTokens": 265
+      }
+    }
+  ],
+  "config": {
+    "model": "gpt-5.6-luna",
+    "promptVersion": "phase6-development-three-arm-v1",
+    "temperature": 0.0
+  },
+  "contractVersion": "forgepilot-evaluation-run-v1",
+  "corpusVersion": "forgepilot-phase1-quick-v1",
+  "runKind": "MODEL_EVALUATION"
+}
