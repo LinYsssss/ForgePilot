@@ -201,3 +201,26 @@ Review Engine、人工闭环、容量冻结、development 三臂评测和独立 
 ### Next Steps
 
 - 单独规划 Phase 8；holdout 只在配置冻结后运行一次
+
+
+## Session 6: Complete frontend capability surface
+
+**Date**: 2026-08-22
+**Task**: Complete frontend capability surface
+**Branch**: `main`
+
+### Summary
+
+Completed account and Requirement workflows, project Review discovery, structured evidence, Finding audit comments, responsive Chromium verification, specs, and delivery evidence.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `952bd48` | (see git log) |
+| `4c72b1c` | (see git log) |
+| `d0af0e7` | (see git log) |
+
+### Status
+
+[OK] **Completed**
