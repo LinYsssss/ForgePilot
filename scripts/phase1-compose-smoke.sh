@@ -135,7 +135,7 @@ application_tables="$(query_postgres "select string_agg(table_name, ',' order by
 # finding_event) arrive with their own authorized batch, so an extra table here
 # means something was added outside the plan. Sorted with the C collation so the
 # comparison does not depend on the container's locale.
-expected_tables='acceptance_criterion,ai_call_log,knowledge_chunk,knowledge_document,project,project_member,pull_request,pull_request_requirement_event,requirement,requirement_attachment,requirement_revision,scm_repository,user_account'
+expected_tables='acceptance_criterion,ai_call_log,finding,finding_event,knowledge_chunk,knowledge_document,project,project_member,pull_request,pull_request_requirement_event,requirement,requirement_attachment,requirement_revision,review,scm_repository,user_account'
 
 [[ "$postgres_15_or_newer" == "t" ]] || {
   printf 'PostgreSQL server is older than 15.\n' >&2

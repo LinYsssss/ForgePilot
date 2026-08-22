@@ -59,7 +59,6 @@ class RequirementLifecycleTest extends PostgresTestBase {
 
         assertThat(created.status()).isEqualTo(RequirementStatus.DRAFT);
         assertThat(created.assigneeId()).isNull();
-        assertThat(created.reviewActivity()).isEqualTo("NO_PR");
         assertThat(created.currentRevision().seq()).isEqualTo(1);
         assertThat(created.currentRevision().changeReason()).isNull();
         assertThat(created.currentRevision().createdByUsername()).isEqualTo(usernameOf(team.leader()));

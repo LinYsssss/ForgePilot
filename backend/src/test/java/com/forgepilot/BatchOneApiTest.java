@@ -78,7 +78,12 @@ class BatchOneApiTest extends PostgresTestBase {
         JsonNode created = leader.read(base);
         assertThat(created.path("status").asString()).isEqualTo("DRAFT");
         assertThat(created.path("currentRevision").path("seq").asInt()).isEqualTo(1);
-        assertThat(created.path("reviewActivity").asString()).isEqualTo("NO_PR");
+        // Batch 3 moved review activity out of this response entirely. It is derived
+        // from pull_request and review, and the dependency arrow runs review ->
+        // requirement, so requirement cannot compute it without cycling the feature
+        // graph. Asserting its absence here is the boundary check: if it ever comes
+        // back, something reached across in the wrong direction.
+        assertThat(created.has("reviewActivity")).isFalse();
         JsonNode firstCriteria = created.path("currentRevision").path("acceptanceCriteria");
         assertThat(firstCriteria.size()).isEqualTo(2);
         String firstKey = firstCriteria.get(0).path("acKey").asString();

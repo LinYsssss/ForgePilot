@@ -24,7 +24,6 @@ import {
   isTerminal,
   REQUIREMENT_STATUS_LABELS,
   REQUIREMENT_STATUS_TONES,
-  REVIEW_ACTIVITY_LABELS,
   STATUS_TRANSITIONS,
   type RequirementStatus,
 } from "./status";
@@ -175,15 +174,6 @@ function saveAssignee(): Promise<void> {
               <span :class="['badge', `badge-${REQUIREMENT_STATUS_TONES[detail.status]}`]">
                 {{ REQUIREMENT_STATUS_LABELS[detail.status] }}
               </span>
-            </dd>
-          </div>
-          <div>
-            <dt>评审活动</dt>
-            <dd class="review-activity">
-              <span class="badge badge-neutral">
-                {{ REVIEW_ACTIVITY_LABELS[detail.reviewActivity] }}
-              </span>
-              <code>{{ detail.reviewActivity }}</code>
             </dd>
           </div>
           <div>

@@ -15,10 +15,15 @@ import org.springframework.jdbc.core.JdbcTemplate;
 class FoundationDatabaseTest extends PostgresTestBase {
 
     /** Thirteen of the sixteen tables exist; review, finding and finding_event arrive with batch 3. */
+    // Sixteen, which is the cap. ARCHITECTURE.md 2.1 fixes the model at exactly
+    // this set, so a seventeenth table is a design change and not a migration.
+    // Compared by name rather than by count on purpose: a count still passes when
+    // one planned table is missing and one unplanned table took its place.
     private static final List<String> EXPECTED_TABLES = List.of(
-            "acceptance_criterion", "ai_call_log", "knowledge_chunk", "knowledge_document",
-            "project", "project_member", "pull_request", "pull_request_requirement_event",
-            "requirement", "requirement_attachment", "requirement_revision", "scm_repository",
+            "acceptance_criterion", "ai_call_log", "finding", "finding_event",
+            "knowledge_chunk", "knowledge_document", "project", "project_member",
+            "pull_request", "pull_request_requirement_event", "requirement",
+            "requirement_attachment", "requirement_revision", "review", "scm_repository",
             "user_account");
 
     @Autowired
@@ -56,7 +61,7 @@ class FoundationDatabaseTest extends PostgresTestBase {
 
         assertThat(history).extracting(row -> row.get("version") + ":" + row.get("description"))
                 .containsExactly("1:foundation", "2:auth project", "3:requirement",
-                        "4:knowledge ai", "5:scm");
+                        "4:knowledge ai", "5:scm", "6:review");
         assertThat(history).allSatisfy(row -> assertThat(row.get("success")).isEqualTo(true));
     }
 

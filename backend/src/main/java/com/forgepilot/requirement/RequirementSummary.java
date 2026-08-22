@@ -8,12 +8,12 @@ import java.time.Instant;
  * here rather than stitched together in the client.
  */
 public record RequirementSummary(long id, String title, RequirementStatus status, Long assigneeId,
-        String assigneeUsername, int currentRevisionSeq, Instant updatedAt, String reviewActivity) {
+        String assigneeUsername, int currentRevisionSeq, Instant updatedAt) {
 
     static RequirementSummary of(Requirement requirement, String assigneeUsername) {
         RequirementRevision current = requirement.getCurrentRevision();
         return new RequirementSummary(requirement.getId(), current.getTitle(), requirement.getStatus(),
                 requirement.getAssigneeId(), assigneeUsername, current.getSeq(),
-                requirement.getUpdatedAt(), RequirementDetail.NO_PULL_REQUEST);
+                requirement.getUpdatedAt());
     }
 }

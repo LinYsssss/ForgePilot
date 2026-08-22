@@ -3,7 +3,7 @@
   "name": "batch-3-review-engine-human-loop",
   "title": "批次 3：Review 引擎与人工闭环（Phase 6 + Phase 7）",
   "description": "三张表（review/finding/finding_event）、唯一 Review Engine、fencing、人工闭环与三页面统一验收",
-  "status": "planning",
+  "status": "in_progress",
   "dev_type": null,
   "scope": null,
   "package": null,

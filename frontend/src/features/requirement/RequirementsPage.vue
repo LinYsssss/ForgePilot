@@ -21,7 +21,6 @@ import {
 import {
   REQUIREMENT_STATUS_LABELS,
   REQUIREMENT_STATUS_TONES,
-  REVIEW_ACTIVITY_LABELS,
 } from "./status";
 
 const route = useRoute();
@@ -172,15 +171,6 @@ async function create(): Promise<void> {
                 <span :class="['badge', `badge-${REQUIREMENT_STATUS_TONES[item.status]}`]">
                   {{ REQUIREMENT_STATUS_LABELS[item.status] }}
                 </span>
-              </dd>
-            </div>
-            <div>
-              <dt>评审活动</dt>
-              <dd class="review-activity">
-                <span class="badge badge-neutral">
-                  {{ REVIEW_ACTIVITY_LABELS[item.reviewActivity] }}
-                </span>
-                <code>{{ item.reviewActivity }}</code>
               </dd>
             </div>
             <div>

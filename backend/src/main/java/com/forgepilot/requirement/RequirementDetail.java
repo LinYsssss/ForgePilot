@@ -4,18 +4,22 @@ import java.time.Instant;
 
 /** A requirement with its current revision, as the API shows it. */
 public record RequirementDetail(long id, RequirementStatus status, Long assigneeId, String assigneeUsername,
-        Instant createdAt, Instant updatedAt, String reviewActivity, RevisionView currentRevision) {
+        Instant createdAt, Instant updatedAt, RevisionView currentRevision) {
 
     /**
-     * Batch 1 has no pull request at all, so the review activity of every
-     * requirement is this constant. It is derived, never stored and never
-     * writable (api-contract 3).
+     * Review activity is deliberately absent here. It is derived from both
+     * {@code pull_request} and {@code review}, and ARCHITECTURE.md 1.3 runs the
+     * dependency the other way — {@code review} may read this module, never the
+     * reverse. Computing it here would need {@code requirement} to reach into
+     * {@code review}, which cycles the feature graph and ArchUnit rejects.
+     *
+     * <p>It is served by {@code review} instead, on its own read endpoint, so the
+     * client asks for it separately. Batch 1 carried a constant {@code "NO_PR"}
+     * here as a placeholder; batch 3 replaced the placeholder rather than the
+     * boundary.
      */
-    static final String NO_PULL_REQUEST = "NO_PR";
-
     static RequirementDetail of(Requirement requirement, String assigneeUsername, RevisionView currentRevision) {
         return new RequirementDetail(requirement.getId(), requirement.getStatus(), requirement.getAssigneeId(),
-                assigneeUsername, requirement.getCreatedAt(), requirement.getUpdatedAt(),
-                NO_PULL_REQUEST, currentRevision);
+                assigneeUsername, requirement.getCreatedAt(), requirement.getUpdatedAt(), currentRevision);
     }
 }

@@ -212,32 +212,39 @@ class KnowledgeAndScmConstraintTest extends PostgresTestBase {
     }
 
     /**
-     * D015.1: review_id exists but carries no foreign key, because review does not
-     * exist yet. Batch 3 adds it, and this test is the record that the absence is
-     * deliberate rather than forgotten.
+     * D015.1, now closed. Batch 2 created {@code review_id} without a foreign key
+     * because {@code review} did not exist, and asserted the column held only
+     * NULLs so that adding the key later could not collide with history. Batch 3
+     * created the table and added the key, so this test is now the other half of
+     * that promise: the key is present, and it points where D015.1 said it would.
      */
     @Test
-    void aiCallLogHasNoReviewForeignKeyYetAndNoRowsUsingIt() {
-        // Asserted against the column the key would have to include, not against
-        // the constraint's name: a batch 3 constraint called anything else would
-        // slip past a name check.
+    void aiCallLogsReviewForeignKeyLandedInBatchThree() {
+        // Asserted against the column the key has to include rather than against a
+        // constraint name, so renaming the constraint cannot make this pass or fail
+        // for the wrong reason.
         assertThat(jdbc.queryForObject(
                 "select count(*) from pg_constraint c "
                         + "join pg_attribute a on a.attrelid = c.conrelid and a.attnum = any (c.conkey) "
                         + "where c.conrelid = 'ai_call_log'::regclass and c.contype = 'f' "
                         + "and a.attname = 'review_id'", Integer.class))
-                .as("no foreign key may involve review_id until review exists")
-                .isZero();
+                .as("review_id must now be covered by a foreign key")
+                .isOne();
+
+        // And it must point at review, not at whatever happened to be handy.
+        assertThat(jdbc.queryForObject(
+                "select confrelid::regclass::text from pg_constraint c "
+                        + "join pg_attribute a on a.attrelid = c.conrelid and a.attnum = any (c.conkey) "
+                        + "where c.conrelid = 'ai_call_log'::regclass and c.contype = 'f' "
+                        + "and a.attname = 'review_id'", String.class))
+                .isEqualTo("review");
+
+        // The composite keys batch 2 already had must still be there: a count that
+        // only went up proves nothing if something else quietly went away.
         assertThat(jdbc.queryForList(
                 "select conname from pg_constraint where conrelid = 'ai_call_log'::regclass "
                         + "and contype = 'f'", String.class))
-                .as("the other composite keys must still be there")
-                .isNotEmpty();
-
-        assertThat(jdbc.queryForObject(
-                "select count(*) from ai_call_log where review_id is not null", Integer.class))
-                .as("batch 3 may only add the foreign key while this stays zero")
-                .isZero();
+                .hasSizeGreaterThan(1);
     }
 
     // ------------------------------------------------- cross-project, by the database

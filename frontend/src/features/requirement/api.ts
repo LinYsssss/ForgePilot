@@ -1,5 +1,5 @@
 import { requestJson } from "../../lib/http";
-import type { RequirementStatus, ReviewActivity } from "./status";
+import type { RequirementStatus } from "./status";
 
 export interface AcceptanceCriterion {
   id: number;
@@ -29,7 +29,6 @@ export interface RequirementSummary {
   assigneeUsername: string | null;
   currentRevisionSeq: number;
   updatedAt: string;
-  reviewActivity: ReviewActivity;
 }
 
 export interface RequirementDetail {
@@ -39,7 +38,6 @@ export interface RequirementDetail {
   assigneeUsername: string | null;
   createdAt: string;
   updatedAt: string;
-  reviewActivity: ReviewActivity;
   currentRevision: Revision;
 }
 
