@@ -1,11 +1,11 @@
 # Component Guidelines
 
 Components are Vue 3 single-file components using `<script setup lang="ts">`.
-The Phase 1 component set is intentionally small: `AppShell` owns document
-landmarks and navigation, while the placeholder view owns route-specific empty
-state. Components should communicate through typed props and events when a
-real feature is authorized; they should not reach across feature boundaries or
-encode server calls in templates.
+`AppShell` owns document landmarks, navigation, and keyed route transitions.
+The shared `components/motion/` boundary owns presentation-only ambient canvas
+behavior and deterministic motion helpers; it does not own business state or
+requests. Components communicate through typed props and events and must not
+reach across feature boundaries or encode server calls in templates.
 
 ## Component structure
 

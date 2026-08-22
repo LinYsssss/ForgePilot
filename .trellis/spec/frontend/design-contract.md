@@ -41,9 +41,13 @@ ratios, mathematical constants, and the approved media-query boundary because
 those are layout mechanics rather than reusable component tokens. The console
 uses deep cool-neutral surfaces, compact translucent bordered panels, system
 sans interface text, and `--fp-font-mono` for paths, line locators, ids,
-revisions, hashes, and code. Decorative gradients remain static and subordinate
-to content; cursor effects, particles, scanlines, radar loops, and perpetual
-ambient motion are outside the contract.
+revisions, hashes, and code. Decorative motion remains subordinate to content
+but is intentionally vivid in normal-motion mode. The approved vocabulary
+includes cursor-responsive particles, drifting grid and scanline layers,
+floating neon orbs, radar and laser sweeps, pulse glow, holographic border flow,
+shimmer, and route entrance choreography. These effects are presentation-only:
+they never synthesize telemetry, state, records, or controls, and they preserve
+the reduced-motion and lifecycle rules in `motion.md`.
 
 The approved responsive boundaries are `64rem` for collapsing dense desktop
 grids and `42rem` for the mobile stack. Do not introduce a third breakpoint

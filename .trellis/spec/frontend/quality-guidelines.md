@@ -17,8 +17,9 @@ placeholder getters.
   logging credentials/tokens.
 - `any`, unchecked casts in views, inaccessible clickable containers, and
   color-only status communication.
-- Ambient/per-frame animation or motion that ignores
-  `prefers-reduced-motion`.
+- Per-frame Vue reactive updates, unbounded canvas work, leaked animation
+  frames/listeners, or motion that ignores `prefers-reduced-motion` and
+  document visibility.
 
 ## Required patterns
 

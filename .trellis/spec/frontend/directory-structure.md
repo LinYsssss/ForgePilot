@@ -25,7 +25,10 @@ frontend/
 │   │   ├── router.ts          # router factory
 │   │   └── routes.ts          # approved paths and top-level navigation
 │   ├── components/
-│   │   └── AppShell.vue       # document landmarks and navigation shell
+│   │   ├── AppShell.vue       # document landmarks, navigation, route transition
+│   │   └── motion/
+│   │       ├── CyberParticleField.vue # bounded ambient canvas lifecycle
+│   │       └── cyberParticles.ts      # deterministic particle helpers
 │   ├── lib/
 │   │   └── http.ts            # same-origin request boundary
 │   ├── styles/
@@ -36,7 +39,8 @@ frontend/
 └── tests/
     ├── routes.spec.ts         # route and semantic shell contract
     ├── http.spec.ts           # request boundary contract
-    └── motion.spec.ts         # reduced-motion contract
+    ├── motion.spec.ts         # full/reduced-motion contract
+    └── cyberParticles.spec.ts # particle bounds and deterministic behavior
 ```
 
 `Dockerfile`, `.dockerignore`, and `nginx.conf` are deployment files at the
@@ -47,8 +51,8 @@ product use.
 ## Module organization
 
 - `app/` owns application-wide routing and navigation constants.
-- `components/` contains reusable, presentation-focused Vue components. The
-  current shell is the only shared component.
+- `components/` contains reusable, presentation-focused Vue components. Motion
+  components remain decorative, typed, bounded, and free of business state.
 - `views/` contains route-level components. Phase 1 views are placeholders and
   must not manufacture business data or actions.
 - `lib/` contains framework-neutral utilities and I/O boundaries. `http.ts`

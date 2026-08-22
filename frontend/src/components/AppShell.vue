@@ -43,7 +43,11 @@ async function logout(): Promise<void> {
     </header>
 
     <main id="app-main" tabindex="-1">
-      <RouterView />
+      <RouterView v-slot="{ Component, route }">
+        <Transition name="cyber-route" mode="out-in">
+          <component :is="Component" :key="route.fullPath" />
+        </Transition>
+      </RouterView>
     </main>
   </div>
 </template>

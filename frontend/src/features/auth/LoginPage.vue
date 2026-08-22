@@ -40,6 +40,18 @@ async function submit(): Promise<void> {
   <section class="login-page" aria-labelledby="login-title">
     <div class="login-stage">
       <div class="login-story" aria-labelledby="login-story-title">
+        <div class="login-cyber-radar" aria-hidden="true">
+          <span class="radar-ring radar-ring-outer"></span>
+          <span class="radar-ring radar-ring-middle"></span>
+          <span class="radar-ring radar-ring-inner"></span>
+          <span class="radar-axis radar-axis-horizontal"></span>
+          <span class="radar-axis radar-axis-vertical"></span>
+          <span class="radar-sweep"></span>
+          <span class="radar-node radar-node-one"></span>
+          <span class="radar-node radar-node-two"></span>
+          <span class="radar-node radar-node-three"></span>
+        </div>
+        <div class="login-laser" aria-hidden="true"></div>
         <p class="eyebrow">ForgePilot · Review Console</p>
         <p id="login-story-title" class="login-story-title">把需求、项目规范与代码变更放进同一条证据链。</p>
         <p class="login-story-copy">
@@ -147,6 +159,7 @@ async function submit(): Promise<void> {
 }
 
 .login-stage {
+  position: relative;
   display: grid;
   width: min(68rem, 100%);
   overflow: hidden;
@@ -156,6 +169,21 @@ async function submit(): Promise<void> {
   box-shadow: var(--fp-shadow-elevated), var(--fp-shadow-accent);
   grid-template-columns: minmax(0, 1.12fr) minmax(22rem, 0.88fr);
   backdrop-filter: blur(1.25rem);
+}
+
+.login-stage::before {
+  position: absolute;
+  z-index: 3;
+  inset: -0.0625rem;
+  padding: 0.0625rem;
+  border-radius: inherit;
+  background: var(--fp-gradient-holo-border);
+  background-size: 300% 100%;
+  content: "";
+  pointer-events: none;
+  animation: fp-border-flow var(--fp-duration-border) linear infinite;
+  mask: linear-gradient(black 0 0) content-box, linear-gradient(black 0 0);
+  mask-composite: exclude;
 }
 
 .login-story,
@@ -181,11 +209,118 @@ async function submit(): Promise<void> {
   box-shadow: 0 0 6rem var(--fp-color-accent-glow);
   content: "";
   pointer-events: none;
+  animation: fp-float-orb var(--fp-duration-orb) ease-in-out infinite alternate;
 }
 
 .login-story > * {
   position: relative;
   z-index: 1;
+}
+
+.login-cyber-radar {
+  position: absolute;
+  z-index: 0;
+  right: -6rem;
+  bottom: -7rem;
+  width: 28rem;
+  height: 28rem;
+  border: 0.0625rem solid var(--fp-color-border-accent);
+  border-radius: 50%;
+  opacity: 0.72;
+  pointer-events: none;
+}
+
+.radar-ring,
+.radar-axis,
+.radar-sweep,
+.radar-node {
+  position: absolute;
+  pointer-events: none;
+}
+
+.radar-ring {
+  top: 50%;
+  left: 50%;
+  border: 0.0625rem solid var(--fp-color-border-accent);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.radar-ring-outer {
+  width: 82%;
+  height: 82%;
+}
+
+.radar-ring-middle {
+  width: 58%;
+  height: 58%;
+}
+
+.radar-ring-inner {
+  width: 32%;
+  height: 32%;
+}
+
+.radar-axis-horizontal {
+  top: 50%;
+  right: 8%;
+  left: 8%;
+  height: 0.0625rem;
+  background: var(--fp-color-border-accent);
+}
+
+.radar-axis-vertical {
+  top: 8%;
+  bottom: 8%;
+  left: 50%;
+  width: 0.0625rem;
+  background: var(--fp-color-border-accent);
+}
+
+.radar-sweep {
+  inset: 0;
+  border-radius: 50%;
+  background: var(--fp-gradient-radar);
+  animation: fp-radar-sweep var(--fp-duration-radar) linear infinite;
+}
+
+.radar-node {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: var(--fp-color-accent);
+  box-shadow: 0 0 1.25rem var(--fp-color-accent);
+  animation: fp-pulse-glow var(--fp-duration-pulse) ease-in-out infinite;
+}
+
+.radar-node-one {
+  top: 24%;
+  left: 40%;
+}
+
+.radar-node-two {
+  top: 55%;
+  right: 21%;
+  animation-delay: -0.9s;
+}
+
+.radar-node-three {
+  bottom: 22%;
+  left: 29%;
+  animation-delay: -1.8s;
+}
+
+.login-laser {
+  position: absolute;
+  z-index: 2;
+  top: 0;
+  bottom: 0;
+  width: 0.125rem;
+  background: var(--fp-gradient-laser);
+  box-shadow: 0 0 1.25rem var(--fp-color-accent);
+  opacity: 0.58;
+  pointer-events: none;
+  animation: fp-laser-scan var(--fp-duration-sweep) ease-in-out infinite alternate;
 }
 
 .login-story-title {
@@ -221,6 +356,25 @@ async function submit(): Promise<void> {
   border: 0.0625rem solid var(--fp-color-border);
   border-radius: var(--fp-radius-md);
   background: var(--fp-color-surface-glass);
+  animation: fp-page-enter var(--fp-duration-route) var(--fp-ease-cinematic) both;
+  transition:
+    border-color var(--fp-duration-normal) var(--fp-ease-standard),
+    box-shadow var(--fp-duration-normal) var(--fp-ease-standard),
+    transform var(--fp-duration-normal) var(--fp-ease-standard);
+}
+
+.login-causal-chain li:nth-child(2) {
+  animation-delay: 90ms;
+}
+
+.login-causal-chain li:nth-child(3) {
+  animation-delay: 180ms;
+}
+
+.login-causal-chain li:hover {
+  border-color: var(--fp-color-border-accent);
+  box-shadow: var(--fp-shadow-accent);
+  transform: translateX(var(--fp-space-1));
 }
 
 .chain-index {

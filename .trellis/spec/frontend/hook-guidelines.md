@@ -60,8 +60,9 @@ existing `Accept`/`Content-Type` handling. Phase 1 does not implement CSRF and
 - Keep `onMounted`, watchers, and cleanup next to the state they manage.
 - Stop watchers/listeners when the owning component is unmounted; do not leave
   global listeners from a view.
-- Do not use per-frame Vue updates or ambient animation. Follow the reduced-
-  motion contract for any future JavaScript motion.
+- Keep per-frame canvas updates outside Vue reactivity. Ambient motion follows
+  the reduced-motion, visibility, focus, bounded-work, and cleanup contract in
+  `motion.md`.
 
 ## Common mistakes
 

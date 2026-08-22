@@ -35,6 +35,15 @@
   --fp-color-secondary-soft: rgb(139 124 246 / 13%);
   --fp-color-focus: #67e8f9;
   --fp-color-foundation: #3ddbd9;
+  --fp-color-particle-cyan: #00f0ff;
+  --fp-color-particle-purple: #a855f7;
+  --fp-color-particle-emerald: #10b981;
+  --fp-color-particle-amber: #f59e0b;
+  --fp-color-particle-link: #3ddbd9;
+  --fp-color-grid-line: rgb(103 232 249 / 7%);
+  --fp-color-scanline: rgb(3 17 22 / 28%);
+  --fp-color-holo-edge: rgb(103 232 249 / 78%);
+  --fp-color-holo-secondary: rgb(168 85 247 / 72%);
 
   --fp-color-info: #57b8ff;
   --fp-color-info-soft: rgb(87 184 255 / 12%);
@@ -58,6 +67,22 @@
   --fp-gradient-primary: linear-gradient(135deg, #67e8f9 0%, #20b8c8 100%);
   --fp-gradient-danger: linear-gradient(135deg, rgb(255 113 133 / 20%), rgb(255 113 133 / 8%));
   --fp-gradient-success: linear-gradient(135deg, rgb(67 214 156 / 20%), rgb(67 214 156 / 8%));
+  --fp-gradient-holo-border:
+    linear-gradient(90deg, transparent, var(--fp-color-holo-edge), var(--fp-color-holo-secondary), transparent);
+  --fp-gradient-light-sweep:
+    linear-gradient(105deg, transparent 18%, rgb(255 255 255 / 32%) 48%, transparent 78%);
+  --fp-gradient-radar:
+    conic-gradient(from 0deg, transparent 0deg, var(--fp-color-accent-glow) 38deg, transparent 76deg);
+  --fp-gradient-laser:
+    linear-gradient(90deg, transparent, var(--fp-color-accent), var(--fp-color-secondary), transparent);
+  --fp-gradient-shimmer:
+    linear-gradient(90deg, var(--fp-color-accent-soft), rgb(255 255 255 / 18%), var(--fp-color-secondary-soft), var(--fp-color-accent-soft));
+  --fp-gradient-orb-cyan:
+    radial-gradient(circle, rgb(0 240 255 / 58%) 0%, rgb(0 240 255 / 0%) 70%);
+  --fp-gradient-orb-purple:
+    radial-gradient(circle, rgb(168 85 247 / 52%) 0%, rgb(168 85 247 / 0%) 70%);
+  --fp-gradient-orb-emerald:
+    radial-gradient(circle, rgb(16 185 129 / 44%) 0%, rgb(16 185 129 / 0%) 70%);
 
   --fp-font-sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --fp-font-mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
@@ -87,5 +112,12 @@
 
   --fp-duration-fast: 140ms;
   --fp-duration-normal: 220ms;
+  --fp-duration-route: 340ms;
+  --fp-duration-sweep: 2.4s;
+  --fp-duration-pulse: 2.8s;
+  --fp-duration-border: 4s;
+  --fp-duration-radar: 9s;
+  --fp-duration-orb: 14s;
   --fp-ease-standard: cubic-bezier(0.16, 1, 0.3, 1);
+  --fp-ease-cinematic: cubic-bezier(0.22, 1, 0.36, 1);
 }
