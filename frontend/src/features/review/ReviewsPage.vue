@@ -12,21 +12,27 @@ import {
 } from "../../app/routes";
 import { formatDateTime } from "../../lib/datetime";
 import { apiErrorMessage } from "../../lib/http";
+import { useSession } from "../auth/session";
 import { listProjects, type Project } from "../project/api";
 import { listRequirements, type RequirementSummary } from "../requirement/api";
-import { REVIEW_ACTIVITY_LABELS } from "../requirement/status";
 import { getPullRequest, type PullRequest } from "../scm/api";
 import {
+  listProjectReviews,
   listPullRequestReviews,
   listReviewActivity,
   requestReview,
   type ActivityView,
+  type ProjectReviewRow,
+  type ReviewDecision,
+  type ReviewStatus,
   type ReviewSummary,
 } from "./api";
 import {
   shortSha,
   PULL_REQUEST_ACTIVITIES,
   PULL_REQUEST_ACTIVITY_LABELS,
+  REVIEW_ACTIVITY_LABELS,
+  REVIEW_ACTIVITY_TONES,
   REVIEW_DECISION_LABELS,
   REVIEW_DECISION_TONES,
   REVIEW_STATUS_LABELS,
@@ -35,24 +41,36 @@ import {
 
 const route = useRoute();
 const router = useRouter();
+const { account } = useSession();
 
 const projectId = computed(() => parseId(route.query[PROJECT_QUERY_KEY]));
 const pullRequestId = computed(() => parseId(route.query[PULL_REQUEST_QUERY_KEY]));
 
 const projects = ref<Project[]>([]);
 const requirements = ref<RequirementSummary[]>([]);
+const projectReviews = ref<ProjectReviewRow[]>([]);
 const activity = ref<Record<string, ActivityView>>({});
-const projectError = ref<string | null>(null);
 const projectLoading = ref(false);
+const projectError = ref<string | null>(null);
 
 const pullRequest = ref<PullRequest | null>(null);
-const reviews = ref<ReviewSummary[]>([]);
-const reviewsLoading = ref(false);
-const reviewsError = ref<string | null>(null);
+const pullRequestReviews = ref<ReviewSummary[]>([]);
+const pullRequestLoading = ref(false);
+const pullRequestError = ref<string | null>(null);
 
+const search = ref("");
+const statusFilter = ref<ReviewStatus | "">("");
+const decisionFilter = ref<ReviewDecision | "">("");
+const currentFilter = ref<"" | "current" | "stale">("");
 const pullRequestInput = ref("");
 const triggerPending = ref(false);
 const triggerMessage = ref<string | null>(null);
+let projectLoadToken = 0;
+let pullRequestLoadToken = 0;
+
+const selectedProject = computed(
+  () => projects.value.find((project) => project.id === projectId.value) ?? null,
+);
 
 const projectSelection = computed({
   get: () => projectId.value,
@@ -63,40 +81,61 @@ const projectSelection = computed({
   },
 });
 
-/** Newest first. The server returns oldest first by `(created_at, id)`. */
-const orderedReviews = computed(() =>
-  [...reviews.value].sort((left, right) =>
+const filteredReviews = computed(() => {
+  const query = search.value.trim().toLocaleLowerCase();
+  return projectReviews.value.filter((review) => {
+    const requirement = requirementTitle(review.requirementId).toLocaleLowerCase();
+    return (
+      (query === "" ||
+        String(review.id).includes(query) ||
+        String(review.pullRequestNumber).includes(query) ||
+        review.headSha.toLocaleLowerCase().includes(query) ||
+        requirement.includes(query)) &&
+      (statusFilter.value === "" || review.status === statusFilter.value) &&
+      (decisionFilter.value === "" || review.decision === decisionFilter.value) &&
+      (currentFilter.value === "" ||
+        (currentFilter.value === "current" ? review.isCurrent : !review.isCurrent))
+    );
+  });
+});
+
+const orderedPullRequestReviews = computed(() =>
+  [...pullRequestReviews.value].sort((left, right) =>
     left.createdAt === right.createdAt
       ? right.id - left.id
       : right.createdAt.localeCompare(left.createdAt),
   ),
 );
 
-function requirementTitle(requirementId: number | null): string {
-  if (requirementId === null) {
-    return "未关联需求";
-  }
-  const match = requirements.value.find((item) => item.id === requirementId);
-  return match === undefined ? `需求 ${requirementId}` : match.title;
-}
-
-interface ActivityRow {
-  requirement: RequirementSummary;
-  /** Null when the map came back without this requirement, which is not the same as zero. */
-  activity: ActivityView | null;
-}
-
-const activityRows = computed<ActivityRow[]>(() =>
+const activityRows = computed(() =>
   requirements.value.map((requirement) => ({
     requirement,
     activity: activity.value[String(requirement.id)] ?? null,
   })),
 );
 
+const canTriggerReview = computed(() => {
+  const role = selectedProject.value?.myRole;
+  return (
+    role === "LEADER" ||
+    role === "REVIEWER" ||
+    (role === "DEVELOPER" && pullRequest.value?.authorUserId === account.value?.id)
+  );
+});
+
+function requirementTitle(requirementId: number | null): string {
+  if (requirementId === null) {
+    return "未关联需求";
+  }
+  return requirements.value.find((item) => item.id === requirementId)?.title ?? `需求 ${requirementId}`;
+}
+
 watch(
   projectId,
   async (id) => {
+    const token = ++projectLoadToken;
     requirements.value = [];
+    projectReviews.value = [];
     activity.value = {};
     projectError.value = null;
     if (id === null) {
@@ -104,16 +143,25 @@ watch(
     }
     projectLoading.value = true;
     try {
-      const [loadedRequirements, loadedActivity] = await Promise.all([
+      const [loadedRequirements, loadedReviews, loadedActivity] = await Promise.all([
         listRequirements(id),
+        listProjectReviews(id),
         listReviewActivity(id),
       ]);
+      if (token !== projectLoadToken) {
+        return;
+      }
       requirements.value = loadedRequirements;
+      projectReviews.value = loadedReviews;
       activity.value = loadedActivity;
     } catch (failure: unknown) {
-      projectError.value = apiErrorMessage(failure);
+      if (token === projectLoadToken) {
+        projectError.value = apiErrorMessage(failure);
+      }
     } finally {
-      projectLoading.value = false;
+      if (token === projectLoadToken) {
+        projectLoading.value = false;
+      }
     }
   },
   { immediate: true },
@@ -122,26 +170,34 @@ watch(
 watch(
   [projectId, pullRequestId],
   async ([project, pull]) => {
+    const token = ++pullRequestLoadToken;
     pullRequest.value = null;
-    reviews.value = [];
-    reviewsError.value = null;
+    pullRequestReviews.value = [];
+    pullRequestError.value = null;
     triggerMessage.value = null;
     if (project === null || pull === null) {
       return;
     }
     pullRequestInput.value = String(pull);
-    reviewsLoading.value = true;
+    pullRequestLoading.value = true;
     try {
       const [loadedPullRequest, loadedReviews] = await Promise.all([
         getPullRequest(project, pull),
         listPullRequestReviews(project, pull),
       ]);
+      if (token !== pullRequestLoadToken) {
+        return;
+      }
       pullRequest.value = loadedPullRequest;
-      reviews.value = loadedReviews;
+      pullRequestReviews.value = loadedReviews;
     } catch (failure: unknown) {
-      reviewsError.value = apiErrorMessage(failure);
+      if (token === pullRequestLoadToken) {
+        pullRequestError.value = apiErrorMessage(failure);
+      }
     } finally {
-      reviewsLoading.value = false;
+      if (token === pullRequestLoadToken) {
+        pullRequestLoading.value = false;
+      }
     }
   },
   { immediate: true },
@@ -151,7 +207,7 @@ function openPullRequest(): void {
   const project = projectId.value;
   const pull = parseId(pullRequestInput.value);
   if (project === null || pull === null) {
-    reviewsError.value = "请输入一个正整数 PR 记录 id。";
+    pullRequestError.value = "请输入一个正整数 PR 记录 id。";
     return;
   }
   void router.push(reviewsRoute(project, pull));
@@ -160,20 +216,21 @@ function openPullRequest(): void {
 async function triggerReview(): Promise<void> {
   const project = projectId.value;
   const pull = pullRequestId.value;
-  if (project === null || pull === null) {
+  if (project === null || pull === null || !canTriggerReview.value) {
     return;
   }
   triggerPending.value = true;
   triggerMessage.value = null;
-  reviewsError.value = null;
+  pullRequestError.value = null;
   try {
     const requested = await requestReview(project, pull);
-    triggerMessage.value = `已受理：审查 ${requested.reviewId}，执行状态 ${
-      REVIEW_STATUS_LABELS[requested.status]
-    }，第 ${requested.executionAttempt} 次执行。`;
-    reviews.value = await listPullRequestReviews(project, pull);
+    triggerMessage.value = `已受理审查 ${requested.reviewId}：${REVIEW_STATUS_LABELS[requested.status]}，第 ${requested.executionAttempt} 次执行。`;
+    [pullRequestReviews.value, projectReviews.value] = await Promise.all([
+      listPullRequestReviews(project, pull),
+      listProjectReviews(project),
+    ]);
   } catch (failure: unknown) {
-    reviewsError.value = apiErrorMessage(failure);
+    pullRequestError.value = apiErrorMessage(failure);
   } finally {
     triggerPending.value = false;
   }
@@ -193,21 +250,19 @@ onMounted(async () => {
     <div class="page-head">
       <p class="eyebrow">Review pipeline</p>
       <h1 id="reviews-title">代码审查</h1>
-      <p class="lede">按真实 PR 记录定位审查历史，分别观察执行状态、人工 Decision 与需求评审活动。</p>
+      <p class="lede">从项目级审查索引直接进入证据工作台；执行状态、人工 Decision 与当前有效性始终分开呈现。</p>
     </div>
 
-    <div class="panel inline-form project-selector">
+    <div class="panel project-selector">
       <div class="selector-copy">
         <h2 class="panel-title">项目上下文</h2>
-        <p class="field-hint">所有 PR、Review 与 Finding 查询都保持项目隔离。</p>
+        <p class="field-hint">审查、PR 与 Finding 查询始终保持项目隔离。</p>
       </div>
       <div class="field">
         <label for="review-project">当前项目</label>
         <select id="review-project" v-model="projectSelection">
           <option :value="null" disabled>请选择项目</option>
-          <option v-for="project in projects" :key="project.id" :value="project.id">
-            {{ project.name }}
-          </option>
+          <option v-for="project in projects" :key="project.id" :value="project.id">{{ project.name }}</option>
         </select>
       </div>
     </div>
@@ -215,285 +270,172 @@ onMounted(async () => {
     <p v-if="projectId === null" class="empty-state">先选择一个项目，再查看它的审查记录。</p>
 
     <template v-else>
-      <form class="panel inline-form pull-request-search" @submit.prevent="openPullRequest">
-        <div class="search-copy">
-          <p class="eyebrow">Pull request index</p>
-          <h2 class="panel-title">定位一条 PR</h2>
-        </div>
-        <div class="field">
-          <label for="review-pull-request">PR 记录 id</label>
-          <input
-            id="review-pull-request"
-            v-model="pullRequestInput"
-            type="number"
-            min="1"
-            step="1"
-            inputmode="numeric"
-          />
-          <p class="field-hint">
-            服务端没有项目级 Review 列表端点，本页按 PR 检索一条 PR 的全部 Review。
-          </p>
-        </div>
-        <button type="submit" class="button button-primary">查看审查记录</button>
-      </form>
-
       <p v-if="projectError" class="alert" role="alert">{{ projectError }}</p>
 
-      <section class="panel review-index-panel" aria-labelledby="pull-request-reviews-title">
-        <h2 id="pull-request-reviews-title" class="panel-title">PR 的审查记录</h2>
+      <section class="panel review-index-panel" aria-labelledby="project-reviews-title">
+        <div class="index-head">
+          <div><p class="eyebrow">Project review index</p><h2 id="project-reviews-title" class="panel-title">项目审查记录</h2></div>
+          <span class="badge badge-neutral">{{ projectReviews.length }} 条</span>
+        </div>
 
-        <p v-if="pullRequestId === null" class="empty-state">
-          还没有选定 PR。填入 PR 记录 id 后可以看到它的全部 Review。
-        </p>
-        <p v-else-if="reviewsLoading" class="muted">正在加载审查记录…</p>
-        <template v-else>
-          <p v-if="reviewsError" class="alert" role="alert">{{ reviewsError }}</p>
+        <div class="review-filters" aria-label="筛选审查记录">
+          <div class="field"><label for="review-search">搜索</label><input id="review-search" v-model="search" type="search" placeholder="审查、PR、需求或 SHA" /></div>
+          <div class="field">
+            <label for="review-status-filter">执行状态</label>
+            <select id="review-status-filter" v-model="statusFilter"><option value="">全部</option><option v-for="(_, status) in REVIEW_STATUS_LABELS" :key="status" :value="status">{{ REVIEW_STATUS_LABELS[status] }}</option></select>
+          </div>
+          <div class="field">
+            <label for="review-decision-filter">Decision</label>
+            <select id="review-decision-filter" v-model="decisionFilter"><option value="">全部</option><option v-for="(_, decision) in REVIEW_DECISION_LABELS" :key="decision" :value="decision">{{ REVIEW_DECISION_LABELS[decision] }}</option></select>
+          </div>
+          <div class="field">
+            <label for="review-current-filter">当前有效性</label>
+            <select id="review-current-filter" v-model="currentFilter"><option value="">全部</option><option value="current">当前有效</option><option value="stale">已过期</option></select>
+          </div>
+        </div>
 
-          <dl v-if="pullRequest" class="meta-list pull-request-head">
-            <div>
-              <dt>PR 编号</dt>
-              <dd class="pull-request-number">PR #{{ pullRequest.externalNumber }}</dd>
-            </div>
-            <div>
-              <dt>当前 head SHA</dt>
-              <dd>
-                <code :title="pullRequest.headSha">{{ shortSha(pullRequest.headSha) }}</code>
-              </dd>
-            </div>
-            <div>
-              <dt>关联需求</dt>
-              <dd>
-                <RouterLink
-                  v-if="pullRequest.requirementId !== null && projectId !== null"
-                  :to="requirementDetailRoute(projectId, pullRequest.requirementId)"
-                >
-                  {{ requirementTitle(pullRequest.requirementId) }}
-                </RouterLink>
-                <span v-else>未关联需求</span>
-              </dd>
-            </div>
-            <div>
-              <dt>作者</dt>
-              <dd>{{ pullRequest.authorUsername ?? "未知" }}</dd>
-            </div>
-          </dl>
+        <p v-if="projectLoading" class="muted">正在加载项目审查记录…</p>
+        <p v-else-if="projectReviews.length === 0" class="empty-state">该项目还没有 Review。</p>
+        <p v-else-if="filteredReviews.length === 0" class="empty-state">没有符合当前筛选条件的 Review。</p>
 
-          <div v-if="pullRequest" class="form-actions trigger-actions">
-            <button
-              type="button"
-              class="button"
-              :disabled="triggerPending"
-              @click="triggerReview"
+        <div v-else class="table-scroll">
+          <table class="data-table project-review-table">
+            <caption class="table-caption">按服务端返回的时间倒序展示项目内全部 Review。</caption>
+            <thead><tr><th scope="col">审查</th><th scope="col">PR</th><th scope="col">关联需求</th><th scope="col">执行状态</th><th scope="col">Decision</th><th scope="col">当前有效性</th><th scope="col">head SHA</th><th scope="col">创建时间</th></tr></thead>
+            <tbody>
+              <tr v-for="review in filteredReviews" :key="review.id">
+                <td><RouterLink :to="reviewDetailRoute(projectId, review.id)">审查 {{ review.id }}</RouterLink></td>
+                <td><RouterLink :to="reviewsRoute(projectId, review.pullRequestId)">PR #{{ review.pullRequestNumber }}</RouterLink></td>
+                <td><RouterLink v-if="review.requirementId !== null" :to="requirementDetailRoute(projectId, review.requirementId)">{{ requirementTitle(review.requirementId) }}</RouterLink><span v-else>未关联需求</span></td>
+                <td><span :class="['badge', `badge-${REVIEW_STATUS_TONES[review.status]}`]">{{ REVIEW_STATUS_LABELS[review.status] }}</span></td>
+                <td><span :class="['badge', `badge-${REVIEW_DECISION_TONES[review.decision]}`]">{{ REVIEW_DECISION_LABELS[review.decision] }}</span></td>
+                <td><span :class="['badge', review.isCurrent ? 'badge-success' : 'badge-warning']">{{ review.isCurrent ? "当前有效" : "已过期" }}</span></td>
+                <td><code :title="review.headSha">{{ shortSha(review.headSha) }}</code></td>
+                <td>{{ formatDateTime(review.createdAt) }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <details class="panel activity-overview">
+        <summary>需求评审活动概览（{{ activityRows.length }} 个需求）</summary>
+        <p class="field-hint">这是关联 PR 的只读派生量，与 Review 执行状态和需求人工状态均不合并。</p>
+        <p v-if="activityRows.length === 0" class="empty-state">该项目还没有需求。</p>
+        <ul v-else class="activity-list">
+          <li v-for="row in activityRows" :key="row.requirement.id">
+            <RouterLink :to="requirementDetailRoute(projectId, row.requirement.id)">{{ row.requirement.title }}</RouterLink>
+            <span
+              v-if="row.activity"
+              :class="['badge', `badge-${REVIEW_ACTIVITY_TONES[row.activity.activity]}`]"
             >
-              对该 PR 请求一次审查
-            </button>
-            <p class="field-hint">
-              同一身份四元组已存在时是幂等返回，失败的会复用同一行重跑，已完成的会被拒绝。
-            </p>
-          </div>
-          <p v-if="triggerMessage" class="muted trigger-message">{{ triggerMessage }}</p>
+              {{ REVIEW_ACTIVITY_LABELS[row.activity.activity] }}
+            </span>
+            <span v-else class="badge badge-neutral">未返回</span>
+            <small v-if="row.activity">
+              <span v-for="state in PULL_REQUEST_ACTIVITIES" :key="state">
+                {{ PULL_REQUEST_ACTIVITY_LABELS[state] }} {{ row.activity.counts[state] }}
+              </span>
+            </small>
+          </li>
+        </ul>
+      </details>
 
-          <p v-if="orderedReviews.length === 0 && !reviewsError" class="empty-state">
-            该 PR 还没有任何 Review。
-          </p>
-
-          <div v-else-if="orderedReviews.length > 0" class="table-scroll">
-            <table class="data-table review-table">
-              <caption class="table-caption">
-                按创建时间倒序，全部 Review 一次列出（MVP 不分页）。
-              </caption>
-              <thead>
-                <tr>
-                  <th scope="col">审查</th>
-                  <th scope="col">PR 编号</th>
-                  <th scope="col">head SHA</th>
-                  <th scope="col">关联需求</th>
-                  <th scope="col">执行状态</th>
-                  <th scope="col">Decision</th>
-                  <th scope="col">是否当前有效</th>
-                  <th scope="col">创建时间</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="review in orderedReviews" :key="review.id" class="review-row">
-                  <td>
-                    <RouterLink
-                      v-if="projectId !== null"
-                      :to="reviewDetailRoute(projectId, review.id)"
-                    >
-                      审查 {{ review.id }}
-                    </RouterLink>
-                  </td>
-                  <td>PR #{{ pullRequest ? pullRequest.externalNumber : "—" }}</td>
-                  <td>
-                    <code :title="review.headSha">{{ shortSha(review.headSha) }}</code>
-                  </td>
-                  <td>
-                    {{
-                      review.requirementRevisionId === null
-                        ? "未关联需求"
-                        : `需求版本 ${review.requirementRevisionId}`
-                    }}
-                  </td>
-                  <td class="review-status">
-                    <span :class="['badge', `badge-${REVIEW_STATUS_TONES[review.status]}`]">
-                      {{ REVIEW_STATUS_LABELS[review.status] }}
-                    </span>
-                  </td>
-                  <td class="review-decision">
-                    <span :class="['badge', `badge-${REVIEW_DECISION_TONES[review.decision]}`]">
-                      {{ REVIEW_DECISION_LABELS[review.decision] }}
-                    </span>
-                  </td>
-                  <td class="review-current">
-                    {{ review.isCurrent ? "当前有效" : "已过期" }}
-                  </td>
-                  <td>{{ formatDateTime(review.createdAt) }}</td>
-                </tr>
-              </tbody>
-            </table>
+      <section v-if="pullRequestId !== null" class="panel pull-request-panel" aria-labelledby="pull-request-history-title">
+        <div class="index-head">
+          <div><p class="eyebrow">Selected pull request</p><h2 id="pull-request-history-title" class="panel-title">PR 审查历史</h2></div>
+          <RouterLink class="button button-quiet" :to="reviewsRoute(projectId)">关闭 PR 视图</RouterLink>
+        </div>
+        <p v-if="pullRequestLoading" class="muted">正在加载 PR 与审查历史…</p>
+        <p v-if="pullRequestError" class="alert" role="alert">{{ pullRequestError }}</p>
+        <template v-if="pullRequest">
+          <dl class="meta-list pull-request-head">
+            <div><dt>PR 编号</dt><dd class="pull-request-number">PR #{{ pullRequest.externalNumber }}</dd></div>
+            <div><dt>当前 head</dt><dd><code :title="pullRequest.headSha">{{ shortSha(pullRequest.headSha) }}</code></dd></div>
+            <div><dt>关联需求</dt><dd>{{ requirementTitle(pullRequest.requirementId) }}</dd></div>
+            <div><dt>作者</dt><dd>{{ pullRequest.authorUsername ?? "未知" }}</dd></div>
+          </dl>
+          <div class="trigger-row">
+            <button v-if="canTriggerReview" type="button" class="button button-primary" :disabled="triggerPending" @click="triggerReview">请求审查 / 重试</button>
+            <p v-else class="field-hint">负责人、评审或该 PR 的平台内作者可以请求审查。</p>
+            <p class="field-hint">同一审查身份幂等；失败可重试，代码或需求版本变化后可发起新一轮。</p>
           </div>
+          <p v-if="triggerMessage" class="muted" role="status">{{ triggerMessage }}</p>
+          <p v-if="orderedPullRequestReviews.length === 0" class="empty-state">该 PR 还没有 Review。</p>
+          <ol v-else class="history-list">
+            <li v-for="review in orderedPullRequestReviews" :key="review.id" class="history-row">
+              <RouterLink :to="reviewDetailRoute(projectId, review.id)">审查 {{ review.id }}</RouterLink>
+              <code :title="review.headSha">{{ shortSha(review.headSha) }}</code>
+              <span :class="['badge', `badge-${REVIEW_STATUS_TONES[review.status]}`]">{{ REVIEW_STATUS_LABELS[review.status] }}</span>
+              <span :class="['badge', `badge-${REVIEW_DECISION_TONES[review.decision]}`]">{{ REVIEW_DECISION_LABELS[review.decision] }}</span>
+              <span>{{ review.isCurrent ? "当前有效" : "已过期" }}</span>
+              <span>{{ formatDateTime(review.createdAt) }}</span>
+            </li>
+          </ol>
         </template>
       </section>
 
-      <section class="panel activity-panel" aria-labelledby="requirement-activity-title">
-        <h2 id="requirement-activity-title" class="panel-title">需求的评审活动</h2>
-        <p class="field-hint">
-          评审活动是只读派生量，与需求状态是两个维度，不合并展示。
-        </p>
-
-        <p v-if="projectLoading" class="muted">正在加载评审活动…</p>
-        <p v-else-if="requirements.length === 0" class="empty-state">该项目还没有需求。</p>
-
-        <ul v-else class="record-list activity-list">
-          <li v-for="row in activityRows" :key="row.requirement.id" class="record activity-card">
-            <div class="record-head">
-              <h3 class="record-title">
-                <RouterLink
-                  v-if="projectId !== null"
-                  :to="requirementDetailRoute(projectId, row.requirement.id)"
-                >
-                  {{ row.requirement.title }}
-                </RouterLink>
-              </h3>
-              <span class="badge badge-neutral">v{{ row.requirement.currentRevisionSeq }}</span>
-            </div>
-
-            <dl class="meta-list">
-              <div>
-                <dt>评审活动</dt>
-                <dd class="review-activity">
-                  <span class="badge badge-info">
-                    {{
-                      row.activity === null
-                        ? "未返回"
-                        : REVIEW_ACTIVITY_LABELS[row.activity.activity]
-                    }}
-                  </span>
-                </dd>
-              </div>
-              <div v-for="state in PULL_REQUEST_ACTIVITIES" :key="state">
-                <dt>{{ PULL_REQUEST_ACTIVITY_LABELS[state] }}</dt>
-                <dd>{{ row.activity === null ? 0 : row.activity.counts[state] }} 个 PR</dd>
-              </div>
-            </dl>
-          </li>
-        </ul>
-      </section>
+      <details class="panel recovery-panel">
+        <summary>故障恢复：按内部 PR 记录 id 定位</summary>
+        <form class="inline-form recovery-form" @submit.prevent="openPullRequest">
+          <div class="field"><label for="review-pull-request">PR 记录 id</label><input id="review-pull-request" v-model="pullRequestInput" type="number" min="1" step="1" inputmode="numeric" /></div>
+          <button type="submit" class="button button-quiet">打开 PR 历史</button>
+          <p class="field-hint">正常使用请直接点击上方列表中的 PR；这里只用于已有内部记录 id 的排障场景。</p>
+        </form>
+      </details>
     </template>
   </section>
 </template>
 
 <style scoped>
 .project-selector,
-.pull-request-search {
+.review-filters {
   display: grid;
-  grid-template-columns: minmax(14rem, 1fr) minmax(14rem, 1.15fr) auto;
+  align-items: end;
+  gap: var(--fp-space-4);
 }
 
+.project-selector { grid-template-columns: minmax(14rem, 1fr) minmax(14rem, 1.2fr); }
+.review-filters { grid-template-columns: minmax(15rem, 1.4fr) repeat(3, minmax(10rem, 0.7fr)); margin-bottom: var(--fp-space-5); }
 .selector-copy .panel-title,
-.search-copy .panel-title {
-  margin-bottom: var(--fp-space-1);
-}
-
-.search-copy .eyebrow {
-  margin-bottom: var(--fp-space-2);
-}
-
-.review-index-panel {
-  border-color: var(--fp-color-border-accent);
-}
-
-.pull-request-head {
-  margin-bottom: var(--fp-space-4);
-  padding: var(--fp-space-4);
-  border: 0.0625rem solid var(--fp-color-border);
-  border-radius: var(--fp-radius-md);
-  background: var(--fp-color-canvas-muted);
-}
-
-.trigger-actions {
-  margin-bottom: var(--fp-space-4);
-}
-
-.trigger-message {
-  margin-bottom: var(--fp-space-4);
-}
-
-/* Bounded local scroll: a wide table never gives the page horizontal overflow. */
-.table-scroll {
-  overflow-x: auto;
-}
-
-.data-table {
-  min-width: 64rem;
-  width: 100%;
-  border-collapse: collapse;
-  text-align: left;
-}
-
-.table-caption {
-  margin-bottom: var(--fp-space-3);
-  color: var(--fp-color-text-muted);
-  font-size: 0.8125rem;
-  text-align: left;
-}
-
+.index-head .panel-title { margin-bottom: var(--fp-space-1); }
+.review-index-panel,
+.pull-request-panel { border-color: var(--fp-color-border-accent); }
+.index-head { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--fp-space-4); margin-bottom: var(--fp-space-5); }
+.index-head .eyebrow { margin-bottom: var(--fp-space-2); }
+.table-scroll { overflow-x: auto; }
+.data-table { min-width: 70rem; width: 100%; border-collapse: collapse; text-align: left; }
+.table-caption { margin-bottom: var(--fp-space-3); color: var(--fp-color-text-muted); font-size: 0.8125rem; text-align: left; }
 .data-table th,
-.data-table td {
-  padding: var(--fp-space-2) var(--fp-space-3);
-  border-bottom: 0.0625rem solid var(--fp-color-border);
-  vertical-align: top;
-  white-space: nowrap;
-}
-
-.data-table th {
-  color: var(--fp-color-text-muted);
-  font-size: 0.8125rem;
-}
-
-.activity-list {
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 30rem), 1fr));
-}
-
-.activity-card .meta-list {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-
-.activity-card .review-activity {
-  grid-column: auto;
-}
+.data-table td { padding: var(--fp-space-3); border-bottom: 0.0625rem solid var(--fp-color-border); vertical-align: top; white-space: nowrap; }
+.data-table th { color: var(--fp-color-text-muted); font-size: 0.8125rem; }
+.data-table tbody tr:hover { background: var(--fp-color-surface-header-hover); }
+.pull-request-head { margin-bottom: var(--fp-space-4); padding: var(--fp-space-4); border: 0.0625rem solid var(--fp-color-border); border-radius: var(--fp-radius-md); background: var(--fp-color-canvas-muted); }
+.trigger-row { display: flex; align-items: center; flex-wrap: wrap; gap: var(--fp-space-3); margin-bottom: var(--fp-space-4); }
+.history-list { display: grid; margin: var(--fp-space-4) 0 0; padding: 0; list-style: none; }
+.history-row { display: grid; grid-template-columns: repeat(6, minmax(0, auto)); align-items: center; gap: var(--fp-space-3); padding: var(--fp-space-3) 0; border-top: 0.0625rem solid var(--fp-color-border); }
+.recovery-panel summary { color: var(--fp-color-text-muted); cursor: pointer; font-weight: 700; }
+.activity-overview > summary { color: var(--fp-color-text-muted); cursor: pointer; font-weight: 700; }
+.activity-overview > .field-hint { margin: var(--fp-space-3) 0; }
+.activity-list { display: grid; gap: var(--fp-space-2); margin: 0; padding: 0; list-style: none; }
+.activity-list li { display: grid; align-items: center; gap: var(--fp-space-3); padding: var(--fp-space-3); border: 0.0625rem solid var(--fp-color-border); border-radius: var(--fp-radius-sm); grid-template-columns: minmax(12rem, 1fr) auto minmax(0, 2fr); }
+.activity-list small { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--fp-space-2); color: var(--fp-color-text-subtle); }
+.recovery-form { margin-top: var(--fp-space-4); }
 
 @media (max-width: 64rem) {
   .project-selector,
-  .pull-request-search {
-    grid-template-columns: 1fr;
-  }
+  .review-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .history-row { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .activity-list li { grid-template-columns: 1fr auto; }
+  .activity-list small { grid-column: 1 / -1; justify-content: flex-start; }
 }
 
 @media (max-width: 42rem) {
-  .activity-card .meta-list {
-    grid-template-columns: 1fr 1fr;
-  }
+  .project-selector,
+  .review-filters,
+  .history-row { grid-template-columns: 1fr; }
+  .activity-list li { grid-template-columns: 1fr; }
+  .activity-list small { grid-column: auto; }
+  .index-head { flex-direction: column; }
 }
 </style>

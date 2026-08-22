@@ -33,11 +33,16 @@ const props = defineProps<{
   events: FindingEvent[] | null;
   eventsPending: boolean;
   eventsError: string | null;
+  selected: boolean;
+  actorNames: Record<string, string>;
+  comment: string;
 }>();
 
 const emit = defineEmits<{
-  move: [target: FindingStatus, action: FindingAction];
+  move: [target: FindingStatus, action: FindingAction, comment: string];
   showEvents: [];
+  select: [];
+  updateComment: [comment: string];
 }>();
 
 const moves = computed(() =>
@@ -51,16 +56,30 @@ const locator = computed(() => {
   }
   return props.finding.line === null ? `${path} · 无精确行号` : `${path}:${props.finding.line}`;
 });
+
+function actorName(actorId: number): string {
+  return props.actorNames[String(actorId)] ?? `用户 ${actorId}`;
+}
+
+function updateComment(event: Event): void {
+  const target = event.target;
+  if (target instanceof HTMLTextAreaElement) {
+    emit("updateComment", target.value);
+  }
+}
 </script>
 
 <template>
-  <li class="record finding">
+  <li :class="['record', 'finding', { 'finding-selected': selected }]">
     <div class="record-head">
       <h3 class="record-title">发现 {{ finding.id }}</h3>
       <span class="badge badge-neutral finding-type">
         {{ FINDING_TYPE_LABELS[finding.findingType] }}
       </span>
       <code class="finding-locator">{{ locator }}</code>
+      <button type="button" class="button button-quiet" @click="emit('select')">
+        在证据中定位
+      </button>
     </div>
 
     <!--
@@ -151,6 +170,18 @@ const locator = computed(() => {
       </div>
     </dl>
 
+    <div v-if="moves.length > 0" class="field finding-comment-field">
+      <label :for="`finding-comment-${finding.id}`">本次流转备注（可选）</label>
+      <textarea
+        :id="`finding-comment-${finding.id}`"
+        :value="comment"
+        rows="2"
+        maxlength="2000"
+        placeholder="记录判断依据、修复说明或打回原因"
+        @input="updateComment"
+      ></textarea>
+    </div>
+
     <div class="form-actions">
       <button
         v-for="move in moves"
@@ -159,7 +190,7 @@ const locator = computed(() => {
         class="button"
         :data-action="move.action"
         :disabled="pending"
-        @click="emit('move', move.target, move.action)"
+        @click="emit('move', move.target, move.action, comment)"
       >
         {{ FINDING_ACTION_LABELS[move.action] }}
       </button>
@@ -183,7 +214,7 @@ const locator = computed(() => {
         {{ FINDING_ACTION_LABELS[event.action] }} ·
         {{ FINDING_STATUS_LABELS[event.fromStatus] }} →
         {{ FINDING_STATUS_LABELS[event.toStatus] }} ·
-        操作人 {{ event.actorId }}
+        操作人 {{ actorName(event.actorId) }}
         <span v-if="event.comment">· {{ event.comment }}</span>
       </li>
       <li v-if="events.length === 0">这条 Finding 还没有流转记录。</li>
@@ -195,6 +226,11 @@ const locator = computed(() => {
 .finding {
   border-color: var(--fp-color-border-strong);
   background: var(--fp-gradient-panel);
+}
+
+.finding-selected {
+  border-color: var(--fp-color-warning);
+  box-shadow: var(--fp-shadow-elevated), 0 0 2rem var(--fp-color-warning-soft);
 }
 
 .finding .record-head {
@@ -264,6 +300,10 @@ const locator = computed(() => {
   margin-top: var(--fp-space-5);
   padding-top: var(--fp-space-5);
   border-top: 0.0625rem solid var(--fp-color-border);
+}
+
+.finding-comment-field {
+  margin-top: var(--fp-space-5);
 }
 
 .finding-events {

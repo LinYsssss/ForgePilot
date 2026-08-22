@@ -317,7 +317,53 @@ function reviewDetail(review: ReviewRow): unknown {
     decisionAt: review.decisionAt,
     decisionComment: review.decisionComment,
     isCurrent: server.isCurrent(review),
-    contextSnapshot: { requirementTitle: server.requirementTitle, revisionSeq: 1 },
+    contextSnapshot: {
+      requirement:
+        server.requirementId === null
+          ? null
+          : {
+              id: server.requirementId,
+              revisionId: server.revisionId,
+              title: server.requirementTitle,
+              background: null,
+              description: "完成登录态闭环",
+            },
+      acceptanceCriteria: server.criteria.map((criterion) => ({
+        id: criterion.id,
+        acKey: criterion.acKey,
+        text: criterion.text,
+      })),
+      pullRequest: {
+        provider: "GITHUB",
+        instance: "github.com",
+        repository: "forgepilot/app",
+        number: 42,
+        baseSha: "0000000000000000000000000000000000000000",
+        headSha: review.headSha,
+        inputFingerprint: review.reviewInputFingerprint,
+        title: "feat: 登录闭环",
+      },
+      changedFiles: [
+        {
+          path: "src/features/auth/LoginPage.vue",
+          changeType: "MODIFIED",
+          patch: "@@ -40,3 +40,4 @@\n context\n-old message\n+same safe message\n+route to projects",
+        },
+        {
+          path: "src/lib/http.ts",
+          changeType: "MODIFIED",
+          patch: "@@ -1 +1 @@\n-old\n+new",
+        },
+      ],
+      knowledgeEvidence: [
+        { sourceId: 1, documentId: 2, chunkId: 3, excerpt: "认证错误不得泄露账户是否存在。", score: 0.93 },
+      ],
+      truncation: {
+        truncated: true,
+        files: [{ path: "src/features/auth/LoginPage.vue", patchTruncated: false }],
+        notReviewed: ["src/generated/huge-bundle.ts"],
+      },
+    },
     coverage: {
       truncated: true,
       files: [{ path: "src/features/auth/LoginPage.vue", patchTruncated: false }],
@@ -378,6 +424,9 @@ function handleAuth(path: string, method: string, body: string | null): Response
   }
   if (path === "/api/auth/logout" && method === "POST") {
     server.session = null;
+    return json({});
+  }
+  if (path === "/api/auth/password" && method === "POST") {
     return json({});
   }
   return null;
@@ -489,6 +538,25 @@ function handleRequirement(
   if (path === "/api/projects/3/requirements/12/revisions" && method === "GET") {
     return json([revisionView()]);
   }
+  if (path === "/api/projects/3/requirements/12/review-activity" && method === "GET") {
+    return json({
+      activity: server.reviews.length === 0 ? "NO_PR" : "REVIEWING",
+      counts: {
+        REVIEW_REQUIRED: 0,
+        FAILED: 0,
+        CHANGES_REQUESTED: 0,
+        REVIEWING: server.reviews.length,
+        PENDING: 0,
+        APPROVED: 0,
+      },
+    });
+  }
+  if (path === "/api/projects/3/requirements/12/quality" && method === "POST") {
+    return json({ requirementId: 12, revisionId: server.revisionId, revisionSeq: 1, qualityVersion: "v1", checkedAt: "2026-08-21T04:00:00Z", rules: [], ai: null });
+  }
+  if (path === "/api/projects/3/requirements/12/guidance" && method === "POST") {
+    return json({ requirementId: 12, revisionId: server.revisionId, revisionSeq: 1, guidance: "先统一错误语义，再补路由测试。" });
+  }
   if (path === "/api/projects/3/requirements/12/status" && method === "POST") {
     const payload = JSON.parse(body ?? "{}") as { status: string };
     server.requirementStatus = payload.status;
@@ -521,6 +589,21 @@ function handleReview(path: string, method: string, body: string | null): Respon
         },
       },
     });
+  }
+  if (path === "/api/projects/3/reviews" && method === "GET") {
+    return json(
+      [...server.reviews].reverse().map((review) => ({
+        id: review.id,
+        pullRequestId: review.pullRequestId,
+        pullRequestNumber: 42,
+        headSha: review.headSha,
+        requirementId: review.requirementId,
+        status: review.status,
+        decision: review.decision,
+        isCurrent: server.isCurrent(review),
+        createdAt: review.createdAt,
+      })),
+    );
   }
   if (path === "/api/projects/3/pull-requests/7" && method === "GET") {
     return json({
@@ -667,7 +750,7 @@ async function signInAs(wrapper: VueWrapper, username: string): Promise<void> {
 }
 
 async function signOut(wrapper: VueWrapper): Promise<void> {
-  await wrapper.find(".session-area button").trigger("click");
+  await wrapper.find(".session-area > button").trigger("click");
   await flushPromises();
 }
 
@@ -781,13 +864,19 @@ describe("three-role journey through the real App and router", () => {
     await router.push("/reviews?project=3&pullRequest=7");
     await flushPromises();
     expect(wrapper.find("main h1").text()).toBe("代码审查");
-    const row = wrapper.find(".review-row");
+    const row = wrapper.find(".project-review-table tbody tr");
     expect(row.text()).toContain("PR #42");
     expect(row.text()).toContain("a1b2c3d4e5f6");
-    expect(row.find(".review-status").text()).toBe("已完成");
-    expect(row.find(".review-decision").text()).toBe("尚无终局决定");
-    expect(row.find(".review-current").text()).toBe("当前有效");
-    expect(wrapper.find(".review-activity").text()).toBe("审查中");
+    expect(row.text()).toContain("已完成");
+    expect(row.text()).toContain("尚无终局决定");
+    expect(row.text()).toContain("当前有效");
+    expect(wrapper.find(".trigger-row .button-primary").exists()).toBe(true);
+
+    await wrapper.find("#review-status-filter").setValue("FAILED");
+    expect(wrapper.find(".project-review-table").exists()).toBe(false);
+    expect(wrapper.text()).toContain("没有符合当前筛选条件的 Review");
+    await wrapper.find("#review-status-filter").setValue("COMPLETED");
+    expect(wrapper.find(".project-review-table").exists()).toBe(true);
 
     // 8. The Review page keeps the four marks apart, and refuses a LEADER the two
     //    developer-only steps of PRD.md 3.
@@ -799,6 +888,11 @@ describe("three-role journey through the real App and router", () => {
     expect(firstFinding.find(".finding-continuity").text()).toBe("本轮新增");
     expect(firstFinding.find(".finding-ai-confidence").text()).toBe("未记录");
     expect(firstFinding.find(".review-decision-mark").text()).toBe("尚无终局决定");
+
+    await firstFinding.findAll("button").find((button) => button.text() === "在证据中定位")?.trigger("click");
+    expect(wrapper.find(".snapshot-criterion-selected").text()).toContain("AC-1");
+    expect(wrapper.find(".diff-file-active").text()).toContain("LoginPage.vue");
+    expect(wrapper.find(".diff-line-selected").text()).toContain("route to projects");
 
     // Four containers, not one: no element carries two of the four marks, and no
     // mark's text has absorbed another's label.
@@ -835,9 +929,9 @@ describe("three-role journey through the real App and router", () => {
     expect(wrapper.findAll('[data-action="CLAIM"]')).toHaveLength(0);
     expect(wrapper.findAll('[data-action="MARK_FIXED"]')).toHaveLength(0);
     expect(wrapper.findAll('[data-action="CONFIRM"]')).toHaveLength(1);
-    // Only the suppressed rejection offers REOPEN, and it is on the second card.
+    // Only the separately grouped suppressed rejection offers REOPEN.
     expect(wrapper.findAll('[data-action="REOPEN"]')).toHaveLength(1);
-    expect(wrapper.findAll(".finding")[1].find(".finding-continuity").text()).toBe(
+    expect(wrapper.find(".suppressed-findings .finding-continuity").text()).toBe(
       "继承抑制",
     );
 
@@ -848,12 +942,17 @@ describe("three-role journey through the real App and router", () => {
     await router.push("/reviews/501?project=3");
     await flushPromises();
 
+    await wrapper.find("#finding-comment-900").setValue("证据与 AC-1 一致");
     await wrapper.find('[data-action="CONFIRM"]').trigger("click");
     await flushPromises();
     expect(lastCall("POST", "/api/projects/3/findings/900/status")?.body).toBe(
-      '{"status":"CONFIRMED"}',
+      '{"status":"CONFIRMED","comment":"证据与 AC-1 一致"}',
     );
     expect(wrapper.findAll(".finding")[0].find(".finding-status").text()).toBe("已确认");
+    await wrapper.findAll(".finding")[0].find(".finding-events-button").trigger("click");
+    await flushPromises();
+    expect(wrapper.findAll(".finding")[0].find(".finding-events").text()).toContain("操作人 rev");
+    expect(wrapper.findAll(".finding")[0].find(".finding-events").text()).toContain("证据与 AC-1 一致");
 
     // 10. DEVELOPER claims it and marks it fixed.
     await signOut(wrapper);
@@ -1016,7 +1115,7 @@ describe("three-role journey through the real App and router", () => {
     expect(wrapper.findAll("main h2").length).toBeGreaterThan(0);
   });
 
-  it("shows the settings screen as three honest sections", async () => {
+  it("keeps project integration settings honest and requirement advice on the requirement", async () => {
     server = new FakeServer();
     server.projectId = 3;
     server.projectName = "ForgePilot";
@@ -1064,6 +1163,18 @@ describe("three-role journey through the real App and router", () => {
     // Knowledge upload has no endpoint yet and the page says so instead of
     // offering a button that does nothing.
     expect(wrapper.find(".knowledge-unavailable").text()).toContain("还没有对应的 HTTP 端点");
-    expect(wrapper.find("#quality-requirement").exists()).toBe(true);
+    expect(wrapper.find("#quality-requirement").exists()).toBe(false);
+    expect(wrapper.text()).toContain("需求质量与实现建议回到对应需求详情中操作");
+
+    await wrapper.find(".account-menu summary").trigger("click");
+    await wrapper.find("#account-current-password").setValue("old-password");
+    await wrapper.find("#account-new-password").setValue("new-password");
+    await wrapper.find("#account-password-confirmation").setValue("new-password");
+    await wrapper.find("form.account-password-form").trigger("submit");
+    await flushPromises();
+    expect(lastCall("POST", "/api/auth/password")?.body).toBe(
+      '{"currentPassword":"old-password","newPassword":"new-password"}',
+    );
+    expect(wrapper.find("form.account-password-form").text()).toContain("密码已修改");
   });
 });

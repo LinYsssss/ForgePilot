@@ -47,6 +47,3 @@ export const STATUS_TRANSITIONS: Record<RequirementStatus, readonly RequirementS
 export function isTerminal(status: RequirementStatus): boolean {
   return status === "DONE" || status === "CANCELED";
 }
-
-// Kept for one migration commit so the previous ReviewsPage remains buildable.
-export { REVIEW_ACTIVITY_LABELS } from "../review/labels";

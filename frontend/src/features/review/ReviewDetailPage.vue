@@ -19,13 +19,16 @@ import {
   listFindingEvents,
   listPullRequestReviews,
   moveFinding,
+  type Finding,
   type FindingAction,
   type FindingEvent,
   type FindingStatus,
   type ReviewDetail,
   type ReviewSummary,
 } from "./api";
+import DiffEvidenceViewer from "./DiffEvidenceViewer.vue";
 import FindingCard from "./FindingCard.vue";
+import { parseReviewContext } from "./context";
 import {
   shortSha,
   AC_VERDICT_LABELS,
@@ -65,6 +68,10 @@ const findingError = ref<string | null>(null);
 const eventsByFinding = ref<Record<string, FindingEvent[]>>({});
 const eventsPendingFor = ref<number | null>(null);
 const eventsError = ref<{ findingId: number; message: string } | null>(null);
+const selectedFindingId = ref<number | null>(null);
+const selectedPath = ref<string | null>(null);
+const findingComments = ref<Record<string, string>>({});
+let detailLoadToken = 0;
 
 const role = computed(() => project.value?.myRole ?? null);
 const isLeader = computed(() => role.value === "LEADER");
@@ -138,6 +145,20 @@ const canSubmitDecision = computed(
   () => canDecide.value && decisionBlockers.value.length === 0,
 );
 
+const reviewContext = computed(() => parseReviewContext(detail.value?.contextSnapshot));
+const activeFindings = computed(() =>
+  detail.value?.findings.filter((finding) => finding.continuity !== "SUPPRESSED") ?? [],
+);
+const suppressedFindings = computed(() =>
+  detail.value?.findings.filter((finding) => finding.continuity === "SUPPRESSED") ?? [],
+);
+const selectedFinding = computed<Finding | null>(() =>
+  detail.value?.findings.find((finding) => finding.id === selectedFindingId.value) ?? null,
+);
+const memberNames = computed<Record<string, string>>(() =>
+  Object.fromEntries(members.value.map((member) => [String(member.userId), member.username])),
+);
+
 const contextSnapshotText = computed(() => {
   const snapshot = detail.value?.contextSnapshot;
   return snapshot === null || snapshot === undefined
@@ -162,6 +183,7 @@ function requirementTitle(requirementId: number | null): string {
 }
 
 async function load(): Promise<void> {
+  const token = ++detailLoadToken;
   const ids = target();
   loading.value = true;
   loadError.value = null;
@@ -178,6 +200,7 @@ async function load(): Promise<void> {
   decisionComment.value = "";
   associationError.value = null;
   associationReason.value = "";
+  findingComments.value = {};
   if (ids === null) {
     loading.value = false;
     return;
@@ -190,22 +213,33 @@ async function load(): Promise<void> {
         listRequirements(ids.projectId),
         getReview(ids.projectId, ids.reviewId),
       ]);
+    if (token !== detailLoadToken) {
+      return;
+    }
     project.value = loadedProject;
     members.value = loadedMembers;
     requirements.value = loadedRequirements;
     detail.value = loadedReview;
+    selectedPath.value = parseReviewContext(loadedReview.contextSnapshot)?.changedFiles[0]?.path ?? null;
 
     const [loadedPullRequest, loadedHistory] = await Promise.all([
       getPullRequest(ids.projectId, loadedReview.pullRequestId),
       listPullRequestReviews(ids.projectId, loadedReview.pullRequestId),
     ]);
+    if (token !== detailLoadToken) {
+      return;
+    }
     pullRequest.value = loadedPullRequest;
     history.value = loadedHistory;
     associationSelection.value = loadedPullRequest.requirementId;
   } catch (failure: unknown) {
-    loadError.value = apiErrorMessage(failure);
+    if (token === detailLoadToken) {
+      loadError.value = apiErrorMessage(failure);
+    }
   } finally {
-    loading.value = false;
+    if (token === detailLoadToken) {
+      loading.value = false;
+    }
   }
 }
 
@@ -265,6 +299,7 @@ async function move(
   findingId: number,
   status: FindingStatus,
   action: FindingAction,
+  comment: string,
 ): Promise<void> {
   const ids = target();
   if (ids === null) {
@@ -273,7 +308,8 @@ async function move(
   findingPending.value = findingId;
   findingError.value = null;
   try {
-    await moveFinding(ids.projectId, findingId, status, "");
+    await moveFinding(ids.projectId, findingId, status, comment);
+    setFindingComment(findingId, "");
     detail.value = await getReview(ids.projectId, ids.reviewId);
     if (String(findingId) in eventsByFinding.value) {
       eventsByFinding.value = {
@@ -285,6 +321,17 @@ async function move(
     findingError.value = `${action} 失败：${apiErrorMessage(failure)}`;
   } finally {
     findingPending.value = null;
+  }
+}
+
+function setFindingComment(findingId: number, comment: string): void {
+  findingComments.value = { ...findingComments.value, [String(findingId)]: comment };
+}
+
+function selectFinding(finding: Finding): void {
+  selectedFindingId.value = finding.id;
+  if (finding.path !== null && reviewContext.value?.changedFiles.some((file) => file.path === finding.path)) {
+    selectedPath.value = finding.path;
   }
 }
 
@@ -482,6 +529,81 @@ function eventsErrorFor(findingId: number): string | null {
       </section>
       </div>
 
+      <section class="panel evidence-workspace" aria-labelledby="evidence-workspace-title">
+        <div class="workspace-head">
+          <div>
+            <p class="eyebrow">Immutable review evidence</p>
+            <h2 id="evidence-workspace-title" class="panel-title">审查证据工作台</h2>
+          </div>
+          <span v-if="selectedFinding" class="badge badge-warning">
+            正在定位发现 {{ selectedFinding.id }}
+          </span>
+        </div>
+
+        <p v-if="reviewContext === null" class="alert context-snapshot-invalid" role="alert">
+          上下文快照缺失或结构不完整，无法安全构建证据联动；原始载荷仍保留在页面底部供诊断。
+        </p>
+
+        <template v-else>
+          <div class="snapshot-summary-grid">
+            <section class="snapshot-card" aria-labelledby="snapshot-requirement-title">
+              <h3 id="snapshot-requirement-title" class="subsection-title">审查时的需求与 AC</h3>
+              <p v-if="reviewContext.requirement === null" class="empty-state">
+                这轮 Review 没有关联需求。
+              </p>
+              <template v-else>
+                <p class="snapshot-title">{{ reviewContext.requirement.title }}</p>
+                <p class="muted">{{ reviewContext.requirement.background ?? "未记录背景" }}</p>
+                <p class="muted">{{ reviewContext.requirement.description ?? "未记录描述" }}</p>
+              </template>
+              <ol class="snapshot-criteria">
+                <li
+                  v-for="criterion in reviewContext.acceptanceCriteria"
+                  :key="criterion.id"
+                  :class="{ 'snapshot-criterion-selected': selectedFinding?.acKey === criterion.acKey }"
+                >
+                  <span class="badge badge-neutral">{{ criterion.acKey }}</span>
+                  {{ criterion.text }}
+                </li>
+              </ol>
+            </section>
+
+            <section class="snapshot-card" aria-labelledby="snapshot-knowledge-title">
+              <h3 id="snapshot-knowledge-title" class="subsection-title">本 Review 召回的知识证据集</h3>
+              <p class="field-hint">
+                响应没有 Finding 到知识块的一对一关联，因此这里只呈现本轮召回集合，不伪造对应关系。
+              </p>
+              <p v-if="reviewContext.knowledgeEvidence.length === 0" class="empty-state">
+                本轮没有召回知识证据。
+              </p>
+              <ol v-else class="knowledge-list">
+                <li v-for="evidence in reviewContext.knowledgeEvidence" :key="evidence.chunkId">
+                  <div class="record-head">
+                    <span class="badge badge-neutral">块 {{ evidence.chunkId }}</span>
+                    <span class="badge badge-info">相关度 {{ evidence.score.toFixed(3) }}</span>
+                  </div>
+                  <p>{{ evidence.excerpt }}</p>
+                  <small>来源 {{ evidence.sourceId }} · 文档 {{ evidence.documentId }}</small>
+                </li>
+              </ol>
+            </section>
+          </div>
+
+          <div class="snapshot-pr-bar">
+            <span>{{ reviewContext.pullRequest.provider }} · {{ reviewContext.pullRequest.repository }} #{{ reviewContext.pullRequest.number }}</span>
+            <strong>{{ reviewContext.pullRequest.title }}</strong>
+            <code :title="reviewContext.pullRequest.headSha">{{ shortSha(reviewContext.pullRequest.headSha) }}</code>
+          </div>
+
+          <DiffEvidenceViewer
+            :files="reviewContext.changedFiles"
+            :selected-path="selectedPath"
+            :finding="selectedFinding"
+            @select-path="selectedPath = $event"
+          />
+        </template>
+      </section>
+
       <div class="review-evidence-grid">
       <section class="panel ac-panel" aria-labelledby="ac-verdicts-title">
         <h2 id="ac-verdicts-title" class="panel-title">验收标准覆盖判定</h2>
@@ -559,9 +681,9 @@ function eventsErrorFor(findingId: number): string | null {
         <p v-if="findingError" class="alert" role="alert">{{ findingError }}</p>
         <p v-if="detail.findings.length === 0" class="empty-state">这条 Review 没有 Finding。</p>
 
-        <ul v-else class="record-list">
+        <ul v-if="activeFindings.length > 0" class="record-list">
           <FindingCard
-            v-for="finding in detail.findings"
+            v-for="finding in activeFindings"
             :key="finding.id"
             :finding="finding"
             :review-decision="detail.decision"
@@ -571,10 +693,41 @@ function eventsErrorFor(findingId: number): string | null {
             :events="eventsByFinding[String(finding.id)] ?? null"
             :events-pending="eventsPendingFor === finding.id"
             :events-error="eventsErrorFor(finding.id)"
-            @move="(status, action) => move(finding.id, status, action)"
+            :selected="selectedFindingId === finding.id"
+            :actor-names="memberNames"
+            :comment="findingComments[String(finding.id)] ?? ''"
+            @move="(status, action, comment) => move(finding.id, status, action, comment)"
             @show-events="showEvents(finding.id)"
+            @select="selectFinding(finding)"
+            @update-comment="setFindingComment(finding.id, $event)"
           />
         </ul>
+
+        <details v-if="suppressedFindings.length > 0" class="suppressed-findings">
+          <summary>继承抑制的 Finding（{{ suppressedFindings.length }} 条）</summary>
+          <p class="field-hint">这些 Finding 来自跨轮继承抑制，与本轮活跃 Finding 分组展示。</p>
+          <ul class="record-list">
+            <FindingCard
+              v-for="finding in suppressedFindings"
+              :key="finding.id"
+              :finding="finding"
+              :review-decision="detail.decision"
+              :assignee-name="memberName(finding.assigneeId)"
+              :role="role"
+              :pending="findingPending === finding.id"
+              :events="eventsByFinding[String(finding.id)] ?? null"
+              :events-pending="eventsPendingFor === finding.id"
+              :events-error="eventsErrorFor(finding.id)"
+              :selected="selectedFindingId === finding.id"
+              :actor-names="memberNames"
+              :comment="findingComments[String(finding.id)] ?? ''"
+              @move="(status, action, comment) => move(finding.id, status, action, comment)"
+              @show-events="showEvents(finding.id)"
+              @select="selectFinding(finding)"
+              @update-comment="setFindingComment(finding.id, $event)"
+            />
+          </ul>
+        </details>
       </section>
 
       <section class="panel decision-panel" aria-labelledby="review-decision-title">
@@ -627,16 +780,12 @@ function eventsErrorFor(findingId: number): string | null {
         <p v-if="decisionError" class="alert" role="alert">{{ decisionError }}</p>
       </section>
 
-      <section class="panel snapshot-panel" aria-labelledby="context-snapshot-title">
-        <h2 id="context-snapshot-title" class="panel-title">不可变上下文快照</h2>
-        <p class="field-hint">
-          历史页面不反查 PR 当前关联，这里原样呈现审查当时保存的快照。
-        </p>
-        <p v-if="contextSnapshotText === null" class="empty-state context-snapshot-missing">
-          这条 Review 没有记录上下文快照。
-        </p>
+      <details class="panel snapshot-panel">
+        <summary id="context-snapshot-title">诊断：查看不可变上下文原始 JSON</summary>
+        <p class="field-hint">历史页面不反查 PR 当前关联；这里原样呈现审查当时保存的载荷。</p>
+        <p v-if="contextSnapshotText === null" class="empty-state context-snapshot-missing">这条 Review 没有记录上下文快照。</p>
         <pre v-else class="context-snapshot">{{ contextSnapshotText }}</pre>
-      </section>
+      </details>
     </template>
   </section>
 </template>
@@ -665,9 +814,124 @@ function eventsErrorFor(findingId: number): string | null {
 }
 
 .identity-panel,
+.evidence-workspace,
 .findings-panel,
 .decision-panel {
   border-color: var(--fp-color-border-accent);
+}
+
+.workspace-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--fp-space-4);
+  margin-bottom: var(--fp-space-5);
+}
+
+.workspace-head .eyebrow {
+  margin-bottom: var(--fp-space-2);
+}
+
+.workspace-head .panel-title {
+  margin-bottom: 0;
+}
+
+.snapshot-summary-grid {
+  display: grid;
+  gap: var(--fp-space-4);
+  margin-bottom: var(--fp-space-4);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.snapshot-card {
+  min-width: 0;
+  padding: var(--fp-space-4);
+  border: 0.0625rem solid var(--fp-color-border);
+  border-radius: var(--fp-radius-md);
+  background: var(--fp-color-canvas-muted);
+}
+
+.snapshot-card .subsection-title {
+  margin-top: 0;
+}
+
+.snapshot-title {
+  margin: 0 0 var(--fp-space-2);
+  color: var(--fp-color-text);
+  font-size: 1rem;
+  font-weight: 750;
+}
+
+.snapshot-criteria,
+.knowledge-list {
+  display: grid;
+  gap: var(--fp-space-2);
+  margin: var(--fp-space-4) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.snapshot-criteria li,
+.knowledge-list li {
+  padding: var(--fp-space-3);
+  border: 0.0625rem solid var(--fp-color-border);
+  border-radius: var(--fp-radius-sm);
+  line-height: 1.6;
+}
+
+.snapshot-criterion-selected {
+  border-color: var(--fp-color-warning) !important;
+  background: var(--fp-color-warning-soft);
+  box-shadow: inset 0.1875rem 0 var(--fp-color-warning);
+}
+
+.knowledge-list {
+  max-height: 22rem;
+  overflow: auto;
+}
+
+.knowledge-list p {
+  margin: var(--fp-space-2) 0;
+  color: var(--fp-color-text-muted);
+}
+
+.knowledge-list small {
+  color: var(--fp-color-text-subtle);
+  font-family: var(--fp-font-mono);
+}
+
+.snapshot-pr-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--fp-space-3);
+  margin-bottom: var(--fp-space-3);
+  padding: var(--fp-space-3) var(--fp-space-4);
+  border: 0.0625rem solid var(--fp-color-border);
+  border-radius: var(--fp-radius-sm);
+  background: var(--fp-color-surface-strong);
+}
+
+.snapshot-pr-bar strong {
+  margin-right: auto;
+}
+
+.suppressed-findings {
+  margin-top: var(--fp-space-5);
+  padding: var(--fp-space-4);
+  border: 0.0625rem dashed var(--fp-color-border-strong);
+  border-radius: var(--fp-radius-md);
+}
+
+.suppressed-findings > summary,
+.snapshot-panel > summary {
+  color: var(--fp-color-text-muted);
+  cursor: pointer;
+  font-weight: 750;
+}
+
+.suppressed-findings > .field-hint {
+  margin: var(--fp-space-3) 0;
 }
 
 .decision-panel {
@@ -767,13 +1031,18 @@ function eventsErrorFor(findingId: number): string | null {
 
 @media (max-width: 64rem) {
   .review-context-grid,
-  .review-evidence-grid {
+  .review-evidence-grid,
+  .snapshot-summary-grid {
     grid-template-columns: 1fr;
   }
 }
 
 @media (max-width: 42rem) {
   .decision-panel-head {
+    flex-direction: column;
+  }
+
+  .workspace-head {
     flex-direction: column;
   }
 }
