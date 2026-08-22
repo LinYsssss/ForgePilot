@@ -1,4 +1,4 @@
-package com.forgepilot.scm.github;
+package com.forgepilot.scm;
 
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication.Type;
@@ -12,28 +12,18 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 
 /**
- * The webhook endpoint's own filter chain.
- *
- * <p>The application chain ends in {@code anyRequest().authenticated()} with
- * cookie CSRF, and a GitHub delivery carries neither a session nor an
- * {@code X-XSRF-TOKEN} header, so without this it would be refused before the
- * signature was ever checked. This chain is ordered ahead of that one and matches
- * exactly one path.
- *
- * <p>Nothing is weakened by it: the HMAC over the raw body <em>is</em> this
- * endpoint's authentication, and it is stronger than a session would be. CSRF has
- * nothing to protect here either — there is no ambient credential for a browser to
- * be tricked into replaying, and no session is created.
+ * The two provider webhook endpoints authenticate their own raw request bytes and
+ * therefore do not use a browser session or cookie CSRF token.
  */
 @Configuration
 @ConditionalOnWebApplication(type = Type.SERVLET)
-class GitHubWebhookSecurityConfig {
+class ScmWebhookSecurityConfig {
 
     @Bean
     @Order(1)
-    SecurityFilterChain gitHubWebhookFilterChain(HttpSecurity http) throws Exception {
+    SecurityFilterChain scmWebhookFilterChain(HttpSecurity http) throws Exception {
         return http
-                .securityMatcher(GitHubWebhookController.PATH)
+                .securityMatcher("/api/scm/github/webhook", "/api/scm/gitlab/webhook")
                 .authorizeHttpRequests(requests -> requests.anyRequest().permitAll())
                 .csrf(CsrfConfigurer::disable)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))

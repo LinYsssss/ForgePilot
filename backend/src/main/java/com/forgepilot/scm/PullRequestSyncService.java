@@ -54,13 +54,28 @@ public class PullRequestSyncService {
     @Transactional(readOnly = true)
     public ScmRepository authenticate(ScmProvider provider, String instanceIdentity, String externalId,
             byte[] body, String signatureHeader) {
-        ScmRepository repository = repositories
-                .findByProviderAndInstanceIdentityAndExternalId(provider, instanceIdentity, externalId)
-                .orElseThrow(PullRequestSyncService::unauthenticated);
+        ScmRepository repository = repository(provider, instanceIdentity, externalId);
         if (!verifier.matches(body, cipher.decrypt(repository.getEncryptedSecret()), signatureHeader)) {
             throw unauthenticated();
         }
         return repository;
+    }
+
+    /** Authenticates either a current signed GitLab webhook or its legacy token form. */
+    @Transactional(readOnly = true)
+    public ScmRepository authenticateGitLab(String instanceIdentity, String externalId, byte[] body,
+            String signatureHeader, String messageId, String timestampHeader, String tokenHeader) {
+        ScmRepository repository = repository(ScmProvider.GITLAB, instanceIdentity, externalId);
+        if (!verifier.matchesGitLab(body, cipher.decrypt(repository.getEncryptedSecret()),
+                signatureHeader, messageId, timestampHeader, tokenHeader)) {
+            throw unauthenticated();
+        }
+        return repository;
+    }
+
+    private ScmRepository repository(ScmProvider provider, String instanceIdentity, String externalId) {
+        return repositories.findByProviderAndInstanceIdentityAndExternalId(provider, instanceIdentity, externalId)
+                .orElseThrow(PullRequestSyncService::unauthenticated);
     }
 
     @Transactional

@@ -4,6 +4,10 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.security.GeneralSecurityException;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneOffset;
+import java.util.Base64;
 import java.util.HexFormat;
 
 import javax.crypto.Mac;
@@ -88,11 +92,59 @@ class WebhookSignatureVerifierTest {
         assertThat(verifier.matches(reserialized, SECRET, signature)).isFalse();
     }
 
+    @Test
+    void gitLabStandardWebhooksVerifyTheDocumentedMessageAndMultipleSignatureShape() {
+        Instant now = Instant.parse("2026-08-22T12:00:00Z");
+        WebhookSignatureVerifier fixed = new WebhookSignatureVerifier(
+                Clock.fixed(now, ZoneOffset.UTC));
+        String timestamp = Long.toString(now.getEpochSecond());
+        String messageId = "msg_2K4fN8";
+        byte[] key = "gitlab-signing-key".getBytes(UTF_8);
+        String token = "whsec_" + Base64.getEncoder().encodeToString(key);
+        String signature = standardSign(key, messageId, timestamp, BODY);
+
+        assertThat(fixed.matchesGitLab(BODY, token,
+                "v1,not-the-signature " + signature, messageId, timestamp, null)).isTrue();
+        assertThat(fixed.matchesGitLab("Hello, World?".getBytes(UTF_8), token,
+                signature, messageId, timestamp, null)).isFalse();
+    }
+
+    @Test
+    void gitLabRejectsStalePartialAndDowngradedStandardSignatures() {
+        Instant now = Instant.parse("2026-08-22T12:00:00Z");
+        WebhookSignatureVerifier fixed = new WebhookSignatureVerifier(
+                Clock.fixed(now, ZoneOffset.UTC));
+        byte[] key = "gitlab-signing-key".getBytes(UTF_8);
+        String token = "whsec_" + Base64.getEncoder().encodeToString(key);
+        String stale = Long.toString(now.minusSeconds(301).getEpochSecond());
+        String current = Long.toString(now.getEpochSecond());
+
+        assertThat(fixed.matchesGitLab(BODY, token, standardSign(key, "id", stale, BODY),
+                "id", stale, null)).isFalse();
+        assertThat(fixed.matchesGitLab(BODY, token, "v1,broken", "id", current, token))
+                .as("a present signed form must never downgrade to the legacy token")
+                .isFalse();
+        assertThat(fixed.matchesGitLab(BODY, token, null, "id", current, token)).isFalse();
+        assertThat(fixed.matchesGitLab(BODY, token, null, null, null, token)).isTrue();
+        assertThat(fixed.matchesGitLab(BODY, token, null, null, null, token + "x")).isFalse();
+    }
+
     private static String sign(byte[] body) {
         try {
             Mac mac = Mac.getInstance("HmacSHA256");
             mac.init(new SecretKeySpec(SECRET.getBytes(UTF_8), "HmacSHA256"));
             return "sha256=" + HexFormat.of().formatHex(mac.doFinal(body));
+        } catch (GeneralSecurityException impossible) {
+            throw new IllegalStateException(impossible);
+        }
+    }
+
+    private static String standardSign(byte[] key, String messageId, String timestamp, byte[] body) {
+        try {
+            Mac mac = Mac.getInstance("HmacSHA256");
+            mac.init(new SecretKeySpec(key, "HmacSHA256"));
+            mac.update((messageId + "." + timestamp + ".").getBytes(UTF_8));
+            return "v1," + Base64.getEncoder().encodeToString(mac.doFinal(body));
         } catch (GeneralSecurityException impossible) {
             throw new IllegalStateException(impossible);
         }
