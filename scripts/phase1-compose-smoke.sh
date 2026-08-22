@@ -130,11 +130,9 @@ flyway_v1="$(query_postgres "select success from flyway_schema_history where ver
 failed_migrations="$(query_postgres "select count(*) from flyway_schema_history where success is false;")"
 application_tables="$(query_postgres "select string_agg(table_name, ',' order by table_name collate \"C\") from information_schema.tables where table_schema = 'public' and table_type = 'BASE TABLE' and table_name <> 'flyway_schema_history';")"
 
-# Batch 1 migrations V2/V3 and batch 2 migrations V4/V5 create exactly these
-# thirteen. The remaining three of the sixteen tables (review, finding,
-# finding_event) arrive with their own authorized batch, so an extra table here
-# means something was added outside the plan. Sorted with the C collation so the
-# comparison does not depend on the container's locale.
+# All accepted migrations create exactly these sixteen business tables. An extra
+# table means something was added outside the frozen plan. Sorted with the C
+# collation so the comparison does not depend on the container's locale.
 expected_tables='acceptance_criterion,ai_call_log,finding,finding_event,knowledge_chunk,knowledge_document,project,project_member,pull_request,pull_request_requirement_event,requirement,requirement_attachment,requirement_revision,review,scm_repository,user_account'
 
 [[ "$postgres_15_or_newer" == "t" ]] || {
