@@ -105,13 +105,18 @@ async function create(): Promise<void> {
 </script>
 
 <template>
-  <section aria-labelledby="requirements-title">
+  <section class="requirements-page" aria-labelledby="requirements-title">
     <div class="page-head">
-      <p class="eyebrow">Requirement</p>
+      <p class="eyebrow">Requirement contracts</p>
       <h1 id="requirements-title">研发需求</h1>
+      <p class="lede">用不可变版本与稳定 AC 描述“应该做什么”，让后续审查拥有可追踪的判断基准。</p>
     </div>
 
-    <div class="panel inline-form">
+    <div class="panel inline-form project-selector">
+      <div class="selector-copy">
+        <h2 class="panel-title">项目上下文</h2>
+        <p class="field-hint">需求始终在一个明确的项目边界内读取和修改。</p>
+      </div>
       <div class="field">
         <label for="requirement-project">当前项目</label>
         <select id="requirement-project" v-model="selection">
@@ -126,8 +131,14 @@ async function create(): Promise<void> {
     <p v-if="projectId === null" class="empty-state">先选择一个项目，再查看它的需求。</p>
 
     <template v-if="projectId !== null">
-      <form v-if="isLeader" class="panel requirement-form" @submit.prevent="create">
-        <h2 class="panel-title">新建需求</h2>
+      <form v-if="isLeader" class="panel requirement-form requirement-create" @submit.prevent="create">
+        <div class="form-section-head">
+          <div>
+            <p class="eyebrow">New contract</p>
+            <h2 class="panel-title">新建需求</h2>
+          </div>
+          <p class="field-hint">创建后先处于草稿状态；发布就绪后内容以版本保存。</p>
+        </div>
         <div class="field">
           <label for="requirement-title">标题</label>
           <input id="requirement-title" v-model="title" required maxlength="200" />
@@ -153,18 +164,19 @@ async function create(): Promise<void> {
       <p v-else-if="loadError" class="alert" role="alert">{{ loadError }}</p>
       <p v-else-if="requirements.length === 0" class="empty-state">该项目还没有需求。</p>
 
-      <ul v-else class="record-list">
-        <li v-for="item in requirements" :key="item.id" class="record">
-          <div class="record-head">
+      <ul v-else class="record-list requirement-list">
+        <li v-for="item in requirements" :key="item.id" class="record requirement-card">
+          <div class="record-head requirement-card-head">
+            <span class="requirement-key">REQ-{{ item.id }}</span>
             <h2 class="record-title">
               <RouterLink :to="requirementDetailRoute(projectId, item.id)">
                 {{ item.title }}
               </RouterLink>
             </h2>
-            <span class="badge badge-neutral">v{{ item.currentRevisionSeq }}</span>
+            <span class="badge badge-neutral">REV {{ item.currentRevisionSeq }}</span>
           </div>
 
-          <dl class="meta-list">
+          <dl class="meta-list requirement-meta">
             <div>
               <dt>需求状态</dt>
               <dd class="requirement-status">
@@ -189,8 +201,92 @@ async function create(): Promise<void> {
 </template>
 
 <style scoped>
+.project-selector {
+  display: grid;
+  grid-template-columns: minmax(14rem, 1fr) minmax(14rem, 1.2fr);
+}
+
+.selector-copy .panel-title,
+.form-section-head .panel-title {
+  margin-bottom: var(--fp-space-1);
+}
+
 .requirement-form {
   display: grid;
+  gap: var(--fp-space-5);
+}
+
+.requirement-create {
+  border-color: var(--fp-color-border-accent);
+}
+
+.form-section-head {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: var(--fp-space-6);
+}
+
+.form-section-head .eyebrow {
+  margin-bottom: var(--fp-space-2);
+}
+
+.requirement-list {
   gap: var(--fp-space-4);
+}
+
+.requirement-card {
+  display: grid;
+  gap: var(--fp-space-5);
+  grid-template-columns: minmax(0, 1fr) minmax(16rem, 0.48fr);
+}
+
+.requirement-card-head {
+  grid-column: 1;
+}
+
+.requirement-key {
+  padding: var(--fp-space-2) var(--fp-space-3);
+  border: 0.0625rem solid var(--fp-color-border-accent);
+  border-radius: var(--fp-radius-sm);
+  background: var(--fp-color-accent-soft);
+  color: var(--fp-color-accent-inverse);
+  font: 800 0.6875rem/1 var(--fp-font-mono);
+  letter-spacing: 0.05em;
+}
+
+.requirement-card .record-title {
+  margin-right: auto;
+}
+
+.requirement-meta {
+  grid-column: 2;
+  grid-row: 1;
+  padding-left: var(--fp-space-5);
+  border-left: 0.0625rem solid var(--fp-color-border);
+}
+
+@media (max-width: 64rem) {
+  .project-selector,
+  .requirement-card {
+    grid-template-columns: 1fr;
+  }
+
+  .requirement-meta {
+    grid-column: 1;
+    grid-row: auto;
+    padding-top: var(--fp-space-5);
+    padding-left: 0;
+    border-top: 0.0625rem solid var(--fp-color-border);
+    border-left: 0;
+  }
+}
+
+@media (max-width: 42rem) {
+  .form-section-head {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: var(--fp-space-2);
+  }
 }
 </style>

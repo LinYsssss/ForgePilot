@@ -19,9 +19,9 @@ async function logout(): Promise<void> {
     <header class="app-header">
       <RouterLink class="brand" :to="HOME_ROUTE_PATH" aria-label="ForgePilot 首页">
         <span class="brand-mark" aria-hidden="true">FP</span>
-        <span>
+        <span class="brand-copy">
           <strong>ForgePilot</strong>
-          <small>Requirement-driven review</small>
+          <small>Requirement-driven review console</small>
         </span>
       </RouterLink>
 

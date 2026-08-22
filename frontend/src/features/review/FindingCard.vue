@@ -108,7 +108,7 @@ const locator = computed(() => {
     <p class="evidence-label">证据摘录</p>
     <pre class="evidence">{{ finding.evidence ?? "本条 Finding 没有证据摘录。" }}</pre>
 
-    <dl class="meta-list">
+    <dl class="meta-list finding-details">
       <div>
         <dt>验收标准</dt>
         <dd>{{ finding.acKey ?? "不针对单条 AC" }}</dd>
@@ -192,14 +192,42 @@ const locator = computed(() => {
 </template>
 
 <style scoped>
+.finding {
+  border-color: var(--fp-color-border-strong);
+  background: var(--fp-gradient-panel);
+}
+
+.finding .record-head {
+  padding-bottom: var(--fp-space-4);
+  border-bottom: 0.0625rem solid var(--fp-color-border);
+}
+
+.finding .record-title {
+  margin-right: auto;
+}
+
 .finding-locator {
+  max-width: 100%;
+  padding: var(--fp-space-2) var(--fp-space-3);
+  border: 0.0625rem solid var(--fp-color-border);
+  border-radius: var(--fp-radius-sm);
+  background: var(--fp-color-canvas-muted);
+  color: var(--fp-color-accent-inverse);
   font-family: var(--fp-font-mono);
   font-size: 0.8125rem;
   word-break: break-all;
 }
 
 .finding-marks {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   margin-top: var(--fp-space-4);
+}
+
+.finding-marks > div {
+  padding: var(--fp-space-3);
+  border: 0.0625rem solid var(--fp-color-border);
+  border-radius: var(--fp-radius-sm);
+  background: var(--fp-color-canvas-muted);
 }
 
 .evidence-label {
@@ -216,12 +244,26 @@ const locator = computed(() => {
   overflow: auto;
   border: 0.0625rem solid var(--fp-color-border);
   border-radius: var(--fp-radius-sm);
-  background: var(--fp-color-surface-muted);
+  border-left: 0.1875rem solid var(--fp-color-accent);
+  background: var(--fp-color-canvas-muted);
   font-family: var(--fp-font-mono);
   font-size: 0.8125rem;
   line-height: 1.5;
   white-space: pre-wrap;
   word-break: break-word;
+}
+
+.finding-details {
+  padding: var(--fp-space-4);
+  border: 0.0625rem solid var(--fp-color-border);
+  border-radius: var(--fp-radius-md);
+  background: var(--fp-color-surface-glass);
+}
+
+.finding .form-actions {
+  margin-top: var(--fp-space-5);
+  padding-top: var(--fp-space-5);
+  border-top: 0.0625rem solid var(--fp-color-border);
 }
 
 .finding-events {
@@ -231,5 +273,17 @@ const locator = computed(() => {
   padding-left: var(--fp-space-6);
   color: var(--fp-color-text-muted);
   font-size: 0.8125rem;
+}
+
+@media (max-width: 64rem) {
+  .finding-marks {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 42rem) {
+  .finding-marks {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

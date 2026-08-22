@@ -2,8 +2,9 @@
 
 这里将承载 ForgePilot V2 的 Vue 3 前端。
 
-Phase 1 已建立 Vue 3 + TypeScript + Vite 路由外壳，生产样式已固化为用户选择的
-**B — Precision Review Console / 精密审查台**。
+Vue 3 + TypeScript + Vite 应用采用用户确认的 **Precision Review Console / 精密审查台**。
+2026-08-22 的视觉重建以 `ForgePilot-Frontend/` 设计稿为参考，使用单一深色分层界面，
+但所有数据、权限、路由与错误状态仍以本目录的真实 API 实现为准，不引入设计稿中的 mock 数据。
 
 ```bash
 npm ci

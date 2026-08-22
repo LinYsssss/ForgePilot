@@ -314,9 +314,9 @@ function eventsErrorFor(findingId: number): string | null {
 </script>
 
 <template>
-  <section aria-labelledby="review-detail-title">
+  <section class="review-detail-page" aria-labelledby="review-detail-title">
     <div class="page-head">
-      <p class="eyebrow">{{ project ? project.name : "Review" }}</p>
+      <p class="eyebrow">{{ project ? `${project.name} · Review workspace` : "Review" }}</p>
       <h1 id="review-detail-title">
         {{ detail ? `审查 ${detail.id}` : "审查详情" }}
       </h1>
@@ -330,6 +330,7 @@ function eventsErrorFor(findingId: number): string | null {
           该 PR 的全部审查
         </RouterLink>
       </div>
+      <p class="lede">先确认审查身份与当前有效性，再核验 AC、覆盖清单和 Finding，最后做出人工决定。</p>
     </div>
 
     <p v-if="!hasContext" class="alert" role="alert">
@@ -339,7 +340,8 @@ function eventsErrorFor(findingId: number): string | null {
     <p v-else-if="loadError" class="alert" role="alert">{{ loadError }}</p>
 
     <template v-if="detail !== null">
-      <section class="panel" aria-labelledby="review-pull-request-title">
+      <div class="review-context-grid">
+      <section class="panel context-panel" aria-labelledby="review-pull-request-title">
         <h2 id="review-pull-request-title" class="panel-title">所属 PR 与需求关联</h2>
 
         <dl class="meta-list">
@@ -397,7 +399,7 @@ function eventsErrorFor(findingId: number): string | null {
         <p v-if="associationError" class="alert" role="alert">{{ associationError }}</p>
       </section>
 
-      <section class="panel" aria-labelledby="review-identity-title">
+      <section class="panel identity-panel" aria-labelledby="review-identity-title">
         <h2 id="review-identity-title" class="panel-title">Review 元信息</h2>
 
         <dl class="meta-list">
@@ -478,50 +480,10 @@ function eventsErrorFor(findingId: number): string | null {
           审查已过期：这条 Review 的 head、输入指纹或需求版本与 PR 当前值不一致。
         </p>
       </section>
+      </div>
 
-      <section class="panel" aria-labelledby="review-decision-title">
-        <h2 id="review-decision-title" class="panel-title">终局决定</h2>
-
-        <p v-if="!canDecide" class="field-hint">
-          只有项目负责人与评审可以做终局决定；开发可以触发重审并修复 Finding。
-        </p>
-
-        <template v-else>
-          <div class="field">
-            <label for="decision-comment">决定备注</label>
-            <textarea id="decision-comment" v-model="decisionComment" rows="3"></textarea>
-          </div>
-          <div class="form-actions decision-actions">
-            <button
-              type="button"
-              class="button button-primary"
-              data-decision="APPROVE"
-              :disabled="decisionPending || !canSubmitDecision"
-              @click="decide('APPROVE')"
-            >
-              通过（APPROVE）
-            </button>
-            <button
-              type="button"
-              class="button"
-              data-decision="REQUEST_CHANGES"
-              :disabled="decisionPending || !canSubmitDecision"
-              @click="decide('REQUEST_CHANGES')"
-            >
-              退回（REQUEST_CHANGES）
-            </button>
-          </div>
-
-          <ul v-if="decisionBlockers.length > 0" class="decision-blockers">
-            <li v-for="blocker in decisionBlockers" :key="blocker">{{ blocker }}</li>
-          </ul>
-          <p class="field-hint">终局决定只写一次，不可撤销、不可覆盖。</p>
-        </template>
-
-        <p v-if="decisionError" class="alert" role="alert">{{ decisionError }}</p>
-      </section>
-
-      <section class="panel" aria-labelledby="ac-verdicts-title">
+      <div class="review-evidence-grid">
+      <section class="panel ac-panel" aria-labelledby="ac-verdicts-title">
         <h2 id="ac-verdicts-title" class="panel-title">验收标准覆盖判定</h2>
 
         <p v-if="detail.acVerdicts === null" class="empty-state ac-verdicts-missing">
@@ -540,7 +502,7 @@ function eventsErrorFor(findingId: number): string | null {
         </ul>
       </section>
 
-      <section class="panel" aria-labelledby="coverage-title">
+      <section class="panel coverage-panel" aria-labelledby="coverage-title">
         <h2 id="coverage-title" class="panel-title">审查覆盖与未审查文件</h2>
 
         <p v-if="detail.coverage === null" class="empty-state coverage-missing">
@@ -588,8 +550,9 @@ function eventsErrorFor(findingId: number): string | null {
           </ul>
         </template>
       </section>
+      </div>
 
-      <section class="panel" aria-labelledby="findings-title">
+      <section class="panel findings-panel" aria-labelledby="findings-title">
         <h2 id="findings-title" class="panel-title">Finding（{{ detail.findings.length }} 条）</h2>
         <p class="field-hint">一次性全部渲染，不分页也不虚拟化。</p>
 
@@ -614,7 +577,57 @@ function eventsErrorFor(findingId: number): string | null {
         </ul>
       </section>
 
-      <section class="panel" aria-labelledby="context-snapshot-title">
+      <section class="panel decision-panel" aria-labelledby="review-decision-title">
+        <div class="decision-panel-head">
+          <div>
+            <p class="eyebrow">Human decision gate</p>
+            <h2 id="review-decision-title" class="panel-title">终局决定</h2>
+          </div>
+          <span :class="['badge', `badge-${REVIEW_DECISION_TONES[detail.decision]}`]">
+            {{ REVIEW_DECISION_LABELS[detail.decision] }}
+          </span>
+        </div>
+
+        <p v-if="!canDecide" class="field-hint">
+          只有项目负责人与评审可以做终局决定；开发可以触发重审并修复 Finding。
+        </p>
+
+        <template v-else>
+          <div class="field">
+            <label for="decision-comment">决定备注</label>
+            <textarea id="decision-comment" v-model="decisionComment" rows="3"></textarea>
+          </div>
+          <div class="form-actions decision-actions">
+            <button
+              type="button"
+              class="button button-success"
+              data-decision="APPROVE"
+              :disabled="decisionPending || !canSubmitDecision"
+              @click="decide('APPROVE')"
+            >
+              通过（APPROVE）
+            </button>
+            <button
+              type="button"
+              class="button button-danger"
+              data-decision="REQUEST_CHANGES"
+              :disabled="decisionPending || !canSubmitDecision"
+              @click="decide('REQUEST_CHANGES')"
+            >
+              退回（REQUEST_CHANGES）
+            </button>
+          </div>
+
+          <ul v-if="decisionBlockers.length > 0" class="decision-blockers">
+            <li v-for="blocker in decisionBlockers" :key="blocker">{{ blocker }}</li>
+          </ul>
+          <p class="field-hint">终局决定只写一次，不可撤销、不可覆盖。</p>
+        </template>
+
+        <p v-if="decisionError" class="alert" role="alert">{{ decisionError }}</p>
+      </section>
+
+      <section class="panel snapshot-panel" aria-labelledby="context-snapshot-title">
         <h2 id="context-snapshot-title" class="panel-title">不可变上下文快照</h2>
         <p class="field-hint">
           历史页面不反查 PR 当前关联，这里原样呈现审查当时保存的快照。
@@ -629,6 +642,55 @@ function eventsErrorFor(findingId: number): string | null {
 </template>
 
 <style scoped>
+.review-context-grid,
+.review-evidence-grid {
+  display: grid;
+  align-items: start;
+  gap: var(--fp-space-6);
+}
+
+.review-context-grid {
+  grid-template-columns: minmax(20rem, 0.85fr) minmax(0, 1.15fr);
+}
+
+.review-evidence-grid {
+  grid-template-columns: minmax(18rem, 0.72fr) minmax(0, 1.28fr);
+}
+
+.context-panel,
+.identity-panel,
+.ac-panel,
+.coverage-panel {
+  height: 100%;
+}
+
+.identity-panel,
+.findings-panel,
+.decision-panel {
+  border-color: var(--fp-color-border-accent);
+}
+
+.decision-panel {
+  background: var(--fp-gradient-panel);
+  box-shadow: var(--fp-shadow-elevated), var(--fp-shadow-accent);
+}
+
+.decision-panel-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--fp-space-4);
+  margin-bottom: var(--fp-space-5);
+}
+
+.decision-panel-head .eyebrow {
+  margin-bottom: var(--fp-space-2);
+}
+
+.decision-panel-head .panel-title {
+  margin-bottom: 0;
+}
+
 .decision-gate,
 .review-stale {
   margin: var(--fp-space-3) 0 0;
@@ -697,5 +759,22 @@ function eventsErrorFor(findingId: number): string | null {
   line-height: 1.5;
   white-space: pre-wrap;
   word-break: break-word;
+}
+
+.snapshot-panel {
+  border-style: dashed;
+}
+
+@media (max-width: 64rem) {
+  .review-context-grid,
+  .review-evidence-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 42rem) {
+  .decision-panel-head {
+    flex-direction: column;
+  }
 }
 </style>

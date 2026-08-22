@@ -120,13 +120,14 @@ function saveScmIdentity(row: MemberRow): Promise<void> {
 </script>
 
 <template>
-  <section aria-labelledby="members-title">
+  <section class="members-page" aria-labelledby="members-title">
     <div class="page-head">
-      <p class="eyebrow">Project · members</p>
+      <p class="eyebrow">Project · access boundary</p>
       <h1 id="members-title">{{ project ? project.name : "项目成员" }}</h1>
       <p v-if="project" class="muted">
         我的角色：{{ PROJECT_ROLE_LABELS[project.myRole] }}
       </p>
+      <p class="lede">成员角色决定业务操作面；稳定的 SCM 外部身份用于判断“本人 PR”。</p>
     </div>
 
     <p v-if="projectId === null" class="alert" role="alert">路由缺少有效的项目 id。</p>
@@ -134,7 +135,11 @@ function saveScmIdentity(row: MemberRow): Promise<void> {
     <p v-else-if="loadError" class="alert" role="alert">{{ loadError }}</p>
 
     <template v-else>
-      <form v-if="isLeader" class="panel inline-form" @submit.prevent="add">
+      <form v-if="isLeader" class="panel inline-form member-add" @submit.prevent="add">
+        <div class="member-add-copy">
+          <h2 class="panel-title">添加项目成员</h2>
+          <p class="field-hint">账户必须已经注册；项目始终保持一个负责人。</p>
+        </div>
         <div class="field">
           <label for="member-username">用户名</label>
           <input id="member-username" v-model="newUsername" required maxlength="64" />
@@ -152,9 +157,10 @@ function saveScmIdentity(row: MemberRow): Promise<void> {
       </form>
       <p v-else class="empty-state">只有项目负责人可以管理成员。</p>
 
-      <ul class="record-list">
-        <li v-for="row in rows" :key="row.member.userId" class="record">
+      <ul class="record-list member-grid">
+        <li v-for="row in rows" :key="row.member.userId" class="record member-card">
           <div class="record-head">
+            <span class="member-avatar" aria-hidden="true">{{ row.member.username.slice(0, 1).toUpperCase() }}</span>
             <h2 class="record-title">{{ row.member.username }}</h2>
             <span class="badge badge-info">{{ PROJECT_ROLE_LABELS[row.member.role] }}</span>
           </div>
@@ -181,7 +187,7 @@ function saveScmIdentity(row: MemberRow): Promise<void> {
           </dl>
 
           <template v-if="isLeader">
-            <form class="inline-form" @submit.prevent="saveRole(row)">
+            <form class="inline-form member-form" @submit.prevent="saveRole(row)">
               <div class="field">
                 <label :for="`role-${row.member.userId}`">角色</label>
                 <select :id="`role-${row.member.userId}`" v-model="row.role">
@@ -196,7 +202,7 @@ function saveScmIdentity(row: MemberRow): Promise<void> {
               <p class="field-hint">改为「负责人」即转移项目负责人，原负责人同时降级。</p>
             </form>
 
-            <form class="inline-form" @submit.prevent="saveScmIdentity(row)">
+            <form class="inline-form member-form scm-identity-form" @submit.prevent="saveScmIdentity(row)">
               <div class="field">
                 <label :for="`scm-id-${row.member.userId}`">SCM 外部 id</label>
                 <input
@@ -233,3 +239,71 @@ function saveScmIdentity(row: MemberRow): Promise<void> {
     </template>
   </section>
 </template>
+
+<style scoped>
+.member-add {
+  display: grid;
+  grid-template-columns: minmax(14rem, 1fr) minmax(12rem, 1fr) minmax(10rem, 0.7fr) auto;
+}
+
+.member-add .alert {
+  grid-column: 1 / -1;
+}
+
+.member-grid {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 29rem), 1fr));
+}
+
+.member-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.member-avatar {
+  display: grid;
+  width: 2.25rem;
+  height: 2.25rem;
+  place-items: center;
+  border: 0.0625rem solid var(--fp-color-border-accent);
+  border-radius: 50%;
+  background: var(--fp-color-accent-soft);
+  color: var(--fp-color-accent-inverse);
+  font: 800 0.75rem/1 var(--fp-font-mono);
+}
+
+.member-card .record-title {
+  margin-right: auto;
+}
+
+.member-form {
+  margin-top: var(--fp-space-5);
+  padding-top: var(--fp-space-5);
+  border-top: 0.0625rem solid var(--fp-color-border);
+}
+
+.scm-identity-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.scm-identity-form button {
+  justify-self: start;
+}
+
+@media (max-width: 64rem) {
+  .member-add {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 42rem) {
+  .member-add,
+  .scm-identity-form {
+    grid-template-columns: 1fr;
+  }
+
+  .scm-identity-form button {
+    width: 100%;
+  }
+}
+</style>

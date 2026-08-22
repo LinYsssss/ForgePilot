@@ -189,13 +189,18 @@ onMounted(async () => {
 </script>
 
 <template>
-  <section aria-labelledby="reviews-title">
+  <section class="reviews-page" aria-labelledby="reviews-title">
     <div class="page-head">
-      <p class="eyebrow">Review</p>
+      <p class="eyebrow">Review pipeline</p>
       <h1 id="reviews-title">代码审查</h1>
+      <p class="lede">按真实 PR 记录定位审查历史，分别观察执行状态、人工 Decision 与需求评审活动。</p>
     </div>
 
-    <div class="panel inline-form">
+    <div class="panel inline-form project-selector">
+      <div class="selector-copy">
+        <h2 class="panel-title">项目上下文</h2>
+        <p class="field-hint">所有 PR、Review 与 Finding 查询都保持项目隔离。</p>
+      </div>
       <div class="field">
         <label for="review-project">当前项目</label>
         <select id="review-project" v-model="projectSelection">
@@ -210,7 +215,11 @@ onMounted(async () => {
     <p v-if="projectId === null" class="empty-state">先选择一个项目，再查看它的审查记录。</p>
 
     <template v-else>
-      <form class="panel inline-form" @submit.prevent="openPullRequest">
+      <form class="panel inline-form pull-request-search" @submit.prevent="openPullRequest">
+        <div class="search-copy">
+          <p class="eyebrow">Pull request index</p>
+          <h2 class="panel-title">定位一条 PR</h2>
+        </div>
         <div class="field">
           <label for="review-pull-request">PR 记录 id</label>
           <input
@@ -230,7 +239,7 @@ onMounted(async () => {
 
       <p v-if="projectError" class="alert" role="alert">{{ projectError }}</p>
 
-      <section class="panel" aria-labelledby="pull-request-reviews-title">
+      <section class="panel review-index-panel" aria-labelledby="pull-request-reviews-title">
         <h2 id="pull-request-reviews-title" class="panel-title">PR 的审查记录</h2>
 
         <p v-if="pullRequestId === null" class="empty-state">
@@ -347,7 +356,7 @@ onMounted(async () => {
         </template>
       </section>
 
-      <section class="panel" aria-labelledby="requirement-activity-title">
+      <section class="panel activity-panel" aria-labelledby="requirement-activity-title">
         <h2 id="requirement-activity-title" class="panel-title">需求的评审活动</h2>
         <p class="field-hint">
           评审活动是只读派生量，与需求状态是两个维度，不合并展示。
@@ -356,8 +365,8 @@ onMounted(async () => {
         <p v-if="projectLoading" class="muted">正在加载评审活动…</p>
         <p v-else-if="requirements.length === 0" class="empty-state">该项目还没有需求。</p>
 
-        <ul v-else class="record-list">
-          <li v-for="row in activityRows" :key="row.requirement.id" class="record">
+        <ul v-else class="record-list activity-list">
+          <li v-for="row in activityRows" :key="row.requirement.id" class="record activity-card">
             <div class="record-head">
               <h3 class="record-title">
                 <RouterLink
@@ -396,8 +405,31 @@ onMounted(async () => {
 </template>
 
 <style scoped>
+.project-selector,
+.pull-request-search {
+  display: grid;
+  grid-template-columns: minmax(14rem, 1fr) minmax(14rem, 1.15fr) auto;
+}
+
+.selector-copy .panel-title,
+.search-copy .panel-title {
+  margin-bottom: var(--fp-space-1);
+}
+
+.search-copy .eyebrow {
+  margin-bottom: var(--fp-space-2);
+}
+
+.review-index-panel {
+  border-color: var(--fp-color-border-accent);
+}
+
 .pull-request-head {
   margin-bottom: var(--fp-space-4);
+  padding: var(--fp-space-4);
+  border: 0.0625rem solid var(--fp-color-border);
+  border-radius: var(--fp-radius-md);
+  background: var(--fp-color-canvas-muted);
 }
 
 .trigger-actions {
@@ -414,6 +446,7 @@ onMounted(async () => {
 }
 
 .data-table {
+  min-width: 64rem;
   width: 100%;
   border-collapse: collapse;
   text-align: left;
@@ -437,5 +470,30 @@ onMounted(async () => {
 .data-table th {
   color: var(--fp-color-text-muted);
   font-size: 0.8125rem;
+}
+
+.activity-list {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 30rem), 1fr));
+}
+
+.activity-card .meta-list {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.activity-card .review-activity {
+  grid-column: auto;
+}
+
+@media (max-width: 64rem) {
+  .project-selector,
+  .pull-request-search {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 42rem) {
+  .activity-card .meta-list {
+    grid-template-columns: 1fr 1fr;
+  }
 }
 </style>

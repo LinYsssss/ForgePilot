@@ -146,9 +146,11 @@ function saveAssignee(): Promise<void> {
 </script>
 
 <template>
-  <section aria-labelledby="requirement-title">
+  <section class="requirement-detail-page" aria-labelledby="requirement-title">
     <div class="page-head">
-      <p class="eyebrow">{{ project ? project.name : "Requirement" }}</p>
+      <p class="eyebrow">
+        {{ project ? `${project.name} · REQ-${requirementId ?? "—"}` : "Requirement" }}
+      </p>
       <h1 id="requirement-title">
         {{ detail ? detail.currentRevision.title : "需求详情" }}
       </h1>
@@ -157,6 +159,7 @@ function saveAssignee(): Promise<void> {
           返回需求列表
         </RouterLink>
       </div>
+      <p class="lede">查看当前需求契约、人工状态、负责人和每次发布后永久保留的版本链。</p>
     </div>
 
     <p v-if="!hasContext" class="alert" role="alert">
@@ -166,7 +169,9 @@ function saveAssignee(): Promise<void> {
     <p v-else-if="loadError" class="alert" role="alert">{{ loadError }}</p>
 
     <template v-if="detail !== null">
-      <div class="panel">
+      <div class="requirement-overview-grid">
+      <div class="panel requirement-overview">
+        <h2 class="panel-title">需求概览</h2>
         <dl class="meta-list">
           <div>
             <dt>需求状态</dt>
@@ -195,7 +200,7 @@ function saveAssignee(): Promise<void> {
         </dl>
       </div>
 
-      <section class="panel" aria-labelledby="current-revision-title">
+      <section class="panel current-revision" aria-labelledby="current-revision-title">
         <h2 id="current-revision-title" class="panel-title">当前版本内容</h2>
         <p class="muted">背景：{{ detail.currentRevision.background ?? "未填写" }}</p>
         <p class="muted">描述：{{ detail.currentRevision.description ?? "未填写" }}</p>
@@ -206,8 +211,10 @@ function saveAssignee(): Promise<void> {
           </li>
         </ol>
       </section>
+      </div>
 
-      <section v-if="editable" class="panel" aria-labelledby="requirement-actions-title">
+      <div class="requirement-edit-grid">
+      <section v-if="editable" class="panel requirement-actions" aria-labelledby="requirement-actions-title">
         <h2 id="requirement-actions-title" class="panel-title">状态与指派</h2>
 
         <div class="form-actions">
@@ -240,7 +247,7 @@ function saveAssignee(): Promise<void> {
         </form>
       </section>
 
-      <form v-if="editable" class="panel requirement-form" @submit.prevent="saveContent">
+      <form v-if="editable" class="panel requirement-form requirement-editor" @submit.prevent="saveContent">
         <h2 class="panel-title">{{ isDraft ? "编辑草稿" : "发布新版本" }}</h2>
         <div class="field">
           <label for="edit-title">标题</label>
@@ -265,10 +272,11 @@ function saveAssignee(): Promise<void> {
           </button>
         </div>
       </form>
+      </div>
 
       <p v-if="actionError" class="alert" role="alert">{{ actionError }}</p>
 
-      <section class="panel" aria-labelledby="revision-history-title">
+      <section class="panel revision-history" aria-labelledby="revision-history-title">
         <h2 id="revision-history-title" class="panel-title">版本历史</h2>
         <ol class="revision-list">
           <li v-for="revision in revisions" :key="revision.id" class="revision">
@@ -295,9 +303,33 @@ function saveAssignee(): Promise<void> {
 </template>
 
 <style scoped>
+.requirement-overview-grid,
+.requirement-edit-grid {
+  display: grid;
+  align-items: start;
+  gap: var(--fp-space-6);
+  grid-template-columns: minmax(18rem, 0.7fr) minmax(0, 1.3fr);
+}
+
+.requirement-overview,
+.current-revision,
+.requirement-actions,
+.requirement-editor {
+  height: 100%;
+}
+
+.current-revision {
+  border-color: var(--fp-color-border-accent);
+}
+
+.requirement-actions {
+  position: sticky;
+  top: 6rem;
+}
+
 .requirement-form {
   display: grid;
-  gap: var(--fp-space-4);
+  gap: var(--fp-space-5);
 }
 
 .criteria-list {
@@ -323,5 +355,20 @@ function saveAssignee(): Promise<void> {
 .revision:first-child {
   padding-top: 0;
   border-top: 0;
+}
+
+.revision-history {
+  margin-top: 0;
+}
+
+@media (max-width: 64rem) {
+  .requirement-overview-grid,
+  .requirement-edit-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .requirement-actions {
+    position: static;
+  }
 }
 </style>

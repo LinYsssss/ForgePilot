@@ -1,41 +1,91 @@
 :root {
-  color-scheme: light;
-  /* Precision Review Console: cool neutral surfaces with distinct semantic roles. */
-  --fp-color-canvas: #f1f5f7;
-  --fp-color-surface: #ffffff;
-  --fp-color-surface-muted: #e8eef2;
-  --fp-color-surface-strong: #17242e;
-  --fp-color-text: #17242e;
-  --fp-color-text-muted: #526372;
-  --fp-color-text-inverse: #f5f8fa;
-  --fp-color-text-inverse-muted: #b8c7d0;
-  --fp-color-text-inverse-nav: #c6d3da;
-  --fp-color-surface-header-hover: #263945;
-  --fp-color-surface-header-active: #28474b;
-  --fp-color-accent-inverse: #9ce2d4;
-  --fp-color-border: #c4d0d8;
-  --fp-color-accent: #176d70;
-  --fp-color-focus: #b94f1e;
-  --fp-color-foundation: #39785e;
-  /* Semantic status and diff roles are a contract-first set required by PRD R5;
-     business state components consume them from Phase 2 onward. */
-  --fp-color-info: #2d6fa3;
-  --fp-color-warning: #9a6415;
-  --fp-color-danger: #a43f3b;
-  --fp-color-success: #39785e;
-  --fp-color-diff-added: #1f704f;
-  --fp-color-diff-removed: #a43f3b;
+  color-scheme: dark;
+
+  /* Reference-informed Precision Review Console: deep, quiet, operational. */
+  --fp-color-canvas: #050812;
+  --fp-color-canvas-muted: #080d18;
+  --fp-color-surface: #0b1220;
+  --fp-color-surface-glass: rgb(11 18 32 / 88%);
+  --fp-color-surface-muted: #111b2d;
+  --fp-color-surface-elevated: #16243a;
+  --fp-color-surface-strong: #07111d;
+  --fp-color-surface-header-hover: #14243a;
+  --fp-color-surface-header-active: #173249;
+  --fp-color-surface-overlay: rgb(5 8 18 / 82%);
+
+  --fp-color-text: #edf5fb;
+  --fp-color-text-muted: #9aafc0;
+  --fp-color-text-subtle: #71879a;
+  --fp-color-text-inverse: #031116;
+  --fp-color-text-inverse-muted: #b8c9d6;
+  --fp-color-text-inverse-nav: #b8c9d6;
+
+  --fp-color-border-subtle: rgb(184 201 214 / 10%);
+  --fp-color-border: #273951;
+  --fp-color-border-strong: #3b5573;
+  --fp-color-border-accent: rgb(61 219 217 / 42%);
+
+  --fp-color-accent: #3ddbd9;
+  --fp-color-accent-strong: #20b8c8;
+  --fp-color-accent-muted: #183f50;
+  --fp-color-accent-soft: rgb(61 219 217 / 12%);
+  --fp-color-accent-glow: rgb(61 219 217 / 20%);
+  --fp-color-accent-inverse: #8deceb;
+  --fp-color-secondary: #8b7cf6;
+  --fp-color-secondary-soft: rgb(139 124 246 / 13%);
+  --fp-color-focus: #67e8f9;
+  --fp-color-foundation: #3ddbd9;
+
+  --fp-color-info: #57b8ff;
+  --fp-color-info-soft: rgb(87 184 255 / 12%);
+  --fp-color-warning: #f5b84b;
+  --fp-color-warning-soft: rgb(245 184 75 / 12%);
+  --fp-color-danger: #ff7185;
+  --fp-color-danger-soft: rgb(255 113 133 / 12%);
+  --fp-color-success: #43d69c;
+  --fp-color-success-soft: rgb(67 214 156 / 12%);
+  --fp-color-diff-added: #43d69c;
+  --fp-color-diff-added-soft: rgb(67 214 156 / 13%);
+  --fp-color-diff-removed: #ff7185;
+  --fp-color-diff-removed-soft: rgb(255 113 133 / 13%);
+
+  --fp-gradient-canvas:
+    radial-gradient(circle at 12% 4%, rgb(32 184 200 / 13%), transparent 30rem),
+    radial-gradient(circle at 92% 18%, rgb(139 124 246 / 10%), transparent 34rem),
+    linear-gradient(180deg, #060b15 0%, #050812 54%, #070b14 100%);
+  --fp-gradient-brand: linear-gradient(135deg, #67e8f9 0%, #3ddbd9 48%, #8b7cf6 100%);
+  --fp-gradient-panel: linear-gradient(145deg, rgb(22 36 58 / 74%), rgb(11 18 32 / 92%));
+  --fp-gradient-primary: linear-gradient(135deg, #67e8f9 0%, #20b8c8 100%);
+  --fp-gradient-danger: linear-gradient(135deg, rgb(255 113 133 / 20%), rgb(255 113 133 / 8%));
+  --fp-gradient-success: linear-gradient(135deg, rgb(67 214 156 / 20%), rgb(67 214 156 / 8%));
+
   --fp-font-sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --fp-font-mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+
   --fp-space-1: 0.25rem;
   --fp-space-2: 0.5rem;
   --fp-space-3: 0.75rem;
   --fp-space-4: 1rem;
+  --fp-space-5: 1.25rem;
   --fp-space-6: 1.5rem;
   --fp-space-8: 2rem;
+  --fp-space-10: 2.5rem;
   --fp-space-12: 3rem;
-  --fp-radius-sm: 0.375rem;
-  --fp-radius-md: 0.5rem;
-  --fp-shadow-panel: 0 0.25rem 1rem rgb(23 36 46 / 7%);
+  --fp-space-16: 4rem;
+
+  --fp-radius-xs: 0.375rem;
+  --fp-radius-sm: 0.625rem;
+  --fp-radius-md: 0.875rem;
+  --fp-radius-lg: 1.125rem;
+  --fp-radius-xl: 1.5rem;
+  --fp-radius-full: 999rem;
+
+  --fp-shadow-panel: 0 1.25rem 4rem rgb(0 0 0 / 26%);
+  --fp-shadow-elevated: 0 1.5rem 5rem rgb(0 0 0 / 38%);
+  --fp-shadow-accent: 0 0 2.5rem rgb(61 219 217 / 12%);
+  --fp-shadow-focus: 0 0 0 0.25rem rgb(103 232 249 / 18%);
+
   --fp-duration-fast: 140ms;
+  --fp-duration-normal: 220ms;
+  --fp-ease-standard: cubic-bezier(0.16, 1, 0.3, 1);
 }

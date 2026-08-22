@@ -187,9 +187,9 @@ async function runQualityCheck(): Promise<void> {
 </script>
 
 <template>
-  <section aria-labelledby="project-settings-title">
+  <section class="project-settings-page" aria-labelledby="project-settings-title">
     <div class="page-head">
-      <p class="eyebrow">Project · settings</p>
+      <p class="eyebrow">Project · integration settings</p>
       <h1 id="project-settings-title">{{ project ? project.name : "项目设置" }}</h1>
       <p v-if="project" class="muted">
         我的角色：{{ PROJECT_ROLE_LABELS[project.myRole] }}
@@ -198,6 +198,7 @@ async function runQualityCheck(): Promise<void> {
         <RouterLink class="button" :to="projectMembersRoute(projectId)">成员管理</RouterLink>
         <RouterLink class="button" :to="requirementsRoute(projectId)">研发需求</RouterLink>
       </div>
+      <p class="lede">配置真实 SCM 接入，查看项目知识能力边界，并对具体需求版本运行质量检查。</p>
     </div>
 
     <p v-if="projectId === null" class="alert" role="alert">路由缺少有效的项目 id。</p>
@@ -205,7 +206,8 @@ async function runQualityCheck(): Promise<void> {
     <p v-else-if="loadError" class="alert" role="alert">{{ loadError }}</p>
 
     <template v-else>
-      <section class="panel" aria-labelledby="scm-title">
+      <div class="settings-grid">
+      <section class="panel settings-section scm-section" aria-labelledby="scm-title">
         <h2 id="scm-title" class="panel-title">SCM 仓库配置</h2>
         <p class="field-hint">
           访问令牌与 webhook 密钥是只写字段：服务端从不回显，本页也不保存它们。
@@ -246,7 +248,7 @@ async function runQualityCheck(): Promise<void> {
           </p>
 
           <h3 class="subsection-title">注册仓库</h3>
-          <form class="inline-form" @submit.prevent="register">
+          <form class="inline-form scm-form" @submit.prevent="register">
             <div class="field">
               <label for="scm-provider">提供方</label>
               <select id="scm-provider" v-model="registerProvider">
@@ -299,7 +301,7 @@ async function runQualityCheck(): Promise<void> {
           <p v-if="registerError" class="alert" role="alert">{{ registerError }}</p>
 
           <h3 class="subsection-title">修改仓库</h3>
-          <form class="inline-form" @submit.prevent="update">
+          <form class="inline-form scm-form" @submit.prevent="update">
             <div class="field">
               <label for="scm-update-id">仓库记录 id</label>
               <input
@@ -355,7 +357,7 @@ async function runQualityCheck(): Promise<void> {
         </template>
       </section>
 
-      <section class="panel" aria-labelledby="knowledge-title">
+      <section class="panel settings-section knowledge-section" aria-labelledby="knowledge-title">
         <h2 id="knowledge-title" class="panel-title">项目知识</h2>
         <p class="empty-state knowledge-unavailable">
           本页暂不提供项目知识上传与解析状态：服务端还没有对应的 HTTP 端点，
@@ -363,7 +365,7 @@ async function runQualityCheck(): Promise<void> {
         </p>
       </section>
 
-      <section class="panel" aria-labelledby="quality-title">
+      <section class="panel settings-section quality-section" aria-labelledby="quality-title">
         <h2 id="quality-title" class="panel-title">需求质量检查</h2>
         <p class="field-hint">
           结果归属被检查的那个需求版本；草稿正文一改就作废。质量检查是建议，不推进任何状态。
@@ -436,11 +438,43 @@ async function runQualityCheck(): Promise<void> {
           </div>
         </template>
       </section>
+      </div>
     </template>
   </section>
 </template>
 
 <style scoped>
+.settings-grid {
+  display: grid;
+  align-items: start;
+  gap: var(--fp-space-6);
+  grid-template-columns: minmax(0, 0.72fr) minmax(0, 1.28fr);
+}
+
+.settings-section {
+  height: 100%;
+  margin-bottom: 0;
+}
+
+.scm-section {
+  grid-column: 1 / -1;
+}
+
+.scm-form {
+  display: grid;
+  align-items: start;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.scm-form button,
+.scm-form > .field-hint {
+  align-self: end;
+}
+
+.scm-form > .alert {
+  grid-column: 1 / -1;
+}
+
 .subsection-title {
   margin: var(--fp-space-6) 0 var(--fp-space-2);
   font-size: 0.9375rem;
@@ -457,5 +491,16 @@ async function runQualityCheck(): Promise<void> {
   padding: 0;
   list-style: none;
   line-height: 1.6;
+}
+
+@media (max-width: 64rem) {
+  .settings-grid,
+  .scm-form {
+    grid-template-columns: 1fr;
+  }
+
+  .scm-section {
+    grid-column: auto;
+  }
 }
 </style>

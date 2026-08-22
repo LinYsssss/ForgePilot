@@ -2,24 +2,24 @@
 
 ## Selected direction
 
-Phase 1 selected **B — Precision Review Console / 精密审查台** on 2026-08-20.
-This is a visual and interaction contract only; it adds no route, business
-state, or second navigation surface.
+The official application uses **Precision Review Console / 精密审查台** as its
+information and interaction direction. On 2026-08-22 its visual expression was
+rebuilt from the user-provided `ForgePilot-Frontend/` study: deep layered
+surfaces, restrained glass panels, cyan/blue emphasis, compact metadata, and a
+denser evidence workspace. This remains a visual and interaction contract only;
+it adds no route, business state, or second navigation surface.
 
 ### Lightness scheme
 
-What shipped adopts direction B's information structure and its teal/mint hue
-family, but with a **light** lightness scheme: canvas `#f1f5f7`, panel
-`#ffffff`, body text `#17242e`, accent `#176d70`. The B comparison fixture the
-user saw at the selection gate
-(`.trellis/tasks/08-20-phase-1-foundation/artifacts/visual-directions/styles.css`,
-`.fixture.console`) is dark: canvas `#0f151b`, panel `#141d26`, body text
-`#d9e3e8`, accent `#5ec4a2`.
+The selected scheme is now a single **dark** console theme. `tokens.css` uses
+`color-scheme: dark` and is the authoritative source for its canvas, surface,
+text, accent, semantic, and glow values. This intentional change supersedes the
+Phase 1 light scheme after the user requested the official frontend adopt the
+reference study's visual effect.
 
-This difference was not recorded when the tokens landed on 2026-08-20. On
-2026-08-21 the user confirmed keeping the light scheme, so `tokens.css` stays
-`color-scheme: light` and the light values above are the contract. Any move to
-a dark or dual scheme is a new contract decision, not a drift fix.
+There is no theme toggle, persisted preference, or second token runtime. A
+future light/dual scheme would be another contract decision rather than a local
+component change.
 
 ## Information architecture
 
@@ -28,7 +28,8 @@ a dark or dual scheme is a new contract decision, not a drift fix.
 - Finding lifecycle, AI confidence, Requirement status, Review Decision, and
   review activity remain separate labels and containers; never merge them into
   one risk badge or composite score.
-- Phase 1 route views are foundation placeholders and contain no product action.
+- Approved route views expose only implemented, role-authorized workflows and
+  never manufacture data or actions for a missing endpoint.
 
 ## Tokens and typography
 
@@ -38,8 +39,16 @@ use semantic custom properties rather than local hex values or arbitrary
 reusable spacing. `base.css` may keep one-off structural dimensions, fluid
 ratios, mathematical constants, and the approved media-query boundary because
 those are layout mechanics rather than reusable component tokens. The console
-uses cool neutral surfaces, compact bordered panels, system sans interface
-text, and `--fp-font-mono` for paths, line locators, and code.
+uses deep cool-neutral surfaces, compact translucent bordered panels, system
+sans interface text, and `--fp-font-mono` for paths, line locators, ids,
+revisions, hashes, and code. Decorative gradients remain static and subordinate
+to content; cursor effects, particles, scanlines, radar loops, and perpetual
+ambient motion are outside the contract.
+
+The approved responsive boundaries are `64rem` for collapsing dense desktop
+grids and `42rem` for the mobile stack. Do not introduce a third breakpoint
+without updating this contract and checking all route surfaces at the new
+boundary.
 
 Stable evidence locators keep file, line, AC, and source visible while moving
 through a finding. The layout is dense and operational, not KPI-first.
