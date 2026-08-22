@@ -58,6 +58,36 @@ export interface RevisionContent {
   acceptanceCriteria: AcceptanceCriterionDraft[];
 }
 
+/**
+ * One deterministic rule hit. `acKey` is set only by rules that are about one
+ * criterion, so it is nullable rather than absent.
+ */
+export interface QualityRuleFinding {
+  rule: "MISSING_DESCRIPTION" | "DUPLICATE_CRITERION" | "PROMPT_BUDGET_EXCEEDED";
+  acKey: string | null;
+  message: string;
+}
+
+export interface QualityAiIssue {
+  acKey: string | null;
+  message: string;
+}
+
+/**
+ * The result of one Requirement Quality check on one revision. There is no score
+ * and no overall verdict on purpose: a number is exactly what gets read as a gate,
+ * and this result is advice that moves no status.
+ */
+export interface QualityReport {
+  requirementId: number;
+  revisionId: number;
+  revisionSeq: number;
+  qualityVersion: string;
+  checkedAt: string;
+  rules: QualityRuleFinding[];
+  ai: { summary: string | null; issues: QualityAiIssue[] } | null;
+}
+
 function requirementsPath(projectId: number): string {
   return `/api/projects/${projectId}/requirements`;
 }
@@ -151,6 +181,21 @@ export function assign(
   return requestJson<RequirementDetail>(
     `${requirementsPath(projectId)}/${requirementId}/assignee`,
     { method: "POST", body: JSON.stringify({ userId }) },
+  );
+}
+
+/**
+ * Runs the quality check against the requirement's current revision. POST because
+ * it spends a provider call and writes onto that revision; the result belongs to
+ * the revision and a DRAFT edit clears it again.
+ */
+export function checkQuality(
+  projectId: number,
+  requirementId: number,
+): Promise<QualityReport> {
+  return requestJson<QualityReport>(
+    `${requirementsPath(projectId)}/${requirementId}/quality`,
+    { method: "POST", body: JSON.stringify({}) },
   );
 }
 

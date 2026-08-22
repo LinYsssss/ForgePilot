@@ -2,10 +2,12 @@ import type { LocationQueryValue, RouteLocationRaw, RouteRecordRaw } from "vue-r
 
 import LoginPage from "../features/auth/LoginPage.vue";
 import ProjectMembersPage from "../features/project/ProjectMembersPage.vue";
+import ProjectSettingsPage from "../features/project/ProjectSettingsPage.vue";
 import ProjectsPage from "../features/project/ProjectsPage.vue";
 import RequirementDetailPage from "../features/requirement/RequirementDetailPage.vue";
 import RequirementsPage from "../features/requirement/RequirementsPage.vue";
-import FoundationPlaceholderPage from "../views/FoundationPlaceholderPage.vue";
+import ReviewDetailPage from "../features/review/ReviewDetailPage.vue";
+import ReviewsPage from "../features/review/ReviewsPage.vue";
 
 declare module "vue-router" {
   interface RouteMeta {
@@ -25,8 +27,15 @@ export const HOME_ROUTE_PATH = TOP_LEVEL_NAVIGATION[0].to;
 
 export const LOGIN_ROUTE_PATH = "/login";
 
-/** Requirement screens are project scoped through this query key. */
+/** Requirement and review screens are project scoped through this query key. */
 export const PROJECT_QUERY_KEY = "project";
+
+/**
+ * The review list narrows to one pull request through this key. It is a filter on
+ * an approved path, not an eighth route: there is no pull request page and the
+ * seven paths below are the whole product surface.
+ */
+export const PULL_REQUEST_QUERY_KEY = "pullRequest";
 
 export const PRODUCT_ROUTE_PATHS = [
   "/projects",
@@ -40,6 +49,36 @@ export const PRODUCT_ROUTE_PATHS = [
 
 export function projectMembersRoute(projectId: number): RouteLocationRaw {
   return { name: "project-members", params: { id: String(projectId) } };
+}
+
+export function projectSettingsRoute(projectId: number): RouteLocationRaw {
+  return { name: "project-settings", params: { id: String(projectId) } };
+}
+
+export function reviewsRoute(
+  projectId: number,
+  pullRequestId?: number,
+): RouteLocationRaw {
+  return {
+    name: "reviews",
+    query: {
+      [PROJECT_QUERY_KEY]: String(projectId),
+      ...(pullRequestId === undefined
+        ? {}
+        : { [PULL_REQUEST_QUERY_KEY]: String(pullRequestId) }),
+    },
+  };
+}
+
+export function reviewDetailRoute(
+  projectId: number,
+  reviewId: number,
+): RouteLocationRaw {
+  return {
+    name: "review-detail",
+    params: { id: String(reviewId) },
+    query: { [PROJECT_QUERY_KEY]: String(projectId) },
+  };
 }
 
 export function requirementsRoute(projectId: number): RouteLocationRaw {
@@ -91,7 +130,7 @@ export const routes: RouteRecordRaw[] = [
   {
     path: "/projects/:id/settings",
     name: "project-settings",
-    component: FoundationPlaceholderPage,
+    component: ProjectSettingsPage,
     meta: { title: "项目设置", requiresSession: true },
   },
   {
@@ -109,13 +148,13 @@ export const routes: RouteRecordRaw[] = [
   {
     path: "/reviews",
     name: "reviews",
-    component: FoundationPlaceholderPage,
+    component: ReviewsPage,
     meta: { title: "代码审查", requiresSession: true },
   },
   {
     path: "/reviews/:id",
     name: "review-detail",
-    component: FoundationPlaceholderPage,
+    component: ReviewDetailPage,
     meta: { title: "审查详情", requiresSession: true },
   },
   { path: "/:pathMatch(.*)*", redirect: HOME_ROUTE_PATH },

@@ -2,7 +2,12 @@
 import { onMounted, ref } from "vue";
 import { RouterLink } from "vue-router";
 
-import { projectMembersRoute, requirementsRoute } from "../../app/routes";
+import {
+  projectMembersRoute,
+  projectSettingsRoute,
+  requirementsRoute,
+  reviewsRoute,
+} from "../../app/routes";
 import { formatDateTime } from "../../lib/datetime";
 import { apiErrorMessage } from "../../lib/http";
 import {
@@ -77,8 +82,14 @@ async function create(): Promise<void> {
           <RouterLink class="button button-quiet" :to="projectMembersRoute(project.id)">
             成员管理
           </RouterLink>
+          <RouterLink class="button button-quiet" :to="projectSettingsRoute(project.id)">
+            项目设置
+          </RouterLink>
           <RouterLink class="button button-quiet" :to="requirementsRoute(project.id)">
             研发需求
+          </RouterLink>
+          <RouterLink class="button button-quiet" :to="reviewsRoute(project.id)">
+            代码审查
           </RouterLink>
         </div>
       </li>
