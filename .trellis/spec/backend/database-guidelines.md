@@ -29,25 +29,23 @@ web layer.
 
 - Migration files live in `backend/src/main/resources/db/migration` and follow
   the naming rule in `ARCHITECTURE.md` §2.4.
-- `V1__foundation.sql` contains only `CREATE EXTENSION IF NOT EXISTS vector` —
-  no business table, index, trigger, or seed row. Batch 1 added
-  `V2__auth_project.sql` (`user_account`, `project`, `project_member`) and
-  `V3__requirement.sql` (`requirement`, `requirement_revision`,
-  `acceptance_criterion`). The remaining ten of the sixteen tables arrive with
-  the phase that uses them.
+- `V1__foundation.sql` contains only `CREATE EXTENSION IF NOT EXISTS vector`.
+  Batches 1–3 append `V2__auth_project.sql`, `V3__requirement.sql`,
+  `V4__knowledge_ai.sql`, `V5__scm.sql`, and `V6__review.sql`, producing the
+  complete fixed set of sixteen business tables. `V7__pull_request_title.sql`
+  is a column-only migration that persists the PR title frozen into Review
+  context; it does not add a seventeenth table.
 - **No migration carries seed rows.** The first account is created through
   `POST /api/auth/register`, so no password ever lives in the repository.
 - Flyway derives the history `description` from the file name, and
-  `FoundationDatabaseTest` asserts the full history — `1:foundation`,
-  `2:auth project`, `3:requirement` — all successful, plus the exact set of
-  base tables in `public`. Renaming an applied migration breaks both that test
-  and every existing database.
+  `FoundationDatabaseTest` asserts all seven successful entries plus the exact
+  sixteen-table set in `public`. Renaming an applied migration breaks both that
+  test and every existing database.
 - Migrations are append-only. Never edit or renumber an applied migration; add
   the next version instead.
-- No `ON DELETE` clause is declared anywhere. `ARCHITECTURE.md` §2.3 defines
-  deletion semantics only for `pull_request.author_user_id`; everywhere else a
-  hard delete is meant to be refused by the foreign key until a phase decides
-  what deletion means.
+- The only `ON DELETE` clause is `pull_request.author_user_id ON DELETE SET
+  NULL`, exactly as `ARCHITECTURE.md` §2.3 defines. Everywhere else a hard
+  delete is refused by the foreign key until a decision defines its semantics.
 - The role that runs Flyway must be allowed to create the `vector` extension.
   The Testcontainers database and the Compose database both run as the image's
   bootstrap superuser; a deployment with a restricted application role has to
@@ -145,6 +143,17 @@ Forbidden in database tests: H2 or any in-memory replacement, a "skip when
 Docker is missing" branch, `@Disabled`, and `assumeTrue` guards. A database
 test that cannot run must fail the build; a false green here hides the
 constraint behavior the model depends on.
+
+## Review fencing and immutable input
+
+`review` freezes its PR, requirement, acceptance-criteria and changed-file
+context when the row is created. Database triggers reject later changes to its
+identity columns and reject project/context disagreement. Finding writes carry
+the current attempt and are protected by the composite foreign key; a worker
+whose lease was replaced can neither finish, fail, renew nor append findings.
+Re-claim deletes findings from the abandoned attempt in the same transaction,
+so a crashed worker cannot pin the Review permanently. These paths are tested
+through direct JDBC and concurrent workers in the `review` test package.
 
 ## Image pinning
 

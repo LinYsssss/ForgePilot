@@ -13,9 +13,10 @@ defined once in [ARCHITECTURE.md](../../../docs/v2/ARCHITECTURE.md) §1, §2 and
 database, test, and configuration conventions this repository enforces, and
 name the file or command that enforces each one.
 
-Phase 1 delivered a foundation only. There is no business entity, table,
-endpoint, error contract, or logging convention yet, so the guides covering
-those areas state the current empty state instead of inventing rules.
+The implementation now covers the Phase 1 foundation and batches 1–3: local
+accounts, projects, requirements, knowledge, SCM, the AI gateway, the single
+Review Engine and its human decision loop. The guides describe those runtime
+conventions; Phase 8 remains outside the current implementation boundary.
 
 ---
 
@@ -26,8 +27,8 @@ those areas state the current empty state instead of inventing rules.
 | [Directory Structure](./directory-structure.md) | Actual `backend/` layout and package boundaries | Active |
 | [Database Guidelines](./database-guidelines.md) | Flyway authority and the real-PostgreSQL test contract | Active |
 | [Quality Guidelines](./quality-guidelines.md) | Executable build, architecture, scope, and configuration checks | Active |
-| [Error Handling](./error-handling.md) | No implementation yet; filled by the phase that introduces `common.web` | Empty |
-| [Logging Guidelines](./logging-guidelines.md) | No implementation yet; filled by the phase that introduces logging | Empty |
+| [Error Handling](./error-handling.md) | `ApiError` production in MVC and the security chain | Active |
+| [Logging Guidelines](./logging-guidelines.md) | Single-handler logging and secret exclusions | Active |
 
 ---
 

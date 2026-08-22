@@ -97,7 +97,7 @@ common, project, scm, knowledge, requirement, ai  ←  review
 | `requirement_attachment` | Requirement↔Document 关系 | project_id；`(requirement_id,document_id)` unique、`(project_id,document_id)` unique（一个附件只有一个归属需求）；与 Document 的 source_requirement_id 双复合 FK（D006） |
 | `knowledge_chunk` | Chunk 与唯一向量 | project_id、document_id、seq、content、metadata、`embedding vector`（无维度，D001）、provider/model/version/dimension |
 | `scm_repository` | 项目的活动仓库与加密凭据 | `project_id` unique；provider、规范化 `instance_identity`、external_id、api_base、encrypted_token/secret；有 PR 后稳定身份三元组不可修改，api_base 更新须验证同一实例（D010）；`UNIQUE(project_id,id)` |
-| `pull_request` | PR/MR 权威快照、作者与需求关联 | `(repository_id,external_number)` unique；当前 base_sha、head_sha、`review_input_fingerprint`（由规范化 base/head、changed-file manifest、patch 及可用的稳定 Diff version 确定性计算）；source_revision/source_updated_at 仅用于乱序保护；requirement_id nullable + 普通索引（D004/D007）；author_external_user_id、author_username（不可变作者快照）、author_user_id（可重算映射，复合 FK 指向 project_member，列级 `ON DELETE SET NULL`，D010）；`UNIQUE(project_id,id)` |
+| `pull_request` | PR/MR 权威快照、作者与需求关联 | `(repository_id,external_number)` unique；当前 title、base_sha、head_sha、`review_input_fingerprint`（由规范化 base/head、changed-file manifest、patch 及可用的稳定 Diff version 确定性计算，title 不参与身份）；source_revision/source_updated_at 仅用于乱序保护；requirement_id nullable + 普通索引（D004/D007）；author_external_user_id、author_username（不可变作者快照）、author_user_id（可重算映射，复合 FK 指向 project_member，列级 `ON DELETE SET NULL`，D010）；`UNIQUE(project_id,id)` |
 | `pull_request_requirement_event` | **仅**记录 PR↔需求关联变更审计 | project_id、pull_request_id、from_requirement_id、to_requirement_id、actor_type(`USER/SYSTEM`)、actor_user_id（可空，→ `user_account`）、reason、created_at；CHECK 保证 type 与 actor 组合合法；与关联修改同事务写入（D007） |
 | `review` | 一个 (head SHA、实际 Review 输入、需求版本) 的审查、上下文快照、摘要与 Decision | `UNIQUE NULLS NOT DISTINCT (pull_request_id,head_sha,review_input_fingerprint,requirement_revision_id)`（D003）；`UNIQUE(project_id,id)` 供 Finding 父 FK；CHECK 保证 requirement_id 与 requirement_revision_id 同空或同非空、Decision 字段组合合法；一次性 Decision 由 PR 行锁 + `WHERE decision='PENDING'` 条件更新保证；project_id、不可变的 review_input_fingerprint/context_snapshot_json、status、decision、decision_by/at/comment、execution_attempt/token/lease、engine/prompt/model 审计列 |
 | `finding` | Review 问题当前态与跨轮血缘 | project_id、review_id、requirement_id、requirement_revision_id、ac_id、finding_type、path、line、evidence、status、assignee_id（nullable，→ project_member）、fingerprint(`finding_key`)、evidence_hash、`basis_hash`、continuity、carried_from_finding_id；永久父 FK `(project_id,review_id) → review(project_id,id)`，血缘 FK `(project_id,carried_from_finding_id)`；`UNIQUE(project_id,id)`；CHECK 与约束触发器保证父子上下文 NULL-safe 一致（D006/D009） |
@@ -451,20 +451,28 @@ HTTP timeout + 一次有限 retry + Review FAILED + 人工 retry 足够覆盖当
 
 **PostgreSQL 最低版本 15 是硬依赖**，来自两处不可替代的语法：复合外键的列级 `ON DELETE SET NULL (author_user_id)`（D010）与 `UNIQUE NULLS NOT DISTINCT`（D003）。Testcontainers 镜像、Docker Compose 与部署环境必须统一到 15+。
 
-### 7.2 运行边界（初值，Phase 6 评测后可调；调整需更新本表）
+### 7.2 运行边界（Phase 6 实测冻结；调整需更新本表）
 
-| 参数 | 初值 | 说明 |
+| 参数 | 冻结值 | 说明 |
 |---|---:|---|
 | 单 PR 最大 changed files | 300 | 超出进 truncation manifest 并 UI 显式提示 |
 | 单文件 patch 最大字符 | 60000 | 超出按行截断并标注 |
 | 单 Batch 输入预算 | 60000 字符 | `ChangedFileBatcher` 分批依据 |
 | LLM 单次调用超时 | 120 s | 超时按瞬时失败处理 |
 | LLM 重试次数 | 1 | 仅瞬时错误（429/5xx/网络） |
-| 并发 Review 上限 | 2 | 有界执行器线程数，小内存部署可降为 1 |
+| 并发 Review 上限 | 2 | 有界执行器线程数；资源更紧的部署可显式降为 1 |
 | 单文件上传上限 | 5 MB | `KnowledgeUploadValidator` |
 | 检索 TopK | 8 | project-scoped |
 
-部署内存受限时（如 4 GB 机器）必须给 JVM 与 Postgres 显式设上限，并把并发 Review 降为 1。
+Phase 6 于 2026-08-22 在 4,101,304,320-byte 主机上按生产上限实测：backend 768 MiB
+（heap 384 MiB、direct 128 MiB、metaspace 128 MiB），PostgreSQL 512 MiB，Hikari 5。
+两个并发 Review 各含 300 文件与 3,989,101 字符的规范化 manifest，经生产 `AiGateway`、
+60,000 字符 Batch、校验、持久化与 fencing 全链路完成，共 152 次 Review 调用；两条均
+`COMPLETED`、`execution_attempt=1`、`truncated=false`。采样峰值 heap 83,167,816 bytes、
+direct 428,032 bytes、Hikari active/pending 1/0；backend 与 PostgreSQL 均无 OOM、无重启。
+因此 4 GB 生产边界的默认并发冻结为 2，不再自动降为 1；资源上限更低或与其他工作负载
+共机时仍可显式覆盖为 1。可复现输入与原始输出见
+[Batch 3 capacity evidence](../../.trellis/tasks/08-21-batch-3-review-engine-human-loop/evidence/capacity/20260822T121359Z-037799412c61/summary.md)。
 
 ---
 

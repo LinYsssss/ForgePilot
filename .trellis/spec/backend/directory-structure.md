@@ -17,15 +17,16 @@ backend/
 └── src/
     ├── main/
     │   ├── java/com/forgepilot/
-    │   │   ├── ForgePilotApplication.java    # the only production class
+    │   │   ├── ForgePilotApplication.java    # bootstrap class
     │   │   └── {ai,auth,common,knowledge,project,requirement,review,scm}/
-    │   │       └── package-info.java         # boundary marker only
+    │   │       ├── package-info.java         # boundary documentation
+    │   │       └── feature classes           # flat package-owned implementation
     │   └── resources/
     │       ├── application.yml               # default configuration
     │       ├── application-capacity.yml      # measurement profile only
     │       └── db/migration/V1__foundation.sql
     └── test/java/com/forgepilot/
-        ├── ArchitectureRulesTest.java        # the five ArchUnit rules
+        ├── ArchitectureRulesTest.java        # architecture rules + counter-probes
         ├── FoundationDatabaseTest.java       # real PostgreSQL/pgvector test
         ├── agent/fixture/                    # deliberately illegal package
         ├── review/fixture/
@@ -41,10 +42,10 @@ The eight allowed top-level packages and the rule against building empty
 `domain/application/infrastructure/web` trees for symmetry are defined in
 `ARCHITECTURE.md` §1.1. This repository realizes that rule as follows:
 
-- Each authorized package exists only as a `package-info.java` boundary marker
-  (one doc comment plus the package statement). Adding a directory is not the
-  same as adding a layer: create a class when a real behavior needs it, in the
-  package that owns that behavior.
+- Each authorized package owns its feature classes directly and retains a
+  `package-info.java` that describes the boundary. Adding a directory is not
+  the same as adding a layer: create a class only for real behavior in the
+  package that owns it.
 - Feature code is flat inside its package. Sub-packages are allowed only where
   `ARCHITECTURE.md` §1.1 already permits them.
 - A new top-level production package under `com.forgepilot` is a rule
@@ -75,5 +76,5 @@ The eight allowed top-level packages and the rule against building empty
 
 - [ForgePilotApplication.java](../../../backend/src/main/java/com/forgepilot/ForgePilotApplication.java)
   is the bootstrap class and the root-package exception to the feature rule.
-- [scm/package-info.java](../../../backend/src/main/java/com/forgepilot/scm/package-info.java)
-  shows the expected size of a boundary marker.
+- [review/package-info.java](../../../backend/src/main/java/com/forgepilot/review/package-info.java)
+  states the single-engine boundary delivered by batch 3.

@@ -26,7 +26,7 @@ anchor do not belong in this file.
 
 ## Architecture rules
 
-`docs/v2/ARCHITECTURE.md` §1.4 defines the five rules;
+`docs/v2/ARCHITECTURE.md` §1.4 defines the architecture rules;
 `backend/src/test/java/com/forgepilot/ArchitectureRulesTest.java` is where they
 are enforced:
 
@@ -37,13 +37,12 @@ are enforced:
 | `scmCannotDependOnReview` | A compile-time `scm -> review` dependency. |
 | `crossFeatureRepositoriesAreNotInjectedDirectly` | Any class depending on another feature's `*Repository`. |
 | `controllersCannotReachCrossFeatureRepositories` | A `*Controller` reaching another feature's `*Repository`. |
+| `featureSubpackagesAreExplicitlyAllowlisted` | Any feature subpackage outside the documented allowlist. |
 
-`forbiddenAndCrossFeatureRulesAreNotTautologies` proves four of these rules
-actually fail by checking them against the deliberately illegal test fixtures.
-The cycle rule has no counter-probe, and with only the bootstrap class and
-eight `package-info` markers in production it currently has nothing to reject.
-Do not describe it as proven. The phase that first creates cross-package
-production code is responsible for making it non-vacuous.
+`forbiddenAndCrossFeatureRulesAreNotTautologies` and
+`theTwoNewRulesAreNotTautologies` exercise deliberately illegal fixtures. The
+cycle rule remains the only rule without a direct counter-probe, but it now
+checks real cross-package production code rather than empty package markers.
 
 When adding a rule, add its counter-probe in the same change. A rule that
 passes because nothing is selected is not enforcement.
@@ -139,11 +138,11 @@ find backend/src/main/java/com/forgepilot -mindepth 1 -maxdepth 1 -type d -print
 # No forbidden production package. Expect no match.
 grep -rEn '^package com\.forgepilot\.(agent|patch|mq|rag|repo|pullrequest|context|assistant|finding)\b' backend/src/main/java
 
-# No unauthorized business types. Expect no match until the owning phase.
-grep -rEn 'class .*Controller|class .*Service|@Entity|@Table' backend/src/main/java
+# Exactly sixteen business tables; later phases must not add a seventeenth.
+grep -rEhi '^create[[:space:]]+table' backend/src/main/resources/db/migration/*.sql | wc -l
 
-# No table DDL in migrations outside an authorized phase. Expect no match.
-grep -rEni 'create[[:space:]]+table|alter[[:space:]]+table' backend/src/main/resources/db/migration
+# Review remains a single package-owned engine; expect no second runtime.
+grep -rEn '^package com\.forgepilot\.(agent|patch|mq|rag|assistant)' backend/src/main/java
 
 # No in-memory database or conditional test skip. Expect no match.
 grep -rniE 'h2|disabledWithoutDocker|DisabledIf|assumeTrue|@Disabled' backend/pom.xml backend/src
