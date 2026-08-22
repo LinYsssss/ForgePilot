@@ -102,13 +102,17 @@ body: {decision: "APPROVE"|"REQUEST_CHANGES", comment?: string}
 
 ```
 {
-  id, findingType, path, line, severity, title, evidence,
+  id, findingType, path, line, evidence,
   status,                    // OPEN|CONFIRMED|IN_PROGRESS|FIXED|VERIFIED|CLOSED|REJECTED
   continuity,                // NEW|PERSISTING|SUPPRESSED   —— 与 status 正交
   requirementId, requirementRevisionId, acId, acKey,
   assigneeId, carriedFromFindingId, findingKey, evidenceHash, basisHash
 }
 ```
+
+**本文早先写的 `severity` 与 `title` 已作废。** `ARCHITECTURE.md` §2.1 的 `finding` 列清单里
+没有这两列，加列属扩充 §2.1，本批次不做——展示内容由 `evidence` 承载。
+这是我在写契约时凭直觉加的字段，与 16 表 schema 冲突，由代理 B 发现并指出。
 
 **`status` 与 `continuity` 不得混入同一字段或同一 UI 标签**（PRD §5）。
 `NOT_REPORTED` **不在这里**——它是查询派生的，不落库（§3.6 第 3 条）。
