@@ -1,9 +1,13 @@
 import { requestJson } from "../../lib/http";
 
-/** `GITLAB` is reserved in the schema but no code can serve it, so it is not here. */
-export type ScmProvider = "GITHUB";
+export type ScmProvider = "GITHUB" | "GITLAB";
 
-export const SCM_PROVIDERS: readonly ScmProvider[] = ["GITHUB"];
+export const SCM_PROVIDERS: readonly ScmProvider[] = ["GITHUB", "GITLAB"];
+
+export const SCM_PROVIDER_DEFAULTS: Readonly<Record<ScmProvider, string>> = {
+  GITHUB: "https://api.github.com",
+  GITLAB: "https://gitlab.com/api/v4",
+};
 
 /**
  * What a LEADER may see of the connection. Neither the token nor the webhook

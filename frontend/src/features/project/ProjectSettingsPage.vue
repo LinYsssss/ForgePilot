@@ -14,6 +14,7 @@ import {
 import {
   registerScmRepository,
   updateScmRepository,
+  SCM_PROVIDER_DEFAULTS,
   SCM_PROVIDERS,
   type ScmProvider,
   type ScmRepository,
@@ -33,13 +34,14 @@ const isLeader = computed(() => project.value?.myRole === "LEADER");
 
 const registerProvider = ref<ScmProvider>("GITHUB");
 const registerExternalId = ref("");
-const registerApiBase = ref("https://api.github.com");
+const registerApiBase = ref(SCM_PROVIDER_DEFAULTS.GITHUB);
 const registerToken = ref("");
 const registerWebhookSecret = ref("");
 const registerPending = ref(false);
 const registerError = ref<string | null>(null);
 
 const updateRepositoryId = ref("");
+const updateProvider = ref<ScmProvider | "">("");
 const updateExternalId = ref("");
 const updateApiBase = ref("");
 const updateToken = ref("");
@@ -53,6 +55,16 @@ const updateError = ref<string | null>(null);
  * connection state.
  */
 const repository = ref<ScmRepository | null>(null);
+
+const webhookPath = computed(() =>
+  registerProvider.value === "GITLAB"
+    ? "/api/scm/gitlab/webhook"
+    : "/api/scm/github/webhook",
+);
+
+watch(registerProvider, (provider) => {
+  registerApiBase.value = SCM_PROVIDER_DEFAULTS[provider];
+});
 
 const qualitySelection = ref<number | null>(null);
 const qualityPending = ref(false);
@@ -128,6 +140,9 @@ async function update(): Promise<void> {
     return;
   }
   const patch: ScmRepositoryPatch = {};
+  if (updateProvider.value !== "") {
+    patch.provider = updateProvider.value;
+  }
   if (updateExternalId.value !== "") {
     patch.externalId = updateExternalId.value;
   }
@@ -243,6 +258,7 @@ async function runQualityCheck(): Promise<void> {
             <div class="field">
               <label for="scm-external-id">仓库外部 id</label>
               <input id="scm-external-id" v-model="registerExternalId" required maxlength="128" />
+              <p class="field-hint">填写提供方返回的稳定数字仓库/项目 id，不填写命名空间。</p>
             </div>
             <div class="field">
               <label for="scm-api-base">API 基地址</label>
@@ -268,8 +284,14 @@ async function runQualityCheck(): Promise<void> {
                 autocomplete="off"
                 required
               />
-              <p class="field-hint">只写，不回显。</p>
+              <p class="field-hint">
+                GitHub 填写 webhook secret；GitLab 优先填写 whsec_ 开头的 signing token，
+                旧实例也可填写 legacy secret token。
+              </p>
             </div>
+            <p class="field-hint scm-webhook-path">
+              Webhook 接收路径：<code>{{ webhookPath }}</code>
+            </p>
             <button type="submit" class="button button-primary" :disabled="registerPending">
               注册仓库
             </button>
@@ -288,6 +310,15 @@ async function runQualityCheck(): Promise<void> {
                 step="1"
                 inputmode="numeric"
               />
+            </div>
+            <div class="field">
+              <label for="scm-update-provider">提供方</label>
+              <select id="scm-update-provider" v-model="updateProvider">
+                <option value="">不修改</option>
+                <option v-for="provider in SCM_PROVIDERS" :key="provider" :value="provider">
+                  {{ provider }}
+                </option>
+              </select>
             </div>
             <div class="field">
               <label for="scm-update-external-id">仓库外部 id</label>
