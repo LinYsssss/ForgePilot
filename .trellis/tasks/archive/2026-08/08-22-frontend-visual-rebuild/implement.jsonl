@@ -1,0 +1,9 @@
+{"file":".trellis/spec/frontend/index.md","reason":"Frontend pre-development checklist and guideline index."}
+{"file":".trellis/spec/frontend/design-contract.md","reason":"Authoritative visual, navigation, responsive, and drift contract."}
+{"file":".trellis/spec/frontend/component-guidelines.md","reason":"Vue component, semantic markup, styling, and accessibility rules."}
+{"file":".trellis/spec/frontend/directory-structure.md","reason":"Feature ownership and file-layout boundaries."}
+{"file":".trellis/spec/frontend/hook-guidelines.md","reason":"Existing request boundary and composable ownership rules."}
+{"file":".trellis/spec/frontend/motion.md","reason":"Reduced-motion and non-ambient-motion requirements."}
+{"file":".trellis/spec/frontend/state-management.md","reason":"Local, URL, and server state ownership constraints."}
+{"file":".trellis/spec/frontend/type-safety.md","reason":"Strict TypeScript and API-boundary requirements."}
+{"file":".trellis/tasks/08-22-frontend-visual-rebuild/research/reference-audit.md","reason":"Audited mapping from the untracked visual reference to authoritative official behavior."}

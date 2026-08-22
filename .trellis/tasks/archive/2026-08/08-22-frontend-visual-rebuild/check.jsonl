@@ -1,0 +1,7 @@
+{"file":".trellis/spec/frontend/index.md","reason":"Frontend quality-check entry point."}
+{"file":".trellis/spec/frontend/design-contract.md","reason":"Check theme, hierarchy, route/menu, and drift compliance."}
+{"file":".trellis/spec/frontend/component-guidelines.md","reason":"Check semantics, focus, labels, props/events, and token-backed styles."}
+{"file":".trellis/spec/frontend/motion.md","reason":"Check reduced motion and absence of ambient animation."}
+{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"Authoritative validation commands and responsive/accessibility checklist."}
+{"file":".trellis/spec/frontend/type-safety.md","reason":"Check strict TypeScript and I/O boundary safety."}
+{"file":".trellis/tasks/08-22-frontend-visual-rebuild/research/reference-audit.md","reason":"Check that visual inspiration did not import mocked or unavailable behavior."}
