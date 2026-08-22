@@ -1,3 +1,4 @@
 /results/*
 !/results/.gitkeep
 tools/__pycache__/
+private-formal-corpus/

@@ -33,6 +33,7 @@ PROMPT_VERSION = "phase6-development-three-arm-v1"
 RUN_VERSION = "forgepilot-evaluation-run-v1"
 CASE_SET_VERSION = "phase1-quick-v1"
 PROMPT_CHAR_LIMIT = 60_000
+PROVIDER_ATTEMPTS = 2
 ARMS = (
     "DIFF_ONLY",
     "DIFF_REQUIREMENT_AC",
@@ -111,8 +112,8 @@ def file_map(root: Path) -> dict[str, str]:
     return values
 
 
-def changed_files(case: dict[str, Any]) -> list[dict[str, str]]:
-    fixture = EVALUATION_DIR / case["fixture"]
+def changed_files(case: dict[str, Any], evaluation_dir: Path = EVALUATION_DIR) -> list[dict[str, str]]:
+    fixture = evaluation_dir / case["fixture"]
     if case["fixtureLayout"] == "base-head":
         before = file_map(fixture / "base")
         after = file_map(fixture / "head")
@@ -140,8 +141,8 @@ def changed_files(case: dict[str, Any]) -> list[dict[str, str]]:
     return changes
 
 
-def knowledge(case: dict[str, Any]) -> list[dict[str, str]]:
-    root = EVALUATION_DIR / case["fixture"] / "knowledge"
+def knowledge(case: dict[str, Any], evaluation_dir: Path = EVALUATION_DIR) -> list[dict[str, str]]:
+    root = evaluation_dir / case["fixture"] / "knowledge"
     if not root.is_dir():
         return []
     return [
@@ -150,7 +151,7 @@ def knowledge(case: dict[str, Any]) -> list[dict[str, str]]:
     ]
 
 
-def prompt_for(case: dict[str, Any], arm: str) -> str:
+def prompt_for(case: dict[str, Any], arm: str, evaluation_dir: Path = EVALUATION_DIR) -> str:
     if arm not in ARMS:
         raise RunnerError(f"unsupported arm: {arm}")
     lines = [f"# Evaluation case\n\ncaseId: {case['id']}"]
@@ -166,7 +167,7 @@ def prompt_for(case: dict[str, Any], arm: str) -> str:
         lines.append("# Acceptance criteria\n\n" + criteria)
 
     if arm == "DIFF_REQUIREMENT_AC_KNOWLEDGE":
-        documents = knowledge(case)
+        documents = knowledge(case, evaluation_dir)
         if documents:
             rendered = "\n\n".join(
                 f"## {item['path']}\n\n{item['content']}" for item in documents
@@ -179,7 +180,7 @@ def prompt_for(case: dict[str, Any], arm: str) -> str:
 
     rendered_changes = "\n\n".join(
         f"## {item['path']} ({item['changeType']})\n\n```diff\n{item['patch']}\n```"
-        for item in changed_files(case)
+        for item in changed_files(case, evaluation_dir)
     )
     lines.append("# Changed files\n\n" + rendered_changes)
     prompt = "\n\n".join(lines) + "\n"
@@ -231,7 +232,7 @@ def provider_call(base_url: str, api_key: str, model: str, temperature: float,
     )
     started = time.monotonic()
     last_error = "provider call failed"
-    for attempt in range(2):
+    for attempt in range(PROVIDER_ATTEMPTS):
         try:
             with urllib.request.urlopen(request, timeout=timeout) as response:
                 raw_envelope = response.read().decode("utf-8")
@@ -315,8 +316,9 @@ def normalized_answer(answer: Any, case: dict[str, Any]) -> tuple[list[dict[str,
 
 
 def run_case(case: dict[str, Any], arm: str, base_url: str, api_key: str, model: str,
-             temperature: float, timeout: float) -> dict[str, Any]:
-    prompt = prompt_for(case, arm)
+             temperature: float, timeout: float,
+             evaluation_dir: Path = EVALUATION_DIR) -> dict[str, Any]:
+    prompt = prompt_for(case, arm, evaluation_dir)
     try:
         answer, usage, latency_ms = provider_call(
             base_url, api_key, model, temperature, prompt, timeout

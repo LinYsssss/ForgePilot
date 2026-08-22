@@ -1,0 +1,30 @@
+{
+  "configVersion": "forgepilot-formal-evaluation-config-v1",
+  "source": {
+    "repository": "https://github.com/LinYsssss/reposage",
+    "commit": "96137dd3b43e14c5e8881c99688663afd979cf4e"
+  },
+  "expectedCases": {
+    "development": 26,
+    "holdout": 12
+  },
+  "arms": [
+    "DIFF_ONLY",
+    "DIFF_REQUIREMENT_AC",
+    "DIFF_REQUIREMENT_AC_KNOWLEDGE"
+  ],
+  "provider": {
+    "endpointIdentity": "https://api.openai.com/v1/chat/completions",
+    "model": "gpt-5.6-luna",
+    "temperature": 0.0,
+    "timeoutSeconds": 120.0,
+    "retryCount": 1
+  },
+  "promptVersion": "phase8-formal-three-arm-v1",
+  "runContractVersion": "forgepilot-evaluation-run-v1",
+  "matchRuleVersion": "forgepilot-deterministic-match-v1",
+  "formalCaseSetVersion": "phase8-formal-38-v1",
+  "freezeArtifact": ".trellis/tasks/08-22-phase-8-gitlab-evaluation-defense/evidence/configuration-freeze.json",
+  "corpusWorkspace": "evaluation/private-formal-corpus",
+  "holdoutLedger": "evaluation/results/formal/holdout-ledger.json"
+}

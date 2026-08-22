@@ -53,3 +53,9 @@ runner 对 429/5xx/网络错误最多重试一次，逐 case 如实记录 `PROVI
 3. `Diff + Requirement + Acceptance Criteria + Project Knowledge + LLM`
 
 保留集只能在 Phase 8 配置冻结后首次运行，且不得据其调参。本目录刻意不保存保留集 ID、fixture 或结果；`score.py` 只接受 `split=development` 的 Phase 1 quick corpus。
+
+## Phase 8 正式评测
+
+正式 26+12 语料、配置冻结、一次性 ledger、三臂运行和 Wilson 区间报告由
+[`formal/README.md`](formal/README.md) 描述。正式工具不会放宽 Phase 1 quick scorer 的默认边界；
+私有 corpus 与运行输出继续位于 Git 忽略目录，冻结证据只保存非秘密配置和内容哈希。

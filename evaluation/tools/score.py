@@ -391,7 +391,11 @@ def validate_run_case(result: Any, case: dict[str, Any]) -> dict[str, Any]:
     return result
 
 
-def validate_run_envelope(document: Any, manifest: dict[str, Any]) -> list[dict[str, Any]]:
+def validate_run_envelope(
+    document: Any,
+    manifest: dict[str, Any],
+    case_set_version: str = CASE_SET_VERSION,
+) -> list[dict[str, Any]]:
     require(isinstance(document, dict), "run envelope must be an object")
     reject_extra_keys(
         document,
@@ -400,7 +404,7 @@ def validate_run_envelope(document: Any, manifest: dict[str, Any]) -> list[dict[
     )
     require(document.get("contractVersion") == RUN_VERSION, "run contractVersion invalid")
     require(document.get("corpusVersion") == manifest["corpusVersion"], "run corpusVersion mismatch")
-    require(document.get("caseSetVersion") == CASE_SET_VERSION, "run caseSetVersion mismatch")
+    require(document.get("caseSetVersion") == case_set_version, "run caseSetVersion mismatch")
     require(document.get("runKind") in {"SYNTHETIC_REFERENCE", "MODEL_EVALUATION"}, "runKind invalid")
     require(document.get("arm") in {"DIFF_ONLY", "DIFF_REQUIREMENT_AC", "DIFF_REQUIREMENT_AC_KNOWLEDGE"}, "run arm invalid")
     config = document.get("config")
@@ -656,7 +660,7 @@ def score_corpus(manifest: dict[str, Any], runs: dict[str, Any], metadata: dict[
         "contractVersion": REPORT_VERSION,
         "matchRuleVersion": MATCH_RULE_VERSION,
         "corpusVersion": manifest["corpusVersion"],
-        "caseSetVersion": CASE_SET_VERSION,
+        "caseSetVersion": metadata.get("caseSetVersion", CASE_SET_VERSION),
         "runKind": metadata["runKind"],
         "arm": metadata["arm"],
         "config": metadata["config"],
