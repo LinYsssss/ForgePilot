@@ -48,10 +48,11 @@ they should not duplicate credential or header setup. A future runtime schema
 may validate an external payload at this boundary, but Phase 1 intentionally
 has no validation dependency.
 
-When CSRF protection is introduced, the token belongs in `options.headers` of
-`requestJson` — that is the single intended injection point, alongside the
-existing `Accept`/`Content-Type` handling. Phase 1 does not implement CSRF and
-`http.ts` contains no token logic; do not add a parallel request path for it.
+CSRF protection is centralized in `requestJson`: unsafe same-origin requests
+read the `XSRF-TOKEN` cookie and send it as `X-XSRF-TOKEN`. Feature helpers must
+not read cookies, construct that header, or create a parallel request path.
+`GET /api/auth/me` is the cold-start probe that establishes both the session
+view and the CSRF cookie before later writes.
 
 ## Naming and lifecycle
 

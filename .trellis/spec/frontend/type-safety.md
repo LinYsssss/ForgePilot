@@ -59,3 +59,68 @@ mutually exclusive states rather than several booleans that can conflict.
 
 Run `npm run typecheck` before considering a frontend change complete; `npm
 run build` repeats the type check as its first step.
+
+## Scenario: render a structured immutable Review context
+
+### 1. Scope / Trigger
+
+Use this contract when an API intentionally exposes a schemaless JSON snapshot
+as `unknown`, while an operational view needs stable nested evidence. It keeps
+malformed historical data from becoming a partially trusted business object.
+
+### 2. Signatures
+
+```ts
+function getReview(projectId: number, reviewId: number): Promise<ReviewDetail>;
+function parseReviewContext(value: unknown): ReviewContextSnapshot | null;
+```
+
+`ReviewDetail.contextSnapshot` stays `unknown`; the Review feature owns the only
+conversion into `ReviewContextSnapshot`.
+
+### 3. Contracts
+
+The accepted snapshot has a nullable Requirement, an AC array, one PR identity,
+changed files with nullable patches, recalled knowledge excerpts, and nullable
+truncation details. Every nested object, array, string, number, integer, boolean,
+and nullability rule is checked before the parser returns a value. Views consume
+that parsed value and keep raw JSON only as a collapsed diagnostic.
+
+### 4. Validation & Error Matrix
+
+| Condition | Result |
+|---|---|
+| Snapshot is not an object | `null` |
+| Requirement is explicitly `null` | valid snapshot with no Requirement |
+| Any required nested field has the wrong type | `null` for the whole snapshot |
+| Patch is explicitly `null` | valid changed file with no displayable patch |
+| Truncation is explicitly `null` | valid snapshot with no manifest |
+
+The parser never drops an invalid array entry and returns the remaining entries;
+partial acceptance would make historical evidence look complete when it is not.
+
+### 5. Good / Base / Bad Cases
+
+- Good: a complete snapshot renders Requirement, AC, PR, knowledge, and Diff.
+- Base: `requirement: null`, empty AC/knowledge/file arrays, and
+  `truncation: null` render explicit empty states.
+- Bad: a string score, non-integer identity, missing PR field, or mixed invalid
+  array returns `null` and the view shows an unavailable state.
+
+### 6. Tests Required
+
+- Accept a complete snapshot and preserve all nested values.
+- Preserve deliberate null/empty states.
+- Reject malformed nested evidence without partial rendering.
+- Test multi-hunk Diff line mapping separately from JSON narrowing.
+
+### 7. Wrong vs Correct
+
+```ts
+// Wrong: assertion spreads trust into a view.
+const snapshot = detail.contextSnapshot as ReviewContextSnapshot;
+
+// Correct: one feature-owned runtime boundary.
+const snapshot = parseReviewContext(detail.contextSnapshot);
+if (snapshot === null) showUnavailableState();
+```
