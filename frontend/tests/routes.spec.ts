@@ -70,9 +70,26 @@ describe("route and shell contract", () => {
 
     expect(router.currentRoute.value.path).toBe("/workspace");
     expect(wrapper.find("header").exists()).toBe(true);
-    expect(wrapper.find('nav[aria-label="主导航"]').exists()).toBe(true);
+    expect(wrapper.find('header nav[aria-label="主导航"]').exists()).toBe(true);
+    expect(wrapper.find("header .brand-lockup").attributes("src")).toBe(
+      "/brand/logo-lockup.png",
+    );
+    expect(wrapper.find(".app-sidebar").exists()).toBe(false);
     expect(wrapper.findAll(".nav-link")).toHaveLength(6);
     expect(wrapper.find("main h1").text()).toBe("工作台");
+  });
+
+  it("uses only the app mark on the signed-out login surface", async () => {
+    clearSession();
+    const router = createAppRouter(createMemoryHistory());
+    await router.push("/login");
+    const wrapper = mount(App, { global: { plugins: [router] } });
+    await flushPromises();
+
+    expect(wrapper.find("header").exists()).toBe(false);
+    expect(wrapper.findAll(".login-page img")).toHaveLength(1);
+    expect(wrapper.find(".login-logo-app").attributes("src")).toBe("/brand/logo-app.png");
+    expect(wrapper.find(".brand-lockup").exists()).toBe(false);
   });
 
   it("redirects former project settings links to repository integration", async () => {

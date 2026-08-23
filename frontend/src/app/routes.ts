@@ -37,7 +37,8 @@ export const PROJECT_QUERY_KEY = "project";
 
 /**
  * 审查列表通过这个参数收窄到单个 PR。它是既有合法路径上的一个过滤条件，
- * 而不是第八条路由：本产品没有 PR 详情页，下面那七条路径就是全部产品面。
+ * 而不是又一条路由：本产品没有 PR 详情页，{@link PRODUCT_ROUTE_PATHS}
+ * 里那十条路径就是全部产品面。
  */
 export const PULL_REQUEST_QUERY_KEY = "pullRequest";
 

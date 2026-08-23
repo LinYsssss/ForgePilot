@@ -209,43 +209,15 @@ code {
 }
 
 .app-shell-signed-in {
-  display: grid;
-  grid-template-columns: 16rem minmax(0, 1fr);
+  min-width: 0;
 }
-
-.app-sidebar {
-  position: sticky;
-  z-index: 30;
-  top: 0;
-  display: flex;
-  flex-direction: column;
-  min-height: 100vh;
-  padding: var(--fp-space-6) var(--fp-space-4);
-  border-right: 0.0625rem solid var(--fp-color-border-subtle);
-  background: var(--fp-color-surface-overlay);
-  backdrop-filter: blur(1.25rem) saturate(130%);
-}
-
-.app-sidebar nav {
-  display: grid;
-  justify-content: stretch;
-  gap: var(--fp-space-1);
-  margin-top: var(--fp-space-10);
-  padding: var(--fp-space-2);
-  border-radius: var(--fp-radius-md);
-}
-
-.app-sidebar .nav-link { border-radius: var(--fp-radius-sm); }
-.app-sidebar .nav-link.router-link-active::after { display: none; }
-.sidebar-note { margin: auto var(--fp-space-2) var(--fp-space-2); color: var(--fp-color-text-subtle); font-size: 0.75rem; line-height: 1.65; }
-.app-workspace { min-width: 0; }
 
 .app-header {
   position: sticky;
   z-index: 30;
   top: 0;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(11rem, 1fr) auto minmax(11rem, 1fr);
   align-items: center;
   gap: var(--fp-space-6);
   min-height: 4.75rem;
@@ -254,6 +226,14 @@ code {
   background: var(--fp-color-surface-overlay);
   box-shadow: 0 0.75rem 2.5rem var(--fp-color-surface-overlay);
   backdrop-filter: blur(1.25rem) saturate(130%);
+}
+
+.app-header .brand {
+  justify-self: start;
+}
+
+.primary-navigation {
+  justify-self: center;
 }
 
 .brand {
@@ -266,7 +246,12 @@ code {
   text-decoration: none;
 }
 
-.brand-lockup { display: block; width: min(11.5rem, 100%); height: auto; object-fit: contain; }
+.brand-lockup {
+  display: block;
+  width: min(10.5rem, 100%);
+  height: auto;
+  object-fit: contain;
+}
 
 .brand-mark {
   position: relative;
@@ -375,6 +360,7 @@ nav {
   justify-content: flex-end;
   gap: var(--fp-space-3);
   min-width: 0;
+  justify-self: end;
 }
 
 .session-user {
@@ -559,6 +545,37 @@ h3 {
   content: "";
   opacity: 0.55;
   pointer-events: none;
+}
+
+.project-selector {
+  display: grid;
+  align-items: end;
+  gap: var(--fp-space-6);
+  grid-template-columns: minmax(14rem, 1fr) minmax(14rem, 1.2fr);
+}
+
+.project-selector .panel-title {
+  margin-bottom: var(--fp-space-1);
+}
+
+.project-selector .field {
+  width: 100%;
+}
+
+.index-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--fp-space-4);
+  margin-bottom: var(--fp-space-5);
+}
+
+.index-head .eyebrow {
+  margin-bottom: var(--fp-space-2);
+}
+
+.index-head .panel-title {
+  margin-bottom: var(--fp-space-1);
 }
 
 .field {
@@ -1254,20 +1271,16 @@ textarea:disabled {
 }
 
 @media (max-width: 64rem) {
-  .app-shell-signed-in { display: block; }
-  .app-sidebar { position: relative; min-height: auto; padding: var(--fp-space-4); border-right: 0; border-bottom: 0.0625rem solid var(--fp-color-border-subtle); }
-  .app-sidebar nav { display: flex; overflow-x: auto; margin-top: var(--fp-space-4); }
-  .app-sidebar .nav-link { flex: 0 0 auto; }
-  .sidebar-note { display: none; }
   .app-header {
-    grid-template-columns: auto 1fr;
+    grid-template-columns: minmax(0, 1fr) auto;
+    row-gap: var(--fp-space-3);
   }
 
-  .app-header nav {
+  .primary-navigation {
     grid-column: 1 / -1;
     grid-row: 2;
     justify-self: stretch;
-    order: 3;
+    justify-content: flex-start;
     overflow-x: auto;
   }
 
@@ -1277,8 +1290,12 @@ textarea:disabled {
   }
 
   .nav-link {
-    flex: 1 0 auto;
+    flex: 0 0 auto;
     text-align: center;
+  }
+
+  .project-selector {
+    grid-template-columns: 1fr;
   }
 }
 
@@ -1293,7 +1310,6 @@ textarea:disabled {
   }
 
   .app-header {
-    position: relative;
     gap: var(--fp-space-3);
     padding: var(--fp-space-3) var(--fp-space-4);
   }
@@ -1343,6 +1359,11 @@ textarea:disabled {
 
   .meta-list {
     grid-template-columns: 1fr;
+  }
+
+  .index-head {
+    align-items: flex-start;
+    flex-direction: column;
   }
 
   .data-table th,

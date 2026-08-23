@@ -52,7 +52,13 @@ async function submit(): Promise<void> {
           <span class="radar-node radar-node-three"></span>
         </div>
         <div class="login-laser" aria-hidden="true"></div>
-        <p class="eyebrow">ForgePilot · Review Console</p>
+        <div class="login-brand">
+          <img class="login-logo-app" src="/brand/logo-app.png" alt="ForgePilot" />
+          <div>
+            <p class="eyebrow">ForgePilot</p>
+            <p class="login-brand-note">Requirement-driven AI review console</p>
+          </div>
+        </div>
         <p id="login-story-title" class="login-story-title">把需求、项目规范与代码变更放进同一条证据链。</p>
         <p class="login-story-copy">
           ForgePilot 围绕需求驱动的 Pull Request 审查构建，让每条 Finding
@@ -76,9 +82,7 @@ async function submit(): Promise<void> {
 
       <div class="login-access">
         <div class="login-heading">
-          <img class="login-logo-app" src="/brand/logo-app.png" alt="ForgePilot" />
-          <img class="login-logo-lockup" src="/brand/logo-lockup.png" alt="ForgePilot" />
-          <p class="eyebrow">Secure session</p>
+          <p class="eyebrow">Secure workspace access</p>
           <h1 id="login-title">{{ mode === "login" ? "登录" : "注册并登录" }}</h1>
           <p class="muted">
             {{
@@ -156,20 +160,20 @@ async function submit(): Promise<void> {
 <style scoped>
 .login-page {
   display: grid;
-  min-height: calc(100vh - 12rem);
+  min-height: calc(100vh - 8rem);
   place-items: center;
 }
 
 .login-stage {
   position: relative;
   display: grid;
-  width: min(68rem, 100%);
+  width: min(72rem, 100%);
   overflow: hidden;
   border: 0.0625rem solid var(--fp-color-border);
   border-radius: var(--fp-radius-xl);
   background: var(--fp-color-surface-glass);
   box-shadow: var(--fp-shadow-elevated), var(--fp-shadow-accent);
-  grid-template-columns: minmax(0, 1.12fr) minmax(22rem, 0.88fr);
+  grid-template-columns: minmax(0, 1.08fr) minmax(23rem, 0.92fr);
   backdrop-filter: blur(1.25rem);
 }
 
@@ -217,6 +221,35 @@ async function submit(): Promise<void> {
 .login-story > * {
   position: relative;
   z-index: 1;
+}
+
+.login-brand {
+  display: flex;
+  align-items: center;
+  gap: var(--fp-space-4);
+  margin-bottom: var(--fp-space-8);
+}
+
+.login-logo-app {
+  display: block;
+  flex: 0 0 auto;
+  width: 4.75rem;
+  height: auto;
+  object-fit: contain;
+  filter: drop-shadow(0 0 1.25rem var(--fp-color-accent-glow));
+}
+
+.login-brand .eyebrow,
+.login-brand-note {
+  margin: 0;
+}
+
+.login-brand-note {
+  margin-top: var(--fp-space-1);
+  color: var(--fp-color-text-subtle);
+  font: 0.6875rem/1.5 var(--fp-font-mono);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
 }
 
 .login-cyber-radar {
@@ -399,17 +432,15 @@ async function submit(): Promise<void> {
   display: flex;
   justify-content: center;
   flex-direction: column;
-  background: var(--fp-color-surface-glass);
+  background: var(--fp-gradient-panel);
 }
 
 .login-heading {
   margin-bottom: var(--fp-space-6);
 }
 
-.login-logo-app { display: block; width: 3.5rem; height: 3.5rem; margin-bottom: var(--fp-space-4); object-fit: contain; }
-.login-logo-lockup { display: block; width: min(12rem, 100%); height: auto; margin-bottom: var(--fp-space-5); object-fit: contain; }
-
 .login-heading h1 {
+  margin-bottom: var(--fp-space-2);
   font-size: clamp(1.75rem, 4vw, 2.25rem);
 }
 
@@ -458,6 +489,14 @@ async function submit(): Promise<void> {
 
   .login-story-title {
     font-size: 1.75rem;
+  }
+
+  .login-brand {
+    margin-bottom: var(--fp-space-6);
+  }
+
+  .login-logo-app {
+    width: 4rem;
   }
 
   .login-causal-chain {

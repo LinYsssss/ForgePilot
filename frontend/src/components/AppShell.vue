@@ -84,12 +84,12 @@ async function logout(): Promise<void> {
 <template>
   <a class="skip-link" href="#app-main">跳到主要内容</a>
   <div :class="['app-shell', { 'app-shell-signed-in': account }]">
-    <aside v-if="account" class="app-sidebar">
+    <header v-if="account" class="app-header">
       <RouterLink class="brand" :to="HOME_ROUTE_PATH" aria-label="ForgePilot 工作台">
         <img class="brand-lockup" src="/brand/logo-lockup.png" alt="ForgePilot" />
-        <span class="brand-copy"><small>Requirement-driven review console</small></span>
+        <span class="brand-copy"><small>Requirement-driven AI review</small></span>
       </RouterLink>
-      <nav aria-label="主导航">
+      <nav class="primary-navigation" aria-label="主导航">
         <RouterLink
           v-for="item in TOP_LEVEL_NAVIGATION"
           :key="item.to"
@@ -99,16 +99,8 @@ async function logout(): Promise<void> {
           {{ item.label }}
         </RouterLink>
       </nav>
-      <p class="sidebar-note">需求上下文、向量知识与人工审查决策在同一条可追溯链路中协作。</p>
-    </aside>
 
-    <div class="app-workspace">
-    <header class="app-header">
-      <RouterLink v-if="!account" class="brand" :to="HOME_ROUTE_PATH" aria-label="ForgePilot 首页">
-        <img class="brand-lockup" src="/brand/logo-lockup.png" alt="ForgePilot" />
-      </RouterLink>
-
-      <div v-if="account" class="session-area">
+      <div class="session-area">
         <details class="account-menu" @toggle="accountMenuToggled">
           <summary class="button button-inverse session-user">{{ account.username }}</summary>
           <div class="account-popover">
@@ -167,7 +159,6 @@ async function logout(): Promise<void> {
         </Transition>
       </RouterView>
     </main>
-    </div>
   </div>
 </template>
 
