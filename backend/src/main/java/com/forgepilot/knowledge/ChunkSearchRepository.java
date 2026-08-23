@@ -61,19 +61,25 @@ public class ChunkSearchRepository {
     }
 
     /**
-     * 单个项目内的最近邻分块。{@code projectId} 是**硬过滤**而非后过滤：
-     * 实测它在排序表达式之前求值，因此别的项目的行既不能影响、也不能毒化
-     * 本次结果。
+     * 单个项目内、且只含公共知识与当前需求附件的最近邻分块。{@code projectId} 与
+     * {@code requirementId} 都在 SQL 中硬过滤；后者为 null 时附件分支无法匹配，故
+     * 只会返回公共项目知识，而不会先召回再在 Java 中剔除。
      */
-    public List<ChunkMatch> search(long projectId, float[] query, int limit) {
+    public List<ChunkMatch> search(long projectId, Long requirementId, float[] query, int limit) {
         return jdbc.query(
-                "select id, document_id, seq, content, embedding <=> ?::vector as distance "
-                        + "from knowledge_chunk "
-                        + "where project_id = ? and embedding is not null "
-                        + "order by embedding <=> ?::vector limit ?",
+                "select c.id, c.document_id, d.title, c.seq, c.content, "
+                        + "c.embedding <=> ?::vector as distance "
+                        + "from knowledge_chunk c "
+                        + "join knowledge_document d on d.project_id = c.project_id "
+                        + "and d.id = c.document_id "
+                        + "where c.project_id = ? and c.embedding is not null "
+                        + "and (d.source_type <> 'REQUIREMENT_ATTACHMENT' "
+                        + "or d.source_requirement_id = ?) "
+                        + "order by c.embedding <=> ?::vector limit ?",
                 (rs, row) -> new ChunkMatch(rs.getLong("id"), rs.getLong("document_id"),
-                        rs.getInt("seq"), rs.getString("content"), rs.getDouble("distance")),
-                literal(query), projectId, literal(query), limit);
+                        rs.getString("title"), rs.getInt("seq"), rs.getString("content"),
+                        rs.getDouble("distance")),
+                literal(query), projectId, requirementId, literal(query), limit);
     }
 
     /** pgvector 的文本形式：{@code [1.0,2.0,3.0]}。 */
@@ -85,6 +91,7 @@ public class ChunkSearchRepository {
         return joiner.toString();
     }
 
-    public record ChunkMatch(long id, long documentId, int seq, String content, double distance) {
+    public record ChunkMatch(long id, long documentId, String title, int seq, String content,
+            double distance) {
     }
 }

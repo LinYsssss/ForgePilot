@@ -83,9 +83,9 @@ public class AiGateway {
     }
 
     /**
-     * 一次补全。{@code schema} 是调用方为结构化回答提供的 JSON Schema，
-     * 传 {@code null} 表示要自由文本：需求质量检查与实现建议共用本网关，
-     * 二者的差别仅在于 schema（ARCHITECTURE.md 4.1）。
+     * 一次补全。{@code schema} 是调用方为结构化回答提供的 JSON Schema；
+     * 传 {@code null} 仍可用于明确要求自由文本的调用。Quality、Guidance 与 Review
+     * 共享本网关，各自拥有业务侧 schema（ARCHITECTURE.md 4.1）。
      */
     public String chat(String prompt, String schema, AiUseCase useCase, AiCallContext context) {
         if (chatModel.isBlank()) {

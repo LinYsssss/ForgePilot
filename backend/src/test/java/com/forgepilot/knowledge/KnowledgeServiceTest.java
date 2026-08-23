@@ -78,7 +78,7 @@ class KnowledgeServiceTest extends PostgresTestBase {
         assertThat(jdbc.queryForObject(
                 "select count(*) from knowledge_chunk where document_id = ? and embedding is null",
                 Integer.class, document)).isZero();
-        assertThat(knowledge.search(fixture.project, fixture.leader,
+        assertThat(knowledge.search(fixture.project, fixture.leader, null,
                 new float[] {0.1f, 0.2f, 0.3f, 0.4f}, 10)).hasSize(stored.size());
     }
 

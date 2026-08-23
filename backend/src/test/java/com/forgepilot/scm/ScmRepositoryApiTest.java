@@ -79,6 +79,29 @@ class ScmRepositoryApiTest extends ScmTestBase {
     }
 
     @Test
+    void membersCanReadTheSafeCurrentRepositoryAndSeeAnEmptyListBeforeConnection() throws Exception {
+        Client leader = register();
+        Client developer = register();
+        long project = leader.post("/api/projects", """
+                {"name": "Repository list"}""").path("id").asLong();
+        leader.post("/api/projects/" + project + "/members", """
+                {"username": "%s", "role": "DEVELOPER"}""".formatted(developer.username));
+
+        assertThat(developer.read("/api/projects/" + project + "/scm/repositories").isEmpty()).isTrue();
+
+        connect(leader, project, "read-list-" + SEQUENCE.incrementAndGet(), INSTANCE);
+        MvcResult listed = developer.readExpecting("/api/projects/" + project + "/scm/repositories", status().isOk());
+
+        JsonNode repositories = body(listed);
+        assertThat(repositories).hasSize(1);
+        assertThat(repositories.get(0).path("provider").asString()).isEqualTo("GITHUB");
+        assertThat(listed.getResponse().getContentAsString())
+                .doesNotContain("token")
+                .doesNotContain("secret")
+                .doesNotContain("encrypted");
+    }
+
+    @Test
     void aProjectGetsOneRepositoryAndTheIdentityIsGlobal() throws Exception {
         Client leader = register();
         long project = leader.post("/api/projects", """

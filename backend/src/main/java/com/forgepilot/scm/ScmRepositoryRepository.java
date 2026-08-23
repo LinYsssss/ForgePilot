@@ -1,5 +1,6 @@
 package com.forgepilot.scm;
 
+import java.util.List;
 import java.util.Optional;
 
 import jakarta.persistence.LockModeType;
@@ -14,6 +15,8 @@ import org.springframework.data.jpa.repository.Lock;
 interface ScmRepositoryRepository extends JpaRepository<ScmRepository, Long> {
 
     Optional<ScmRepository> findByProjectIdAndId(long projectId, long id);
+
+    List<ScmRepository> findByProjectId(long projectId);
 
     /**
      * 在比较稳定身份之前先锁行，使两个并发更新不会都读到「还没有 PR」

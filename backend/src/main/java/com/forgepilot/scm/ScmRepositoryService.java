@@ -1,6 +1,7 @@
 package com.forgepilot.scm;
 
 import java.net.URI;
+import java.util.List;
 
 import com.forgepilot.common.ApiException;
 import com.forgepilot.project.ProjectAccessService;
@@ -31,6 +32,17 @@ class ScmRepositoryService {
         this.access = access;
         this.outbound = outbound;
         this.cipher = cipher;
+    }
+
+    /**
+     * 成员可查看当前项目已经接入的仓库，但响应只投影可安全展示的连接元数据。
+     * 数据库的 project_id 唯一约束使返回最多一项；保留数组形状让前端自然处理
+     * 尚未接入的项目，也不需要暴露一条可空的“当前仓库”状态。
+     */
+    @Transactional(readOnly = true)
+    List<ScmRepositoryResponse> list(long projectId, long actorId) {
+        access.requireMember(projectId, actorId);
+        return repositories.findByProjectId(projectId).stream().map(ScmRepositoryResponse::of).toList();
     }
 
     @Transactional

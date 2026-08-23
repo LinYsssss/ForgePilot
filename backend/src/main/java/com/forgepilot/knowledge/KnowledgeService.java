@@ -32,6 +32,7 @@ public class KnowledgeService {
     static final int MAX_CHUNK_CHARS = 1_200;
 
     private final KnowledgeDocumentRepository documents;
+    private final KnowledgeReadRepository reads;
     private final KnowledgeChunkRepository chunks;
     private final ChunkSearchRepository vectors;
     private final KnowledgeUploadValidator validator;
@@ -47,13 +48,15 @@ public class KnowledgeService {
     private final String model;
     private final String version;
 
-    KnowledgeService(KnowledgeDocumentRepository documents, KnowledgeChunkRepository chunks,
+    KnowledgeService(KnowledgeDocumentRepository documents, KnowledgeReadRepository reads,
+            KnowledgeChunkRepository chunks,
             ChunkSearchRepository vectors, KnowledgeUploadValidator validator,
             ProjectAccessService access, AiGateway ai,
             @Value("${forgepilot.knowledge.embedding.provider:}") String provider,
             @Value("${forgepilot.knowledge.embedding.model:}") String model,
             @Value("${forgepilot.knowledge.embedding.version:}") String version) {
         this.documents = documents;
+        this.reads = reads;
         this.chunks = chunks;
         this.vectors = vectors;
         this.validator = validator;
@@ -69,6 +72,29 @@ public class KnowledgeService {
         access.requireRole(projectId, actorId, ProjectRole.LEADER);
         validator.validate(title, text);
         return ingest(KnowledgeDocument.projectKnowledge(projectId, title, text));
+    }
+
+    @Transactional(readOnly = true)
+    public List<KnowledgeDocumentView> listProjectKnowledge(long projectId, long actorId) {
+        access.requireMember(projectId, actorId);
+        return reads.findProjectKnowledge(projectId);
+    }
+
+    @Transactional(readOnly = true)
+    public KnowledgeDocumentView document(long projectId, long actorId, long documentId) {
+        access.requireMember(projectId, actorId);
+        KnowledgeDocumentView view = reads.findByProjectIdAndId(projectId, documentId);
+        if (view == null) {
+            throw ApiException.notFound();
+        }
+        return view;
+    }
+
+    @Transactional(readOnly = true)
+    public List<KnowledgeDocumentView> documents(long projectId, long actorId,
+            List<Long> documentIds) {
+        access.requireMember(projectId, actorId);
+        return reads.findByProjectIdAndIds(projectId, documentIds);
     }
 
     /** 这里的 {@code requirementId} 只是不透明作用域；它是否存在由数据库负责检查。 */
@@ -98,9 +124,9 @@ public class KnowledgeService {
 
     @Transactional(readOnly = true)
     public List<ChunkSearchRepository.ChunkMatch> search(long projectId, long actorId,
-            float[] query, int limit) {
+            Long requirementId, float[] query, int limit) {
         access.requireMember(projectId, actorId);
-        return vectors.search(projectId, query, limit);
+        return vectors.search(projectId, requirementId, query, limit);
     }
 
     /**
@@ -134,6 +160,8 @@ public class KnowledgeService {
         }
 
         saved.markReady();
+        chunks.flush();
+        documents.flush();
         return saved.getId();
     }
 

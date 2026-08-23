@@ -1,6 +1,7 @@
 package com.forgepilot.scm;
 
 import java.security.Principal;
+import java.util.List;
 
 import com.forgepilot.auth.AccountView;
 import com.forgepilot.auth.UserDirectory;
@@ -33,6 +34,11 @@ class ScmController {
         this.repositories = repositories;
         this.associations = associations;
         this.users = users;
+    }
+
+    @GetMapping("/scm/repositories")
+    List<ScmRepositoryResponse> list(@PathVariable long projectId, Principal principal) {
+        return repositories.list(projectId, userIdOf(principal));
     }
 
     @PostMapping("/scm/repositories")

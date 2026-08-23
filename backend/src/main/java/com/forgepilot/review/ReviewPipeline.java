@@ -290,7 +290,7 @@ public class ReviewPipeline {
                 AiCallContext.ofProject(review.getProjectId())).getFirst();
         List<KnowledgeExcerpt> recalled = new ArrayList<>();
         for (ChunkMatch match : knowledge.search(review.getProjectId(), retrievalActor(review),
-                vector, knowledgeTopK)) {
+                review.getRequirementId(), vector, knowledgeTopK)) {
             recalled.add(new KnowledgeExcerpt(match.id(), match.documentId(), match.id(),
                     match.content(), 1.0d - match.distance()));
         }

@@ -6,6 +6,7 @@ import java.util.List;
 import com.forgepilot.auth.AccountView;
 import com.forgepilot.auth.UserDirectory;
 import com.forgepilot.common.ApiException;
+import com.forgepilot.knowledge.KnowledgeDocumentView;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
@@ -28,13 +29,15 @@ class RequirementController {
     private final RequirementService requirements;
     private final ImplementationGuidanceService guidance;
     private final RequirementQualityService quality;
+    private final RequirementAttachmentService attachments;
     private final UserDirectory users;
 
     RequirementController(RequirementService requirements, ImplementationGuidanceService guidance,
-            RequirementQualityService quality, UserDirectory users) {
+            RequirementQualityService quality, RequirementAttachmentService attachments, UserDirectory users) {
         this.requirements = requirements;
         this.guidance = guidance;
         this.quality = quality;
+        this.attachments = attachments;
         this.users = users;
     }
 
@@ -87,6 +90,26 @@ class RequirementController {
         return requirements.assign(projectId, userIdOf(principal), requirementId, request.userId());
     }
 
+    @GetMapping("/{requirementId}/attachments")
+    List<KnowledgeDocumentView> attachments(@PathVariable long projectId, @PathVariable long requirementId,
+            Principal principal) {
+        return this.attachments.list(projectId, userIdOf(principal), requirementId);
+    }
+
+    @PostMapping("/{requirementId}/attachments")
+    @ResponseStatus(HttpStatus.CREATED)
+    KnowledgeDocumentView attach(@PathVariable long projectId, @PathVariable long requirementId,
+            @Valid @RequestBody AttachmentRequest request, Principal principal) {
+        return attachments.create(projectId, userIdOf(principal), requirementId, request.title(), request.text());
+    }
+
+    @PostMapping("/{requirementId}/attachments/{documentId}/promote")
+    @ResponseStatus(HttpStatus.CREATED)
+    KnowledgeDocumentView promoteAttachment(@PathVariable long projectId, @PathVariable long requirementId,
+            @PathVariable long documentId, Principal principal) {
+        return attachments.promote(projectId, userIdOf(principal), requirementId, documentId);
+    }
+
     /**
      * 针对需求当前修订的一次性实现建议。用 POST 而非 GET，因为它会花掉一次
      * provider 调用：既非安全方法也不可缓存，而且它的结果完全不落库、无法回读。
@@ -135,5 +158,8 @@ class RequirementController {
     }
 
     record AssigneeRequest(@NotNull Long userId) {
+    }
+
+    record AttachmentRequest(@NotBlank @Size(max = 255) String title, @NotBlank String text) {
     }
 }

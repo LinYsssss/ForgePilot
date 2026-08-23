@@ -92,7 +92,7 @@ class KnowledgeGuardTest extends PostgresTestBase {
                 .hasMessageContaining("4-dimension");
 
         chunks.writeEmbedding(fixture.project, second, new float[] {0.2f, 0.3f, 0.4f, 0.5f});
-        assertThat(chunks.search(fixture.project, new float[] {0.1f, 0.2f, 0.3f, 0.4f}, 5))
+        assertThat(chunks.search(fixture.project, null, new float[] {0.1f, 0.2f, 0.3f, 0.4f}, 5))
                 .extracting(ChunkSearchRepository.ChunkMatch::id)
                 .containsExactly(first, second);
     }
@@ -104,7 +104,7 @@ class KnowledgeGuardTest extends PostgresTestBase {
         chunks.writeEmbedding(mine.project, mine.chunk(1), new float[] {1f, 0f});
         chunks.writeEmbedding(theirs.project, theirs.chunk(1), new float[] {1f, 0f});
 
-        assertThat(chunks.search(mine.project, new float[] {1f, 0f}, 10)).hasSize(1);
+        assertThat(chunks.search(mine.project, null, new float[] {1f, 0f}, 10)).hasSize(1);
     }
 
     // ---------------------------------------------------------------- fixture
