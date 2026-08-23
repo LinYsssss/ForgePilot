@@ -224,3 +224,41 @@ Completed account and Requirement workflows, project Review discovery, structure
 ### Status
 
 [OK] **Completed**
+
+
+## Session 7: Complete D017 product flow
+
+**Date**: 2026-08-23
+**Task**: Complete D017 product flow
+**Branch**: `chore/chinese-comments-and-docs`
+
+### Summary
+
+Delivered and verified the six-entry frontend, real-data workbench, Knowledge and attachment flows, structured knowledge-enhanced Guidance, SCM safe read, branding, AI prominence, and vector metadata; archived the task after 310 backend and 34 frontend tests passed.
+
+### Main Changes
+
+- Added six-entry responsive product shell, workbench, Knowledge and Repository pages, and both official Logo assets.
+- Completed requirement-scoped attachment persistence and vector retrieval isolation, structured knowledge-enhanced Guidance, and safe SCM configuration reads.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `d71533e` | (see git log) |
+| `66436dd` | (see git log) |
+| `2516be1` | (see git log) |
+| `25c1961` | (see git log) |
+
+### Testing
+
+- [OK] Backend verify: 310 tests, 0 failures/errors/skips.
+- [OK] Frontend lint, strict typecheck, 34 tests, and production build passed.
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- Push the current branch and deploy the existing Compose project without removing its PostgreSQL volume.
