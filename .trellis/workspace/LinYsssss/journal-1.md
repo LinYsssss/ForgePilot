@@ -262,3 +262,28 @@ Delivered and verified the six-entry frontend, real-data workbench, Knowledge an
 ### Next Steps
 
 - Push the current branch and deploy the existing Compose project without removing its PostgreSQL volume.
+
+
+## Session 8: R2.5 product baseline closure
+
+**Date**: 2026-08-23
+**Task**: R2.5 product baseline closure
+**Branch**: `chore/chinese-comments-and-docs`
+
+### Summary
+
+Aligned R2.5 documentation and UI baseline, fixed PR author association authorization, recorded exact sequential vector search, and archived the completed D018/R2.5 tasks.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `7872912` | (see git log) |
+| `1bf5c53` | (see git log) |
+| `56d03af` | (see git log) |
+| `0fcfd9c` | (see git log) |
+| `7db45d4` | (see git log) |
+
+### Status
+
+[OK] **Completed**
