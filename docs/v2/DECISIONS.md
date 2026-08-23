@@ -1,6 +1,6 @@
 # ForgePilot V2 决策记录
 
-状态：**R2.4 产品链路补全基线（2026-08-23）**。
+状态：**R2.5 顶部导航基线（2026-08-23）**。
 
 本文将原来分散的 11 份 ADR 收敛为一个决策记录，只解释“为什么这样定”和不可逆后果；可执行规则分别以 [PRD](./PRD.md)、[ARCHITECTURE](./ARCHITECTURE.md) 和 [IMPLEMENTATION-PLAN](./IMPLEMENTATION-PLAN.md) 为准。未来新增决策按 `D012...` 追加；修改已接受决策须用户明确批准并在 Git 历史中留痕。
 
@@ -12,6 +12,8 @@
 **理由**：模型维度是部署配置，不能让相同 Flyway 版本在不同环境生成不同结构。
 
 **后果**：索引前顺序扫描；应用写入时显式校验维度。更换 Profile 是停写、重嵌入和重建索引的维护操作，不做在线双版本。
+
+**执行状态（R2.5）**：那条 HNSW expression index 的独立 migration **没有创建，而且在当前 Profile 下创建不了**。冻结的 `Qwen/Qwen3-Embedding-8B` 是 4096 维，超过 pgvector 0.8.6 全部精确索引形态的维度上限。本条的索引条款由 [D019](#d019) 收窄为条件条款，实测与替代方案的代价一并记在那里。
 
 <a id="d002"></a>
 ## D002 大 PR 分批产证据、统一合成
@@ -140,7 +142,7 @@ Phase 8 单独且最后               GitLab + 正式评测与答辩
 以下三条不随批次化放宽：
 
 1. **holdout 仍锁定在 Phase 8**，配置冻结后只运行一次。任何提前运行、反复运行或据其调参都会永久摧毁该 12 例作为无偏估计的资格，且不可通过重跑恢复。
-2. **Phase 6 的运行边界是实测输出**，不是可以预先写死的常量。并发 Review 上限（1 或 2）、单 Batch 输入预算和 changed-file 上限必须由目标 4 GB 机上的实际 Review 运行确定，并按 [ARCHITECTURE §7.2](./ARCHITECTURE.md#72-运行边界初值phase-6-评测后可调调整需更新本表) 更新该表。
+2. **Phase 6 的运行边界是实测输出**，不是可以预先写死的常量。并发 Review 上限（1 或 2）、单 Batch 输入预算和 changed-file 上限必须由目标 4 GB 机上的实际 Review 运行确定，并按 [ARCHITECTURE §7.2](./ARCHITECTURE.md#72-运行边界phase-6-实测冻结调整需更新本表) 更新该表。
 3. **数据库约束的反馈回路必须保留**。[D006](#d006) 已经声明约束触发器与 ORM 可能不兼容，且该情况必须先新增决策而不是静默降级。批次划分刻意把这一风险留在批次 1（第一次真正建业务表时）暴露，而不是等六个 Phase 的代码堆完再发现。
 
 **理由**：R2.3 已把 16 张表、依赖方向、状态机和 D001–D011 冻结得足够彻底，逐个 Phase 停一次的边际收益低，而横切模式（`project_id` 复合外键、Service/Query facade、错误映射）一次性统一实现比分批引入更一致。同时，把批次做到"一次写完全部 Phase"则会同时破坏上述三条：holdout 不可逆污染、Phase 6 参数变成猜测、schema 风险在六个 Phase 的代码之下暴露。批次为 2 个 Phase 是这两种失效模式之间的平衡点。
@@ -150,7 +152,7 @@ Phase 8 单独且最后               GitLab + 正式评测与答辩
 <a id="d013"></a>
 ## D013 批次 1 实现裁定
 
-**背景**：批次 1 规划期做了三项研究（`.trellis/tasks/08-21-batch-1-auth-project-requirement/research/`），其中 `pg15-hibernate-constraints.md` 用真实 PostgreSQL 15.19 + Hibernate 7.4.1 实测了本模型最危险的约束。研究共提出 49 条开放问题；本决策裁定其中会改变实现形态或消除文档矛盾的部分，其余属实现细节，由 `design.md` 承担。
+**背景**：批次 1 规划期做了三项研究（`.trellis/tasks/archive/2026-08/08-21-batch-1-auth-project-requirement/research/`），其中 `pg15-hibernate-constraints.md` 用真实 PostgreSQL 15.19 + Hibernate 7.4.1 实测了本模型最危险的约束。研究共提出 49 条开放问题；本决策裁定其中会改变实现形态或消除文档矛盾的部分，其余属实现细节，由 `design.md` 承担。
 
 **总判据**（用户 2026-08-21 要求）：优先选零新增表、零新增列、零新增抽象的可行解；只有当简单解会让两条权威规定互相矛盾或根本跑不起来时才升级，并说明为什么简单解不成立。**以下裁定没有一条改动 16 表定义。**
 
@@ -269,7 +271,7 @@ Phase 8 单独且最后               GitLab + 正式评测与答辩
 
 ## D015 批次 2 实现裁定（结构性部分）
 
-**背景**：批次 2 的三份研究（`.trellis/tasks/08-21-batch-2-ai-knowledge-scm/research/`）提出 28 条开放问题，
+**背景**：批次 2 的三份研究（`.trellis/tasks/archive/2026-08/08-21-batch-2-ai-knowledge-scm/research/`）提出 28 条开放问题，
 其中 `pgvector-hibernate-measured.md` 在真实 PostgreSQL 15.19 + pgvector 0.8.6 + Hibernate 7.4.1 上实测了
 本批次最危险的几条。本决策只裁定**会改变迁移结构或模块边界**的部分；其余属实现细节，由 `design.md` 承担。
 
@@ -438,6 +440,8 @@ PRD P1 的另一半「本人 PR 且当前 head 尚无人工终局 Decision」**�
 **后果**：批次 3 建 `review` 之后**必须**补上这半条，否则 PRD P1 长期只实现一半。
 已写入批次 2 `result.md` §10 的前置条件清单与 `PullRequestAssociationService` 的 javadoc。
 
+**执行状态（R2.5，已完成）**：这半条已经补上。`PullRequestAssociationService` 现在允许 PR 作者在本 head 尚无任何终局 Decision 时纠正关联，作者身份按项目级稳定外部 id 判定（D010），闸门由 `PullRequestDecisionGate` 回答——接口声明在 `scm`、实现落在 `review`，因此编译期依赖方向仍是 `review → scm`，ArchUnit 规则 3 未被触碰。作者被闸门挡住时返回 409 而不是 403：角色和人都是对的，挡住他的是这个 head 上已经发生的事实，推一个新 commit 就能改变。前端 `ReviewDetailPage` 对作者显示同一张表单，但不复制判定——授权仍然只在后端。
+
 **本决策不改变**：16 张表的定义、[D001](#d001) 的不绑维度、模块边界、ArchUnit 七条规则、
 holdout 纪律，以及 [D001](#d001)–[D015](#d015) 的任何其它已接受结论。
 
@@ -451,3 +455,45 @@ Project Knowledge 与 Requirement 附件补齐正式 HTTP 用户流程；附件�
 **理由**：原三入口界面隐藏了已经属于主因果链的 Knowledge 与 SCM，并且缺少上传、附件、刷新读取和知识增强 Guidance 的用户闭环。只读工作台和真实向量元数据能让用户理解系统亮点，同时不增加持久化、第二运行时或虚构遥测。
 
 **后果**：前端契约由 3 个一级入口扩展为 6 个，桌面 Shell 改为侧边导航并保留窄屏可达性；两份用户 Logo 成为正式品牌资源。允许展示 Chunk 数、已嵌入数、维度、Embedding Profile、索引状态和语义召回相似度，但禁止返回原始向量或凭据。16 表、8 包、一个仓库/项目、唯一 Review Engine、AI 不改变业务状态和不可变评测证据均不改变。
+
+> 侧边导航这一半已由 [D018](#d018) 取代为顶部居中应用栏。六个入口本身、路由、权限与数据源不变。
+
+<a id="d018"></a>
+## D018 顶部居中导航与单页面单 Logo
+
+**决定**：D017 的六个一级入口保持不变，但正式桌面 Shell 从侧边导航改为顶部应用栏：横版 Logo 位于左侧、六入口导航位于页面水平中心、账户操作位于右侧。窄屏在既有 `64rem` 断点变为两行，导航继续水平滚动且不隐藏入口。
+
+同一页面只展示一种 Logo。已登录 Shell 使用 `logo-lockup.png`；登录页只使用 `logo-app.png`；应用图标继续作为 favicon。登录页不再并排展示两份品牌资源。
+
+**理由**：六入口已经稳定，不需要侧栏才能承载。顶部居中导航能减少内容区被挤压，并让各业务页面拥有一致的横向工作空间；单页面单 Logo 可建立更清晰的品牌层级，避免登录页出现重复标识。
+
+**后果**：本决策只改变信息架构的空间布局和品牌摆放，不改变路由、权限、项目查询参数、业务状态源或 AI/向量能力。仍只允许六个一级入口，不引入抽屉依赖、第三断点、UI 框架或第二套导航运行时。
+
+<a id="d019"></a>
+## D019 冻结 Profile 下不建向量索引
+
+**背景**：[D001](#d001) 规定 Embedding Profile 冻结之后，用一条独立 migration 建出与检索 cast 完全一致的 HNSW 表达式索引。该 migration 至今未写。R2.5 的文档复核先把它记为「计划中未兑现」，随后补做了实测——结论比「忘了写」更硬。
+
+**实测**（pgvector 0.8.6 / PostgreSQL 15；冻结 Profile 为 `Qwen/Qwen3-Embedding-8B`、`qwen3-embedding-8b-4096-v1`，**4096 维**）：
+
+| 索引形态 | 结果 |
+|---|---|
+| `hnsw ((embedding::vector(4096)) vector_cosine_ops)` | ❌ `column cannot have more than 2000 dimensions for hnsw index` |
+| `hnsw ((embedding::halfvec(4096)) halfvec_cosine_ops)` | ❌ `column cannot have more than 4000 dimensions for hnsw index` |
+| `ivfflat ((embedding::vector(4096)) vector_cosine_ops)` | ❌ `column cannot have more than 2000 dimensions for ivfflat index` |
+| `hnsw ((binary_quantize(embedding)::bit(4096)) bit_hamming_ops)` | ✅ 建得出 |
+| `hnsw ((subvector(embedding::vector(4096),1,2000)::vector(2000)) vector_cosine_ops)` | ✅ 建得出 |
+
+**决定**：本部署**不建任何向量索引**，语义检索保持顺序扫描给出的精确余弦序。D001 中「建 HNSW expression index」那一句在当前 Profile 下**不可执行**，就此收窄为条件条款：只有当 Embedding 维度降到 2000 及以下、或 pgvector 放宽维度上限时才重新生效。
+
+**理由**：三条，缺一条这个决定都不成立。
+
+1. 被承诺的那条索引**建不出来**——不是没人写，是在这个维度上写不了。
+2. 唯一建得出的两种形态都是**有损预筛**：二值量化按 Hamming 距离排序，subvector 直接丢掉一半以上的维度。要用它们就必须再加一个 rerank 阶段，于是「加索引」从一次性能优化变成一次**检索契约变更**。而 `.trellis/spec/backend/quality-guidelines.md` 要求新增复杂度必须举出它能挡住的真实故障。
+3. 举不出那个故障。MVP 下单项目的 chunk 数是几十到几百量级，顺序扫描是亚毫秒级；`project_id` 硬过滤又在排序表达式之前求值（[D015.3](#d015) 实测），跨项目数据根本不进入这次扫描。为这个规模引入有损预筛加 rerank，是拿正确性去换一个测不出来的速度。
+
+第三条路是把 Profile 换成 2000 维以下（Qwen3 支持 MRL 维度截断），精确 HNSW 就重新可用。它被否决**不是因为方案不好，而是代价不在本次范围内**：换 Profile 按 D001 是停写 → 全量重嵌入 → 重建索引的维护操作，且发生在答辩前。它是本决策日后最可能的出路。
+
+**后果**：`ChunkSearchRepository` 的查询保持 `c.embedding <=> ?::vector`，不引入 cast 表达式，也不引入第二段检索。`KnowledgeVectorIndexTest` 把上表的三条拒绝钉成断言：pgvector 一旦放宽上限，该测试就会失败，而那次失败正是「D019 的前提变了，回来重开」的信号——一份躺在 markdown 里的实测结论没有这个性质。
+
+**重新评估的触发条件**：单项目 chunk 数进入万级；或检索延迟成为可观测问题；或 Embedding Profile 换到 ≤2000 维。

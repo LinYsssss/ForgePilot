@@ -86,3 +86,5 @@ horizontal overflow.
   color-only badge.
 - Recreating header/navigation markup in each view instead of using
   `AppShell` and the router shell.
+- Placing both brand images on one surface or offsetting the desktop navigation
+  from the horizontal center to compensate for unequal brand/account widths.

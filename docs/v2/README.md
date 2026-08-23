@@ -2,7 +2,7 @@
 
 ForgePilot 是围绕需求驱动 Pull Request 审查建设的轻量级 AI 研发协作平台。
 
-状态：**Phase 0–8 已于 2026-08-22 全部完成并通过退出闸门**。D017 产品主链路补全已于 2026-08-23 完成实现、自动化验证、提交与归档，交付六入口前端、只读工作台、Knowledge/附件用户流程、知识增强 Guidance 与 SCM 安全读取；正式评测证据仍不可重跑或覆盖。
+状态：**R2.5 顶部导航基线（2026-08-23）**。Phase 0–8 已于 2026-08-22 全部完成并通过退出闸门。此后完成两次产品级补全：D017 交付六入口前端、只读工作台、Knowledge/附件用户流程、知识增强 Guidance 与 SCM 安全读取；D018 把桌面 Shell 改为顶部居中导航并统一单页面单 Logo。正式评测证据仍不可重跑或覆盖。
 
 ## 权威文档
 
@@ -22,7 +22,9 @@ ForgePilot 是围绕需求驱动 Pull Request 审查建设的轻量级 AI 研发
 
 ## 当前状态与已交付能力
 
-Phase 0–8 全部完成，逐阶段验收证据在 `.trellis/tasks/archive/2026-08/` 下各任务的 `result.md`。已交付能力：
+Phase 0–8 全部完成，逐阶段验收证据在 `.trellis/tasks/archive/2026-08/` 下各任务的 `result.md`。
+
+交付形态：后端 8 个顶层包、16 张业务表、7 个 Flyway 迁移；前端 6 个一级导航、10 条产品路由。已交付能力：
 
 - **auth**：本地账号、进程内会话、Cookie CSRF、会话版本失效、改密。
 - **project**：项目与成员、唯一 LEADER 约束、项目级 SCM 身份、成员角色鉴权。
@@ -34,12 +36,25 @@ Phase 0–8 全部完成，逐阶段验收证据在 `.trellis/tasks/archive/2026
 
 后续改动仍受下列总边界约束，且必须走 Trellis 任务流程。
 
+## 已知缺口
+
+这些是**已交付基线的真实缺口**，在此单列而不是分散在各阶段 `result.md` 里，避免后续会话把它们当成已完成：
+
+| 缺口 | 性质 | 依据 |
+|---|---|---|
+| 语义检索没有向量索引，走顺序扫描 | **已决策接受**：冻结的 4096 维 Profile 在 pgvector 0.8.6 下建不出任何精确索引，可建的两种形态都是有损预筛 | [D019](./DECISIONS.md#d019) |
+| 需求状态转换（DRAFT→READY、指派、CANCELED、DONE）不单独留痕 | 明确接受的 MVP 缺口 | [D013.3](./DECISIONS.md#d013) |
+| changed-file 超限整条 422 拒绝且不留痕 | 明确接受的可观测性缺口 | [D016.1](./DECISIONS.md#d016) |
+| 浏览器点击闭环、1440/768/390 响应式与视觉漂移检查为人工验收 | 各批次均如实记为部分通过 | 批次 1/3 `result.md` |
+
+R2.5 复核时另有两条曾被列为「计划中未兑现」，现已各自收口：PRD P1 的 DEVELOPER 半条授权**已实现**（[D016.2](./DECISIONS.md#d016) 执行状态），向量索引**已由 D019 决策接受不建**。补上表中任何一条都要先立 Trellis 任务。
+
 ## 不可违反的总边界
 
 - 后端是模块化单体，顶层包仅为 `common/auth/project/requirement/scm/knowledge/ai/review`。
 - 首版数据模型上限为 16 张表；Finding 内聚于 `review`，只有一个 Review Engine。
 - `scm` 发布 `PullRequestChanged` 事件但不依赖 `review`；AI 不直接改变业务状态或代码。
-- 禁止 Agent、Patch、MQ/Outbox、第二 AI runtime、本地 clone/Git、第二 Review Pipeline、代码向量库和未经过产品决策的额外一级菜单；D017 批准的六个入口不属于额外扩张。
+- 禁止 Agent、Patch、MQ/Outbox、第二 AI runtime、本地 clone/Git、第二 Review Pipeline、代码向量库和未经过产品决策的额外一级菜单；D017 批准、D018 重新布局的六个入口不属于额外扩张。
 - PostgreSQL 15+ 与 pgvector 是业务事实源；所有项目内引用和查询必须保持 `project_id` 隔离。
 - Legacy RepoSage 只读，按迁移矩阵逐项提取，不整包复制，也不继承其迁移历史。
 

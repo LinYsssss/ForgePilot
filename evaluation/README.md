@@ -1,6 +1,16 @@
 # Evaluation
 
-这里保存 ForgePilot V2 的版本化评测契约、确定性评分器和可重算的合成参考结果。Phase 1 不包含 Review Engine 或模型调用；`reference-runs/` 只验证评分口径，不能作为产品质量证据。
+这里保存 ForgePilot V2 的版本化评测契约、确定性评分器和可重算的合成参考结果。
+
+**当前状态（R2.5）**：Phase 8 的正式三臂评测已经完成，holdout 按约定在配置冻结后只运行一次。
+正式语料、配置冻结、一次性 ledger 与原始输出是**不可变证据**，位于 Git 忽略的
+`private-formal-corpus/` 与 `results/`，由 [`formal/README.md`](formal/README.md) 描述，
+**不得删除、覆盖或重跑**。本目录下入库的其余内容是**评分口径的可复现基础设施**：
+契约 schema、确定性评分器、12 例 development quick corpus 与合成参考运行。
+`reference-runs/` 只验证评分口径，不能作为产品质量证据。
+
+下面两节按建设顺序保留：Phase 1 冻结了评分口径与语料校验，Phase 6 加入 development 三臂离线适配器，
+Phase 8 是正式实验。CI 每次运行的是 Phase 1 那组契约检查——它保护的是评分口径本身。
 
 ## Phase 1 文件
 

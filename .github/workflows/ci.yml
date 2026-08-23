@@ -1,4 +1,4 @@
-name: Phase 1 CI
+name: CI
 
 on:
   push:
@@ -11,9 +11,13 @@ concurrency:
   group: phase1-ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+# 各 job 的名字保留 "foundation" 与 phase1 前缀：Compose 冒烟脚本用
+# `forgepilot-phase1-` 前缀做安全校验，归档的验收证据也按这些名字引用。
+# 覆盖范围早已不止 Phase 1——后端 job 跑的是全部 316 个测试。
+
 jobs:
   backend:
-    name: Backend foundation
+    name: Backend verify
     runs-on: ubuntu-latest
     timeout-minutes: 20
     defaults:
@@ -31,7 +35,7 @@ jobs:
         run: ./mvnw -B -ntp verify
 
   frontend:
-    name: Frontend foundation
+    name: Frontend gates
     runs-on: ubuntu-latest
     timeout-minutes: 15
     defaults:

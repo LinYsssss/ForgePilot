@@ -6,8 +6,9 @@ The official application uses **Precision Review Console / 精密审查台** as 
 information and interaction direction. On 2026-08-22 its visual expression was
 rebuilt from the user-provided `ForgePilot-Frontend/` study: deep layered
 surfaces, restrained glass panels, cyan/blue emphasis, compact metadata, and a
-denser evidence workspace. D017 later added the approved product routes and
-sidebar shell without creating a second business-state or navigation runtime.
+denser evidence workspace. D017 later added the approved product routes, and
+D018 places them in one centered top application bar without creating a second
+business-state or navigation runtime.
 
 ### Lightness scheme
 
@@ -24,8 +25,11 @@ component change.
 ## Information architecture
 
 - Top-level navigation is Workspace, Projects, Requirements, Project Knowledge,
-  Repository Integration, and Reviews. Desktop uses a sidebar; at `64rem` it
-  becomes a compact horizontally scrollable top navigation.
+  Repository Integration, and Reviews. Desktop uses a top application bar with
+  the lockup on the left, six links centered, and account actions on the right.
+  At `64rem` it becomes two rows with a horizontally scrollable navigation.
+- A surface displays one visible Logo: the signed-in Shell uses the lockup,
+  Login uses the app icon, and the app icon remains the favicon.
 - Workspace is a read-only composition of real project APIs. It may summarize
   real records and link to workflows, but never invent telemetry or automate work.
 - Contextual AI is deliberately prominent as Requirement Quality, structured

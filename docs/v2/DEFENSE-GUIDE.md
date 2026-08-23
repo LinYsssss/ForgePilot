@@ -59,12 +59,14 @@ The last guard is for a source checkout. A machine holding the ignored post-free
 
 ## 3. Demonstration path
 
-Use three disposable accounts and one disposable project:
+Use three disposable accounts and one disposable project. The signed-in shell has six top-level entries — Workspace, Projects, Requirements, Project Knowledge, Repository Integration, Reviews — in one centered top application bar.
 
-1. A LEADER creates the project and requirement, adds DEVELOPER and REVIEWER members, and configures either GitHub or GitLab in project settings. Tokens and webhook secrets are write-only.
+1. A LEADER creates the project and requirement, adds DEVELOPER and REVIEWER members, uploads project knowledge on **Project Knowledge**, and configures either GitHub or GitLab on **Repository Integration** (`/repositories`; the legacy `/projects/:id/settings` path redirects there). Tokens and webhook secrets are write-only.
 2. A merge/pull request webhook authenticates the untouched body, triggers an authoritative provider read, links `REQ-<id>` when present, and creates the shared PENDING Review.
 3. The DEVELOPER claims and marks a confirmed Finding fixed. The REVIEWER verifies or sends it back. The LEADER or REVIEWER records the one-time Review Decision.
 4. Show that a new head/revision makes the previous Review historical, while the requirement status remains under human control.
+
+One thing to state honestly if asked during the walkthrough: semantic knowledge retrieval runs without a vector index. That is a recorded decision (D019), not an oversight — the frozen 4096-dimension embedding profile exceeds every exact index form pgvector 0.8.6 offers, and the two buildable forms are lossy pre-filters that would need a rerank stage. At MVP corpus scale the sequential scan returns the exact cosine ordering, which `KnowledgeVectorIndexTest` demonstrates at the frozen dimension. None of this affects the recorded evaluation, whose runner builds its own context and never calls the running application's retrieval path.
 
 GitHub receives webhooks at `/api/scm/github/webhook`. GitLab receives them at `/api/scm/gitlab/webhook`; current GitLab uses a `whsec_` signing token, while older instances may use their legacy secret token. Do not expose either value during the demonstration.
 
@@ -89,6 +91,8 @@ python3 evaluation/tools/formal_evaluation.py report \
 ```
 
 Compare the resulting `formal-summary.json` and per-arm score files with the preserved artifact hashes. Failed and `NOT_RUN` cases remain explicit; the tool never converts them into empty successful predictions. The report deliberately has no composite score and states that the 12-case holdout and hand-constructed demonstration defects limit generalization.
+
+State one more scope boundary honestly, because the arm names invite a stronger reading than the experiment supports. The third arm supplies **every knowledge file of the case verbatim** — `run_development.py` reads them from the case fixture on disk and renders them all into the prompt. It performs no embedding call, no TopK retrieval, and never touches the running application. So the measured effect is *"project knowledge in context helps the model find requirement violations"*, **not** *"ForgePilot's pgvector retrieval helps"*. The retrieval path is a product capability with its own tests; it is not what these numbers evaluate. Claiming otherwise would over-read the experiment.
 
 ## 5. Secret and cleanup rules
 

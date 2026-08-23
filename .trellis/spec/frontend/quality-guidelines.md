@@ -24,8 +24,8 @@ placeholder getters.
 ## Required patterns
 
 - Use semantic landmarks, a visible keyboard focus indicator, and the global
-  skip link; preserve D017's six approved top-level entries and compatibility
-  detail paths.
+  skip link; preserve D017's six approved top-level entries, D018's centered
+  top navigation/single-Logo placement, and compatibility detail paths.
 - Use `<script setup lang="ts">`, strict TypeScript, typed props/events, and
   `requestJson<T>` for JSON I/O.
 - Use token-backed styles and keep DOM order aligned with operational reading

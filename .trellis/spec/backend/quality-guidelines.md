@@ -105,7 +105,7 @@ host they need, and a separate test with an empty allowlist pins the denials.
 - Actuator exposure is `health` only by default (`application.yml`).
   `metrics` is added exclusively by `application-capacity.yml`, and the
   `capacity` profile is set only by the capacity measurement runner (Phase 1:
-  `.trellis/tasks/08-20-phase-1-foundation/evidence/capacity/run-capacity.sh`).
+  `.trellis/tasks/archive/2026-08/08-20-phase-1-foundation/evidence/capacity/run-capacity.sh`).
   `scripts/phase1-compose-smoke.sh` clears the profile and fails if
   `/actuator/metrics` returns anything other than `404`. Widening exposure or
   adding a metrics registry is not allowed while there is no authentication.

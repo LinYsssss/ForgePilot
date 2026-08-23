@@ -1,6 +1,6 @@
 # ForgePilot V2 架构规范
 
-状态：**R2.4 产品链路补全基线（2026-08-23）**。本文是 V2 的**技术权威**：模块边界、数据模型、流程契约、技术栈与运行边界。Phase 0–8 历史基线保持有效；D017 的补全仍须通过独立 Trellis Finish 闸门。
+状态：**R2.5 顶部导航基线（2026-08-23）**。本文是 V2 的**技术权威**：模块边界、数据模型、流程契约、技术栈与运行边界。Phase 0–8 历史基线保持有效；D017 的主链路补全与 D018 的导航布局均已通过独立 Trellis Finish 闸门。
 
 - 产品定义（定位、角色、范围、验收）见 [PRD.md](./PRD.md)。
 - 决策理由见 [DECISIONS.md](./DECISIONS.md)；本文只陈述**规则**，不重复论证。
@@ -74,10 +74,13 @@ common, project, scm, knowledge, requirement, ai  ←  review
 ### 1.4 ArchUnit 强制项
 
 1. 顶层包 cycle = 0。
-2. 禁止包不存在（上列 9 个名字）。
+2. 顶层包必须在上列 8 个名字之内；禁止包名（`agent/patch/mq/rag/repo/pullrequest/context/assistant/finding`）不得出现。
 3. `scm` 的编译期依赖不含 `review`。
 4. 跨 feature 不直接注入对方 `*Repository`。
 5. Controller 不直连跨模块 Repository。
+6. 子包必须在允许清单内（仅 `scm.github`、`scm.gitlab`、`ai.openai`）。
+
+`ArchitectureRulesTest` 另有两条**反重言式**测试：用 `*.fixture` 包里故意违规的类证明上述规则真的会失败，而不是因为匹配不到任何类而空过。
 
 ---
 
@@ -97,10 +100,10 @@ common, project, scm, knowledge, requirement, ai  ←  review
 | `requirement_attachment` | Requirement↔Document 关系 | project_id；`(requirement_id,document_id)` unique、`(project_id,document_id)` unique（一个附件只有一个归属需求）；与 Document 的 source_requirement_id 双复合 FK（D006） |
 | `knowledge_chunk` | Chunk 与唯一向量 | project_id、document_id、seq、content、metadata、`embedding vector`（无维度，D001）、provider/model/version/dimension |
 | `scm_repository` | 项目的活动仓库与加密凭据 | `project_id` unique；provider、规范化 `instance_identity`、external_id、api_base、encrypted_token/secret；有 PR 后稳定身份三元组不可修改，api_base 更新须验证同一实例（D010）；`UNIQUE(project_id,id)` |
-| `pull_request` | PR/MR 权威快照、作者与需求关联 | `(repository_id,external_number)` unique；当前 title、base_sha、head_sha、`review_input_fingerprint`（由规范化 base/head、changed-file manifest、patch 及可用的稳定 Diff version 确定性计算，title 不参与身份）；source_revision/source_updated_at 仅用于乱序保护；requirement_id nullable + 普通索引（D004/D007）；author_external_user_id、author_username（不可变作者快照）、author_user_id（可重算映射，复合 FK 指向 project_member，列级 `ON DELETE SET NULL`，D010）；`UNIQUE(project_id,id)` |
+| `pull_request` | PR/MR 权威快照、作者与需求关联 | `(repository_id,external_number)` unique；当前 title、base_sha、head_sha、`review_input_fingerprint`（由规范化 base/head、changed-file manifest、patch 及可用的稳定 Diff version 确定性计算，title 不参与身份）；`changed_files` JSONB 保存 manifest 与每个 patch，使指纹输入可从数据库复现（D015.7）；source_revision/source_updated_at 仅用于乱序保护；requirement_id nullable + 普通索引（D004/D007）；author_external_user_id、author_username（不可变作者快照）、author_user_id（可重算映射，复合 FK 指向 project_member，列级 `ON DELETE SET NULL`，D010）；`UNIQUE(project_id,id)` |
 | `pull_request_requirement_event` | **仅**记录 PR↔需求关联变更审计 | project_id、pull_request_id、from_requirement_id、to_requirement_id、actor_type(`USER/SYSTEM`)、actor_user_id（可空，→ `user_account`）、reason、created_at；CHECK 保证 type 与 actor 组合合法；与关联修改同事务写入（D007） |
-| `review` | 一个 (head SHA、实际 Review 输入、需求版本) 的审查、上下文快照、摘要与 Decision | `UNIQUE NULLS NOT DISTINCT (pull_request_id,head_sha,review_input_fingerprint,requirement_revision_id)`（D003）；`UNIQUE(project_id,id)` 供 Finding 父 FK；CHECK 保证 requirement_id 与 requirement_revision_id 同空或同非空、Decision 字段组合合法；一次性 Decision 由 PR 行锁 + `WHERE decision='PENDING'` 条件更新保证；project_id、不可变的 review_input_fingerprint/context_snapshot_json、status、decision、decision_by/at/comment、execution_attempt/token/lease、engine/prompt/model 审计列 |
-| `finding` | Review 问题当前态与跨轮血缘 | project_id、review_id、requirement_id、requirement_revision_id、ac_id、finding_type、path、line、evidence、status、assignee_id（nullable，→ project_member）、fingerprint(`finding_key`)、evidence_hash、`basis_hash`、continuity、carried_from_finding_id；永久父 FK `(project_id,review_id) → review(project_id,id)`，血缘 FK `(project_id,carried_from_finding_id)`；`UNIQUE(project_id,id)`；CHECK 与约束触发器保证父子上下文 NULL-safe 一致（D006/D009） |
+| `review` | 一个 (head SHA、实际 Review 输入、需求版本) 的审查、上下文快照、摘要与 Decision | `UNIQUE NULLS NOT DISTINCT (pull_request_id,head_sha,review_input_fingerprint,requirement_revision_id)`（D003）；`UNIQUE(project_id,id)` 供 Finding 父 FK；`UNIQUE(project_id,id,execution_attempt)` 供 Finding 的 attempt 围栏；CHECK 保证 requirement_id 与 requirement_revision_id 同空或同非空、Decision 字段组合合法、终局 Decision 只能落在 COMPLETED 行、RUNNING 必带 token+lease；一次性 Decision 由 PR 行锁 + `WHERE decision='PENDING'` 条件更新保证；触发器冻结四元身份与 context_snapshot_json；project_id、status、decision、decision_by/at/comment、execution_attempt/token/lease、输入快照 `context_snapshot_json` 与输出摘要 `summary_json`（AC verdict、coverage、知识证据、warning）、engine/prompt_version/model 审计列 |
+| `finding` | Review 问题当前态与跨轮血缘 | project_id、review_id、`review_attempt`、requirement_id、requirement_revision_id、ac_id、finding_type、path、line、evidence、status、assignee_id（nullable，→ project_member）、fingerprint(`finding_key`)、evidence_hash、`basis_hash`、continuity、carried_from_finding_id；永久父 FK `(project_id,review_id,review_attempt) → review(project_id,id,execution_attempt)`——父子关系与 attempt 围栏合一，过期 Worker 的插入由数据库而非应用检查拒绝；血缘 FK `(project_id,carried_from_finding_id)`；`UNIQUE(project_id,id)`、`UNIQUE(review_id,finding_key)`；CHECK 与约束触发器保证父子上下文 NULL-safe 一致（D006/D009） |
 | `finding_event` | Finding 人工状态与指派审计 | project_id、finding_id（复合 FK）、actor_id（→ `user_account`）、action、from/to、comment、created_at |
 | `ai_call_log` | 评测与故障定位 | project_id、review_id、requirement_id、requirement_revision_id（三者均可空且使用含 project_id 的复合 FK）、use_case、model、token、latency、status、error |
 
@@ -173,7 +176,8 @@ review
     -> requirement_revision(project_id, requirement_id, id)
 
 finding
-  (project_id, review_id) -> review(project_id, id)
+  (project_id, review_id, review_attempt)
+    -> review(project_id, id, execution_attempt)
   (project_id, requirement_revision_id, ac_id)
     -> acceptance_criterion(project_id, requirement_revision_id, id)
   (project_id, assignee_id) -> project_member(project_id, user_id)
@@ -197,7 +201,7 @@ pull_request_requirement_event
   (project_id, to_requirement_id) -> requirement(project_id, id)
 ```
 
-可空复合外键使用 PostgreSQL `MATCH SIMPLE`，因此不能用 Finding 的 nullable Requirement/Revision/AC 外键证明父 Review 存在。`finding` 必须永久保留 `(project_id,review_id) → review(project_id,id)`；同时 migration 定义约束触发器，使用 `IS NOT DISTINCT FROM` 保证 Finding 的 `requirement_id` 与 `requirement_revision_id` 分别等于父 Review 对应列。Review 未关联 Requirement 时，Finding 两列必须都为空。触发器也必须覆盖对父 Review 上下文列的更新，或直接拒绝这些身份列在创建后变化。
+可空复合外键使用 PostgreSQL `MATCH SIMPLE`，因此不能用 Finding 的 nullable Requirement/Revision/AC 外键证明父 Review 存在。`finding` 必须永久保留指向父 Review 的复合外键，且该外键把 `review_attempt` 一并带上，指向 `review(project_id,id,execution_attempt)`——父子关系与执行围栏由同一把键承担；同时 migration 定义约束触发器，使用 `IS NOT DISTINCT FROM` 保证 Finding 的 `requirement_id` 与 `requirement_revision_id` 分别等于父 Review 对应列。Review 未关联 Requirement 时，Finding 两列必须都为空。父 Review 一侧改由「身份列与上下文快照创建后不可变」的触发器封死，而不是让子触发器去追父表更新。
 
 Review 与 Finding 还必须具备以下行内约束：
 
@@ -398,15 +402,22 @@ Requirement、文档、PR 标题、代码注释**全部是不可信数据**，�
 
 - 一个部署一个 Embedding provider/model/dimension；**部署配置不得改变 schema**（D001）。
 - `knowledge_chunk.embedding` 是唯一向量存储，pgvector **无维度 `vector`**；无 JSON 双写、无第二 vector 表、无运行时 DDL。
-- `V1__init.sql` 不绑定模型维度、不建向量索引；Phase 4 定下 Profile 后由独立 migration 建 HNSW expression index，检索 SQL 须用一致的 cast 表达式。
-- 应用层写入时校验向量维度与当前 Profile 一致，不一致显式失败。
+- 初始化迁移 `V1__foundation.sql` 只启用 `vector` 扩展；`V4__knowledge_ai.sql` 建列时不绑定模型维度、不建向量索引。
+- **本部署不建任何向量索引，检索保持顺序扫描给出的精确余弦序（[D019](./DECISIONS.md#d019)）。**
+  冻结的 Embedding Profile 是 `Qwen/Qwen3-Embedding-8B`（4096 维），而 pgvector 0.8.6 的精确索引形态全部有维度上限：
+  `hnsw`+`vector` 与 `ivfflat` 是 2000，`hnsw`+`halfvec` 是 4000。D001 承诺的那条 HNSW expression index
+  因此在当前 Profile 下**建不出来**，而唯一建得出的两种形态（二值量化、subvector 截断）都是有损预筛、必须再加 rerank。
+  上限一旦放宽或 Profile 换到 ≤2000 维，D001 的索引条款重新生效；`KnowledgeVectorIndexTest` 钉住了这三条拒绝，
+  实测前提改变时它会失败。
+- 无维度列在建索引之前，数据库**完全不校验维度**，一行错维度向量会让该项目所有 TopK 查询以 `22000` 失败。
+  因此应用层写入时校验向量维度与当前 Profile 一致、不一致显式失败，是唯一真实防线（D015.3），不是锦上添花。
 - 换模型是维护操作：停写 → reindex → 重建索引；失败保留旧数据。不做在线双版本。
 
 ---
 
 ## 6. 前端信息架构
 
-一级导航按 D017 固定为六个：**工作台**、**项目**、**研发需求**、**项目知识**、**仓库接入**、**代码审查**。桌面使用侧边导航，窄屏在既有断点降级为紧凑、可横向滚动的顶部导航。
+一级导航按 D017 固定为六个：**工作台**、**项目**、**研发需求**、**项目知识**、**仓库接入**、**代码审查**。按 D018，桌面使用顶部应用栏：横版 Logo 在左、六入口在页面水平中心、账户操作在右；窄屏在既有断点变为两行并保持导航可横向滚动。
 
 ```text
 /workspace
@@ -423,6 +434,7 @@ Requirement、文档、PR 标题、代码注释**全部是不可信数据**，�
 
 工作台是浏览器端组合现有列表 API 的只读项目总览，不新增 Dashboard 表、缓存或统计服务。Knowledge 与 Repository 是正式一级页面；Metrics、Agent、Patch、AI Logs 仍不做一级页面。
 工作台、需求和 Review 页面突出三段上下文内 AI 能力，但不得创建通用 AI/Assistant 入口、聊天框或第二条运行管线。Knowledge 页面展示真实文档/Chunk 数、已嵌入数、向量维度和 Embedding Profile；任何 HTTP 响应均不得返回原始向量。
+同一页面只使用一种可见 Logo：已登录 Shell 使用横版 Logo，登录页只使用应用图标，应用图标同时作为 favicon；不得在登录页并排堆放两份 Logo。
 普通用户不获得手工向量查询调试台；项目成员只读查看文档状态、失败原因与真实向量索引元数据，LEADER 执行上传和提升。
 一次性实现建议位于 Requirement 详情页，不创建 Assistant 一级菜单或 Conversation 页面。
 AI 置信度、Finding 人工状态、Review Decision 在 UI 上必须明确分开呈现；需求状态与派生的评审活动（D011）同样是两个正交维度，不得合并为一个标签。
@@ -476,7 +488,7 @@ Phase 6 于 2026-08-22 在 4,101,304,320-byte 主机上按生产上限实测：b
 direct 428,032 bytes、Hikari active/pending 1/0；backend 与 PostgreSQL 均无 OOM、无重启。
 因此 4 GB 生产边界的默认并发冻结为 2，不再自动降为 1；资源上限更低或与其他工作负载
 共机时仍可显式覆盖为 1。可复现输入与原始输出见
-[Batch 3 capacity evidence](../../.trellis/tasks/08-21-batch-3-review-engine-human-loop/evidence/capacity/20260822T121359Z-037799412c61/summary.md)。
+[Batch 3 capacity evidence](../../.trellis/tasks/archive/2026-08/08-21-batch-3-review-engine-human-loop/evidence/capacity/20260822T121359Z-037799412c61/summary.md)。
 
 ---
 
