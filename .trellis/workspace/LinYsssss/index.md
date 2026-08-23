@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 8
+- **Total Sessions**: 9
 - **Last Active**: 2026-08-23
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~289 | Active |
+| `journal-1.md` | ~310 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 9 | 2026-08-23 | Requirement document access | `850f83d5ebdf762bb0247191ada03ae8d5e2e814` | `chore/chinese-comments-and-docs` |
 | 8 | 2026-08-23 | R2.5 product baseline closure | `7872912`, `1bf5c53`, `56d03af`, `0fcfd9c`, `7db45d4` | `chore/chinese-comments-and-docs` |
 | 7 | 2026-08-23 | Complete D017 product flow | `d71533e`, `66436dd`, `2516be1`, `25c1961` | `chore/chinese-comments-and-docs` |
 | 6 | 2026-08-22 | Complete frontend capability surface | `952bd48`, `4c72b1c`, `d0af0e7` | `main` |

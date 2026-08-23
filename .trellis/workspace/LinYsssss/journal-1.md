@@ -287,3 +287,24 @@ Aligned R2.5 documentation and UI baseline, fixed PR author association authoriz
 ### Status
 
 [OK] **Completed**
+
+
+## Session 9: Requirement document access
+
+**Date**: 2026-08-23
+**Task**: Requirement document access
+**Branch**: `chore/chinese-comments-and-docs`
+
+### Summary
+
+Delivered minimal full-stack .txt/.md requirement document upload, member reading/download, structured Markdown export, and existing Guidance reuse; backend 316/316 and frontend 35/35 green.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `850f83d5ebdf762bb0247191ada03ae8d5e2e814` | (see git log) |
+
+### Status
+
+[OK] **Completed**
