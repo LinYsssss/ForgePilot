@@ -2,6 +2,8 @@ package com.forgepilot.scm;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.sql.Timestamp;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -28,6 +30,9 @@ class PullRequestAssociationTest extends ScmTestBase {
 
     @Autowired
     private PullRequestAssociationService associations;
+
+    @Autowired
+    private ScmRepositoryService repositories;
 
     @Autowired
     private JdbcTemplate jdbc;
@@ -135,24 +140,120 @@ class PullRequestAssociationTest extends ScmTestBase {
     }
 
     @Test
-    void onlyALeaderMayCorrectTheAssociation() {
+    void aLeaderMayAlwaysCorrectAndAReviewerNeverMay() {
         Fixture fixture = new Fixture();
         Fixture stranger = new Fixture();
         long linked = fixture.requirement();
         long target = fixture.requirement();
         long pullRequest = fixture.pullRequest(linked);
 
-        for (ProjectRole role : List.of(ProjectRole.DEVELOPER, ProjectRole.REVIEWER)) {
-            long member = fixture.member(role);
-            // A member knows the project exists, so 403 tells them nothing new.
+        // A REVIEWER decides reviews; which requirement a pull request implements is
+        // not a review conclusion, so PRD P1 gives them no path here at all.
+        long reviewer = fixture.member(ProjectRole.REVIEWER, "gh-reviewer");
+        assertThat(statusOf(() -> associations.correct(fixture.project, reviewer, pullRequest,
+                target, "Mine now."))).isEqualTo(HttpStatus.FORBIDDEN);
+
+        // A DEVELOPER who is not the author is refused the same way, and a member
+        // with no verified SCM identity at all matches nothing (fail closed).
+        long otherDeveloper = fixture.member(ProjectRole.DEVELOPER, "gh-somebody-else");
+        long unverified = fixture.member(ProjectRole.DEVELOPER, null);
+        for (long member : List.of(otherDeveloper, unverified)) {
             assertThat(statusOf(() -> associations.correct(fixture.project, member, pullRequest,
-                    target, "Mine now."))).as("correct as %s", role).isEqualTo(HttpStatus.FORBIDDEN);
+                    target, "Mine now."))).isEqualTo(HttpStatus.FORBIDDEN);
         }
 
         // A non-member gets the same answer as for a project that does not exist.
         assertThat(statusOf(() -> associations.correct(fixture.project, stranger.leader, pullRequest,
                 target, "Not mine."))).isEqualTo(HttpStatus.NOT_FOUND);
 
+        assertThat(storedRequirementOf(pullRequest)).isEqualTo(linked);
+        assertThat(auditOf(pullRequest)).isEmpty();
+
+        assertThat(associations.correct(fixture.project, fixture.leader, pullRequest, target, "Leader.")
+                .requirementId()).isEqualTo(target);
+    }
+
+    /**
+     * PRD P1 / D007 / D016.2, the half that batch 2 deferred and batch 3 owed:
+     * the author may correct their own pull request until this head carries a
+     * final human decision.
+     *
+     * <p>The PENDING review is load-bearing. Webhook delivery creates one inside
+     * the same transaction that updates the pull request, so a gate written as
+     * "no review exists" would close the author's window before they could ever
+     * reach it — which is exactly why D007 spells out "即使自动 PENDING 已存在".
+     */
+    @Test
+    void theAuthorMayCorrectTheirOwnPullRequestWhileNoFinalDecisionExistsOnThisHead() {
+        Fixture fixture = new Fixture();
+        long linked = fixture.requirement();
+        long target = fixture.requirement();
+        long pullRequest = fixture.pullRequest(linked);
+        long author = fixture.member(ProjectRole.DEVELOPER, "gh-1");
+
+        fixture.review(pullRequest, "head-sha", "PENDING", null);
+
+        PullRequestResponse visible = repositories.pullRequest(fixture.project, author, pullRequest);
+        assertThat(visible.authorUserId()).isNull();
+        assertThat(visible.canEditRequirementAssociation()).isTrue();
+
+        PullRequestResponse corrected = associations.correct(fixture.project, author, pullRequest,
+                target, "I named the wrong requirement in the branch.");
+
+        assertThat(corrected.requirementId()).isEqualTo(target);
+        assertThat(auditOf(pullRequest)).singleElement()
+                .satisfies(row -> assertThat(row.get("actor_user_id")).isEqualTo(author));
+    }
+
+    @Test
+    void aFinalDecisionOnThisHeadClosesTheAuthorsWindowUntilANewHead() {
+        Fixture fixture = new Fixture();
+        long linked = fixture.requirement();
+        long target = fixture.requirement();
+        long pullRequest = fixture.pullRequest(linked);
+        long author = fixture.member(ProjectRole.DEVELOPER, "gh-1");
+
+        fixture.review(pullRequest, "head-sha", "COMPLETED", "REQUEST_CHANGES");
+
+        assertThat(repositories.pullRequest(fixture.project, author, pullRequest)
+                .canEditRequirementAssociation()).isFalse();
+
+        // The role is right and the person is right; what stops them is a fact about
+        // this head, so it is a conflict rather than a forbidden.
+        assertThat(statusOf(() -> associations.correct(fixture.project, author, pullRequest, target,
+                "Too late."))).isEqualTo(HttpStatus.CONFLICT);
+        assertThat(storedRequirementOf(pullRequest)).isEqualTo(linked);
+        assertThat(auditOf(pullRequest)).isEmpty();
+
+        // The LEADER is never gated by it (PRD P1: LEADER 始终可改).
+        assertThat(associations.correct(fixture.project, fixture.leader, pullRequest, target, "Leader.")
+                .requirementId()).isEqualTo(target);
+
+        // Pushing a new commit re-opens the author's window: the gate is derived per
+        // head every time, never cached on the pull request row.
+        jdbc.update("update pull_request set head_sha = 'head-two' where id = ?", pullRequest);
+        assertThat(associations.correct(fixture.project, author, pullRequest, linked, "New head.")
+                .requirementId()).isEqualTo(linked);
+    }
+
+    /**
+     * D010: "this is my pull request" is decided by the stable external user id.
+     * A member whose SCM username matches the author's while their external id
+     * does not is a different person — usernames are reassignable.
+     */
+    @Test
+    void authorshipIsDecidedByExternalIdAndNeverByUsername() {
+        Fixture fixture = new Fixture();
+        long linked = fixture.requirement();
+        long target = fixture.requirement();
+        long pullRequest = fixture.pullRequest(linked);
+
+        long impostor = fixture.member(ProjectRole.DEVELOPER, "gh-2");
+        jdbc.update("update project_member set scm_username = 'octocat' "
+                + "where project_id = ? and user_id = ?", fixture.project, impostor);
+
+        assertThat(statusOf(() -> associations.correct(fixture.project, impostor, pullRequest, target,
+                "Same name."))).isEqualTo(HttpStatus.FORBIDDEN);
         assertThat(storedRequirementOf(pullRequest)).isEqualTo(linked);
         assertThat(auditOf(pullRequest)).isEmpty();
     }
@@ -242,11 +343,39 @@ class PullRequestAssociationTest extends ScmTestBase {
                     Long.class, "assoc-user-" + SEQUENCE.incrementAndGet());
         }
 
-        private long member(ProjectRole role) {
+        /**
+         * A verified SCM identity is what "this is my pull request" is decided by
+         * (D010). Passing null leaves the member unverified, which must match
+         * nothing rather than everything.
+         */
+        private long member(ProjectRole role, String scmExternalUserId) {
             long user = account();
-            jdbc.update("insert into project_member (project_id, user_id, role) values (?, ?, ?)",
-                    project, user, role.name());
+            Timestamp verifiedAt = scmExternalUserId == null
+                    ? null
+                    : Timestamp.from(Instant.now());
+            jdbc.update("insert into project_member (project_id, user_id, role, scm_external_user_id, "
+                    + "scm_identity_verified_at) values (?, ?, ?, ?, ?)",
+                    project, user, role.name(), scmExternalUserId, verifiedAt);
             return user;
+        }
+
+        /**
+         * A review row written straight through SQL, because the point is the state
+         * the gate reads, not how the engine got there. The CHECK constraints refuse
+         * an inconsistent one: a non-PENDING decision needs COMPLETED plus an actor
+         * and a timestamp, so this fixture cannot fake a decision that the engine
+         * itself could never have produced.
+         */
+        private void review(long pullRequestId, String headSha, String status, String decision) {
+            boolean isFinal = decision != null;
+            jdbc.update("insert into review (project_id, pull_request_id, head_sha, "
+                    + "review_input_fingerprint, status, decision, decision_by, decision_at) "
+                    + "values (?, ?, ?, ?, ?, ?, ?, ?)",
+                    project, pullRequestId, headSha,
+                    "fingerprint-" + SEQUENCE.incrementAndGet(), status,
+                    isFinal ? decision : "PENDING",
+                    isFinal ? leader : null,
+                    isFinal ? Timestamp.from(Instant.now()) : null);
         }
     }
 }

@@ -254,6 +254,7 @@ class ScmRepositoryApiTest extends ScmTestBase {
         assertThat(body.path("externalNumber").asInt()).isEqualTo(42);
         assertThat(body.path("headSha").asString()).isEqualTo("head-sha");
         assertThat(body.path("reviewInputFingerprint").asString()).isEqualTo("fingerprint");
+        assertThat(body.path("canEditRequirementAssociation").asBoolean()).isTrue();
     }
 
     /**

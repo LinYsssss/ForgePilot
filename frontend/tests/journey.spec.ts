@@ -624,6 +624,7 @@ function handleReview(path: string, method: string, body: string | null): Respon
       authorExternalUserId: "gh-2",
       authorUsername: "dev",
       authorUserId: 2,
+      canEditRequirementAssociation: true,
       sourceUpdatedAt: "2026-08-21T05:00:00Z",
       updatedAt: "2026-08-21T05:00:00Z",
     });

@@ -77,6 +77,10 @@ const role = computed(() => project.value?.myRole ?? null);
 const isLeader = computed(() => role.value === "LEADER");
 const canDecide = computed(() => role.value === "LEADER" || role.value === "REVIEWER");
 
+const canEditAssociation = computed(
+  () => pullRequest.value?.canEditRequirementAssociation ?? false,
+);
+
 function target(): { projectId: number; reviewId: number } | null {
   const pid = projectId.value;
   const rid = reviewId.value;
@@ -420,7 +424,11 @@ function eventsErrorFor(findingId: number): string | null {
           </div>
         </dl>
 
-        <form v-if="isLeader && pullRequest" class="inline-form" @submit.prevent="saveAssociation">
+        <form
+          v-if="canEditAssociation && pullRequest"
+          class="inline-form"
+          @submit.prevent="saveAssociation"
+        >
           <div class="field">
             <label for="association-requirement">改为关联需求</label>
             <select id="association-requirement" v-model="associationSelection">
@@ -438,10 +446,15 @@ function eventsErrorFor(findingId: number): string | null {
             保存关联
           </button>
           <p class="field-hint">
-            只有项目负责人可以改关联；清除关联也是合法纠正，两者都会写入审计。
+            清除关联也是合法纠正，两者都会写入审计。
+          </p>
+          <p v-if="!isLeader" class="field-hint">
+            你是这个 PR 的作者，因此在本 head 出现终局裁定之前可以纠正关联。
           </p>
         </form>
-        <p v-else-if="!isLeader" class="field-hint">只有项目负责人可以修改 PR 的需求关联。</p>
+        <p v-else-if="!canEditAssociation" class="field-hint">
+          只有项目负责人，或纠正窗口仍开放的 PR 作者可以修改需求关联。
+        </p>
         <p v-if="associationError" class="alert" role="alert">{{ associationError }}</p>
       </section>
 

@@ -18,15 +18,16 @@ record PullRequestResponse(
         String authorExternalUserId,
         String authorUsername,
         Long authorUserId,
+        boolean canEditRequirementAssociation,
         Instant sourceUpdatedAt,
         Instant updatedAt) {
 
-    static PullRequestResponse of(PullRequest pullRequest) {
+    static PullRequestResponse of(PullRequest pullRequest, boolean canEditRequirementAssociation) {
         return new PullRequestResponse(pullRequest.getId(), pullRequest.getProjectId(),
                 pullRequest.getRepositoryId(), pullRequest.getExternalNumber(), pullRequest.getBaseSha(),
                 pullRequest.getHeadSha(), pullRequest.getReviewInputFingerprint(),
                 pullRequest.getRequirementId(), pullRequest.getAuthorExternalUserId(),
-                pullRequest.getAuthorUsername(), pullRequest.getAuthorUserId(),
+                pullRequest.getAuthorUsername(), pullRequest.getAuthorUserId(), canEditRequirementAssociation,
                 pullRequest.getSourceUpdatedAt(), pullRequest.getUpdatedAt());
     }
 }

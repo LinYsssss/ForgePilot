@@ -22,14 +22,17 @@ class ScmRepositoryService {
     private final ScmRepositoryRepository repositories;
     private final PullRequestRepository pullRequests;
     private final ProjectAccessService access;
+    private final PullRequestAssociationService associations;
     private final OutboundUrlPolicy outbound;
     private final ScmSecretCipher cipher;
 
     ScmRepositoryService(ScmRepositoryRepository repositories, PullRequestRepository pullRequests,
-            ProjectAccessService access, OutboundUrlPolicy outbound, ScmSecretCipher cipher) {
+            ProjectAccessService access, PullRequestAssociationService associations,
+            OutboundUrlPolicy outbound, ScmSecretCipher cipher) {
         this.repositories = repositories;
         this.pullRequests = pullRequests;
         this.access = access;
+        this.associations = associations;
         this.outbound = outbound;
         this.cipher = cipher;
     }
@@ -105,9 +108,10 @@ class ScmRepositoryService {
 
     @Transactional(readOnly = true)
     PullRequestResponse pullRequest(long projectId, long actorId, long pullRequestId) {
-        access.requireMember(projectId, actorId);
+        var member = access.requireMember(projectId, actorId);
         return pullRequests.findByProjectIdAndId(projectId, pullRequestId)
-                .map(PullRequestResponse::of)
+                .map(pullRequest -> PullRequestResponse.of(pullRequest,
+                        associations.canCorrect(projectId, member, pullRequest)))
                 .orElseThrow(ApiException::notFound);
     }
 }

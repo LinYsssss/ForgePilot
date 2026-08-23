@@ -1,5 +1,6 @@
 package com.forgepilot.review;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -50,4 +51,13 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
      */
     boolean existsByProjectIdAndPullRequestIdAndHeadShaAndDecision(
             long projectId, long pullRequestId, String headSha, ReviewDecision decision);
+
+    /**
+     * 同一口径的「任意终局裁定」，供 {@link ReviewDecisionGate} 回答 PRD P1 的
+     * 作者纠正权。与上面那个方法刻意分开：Decision Gate 只关心 REQUEST_CHANGES
+     * （只有新 head 能解锁），而作者纠正权被**任何**终局裁定关闭，
+     * 把两者合并成一个带集合参数的方法会让调用点读起来像同一条规则。
+     */
+    boolean existsByProjectIdAndPullRequestIdAndHeadShaAndDecisionIn(
+            long projectId, long pullRequestId, String headSha, Collection<ReviewDecision> decisions);
 }

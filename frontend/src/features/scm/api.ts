@@ -36,6 +36,7 @@ export interface PullRequest {
   authorExternalUserId: string | null;
   authorUsername: string | null;
   authorUserId: number | null;
+  canEditRequirementAssociation: boolean;
   sourceUpdatedAt: string | null;
   updatedAt: string;
 }
