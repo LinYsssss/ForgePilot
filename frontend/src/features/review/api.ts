@@ -1,12 +1,12 @@
 import { requestJson } from "../../lib/http";
 
-/** Execution state of a Review (api-contract.md §2.2). Orthogonal to `decision`. */
+/** 一次 Review 的执行状态（api-contract.md §2.2）。与 `decision` 正交。 */
 export type ReviewStatus = "PENDING" | "RUNNING" | "COMPLETED" | "FAILED";
 
-/** The one-shot human verdict. `PENDING` is the absence of one, not a third verdict. */
+/** 一次性的人工裁定。`PENDING` 表示「尚未作出裁定」，而不是第三种裁定。 */
 export type ReviewDecision = "PENDING" | "APPROVE" | "REQUEST_CHANGES";
 
-/** Human handling lifecycle of a Finding (api-contract.md §3.1). */
+/** 一条 Finding 的人工处理生命周期（api-contract.md §3.1）。 */
 export type FindingStatus =
   | "OPEN"
   | "CONFIRMED"
@@ -17,9 +17,8 @@ export type FindingStatus =
   | "REJECTED";
 
 /**
- * Cross-round lineage of a Finding. PRD §5 forbids merging this with `status`
- * into one field or one label: one says what a person decided, the other says
- * where the finding came from.
+ * 一条 Finding 的跨轮次血缘。PRD §5 禁止把它与 `status` 合并成一个字段
+ * 或一个标签：一个说的是人做了什么判断，另一个说的是这条问题从哪来。
  */
 export type FindingContinuity = "NEW" | "PERSISTING" | "SUPPRESSED";
 
@@ -37,7 +36,7 @@ export type FindingAction =
   | "CLOSE"
   | "REOPEN";
 
-/** Requirement-level aggregation. `NO_PR` and `MIXED` do not exist per PR. */
+/** 需求层面的聚合。`NO_PR` 与 `MIXED` 在单个 PR 层面并不存在。 */
 export type ReviewActivity =
   | "NO_PR"
   | "REVIEW_REQUIRED"
@@ -48,7 +47,7 @@ export type ReviewActivity =
   | "APPROVED"
   | "MIXED";
 
-/** A single pull request has six values; `NO_PR` and `MIXED` exist only per requirement. */
+/** 单个 PR 只有六个取值；`NO_PR` 与 `MIXED` 只存在于需求层面。 */
 export type PullRequestActivity =
   | "REVIEW_REQUIRED"
   | "FAILED"
@@ -61,7 +60,7 @@ export interface Finding {
   id: number;
   findingType: FindingType;
   path: string | null;
-  /** Null when the patch could not place the finding on a verifiable line. */
+  /** 当 patch 无法把该 finding 定位到一个可核实的行上时为 null。 */
   line: number | null;
   evidence: string | null;
   status: FindingStatus;
@@ -89,9 +88,8 @@ export interface FileCoverage {
 }
 
 /**
- * The coverage manifest. `notReviewed` being an empty array and the manifest
- * being absent are different answers and D002 forbids collapsing them, so the
- * whole object is nullable and the array inside it never is.
+ * 覆盖清单。「`notReviewed` 是空数组」与「整份清单缺席」是两个不同的答案，
+ * D002 禁止把它们混为一谈，因此整个对象是可空的，而它内部的数组永远不为空缺。
  */
 export interface Coverage {
   truncated: boolean;
@@ -111,7 +109,7 @@ export interface ReviewDetail {
   decisionBy: number | null;
   decisionAt: string | null;
   decisionComment: string | null;
-  /** Derived on every read by comparing the identity against the pull request. */
+  /** 每次读取时把身份与 PR 比对后现算得出。 */
   isCurrent: boolean;
   contextSnapshot: unknown;
   coverage: Coverage | null;
@@ -133,7 +131,7 @@ export interface ReviewSummary {
   createdAt: string;
 }
 
-/** One newest-first row returned by the project-wide Review index. */
+/** 项目级审查索引返回的一行（最新在前）。 */
 export interface ProjectReviewRow {
   id: number;
   pullRequestId: number;
@@ -169,9 +167,9 @@ export interface FindingEvent {
 }
 
 /**
- * A requirement's aggregated activity plus the per-state counts. The counts are
- * always present and always carry all six single-pull-request values, zeros
- * included, so there is no missing-key branch here.
+ * 一条需求的聚合活动状态，外加各状态的计数。计数永远存在，
+ * 且永远携带全部六个单 PR 取值（包括为零的项），
+ * 因此这里不存在「键不存在」的分支处理。
  */
 export interface ActivityView {
   activity: ReviewActivity;
@@ -200,7 +198,7 @@ export function listPullRequestReviews(
   );
 }
 
-/** Trigger, retry after a failure and re-review after a new revision are one call. */
+/** 触发、失败后重试、新修订后的重新审查，都是同一次调用。 */
 export function requestReview(
   projectId: number,
   pullRequestId: number,
@@ -250,7 +248,7 @@ export function listFindingEvents(
   );
 }
 
-/** Keyed by requirement id, so a list screen reads the whole column in one call. */
+/** 以需求 id 为键，使列表界面一次调用就能读到整列数据。 */
 export function listReviewActivity(
   projectId: number,
 ): Promise<Record<string, ActivityView>> {

@@ -1,4 +1,4 @@
-/** Error body shape shared by every ForgePilot endpoint (api-contract.md §0). */
+/** 所有 ForgePilot 端点共用的错误体结构（api-contract.md §0）。 */
 export interface ApiError {
   code: string;
   message: string;
@@ -25,8 +25,8 @@ const CSRF_HEADER = "X-XSRF-TOKEN";
 let unauthorizedHandler: (() => void) | null = null;
 
 /**
- * Registers the single reaction to an expired session. `requestJson` calls it
- * for every 401 so that no view has to redirect on its own.
+ * 注册会话过期时唯一的那个响应动作。`requestJson` 在每次 401 时调用它，
+ * 因此任何视图都不必自己去做跳转。
  */
 export function setUnauthorizedHandler(handler: () => void): void {
   unauthorizedHandler = handler;
@@ -62,7 +62,7 @@ function isApiError(body: unknown): body is ApiError {
   );
 }
 
-/** Message to show a user for a failed request, preferring the server's own text. */
+/** 请求失败时展示给用户的消息，优先采用服务端自己给出的文本。 */
 export function apiErrorMessage(error: unknown): string {
   if (error instanceof HttpError) {
     return isApiError(error.body) ? error.body.message : error.message;

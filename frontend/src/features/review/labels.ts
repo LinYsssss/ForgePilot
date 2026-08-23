@@ -45,11 +45,11 @@ export const REVIEW_ACTIVITY_TONES: Record<ReviewActivity, string> = {
 };
 
 /**
- * Four marks are shown next to a finding and PRD.md:131 / :135 forbid merging any
- * of them: the execution status of the Review, the human status of the Finding,
- * the Finding's cross-round lineage, and the Review's one-shot Decision. They are
- * four label maps here, and four containers in the template, so that "merge them
- * into one risk badge" is not something a single edit can do by accident.
+ * 一条 finding 旁边会展示四个标记，而 PRD.md:131 / :135 禁止合并其中任何两个：
+ * Review 的执行状态、Finding 的人工状态、Finding 的跨轮次血缘，
+ * 以及 Review 那次一次性的 Decision。它们在这里是四张标签表、
+ * 在模板里是四个容器，好让「把它们合成一个风险徽标」
+ * 不可能被一次顺手的改动意外做成。
  */
 export const REVIEW_STATUS_LABELS: Record<ReviewStatus, string> = {
   PENDING: "排队中",
@@ -146,7 +146,7 @@ export const PULL_REQUEST_ACTIVITY_LABELS: Record<PullRequestActivity, string> =
   APPROVED: "已通过",
 };
 
-/** Iteration order for the dense six-key count map, so the column order is stable. */
+/** 那张稠密六键计数表的遍历顺序，使列的顺序保持稳定。 */
 export const PULL_REQUEST_ACTIVITIES: readonly PullRequestActivity[] = [
   "REVIEW_REQUIRED",
   "FAILED",
@@ -156,12 +156,12 @@ export const PULL_REQUEST_ACTIVITIES: readonly PullRequestActivity[] = [
   "APPROVED",
 ];
 
-/** One cell of PRD §3's matrix: what the step is called and who may take it. */
+/** PRD §3 矩阵中的一格：这一步叫什么，以及谁可以执行它。 */
 export interface FindingMove {
   target: FindingStatus;
   action: FindingAction;
   allowed: readonly ProjectRole[];
-  /** `REJECTED → OPEN` only reopens an inherited suppression (PRD §5). */
+  /** `REJECTED → OPEN` 只用于重开被继承的抑制项（PRD §5）。 */
   onlySuppressed?: true;
 }
 
@@ -169,12 +169,11 @@ const BY_REVIEWERS: readonly ProjectRole[] = ["LEADER", "REVIEWER"];
 const BY_DEVELOPER: readonly ProjectRole[] = ["DEVELOPER"];
 
 /**
- * PRD §3 transcribed cell by cell, mirroring `FindingLifecycleService.MOVES`.
+ * PRD §3 的逐格抄录，与 `FindingLifecycleService.MOVES` 一一对应。
  *
- * <p>The two cells that read like mistakes are not: a LEADER may neither claim a
- * finding nor mark one fixed. Offering those buttons to a LEADER would only
- * produce a 403 from the server, and showing an action the specification withholds
- * is how a UI teaches a permission that does not exist.
+ * <p>那两格看上去像笔误、但其实不是：LEADER 既不能认领 finding，
+ * 也不能把它标记为已修复。把这两个按钮摆给 LEADER，只会换来服务端的 403；
+ * 而展示一个规格明确保留的操作，正是 UI 教会用户「一个并不存在的权限」的方式。
  */
 export const FINDING_MOVES: Record<FindingStatus, readonly FindingMove[]> = {
   OPEN: [
@@ -198,10 +197,10 @@ export const FINDING_MOVES: Record<FindingStatus, readonly FindingMove[]> = {
 };
 
 /**
- * The moves this viewer may actually perform on this finding. A rejection that was
- * never an inherited suppression is an irreversible terminal state for every role,
- * so it yields no move at all rather than a button that always fails. An unknown
- * role yields nothing: narrowing is the safe direction here, widening is not.
+ * 当前查看者在这条 finding 上**实际**能执行的操作。一次并非继承而来的驳回，
+ * 对任何角色都是不可逆的终态，因此它给出的是「没有任何可执行操作」，
+ * 而不是一个必定失败的按钮。未知角色同样什么都不给：
+ * 在这里收紧是安全方向，放宽不是。
  */
 export function availableMoves(
   status: FindingStatus,
@@ -218,7 +217,7 @@ export function availableMoves(
   );
 }
 
-/** A short, still-recognisable commit id; the full value stays in the `title`. */
+/** 一个简短但仍可辨识的 commit id；完整值保留在 `title` 属性里。 */
 export function shortSha(sha: string): string {
   return sha.length > 12 ? sha.slice(0, 12) : sha;
 }

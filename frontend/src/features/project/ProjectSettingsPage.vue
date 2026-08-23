@@ -43,9 +43,8 @@ const updatePending = ref(false);
 const updateError = ref<string | null>(null);
 
 /**
- * Only what the last write returned. There is no read endpoint for the SCM
- * connection, so a reload starts blank rather than showing a stale or invented
- * connection state.
+ * 只保留上一次写入所返回的内容。SCM 连接没有读取端点，
+ * 因此刷新后从空白开始，而不是显示一份过期或凭空编造的连接状态。
  */
 const repository = ref<ScmRepository | null>(null);
 
@@ -59,8 +58,8 @@ watch(registerProvider, (provider) => {
   registerApiBase.value = SCM_PROVIDER_DEFAULTS[provider];
 });
 
-// Watched rather than mounted: vue-router reuses this component when only the
-// `:id` changes, so an `onMounted` load would keep showing the previous project.
+// 用 watch 而不是 mounted：仅 `:id` 变化时 vue-router 会复用本组件，
+// 因此放在 `onMounted` 里加载会一直显示上一个项目。
 watch(
   projectId,
   async (id) => {
@@ -98,7 +97,7 @@ async function register(): Promise<void> {
       token: registerToken.value,
       webhookSecret: registerWebhookSecret.value,
     });
-    // Credentials never live longer than the request that carried them.
+    // 凭据的存活时间绝不超过携带它的那次请求。
     registerToken.value = "";
     registerWebhookSecret.value = "";
     updateRepositoryId.value = String(repository.value.id);

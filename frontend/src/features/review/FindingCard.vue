@@ -24,10 +24,10 @@ import {
 
 const props = defineProps<{
   finding: Finding;
-  /** The parent Review's verdict, shown next to the finding and never merged into it. */
+  /** 父级 Review 的裁定，展示在 finding 旁边，绝不与之合并。 */
   reviewDecision: ReviewDecision;
   assigneeName: string | null;
-  /** Null while the project has not loaded; no action is offered until it has. */
+  /** 项目尚未加载完成时为 null；在此之前不提供任何操作。 */
   role: ProjectRole | null;
   pending: boolean;
   events: FindingEvent[] | null;

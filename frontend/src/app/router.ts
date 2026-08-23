@@ -20,7 +20,7 @@ export function createAppRouter(history: RouterHistory = createWebHistory()): Ro
     to.meta.requiresSession === true && !hasSession() ? LOGIN_ROUTE_PATH : true,
   );
 
-  // The only place a lost session sends the user back to the login screen.
+  // 会话失效后把用户送回登录页的唯一入口。
   setUnauthorizedHandler(() => {
     clearSession();
     if (router.currentRoute.value.path !== LOGIN_ROUTE_PATH) {

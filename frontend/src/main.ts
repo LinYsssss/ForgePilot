@@ -6,8 +6,8 @@ import { bootstrapSession } from "./features/auth/session";
 import "./styles/tokens.css";
 import "./styles/base.css";
 
-// The cold-start probe also issues the CSRF cookie, so it runs before the
-// router decides whether the first route is reachable.
+// 冷启动探测同时会下发 CSRF cookie，因此它必须先于路由判断
+// 「首个路由是否可达」而运行。
 void bootstrapSession().then(() => {
   createApp(App).use(createAppRouter()).mount("#app");
 });

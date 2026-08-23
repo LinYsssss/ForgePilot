@@ -1,4 +1,4 @@
-/** Requirement lifecycle from api-contract.md §3. */
+/** 取自 api-contract.md §3 的需求生命周期。 */
 export type RequirementStatus =
   | "DRAFT"
   | "READY"
@@ -22,7 +22,7 @@ export const REQUIREMENT_STATUS_LABELS: Record<RequirementStatus, string> = {
   CANCELED: "已取消",
 };
 
-/** Badge modifier per status, so state is never carried by color alone. */
+/** 每个状态对应的徽标修饰符，使状态绝不仅靠颜色来传达。 */
 export const REQUIREMENT_STATUS_TONES: Record<RequirementStatus, string> = {
   DRAFT: "neutral",
   READY: "info",
@@ -32,8 +32,8 @@ export const REQUIREMENT_STATUS_TONES: Record<RequirementStatus, string> = {
 };
 
 /**
- * Targets reachable through `POST /status`. `IN_DEVELOPMENT` is missing on
- * purpose: its only entry point is the first assignee (api-contract.md §3).
+ * 可以通过 `POST /status` 抵达的目标状态。`IN_DEVELOPMENT` 刻意缺席：
+ * 进入它的唯一入口是首次指派（api-contract.md §3）。
  */
 export const STATUS_TRANSITIONS: Record<RequirementStatus, readonly RequirementStatus[]> = {
   DRAFT: ["READY", "CANCELED"],
@@ -43,7 +43,7 @@ export const STATUS_TRANSITIONS: Record<RequirementStatus, readonly RequirementS
   CANCELED: [],
 };
 
-/** A terminal requirement accepts no further edit, revision, or transition. */
+/** 处于终态的需求不再接受任何编辑、修订或状态流转。 */
 export function isTerminal(status: RequirementStatus): boolean {
   return status === "DONE" || status === "CANCELED";
 }

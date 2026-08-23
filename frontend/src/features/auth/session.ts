@@ -2,7 +2,7 @@ import { computed, ref, type ComputedRef } from "vue";
 
 import { HttpError, requestJson } from "../../lib/http";
 
-/** `{id, username}` returned by every auth endpoint (api-contract.md §1). */
+/** 每个认证端点都返回的 `{id, username}`（api-contract.md §1）。 */
 export interface AccountView {
   id: number;
   username: string;
@@ -24,8 +24,8 @@ export function clearSession(): void {
 }
 
 /**
- * Cold start probe. `GET /api/auth/me` also issues the `XSRF-TOKEN` cookie the
- * request layer needs for later writes (api-contract.md §0).
+ * 冷启动探测。`GET /api/auth/me` 同时会下发 `XSRF-TOKEN` cookie，
+ * 后续写操作的请求层需要它（api-contract.md §0）。
  */
 export async function bootstrapSession(): Promise<void> {
   try {
@@ -55,9 +55,9 @@ export async function register(username: string, password: string): Promise<void
 }
 
 /**
- * Changes the signed-in account's password. The backend advances the account's
- * session version while adopting it into this HttpSession, so this tab remains
- * signed in and every other session becomes invalid.
+ * 修改当前登录账号的口令。后端会递增该账号的 session version，
+ * 同时把新版本号写进本次 HttpSession，因此本标签页保持登录，
+ * 而其余所有会话随之失效。
  */
 export async function changePassword(
   currentPassword: string,

@@ -10,9 +10,8 @@ export const SCM_PROVIDER_DEFAULTS: Readonly<Record<ScmProvider, string>> = {
 };
 
 /**
- * What a LEADER may see of the connection. Neither the token nor the webhook
- * secret is in this shape: they are write-only and the server never echoes them,
- * so there is no field here that could accidentally render one.
+ * LEADER 能看到的连接信息。token 与 webhook 密钥都不在这个结构里：
+ * 它们是只写的，服务端从不回显，因此这里不存在任何可能意外把它们渲染出来的字段。
  */
 export interface ScmRepository {
   id: number;
@@ -49,7 +48,7 @@ export interface ScmRepositoryRegistration {
   webhookSecret: string;
 }
 
-/** Every field is optional; an omitted one leaves that part of the connection alone. */
+/** 所有字段都是可选的；省略某个字段表示该部分连接配置保持不变。 */
 export interface ScmRepositoryPatch {
   provider?: ScmProvider;
   externalId?: string;
@@ -93,9 +92,9 @@ export function getPullRequest(
 }
 
 /**
- * Sets or clears the pull request's requirement (PRD P1). `null` is a legal value
- * and means "this pull request implements no requirement"; it is a correction the
- * audit records like any other, not a missing field.
+ * 设置或清除 PR 的关联需求（PRD P1）。`null` 是合法取值，
+ * 表示「这个 PR 不实现任何需求」；它与其他纠正一样会被审计记录，
+ * 而不是一个漏填的字段。
  */
 export function setPullRequestRequirement(
   projectId: number,

@@ -10,7 +10,7 @@ export interface DiffLine {
 
 const HUNK = /^@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@/;
 
-/** Converts a provider unified patch into stable display rows and real hunk lines. */
+/** 把 provider 的 unified patch 转换成稳定的展示行与真实的 hunk 行号。 */
 export function parseUnifiedDiff(patch: string): DiffLine[] {
   let oldLine: number | null = null;
   let newLine: number | null = null;
@@ -63,7 +63,7 @@ export function parseUnifiedDiff(patch: string): DiffLine[] {
   });
 }
 
-/** A Finding line normally names the new file; deletions have only an old line. */
+/** Finding 的行号通常指向新文件；删除行则只有旧文件的行号。 */
 export function isFindingLine(row: DiffLine, line: number | null): boolean {
   return line !== null && (row.newLine === line || (row.newLine === null && row.oldLine === line));
 }

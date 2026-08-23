@@ -12,7 +12,7 @@ import ReviewsPage from "../features/review/ReviewsPage.vue";
 declare module "vue-router" {
   interface RouteMeta {
     title: string;
-    /** Product routes need a signed-in account; the login route does not. */
+    /** 产品路由需要已登录账号；登录路由不需要。 */
     requiresSession?: boolean;
   }
 }
@@ -27,13 +27,12 @@ export const HOME_ROUTE_PATH = TOP_LEVEL_NAVIGATION[0].to;
 
 export const LOGIN_ROUTE_PATH = "/login";
 
-/** Requirement and review screens are project scoped through this query key. */
+/** 需求与审查界面通过这个查询参数限定到某个项目。 */
 export const PROJECT_QUERY_KEY = "project";
 
 /**
- * The review list narrows to one pull request through this key. It is a filter on
- * an approved path, not an eighth route: there is no pull request page and the
- * seven paths below are the whole product surface.
+ * 审查列表通过这个参数收窄到单个 PR。它是既有合法路径上的一个过滤条件，
+ * 而不是第八条路由：本产品没有 PR 详情页，下面那七条路径就是全部产品面。
  */
 export const PULL_REQUEST_QUERY_KEY = "pullRequest";
 
@@ -96,7 +95,7 @@ export function requirementDetailRoute(
   };
 }
 
-/** Reads a positive integer id from a route param or query value. */
+/** 从路由参数或查询值中读取一个正整数 id。 */
 export function parseId(
   value: string | LocationQueryValue | LocationQueryValue[] | undefined,
 ): number | null {

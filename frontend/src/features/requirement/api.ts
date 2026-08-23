@@ -42,9 +42,8 @@ export interface RequirementDetail {
 }
 
 /**
- * One acceptance criterion being edited. `acKey` is the stable identity handed
- * back for a row that already exists; a new row has none and the server assigns
- * one. `sortOrder` is derived from array order and is never sent.
+ * 正在编辑中的一条验收条件。`acKey` 是服务端为已存在的行回传的稳定身份；
+ * 新增的行没有它，由服务端分配。`sortOrder` 由数组顺序推导，绝不上送。
  */
 export interface AcceptanceCriterionDraft {
   acKey?: string;
@@ -59,8 +58,8 @@ export interface RevisionContent {
 }
 
 /**
- * One deterministic rule hit. `acKey` is set only by rules that are about one
- * criterion, so it is nullable rather than absent.
+ * 命中的一条确定性规则。只有针对单条验收条件的规则才会设置 `acKey`，
+ * 因此它是可空的，而不是缺席的。
  */
 export interface QualityRuleFinding {
   rule: "MISSING_DESCRIPTION" | "DUPLICATE_CRITERION" | "PROMPT_BUDGET_EXCEEDED";
@@ -74,9 +73,8 @@ export interface QualityAiIssue {
 }
 
 /**
- * The result of one Requirement Quality check on one revision. There is no score
- * and no overall verdict on purpose: a number is exactly what gets read as a gate,
- * and this result is advice that moves no status.
+ * 对某一次修订做一次需求质量检查的结果。刻意没有评分、也没有总评：
+ * 一个数字恰恰会被当成闸门来读，而这个结果只是建议，不改动任何状态。
  */
 export interface QualityReport {
   requirementId: number;
@@ -88,7 +86,7 @@ export interface QualityReport {
   ai: { summary: string | null; issues: QualityAiIssue[] } | null;
 }
 
-/** One provider answer about one immutable Requirement revision; never persisted. */
+/** provider 针对某个不可变需求修订给出的一次回答；不做任何持久化。 */
 export interface ImplementationGuidance {
   requirementId: number;
   revisionId: number;
@@ -145,7 +143,7 @@ export function createRequirement(
   });
 }
 
-/** In-place edit of a DRAFT requirement. */
+/** 对 DRAFT 状态需求的原地编辑。 */
 export function editDraft(
   projectId: number,
   requirementId: number,
@@ -157,7 +155,7 @@ export function editDraft(
   );
 }
 
-/** Publishes a new immutable revision once the requirement left DRAFT. */
+/** 需求离开 DRAFT 之后，发布一个新的不可变修订。 */
 export function publishRevision(
   projectId: number,
   requirementId: number,
@@ -193,9 +191,8 @@ export function assign(
 }
 
 /**
- * Runs the quality check against the requirement's current revision. POST because
- * it spends a provider call and writes onto that revision; the result belongs to
- * the revision and a DRAFT edit clears it again.
+ * 针对需求的当前修订运行质量检查。用 POST，因为它会花掉一次 provider 调用
+ * 并把结果写到那个修订上；结果归属于该修订，而一次 DRAFT 编辑会把它清空。
  */
 export function checkQuality(
   projectId: number,
@@ -208,8 +205,8 @@ export function checkQuality(
 }
 
 /**
- * Generates one implementation answer for the current revision. This deliberately
- * has no conversation id, input box, history, or streaming path.
+ * 为当前修订生成一次实现建议。这里**刻意**没有会话 id、没有输入框、
+ * 没有历史记录，也没有流式输出通道。
  */
 export function generateGuidance(
   projectId: number,
@@ -221,7 +218,7 @@ export function generateGuidance(
   );
 }
 
-/** Turns a stored revision into editable rows, keeping each stable `acKey`. */
+/** 把一个已存修订转成可编辑的行，并保留每一行稳定的 `acKey`。 */
 export function toDraft(revision: Revision): RevisionContent {
   return {
     title: revision.title,

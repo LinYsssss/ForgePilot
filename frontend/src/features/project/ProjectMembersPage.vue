@@ -96,7 +96,7 @@ async function patch(row: MemberRow, changes: MemberPatch): Promise<void> {
   row.error = null;
   try {
     await updateMember(id, row.member.userId, changes);
-    // A LEADER transfer demotes the previous leader, so reload the whole list.
+    // LEADER 转移会把原负责人降级，因此整份列表都要重新加载。
     const [reloadedProject, members] = await Promise.all([getProject(id), listMembers(id)]);
     project.value = reloadedProject;
     rows.value = members.map(toRow);

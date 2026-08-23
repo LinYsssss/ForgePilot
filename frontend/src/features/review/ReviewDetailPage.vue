@@ -86,10 +86,10 @@ function target(): { projectId: number; reviewId: number } | null {
 const hasContext = computed(() => target() !== null);
 
 /**
- * The Decision Gate of ARCHITECTURE.md 3.1: any `REQUEST_CHANGES` on the pull
- * request's *present* head locks that head permanently. It is derived from the
- * rows on every read rather than cached, because a force-push back to a blocked
- * head has to re-lock it and a stored flag would not.
+ * ARCHITECTURE.md 3.1 的决策闸门：只要 PR 的*当前* head 上存在任何一次
+ * `REQUEST_CHANGES`，这个 head 就被永久封锁。它在每次读取时从数据行中现算、
+ * 而不是缓存下来，因为 force-push 回退到一个被封锁的 head 时必须重新上锁，
+ * 而一个存下来的标志位做不到。
  */
 const gateBlocked = computed(() => {
   const head = pullRequest.value?.headSha;
@@ -102,16 +102,15 @@ const gateBlocked = computed(() => {
 });
 
 /**
- * The six preconditions, evaluated here only to explain a disabled button. The
- * server re-checks all six under a row lock and stays the only authority; this
- * list never grants anything.
+ * 那六项前置条件，在这里求值**仅仅是为了解释按钮为何被禁用**。
+ * 服务端会在行锁之下重新检查全部六项，并且始终是唯一的权威；
+ * 这份列表从不授予任何权限。
  *
- * <p>Preconditions 3, 4 and 5 are read off `isCurrent` rather than recomputed:
- * that flag is the server's own derivation of "head, fingerprint and requirement
- * revision all equal the pull request's present values", and the pull request
- * payload does not even carry its current requirement revision id. Head and
- * fingerprint are visible here, so when one of them explains the mismatch it is
- * named; when neither does, the remaining cause is the requirement revision.
+ * <p>前置条件 3、4、5 是从 `isCurrent` 读出来的，而不是在这里重算：
+ * 那个标志是服务端自己对「head、指纹与需求修订三者都等于 PR 当前值」的推导结果，
+ * 而 PR 的响应里压根没有携带它当前的需求修订 id。head 与指纹在这里是可见的，
+ * 因此当其中之一能解释这次不匹配时就点名它；当两者都解释不了时，
+ * 剩下的原因就是需求修订。
  */
 const decisionBlockers = computed<string[]>(() => {
   const review = detail.value;
@@ -243,8 +242,8 @@ async function load(): Promise<void> {
   }
 }
 
-// Watched rather than mounted: vue-router reuses this component when only the
-// `:id` changes, so an `onMounted` load would keep showing the previous Review.
+// 用 watch 而不是 mounted：仅 `:id` 变化时 vue-router 会复用本组件，
+// 因此放在 `onMounted` 里加载会一直显示上一次 Review。
 watch([projectId, reviewId], load, { immediate: true });
 
 async function saveAssociation(): Promise<void> {
@@ -263,8 +262,8 @@ async function saveAssociation(): Promise<void> {
       associationReason.value,
     );
     associationReason.value = "";
-    // `isCurrent` and the six preconditions are derived from the pull request, so
-    // the Review has to be re-read rather than patched locally.
+    // `isCurrent` 与那六项前置条件都是从 PR 推导出来的，
+    // 因此必须重新读取该 Review，而不能在本地打补丁。
     detail.value = await getReview(ids.projectId, ids.reviewId);
     history.value = await listPullRequestReviews(ids.projectId, pull.id);
   } catch (failure: unknown) {

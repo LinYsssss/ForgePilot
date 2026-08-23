@@ -202,8 +202,8 @@ function arrayOf<T>(value: unknown, parse: (entry: unknown) => T | null): T[] | 
 }
 
 /**
- * Narrows the external JSON once, at its owner. Views never cast or privately
- * reinterpret fields from the immutable Review context.
+ * 在它的归属处对外部 JSON 做一次收窄。视图绝不对不可变 Review 上下文中的
+ * 字段做类型断言或私自重新解读。
  */
 export function parseReviewContext(value: unknown): ReviewContextSnapshot | null {
   if (!isObject(value)) {
