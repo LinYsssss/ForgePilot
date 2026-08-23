@@ -19,21 +19,24 @@ import {
 } from "../review/labels";
 import AcceptanceCriteriaEditor from "./AcceptanceCriteriaEditor.vue";
 import {
+  attachmentDownloadUrl,
   assign,
   checkQuality,
   changeStatus,
   editDraft,
   generateGuidance,
+  getAttachmentContent,
   getRequirement,
+  listAttachments,
   listRevisions,
   publishRevision,
-  listAttachments,
   promoteAttachment,
   uploadAttachment,
   toDraft,
   type AcceptanceCriterionDraft,
   type ImplementationGuidance,
   type QualityReport,
+  type RequirementDocumentContent,
   type RequirementDetail,
   type Revision,
   type RevisionContent,
@@ -81,6 +84,9 @@ const attachments = ref<KnowledgeDocument[]>([]);
 const attachmentFile = ref<File | null>(null);
 const attachmentPending = ref(false);
 const attachmentError = ref<string | null>(null);
+const selectedDocument = ref<RequirementDocumentContent | null>(null);
+const documentPending = ref(false);
+const documentError = ref<string | null>(null);
 let detailLoadToken = 0;
 
 const isLeader = computed(() => project.value?.myRole === "LEADER");
@@ -131,6 +137,8 @@ async function load(): Promise<void> {
   qualityReport.value = null;
   guidance.value = null;
   attachments.value = [];
+  selectedDocument.value = null;
+  documentError.value = null;
   if (ids === null) {
     loading.value = false;
     return;
@@ -245,6 +253,51 @@ async function promote(documentId: number): Promise<void> {
   finally { attachmentPending.value = false; }
 }
 
+async function viewAttachment(documentId: number): Promise<void> {
+  const ids = target();
+  if (ids === null) return;
+  documentPending.value = true;
+  documentError.value = null;
+  selectedDocument.value = null;
+  try {
+    selectedDocument.value = await getAttachmentContent(
+      ids.projectId,
+      ids.requirementId,
+      documentId,
+    );
+  } catch (failure: unknown) {
+    documentError.value = apiErrorMessage(failure);
+  } finally {
+    documentPending.value = false;
+  }
+}
+
+function downloadUrl(documentId: number): string {
+  const ids = target();
+  return ids === null ? "" : attachmentDownloadUrl(ids.projectId, ids.requirementId, documentId);
+}
+
+function exportRequirement(): void {
+  const loaded = detail.value;
+  if (loaded === null) return;
+  const revision = loaded.currentRevision;
+  const sections = [`# ${revision.title}`];
+  if (revision.background) sections.push(`## 背景\n\n${revision.background}`);
+  if (revision.description) sections.push(`## 描述\n\n${revision.description}`);
+  sections.push(`## 验收条件\n\n${revision.acceptanceCriteria
+    .map((criterion) => `- **${criterion.acKey}**：${criterion.text}`)
+    .join("\n")}`);
+
+  const url = URL.createObjectURL(new Blob([`${sections.join("\n\n")}\n`], {
+    type: "text/markdown;charset=utf-8",
+  }));
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `REQ-${loaded.id}-v${revision.seq}.md`;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
 function saveContent(): Promise<void> {
   const content: RevisionContent = {
     title: draftTitle.value,
@@ -342,7 +395,15 @@ function saveAssignee(): Promise<void> {
       </div>
 
       <section class="panel current-revision" aria-labelledby="current-revision-title">
-        <h2 id="current-revision-title" class="panel-title">当前版本内容</h2>
+        <div class="section-action-head">
+          <div>
+            <p class="eyebrow">Structured requirement</p>
+            <h2 id="current-revision-title" class="panel-title">结构化需求</h2>
+          </div>
+          <button type="button" class="button button-quiet" @click="exportRequirement">
+            导出 Markdown
+          </button>
+        </div>
         <p class="muted">背景：{{ detail.currentRevision.background ?? "未填写" }}</p>
         <p class="muted">描述：{{ detail.currentRevision.description ?? "未填写" }}</p>
         <ol class="criteria-list">
@@ -366,11 +427,86 @@ function saveAssignee(): Promise<void> {
       </section>
 
       <section class="panel attachment-section" aria-labelledby="attachment-title">
-        <div class="section-action-head"><div><p class="eyebrow">Requirement-scoped context</p><h2 id="attachment-title" class="panel-title">需求附件与知识上下文</h2></div><span class="badge badge-info">私有检索边界</span></div>
-        <p class="field-hint">附件仅在本需求的 AI 场景中召回；提升后才复制为公共项目知识，原附件仍保留。</p>
-        <form v-if="isLeader" class="inline-form attachment-form" @submit.prevent="uploadSelectedAttachment"><div class="field"><label for="attachment-file">上传文本或 Markdown 附件</label><input id="attachment-file" type="file" accept=".txt,.md,text/plain,text/markdown" @change="pickAttachment" /><p v-if="attachmentFile" class="field-hint">已选择：{{ attachmentFile.name }}</p></div><button class="button button-primary" :disabled="attachmentFile === null || attachmentPending">上传附件</button></form>
-        <p v-if="attachmentError" class="alert" role="alert">{{ attachmentError }}</p><p v-if="attachments.length===0" class="empty-state">该需求还没有附件。</p>
-        <ol v-else class="record-list"><li v-for="document in attachments" :key="document.id" class="record"><div class="record-head"><h3 class="record-title">{{ document.title }}</h3><span class="badge badge-info">{{ document.status }}</span><button v-if="isLeader" class="button button-quiet" :disabled="attachmentPending" @click="promote(document.id)">提升为项目知识</button></div><p class="muted">{{ document.embeddedChunkCount }}/{{ document.chunkCount }} 向量 Chunk · 维度 {{ document.embeddingDimension ?? '未就绪' }} · {{ [document.embeddingProvider,document.embeddingModel].filter(Boolean).join(' · ') || '未记录 Profile' }}</p></li></ol>
+        <div class="section-action-head">
+          <div>
+            <p class="eyebrow">Requirement document</p>
+            <h2 id="attachment-title" class="panel-title">需求文档</h2>
+          </div>
+          <span class="badge badge-info">当前需求私有</span>
+        </div>
+        <p class="field-hint">
+          项目成员可阅读和下载；AI 实现建议会召回本需求文档的相关片段。
+        </p>
+        <form
+          v-if="isLeader"
+          class="inline-form attachment-form"
+          @submit.prevent="uploadSelectedAttachment"
+        >
+          <div class="field">
+            <label for="attachment-file">上传 .txt 或 .md 文档</label>
+            <input
+              id="attachment-file"
+              type="file"
+              accept=".txt,.md,text/plain,text/markdown"
+              @change="pickAttachment"
+            />
+            <p v-if="attachmentFile" class="field-hint">已选择：{{ attachmentFile.name }}</p>
+          </div>
+          <button
+            class="button button-primary"
+            :disabled="attachmentFile === null || attachmentPending"
+          >
+            {{ attachmentPending ? "正在上传…" : "上传文档" }}
+          </button>
+        </form>
+        <p v-if="attachmentError" class="alert" role="alert">{{ attachmentError }}</p>
+        <p v-if="attachments.length === 0" class="empty-state">该需求还没有文档。</p>
+        <ol v-else class="record-list document-list">
+          <li v-for="item in attachments" :key="item.id" class="record">
+            <div class="record-head">
+              <h3 class="record-title">{{ item.title }}</h3>
+              <span class="badge badge-info">{{ item.status }}</span>
+            </div>
+            <p class="muted">
+              {{ item.embeddedChunkCount }}/{{ item.chunkCount }} 向量 Chunk · 维度
+              {{ item.embeddingDimension ?? "未就绪" }} ·
+              {{ [item.embeddingProvider, item.embeddingModel].filter(Boolean).join(" · ") || "未记录 Profile" }}
+            </p>
+            <div class="record-actions">
+              <button
+                type="button"
+                class="button button-quiet"
+                :disabled="documentPending"
+                @click="viewAttachment(item.id)"
+              >
+                查看原文
+              </button>
+              <a class="button button-quiet" :href="downloadUrl(item.id)">下载</a>
+              <button
+                v-if="isLeader"
+                type="button"
+                class="button button-quiet"
+                :disabled="attachmentPending"
+                @click="promote(item.id)"
+              >
+                提升为项目知识
+              </button>
+            </div>
+          </li>
+        </ol>
+        <p v-if="documentPending" class="muted">正在读取文档…</p>
+        <p v-if="documentError" class="alert" role="alert">{{ documentError }}</p>
+        <section
+          v-if="selectedDocument"
+          class="document-reader"
+          aria-labelledby="document-reader-title"
+        >
+          <div class="record-head">
+            <h3 id="document-reader-title" class="record-title">{{ selectedDocument.fileName }}</h3>
+            <span class="badge badge-neutral">{{ selectedDocument.mediaType }}</span>
+          </div>
+          <pre>{{ selectedDocument.text }}</pre>
+        </section>
       </section>
       <section class="ai-assistance" aria-labelledby="ai-assistance-title"><div class="ai-assistance-heading"><p class="eyebrow">AI development assistance</p><h2 id="ai-assistance-title">AI 研发辅助</h2><p>AI 提供一次性分析与知识证据，不会自动改变需求、代码或人工决定。</p></div>
       <div class="requirement-intelligence-grid">
@@ -594,6 +730,11 @@ function saveAssignee(): Promise<void> {
   line-height: 1.6;
 }
 
+.document-reader {
+  margin-top: var(--fp-space-5);
+}
+
+.document-reader pre,
 .guidance-result pre {
   max-height: 30rem;
   margin: var(--fp-space-3) 0 0;

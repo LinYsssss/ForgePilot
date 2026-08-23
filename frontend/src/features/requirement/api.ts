@@ -100,6 +100,13 @@ export interface ImplementationGuidance {
 
 export interface GuidanceKnowledgeSource { documentId: number; chunkSeq: number; title: string; excerpt: string; similarity: number; }
 
+export interface RequirementDocumentContent {
+  documentId: number;
+  fileName: string;
+  mediaType: "text/plain" | "text/markdown";
+  text: string;
+}
+
 function requirementsPath(projectId: number): string {
   return `/api/projects/${projectId}/requirements`;
 }
@@ -230,6 +237,24 @@ export function listAttachments(projectId: number, requirementId: number): Promi
 
 export function uploadAttachment(projectId: number, requirementId: number, title: string, text: string): Promise<KnowledgeDocument> {
   return requestJson<KnowledgeDocument>(`${requirementsPath(projectId)}/${requirementId}/attachments`, { method: "POST", body: JSON.stringify({ title, text }) });
+}
+
+export function getAttachmentContent(
+  projectId: number,
+  requirementId: number,
+  documentId: number,
+): Promise<RequirementDocumentContent> {
+  return requestJson<RequirementDocumentContent>(
+    `${requirementsPath(projectId)}/${requirementId}/attachments/${documentId}/content`,
+  );
+}
+
+export function attachmentDownloadUrl(
+  projectId: number,
+  requirementId: number,
+  documentId: number,
+): string {
+  return `${requirementsPath(projectId)}/${requirementId}/attachments/${documentId}/download`;
 }
 
 export function promoteAttachment(projectId: number, requirementId: number, documentId: number): Promise<KnowledgeDocument> {

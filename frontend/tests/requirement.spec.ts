@@ -59,6 +59,24 @@ const detail = {
   currentRevision: revision,
 };
 
+const requirementDocument = {
+  id: 44,
+  projectId: 3,
+  sourceType: "REQUIREMENT_ATTACHMENT",
+  sourceRequirementId: 12,
+  title: "login.md",
+  status: "READY",
+  failureReason: null,
+  createdAt: "2026-08-21T02:20:00Z",
+  updatedAt: "2026-08-21T02:20:00Z",
+  chunkCount: 1,
+  embeddedChunkCount: 1,
+  embeddingDimension: 4096,
+  embeddingProvider: "openai-compatible",
+  embeddingModel: "Qwen3-Embedding-8B",
+  embeddingVersion: "v1",
+};
+
 const calls: RecordedCall[] = [];
 
 function jsonResponse(body: unknown): Response {
@@ -95,7 +113,15 @@ function respond(path: string, method: string): Response {
     });
   }
   if (path === "/api/projects/3/requirements/12/attachments") {
-    return jsonResponse([]);
+    return jsonResponse([requirementDocument]);
+  }
+  if (path === "/api/projects/3/requirements/12/attachments/44/content") {
+    return jsonResponse({
+      documentId: 44,
+      fileName: "login.md",
+      mediaType: "text/markdown",
+      text: "# 登录文档\n\n错误语义必须一致。",
+    });
   }
   if (path === "/api/projects/3/requirements/12/quality" && method === "POST") {
     return jsonResponse({
@@ -164,6 +190,31 @@ describe("requirement detail contract", () => {
     // The two values come from different endpoints and stay in different cells.
     expect(status.text()).not.toContain("NO_PR");
     expect(wrapper.find(".review-activity").text()).toBe("无关联 PR");
+    expect(wrapper.get(".current-revision").text()).toContain("结构化需求");
+    expect(wrapper.get(".attachment-section").text()).toContain("需求文档");
+
+    await wrapper.get(".document-list button").trigger("click");
+    await flushPromises();
+
+    expect(wrapper.get(".document-reader").text()).toContain("错误语义必须一致");
+    expect(wrapper.get(".document-list a").attributes("href"))
+      .toBe("/api/projects/3/requirements/12/attachments/44/download");
+
+    const createObjectUrl = vi.fn((_blob: Blob) => "blob:requirement");
+    vi.stubGlobal("URL", {
+      createObjectURL: createObjectUrl,
+      revokeObjectURL: vi.fn(),
+    });
+    vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => undefined);
+    const exportButton = wrapper.findAll("button")
+      .find((button) => button.text() === "导出 Markdown");
+    expect(exportButton).toBeDefined();
+    await exportButton?.trigger("click");
+
+    const exported = createObjectUrl.mock.calls[0]?.[0];
+    expect(exported).toBeInstanceOf(Blob);
+    expect(await exported?.text()).toContain("# 登录闭环");
+    expect(await exported?.text()).toContain("**AC-1**：登录成功后进入项目列表");
   });
 
   it("keeps every existing acKey and never sends sortOrder when editing criteria", async () => {
