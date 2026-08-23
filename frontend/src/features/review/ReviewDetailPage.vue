@@ -376,7 +376,7 @@ function eventsErrorFor(findingId: number): string | null {
           该 PR 的全部审查
         </RouterLink>
       </div>
-      <p class="lede">先确认审查身份与当前有效性，再核验 AC、覆盖清单和 Finding，最后做出人工决定。</p>
+      <p class="lede">唯一 AI Review Engine 将 Requirement、AC、向量召回的项目知识与 Diff 形成证据；Finding 生命周期和最终 Decision 始终由人完成。</p>
     </div>
 
     <p v-if="!hasContext" class="alert" role="alert">
@@ -568,7 +568,7 @@ function eventsErrorFor(findingId: number): string | null {
             </section>
 
             <section class="snapshot-card" aria-labelledby="snapshot-knowledge-title">
-              <h3 id="snapshot-knowledge-title" class="subsection-title">本 Review 召回的知识证据集</h3>
+              <h3 id="snapshot-knowledge-title" class="subsection-title">本 Review 的向量语义召回知识证据集</h3>
               <p class="field-hint">
                 响应没有 Finding 到知识块的一对一关联，因此这里只呈现本轮召回集合，不伪造对应关系。
               </p>
@@ -579,7 +579,7 @@ function eventsErrorFor(findingId: number): string | null {
                 <li v-for="evidence in reviewContext.knowledgeEvidence" :key="evidence.chunkId">
                   <div class="record-head">
                     <span class="badge badge-neutral">块 {{ evidence.chunkId }}</span>
-                    <span class="badge badge-info">相关度 {{ evidence.score.toFixed(3) }}</span>
+                    <span class="badge badge-info">向量语义召回相似度 {{ evidence.score.toFixed(3) }}</span>
                   </div>
                   <p>{{ evidence.excerpt }}</p>
                   <small>来源 {{ evidence.sourceId }} · 文档 {{ evidence.documentId }}</small>

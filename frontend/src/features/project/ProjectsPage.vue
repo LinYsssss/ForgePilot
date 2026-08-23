@@ -4,7 +4,8 @@ import { RouterLink } from "vue-router";
 
 import {
   projectMembersRoute,
-  projectSettingsRoute,
+  knowledgeRoute,
+  repositoriesRoute,
   requirementsRoute,
   reviewsRoute,
 } from "../../app/routes";
@@ -105,8 +106,11 @@ async function create(): Promise<void> {
           <RouterLink class="button button-quiet" :to="projectMembersRoute(project.id)">
             成员管理
           </RouterLink>
-          <RouterLink class="button button-quiet" :to="projectSettingsRoute(project.id)">
-            项目设置
+          <RouterLink class="button button-quiet" :to="knowledgeRoute(project.id)">
+            项目知识
+          </RouterLink>
+          <RouterLink class="button button-quiet" :to="repositoriesRoute(project.id)">
+            仓库接入
           </RouterLink>
           <RouterLink class="button button-quiet" :to="requirementsRoute(project.id)">
             研发需求

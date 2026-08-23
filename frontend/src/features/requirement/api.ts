@@ -1,5 +1,6 @@
 import { requestJson } from "../../lib/http";
 import type { RequirementStatus } from "./status";
+import type { KnowledgeDocument } from "../knowledge/api";
 
 export interface AcceptanceCriterion {
   id: number;
@@ -91,8 +92,13 @@ export interface ImplementationGuidance {
   requirementId: number;
   revisionId: number;
   revisionSeq: number;
-  guidance: string;
+  checklist: string[];
+  rules: string[];
+  risks: string[];
+  knowledgeSources: GuidanceKnowledgeSource[];
 }
+
+export interface GuidanceKnowledgeSource { documentId: number; chunkSeq: number; title: string; excerpt: string; similarity: number; }
 
 function requirementsPath(projectId: number): string {
   return `/api/projects/${projectId}/requirements`;
@@ -216,6 +222,18 @@ export function generateGuidance(
     `${requirementsPath(projectId)}/${requirementId}/guidance`,
     { method: "POST", body: JSON.stringify({}) },
   );
+}
+
+export function listAttachments(projectId: number, requirementId: number): Promise<KnowledgeDocument[]> {
+  return requestJson<KnowledgeDocument[]>(`${requirementsPath(projectId)}/${requirementId}/attachments`);
+}
+
+export function uploadAttachment(projectId: number, requirementId: number, title: string, text: string): Promise<KnowledgeDocument> {
+  return requestJson<KnowledgeDocument>(`${requirementsPath(projectId)}/${requirementId}/attachments`, { method: "POST", body: JSON.stringify({ title, text }) });
+}
+
+export function promoteAttachment(projectId: number, requirementId: number, documentId: number): Promise<KnowledgeDocument> {
+  return requestJson<KnowledgeDocument>(`${requirementsPath(projectId)}/${requirementId}/attachments/${documentId}/promote`, { method: "POST", body: JSON.stringify({}) });
 }
 
 /** 把一个已存修订转成可编辑的行，并保留每一行稳定的 `acKey`。 */

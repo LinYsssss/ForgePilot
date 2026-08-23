@@ -42,31 +42,45 @@ afterEach(() => {
 });
 
 describe("route and shell contract", () => {
-  it("keeps exactly the seven approved product paths and three top-level entries", () => {
+  it("exposes the approved six-entry product surface and compatibility route", () => {
     expect(PRODUCT_ROUTE_PATHS).toEqual([
+      "/workspace",
       "/projects",
       "/projects/:id/members",
       "/projects/:id/settings",
       "/requirements",
       "/requirements/:id",
+      "/knowledge",
+      "/repositories",
       "/reviews",
       "/reviews/:id",
     ]);
     expect(TOP_LEVEL_NAVIGATION.map((item) => item.to)).toEqual([
+      "/workspace",
       "/projects",
       "/requirements",
+      "/knowledge",
+      "/repositories",
       "/reviews",
     ]);
   });
 
-  it("redirects root to the project screen inside the semantic shell", async () => {
+  it("redirects root to the workbench inside the semantic shell", async () => {
     const { router, wrapper } = await mountSignedInShell();
 
-    expect(router.currentRoute.value.path).toBe("/projects");
+    expect(router.currentRoute.value.path).toBe("/workspace");
     expect(wrapper.find("header").exists()).toBe(true);
     expect(wrapper.find('nav[aria-label="主导航"]').exists()).toBe(true);
-    expect(wrapper.findAll(".nav-link")).toHaveLength(3);
-    expect(wrapper.find("main h1").text()).toBe("项目");
+    expect(wrapper.findAll(".nav-link")).toHaveLength(6);
+    expect(wrapper.find("main h1").text()).toBe("工作台");
+  });
+
+  it("redirects former project settings links to repository integration", async () => {
+    const { router } = await mountSignedInShell();
+    await router.push("/projects/8/settings");
+    await flushPromises();
+    expect(router.currentRoute.value.path).toBe("/repositories");
+    expect(router.currentRoute.value.query.project).toBe("8");
   });
 
   it("exposes a skip link that targets the main landmark", async () => {

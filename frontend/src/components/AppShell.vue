@@ -30,7 +30,7 @@ const currentProjectId = computed(
 
 function navigationTarget(path: string): RouteLocationRaw {
   const project = currentProjectId.value;
-  return project !== null && (path === "/requirements" || path === "/reviews")
+  return project !== null && ["/workspace", "/requirements", "/knowledge", "/repositories", "/reviews"].includes(path)
     ? { path, query: { [PROJECT_QUERY_KEY]: String(project) } }
     : path;
 }
@@ -83,17 +83,13 @@ async function logout(): Promise<void> {
 
 <template>
   <a class="skip-link" href="#app-main">跳到主要内容</a>
-  <div class="app-shell">
-    <header class="app-header">
-      <RouterLink class="brand" :to="HOME_ROUTE_PATH" aria-label="ForgePilot 首页">
-        <span class="brand-mark" aria-hidden="true">FP</span>
-        <span class="brand-copy">
-          <strong>ForgePilot</strong>
-          <small>Requirement-driven review console</small>
-        </span>
+  <div :class="['app-shell', { 'app-shell-signed-in': account }]">
+    <aside v-if="account" class="app-sidebar">
+      <RouterLink class="brand" :to="HOME_ROUTE_PATH" aria-label="ForgePilot 工作台">
+        <img class="brand-lockup" src="/brand/logo-lockup.png" alt="ForgePilot" />
+        <span class="brand-copy"><small>Requirement-driven review console</small></span>
       </RouterLink>
-
-      <nav v-if="account" aria-label="主导航">
+      <nav aria-label="主导航">
         <RouterLink
           v-for="item in TOP_LEVEL_NAVIGATION"
           :key="item.to"
@@ -103,6 +99,14 @@ async function logout(): Promise<void> {
           {{ item.label }}
         </RouterLink>
       </nav>
+      <p class="sidebar-note">需求上下文、向量知识与人工审查决策在同一条可追溯链路中协作。</p>
+    </aside>
+
+    <div class="app-workspace">
+    <header class="app-header">
+      <RouterLink v-if="!account" class="brand" :to="HOME_ROUTE_PATH" aria-label="ForgePilot 首页">
+        <img class="brand-lockup" src="/brand/logo-lockup.png" alt="ForgePilot" />
+      </RouterLink>
 
       <div v-if="account" class="session-area">
         <details class="account-menu" @toggle="accountMenuToggled">
@@ -163,6 +167,7 @@ async function logout(): Promise<void> {
         </Transition>
       </RouterView>
     </main>
+    </div>
   </div>
 </template>
 

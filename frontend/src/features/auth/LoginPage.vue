@@ -76,6 +76,8 @@ async function submit(): Promise<void> {
 
       <div class="login-access">
         <div class="login-heading">
+          <img class="login-logo-app" src="/brand/logo-app.png" alt="ForgePilot" />
+          <img class="login-logo-lockup" src="/brand/logo-lockup.png" alt="ForgePilot" />
           <p class="eyebrow">Secure session</p>
           <h1 id="login-title">{{ mode === "login" ? "登录" : "注册并登录" }}</h1>
           <p class="muted">
@@ -403,6 +405,9 @@ async function submit(): Promise<void> {
 .login-heading {
   margin-bottom: var(--fp-space-6);
 }
+
+.login-logo-app { display: block; width: 3.5rem; height: 3.5rem; margin-bottom: var(--fp-space-4); object-fit: contain; }
+.login-logo-lockup { display: block; width: min(12rem, 100%); height: auto; margin-bottom: var(--fp-space-5); object-fit: contain; }
 
 .login-heading h1 {
   font-size: clamp(1.75rem, 4vw, 2.25rem);

@@ -250,7 +250,7 @@ onMounted(async () => {
     <div class="page-head">
       <p class="eyebrow">Review pipeline</p>
       <h1 id="reviews-title">代码审查</h1>
-      <p class="lede">从项目级审查索引直接进入证据工作台；执行状态、人工 Decision 与当前有效性始终分开呈现。</p>
+      <p class="lede">唯一 AI Review Engine 基于 Requirement、AC、向量语义召回知识与 Diff 生成证据；执行状态、Finding 人工生命周期、Decision 与当前有效性始终分开呈现。</p>
     </div>
 
     <div class="panel project-selector">

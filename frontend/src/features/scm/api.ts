@@ -61,6 +61,10 @@ function projectPath(projectId: number): string {
   return `/api/projects/${projectId}`;
 }
 
+export function listScmRepositories(projectId: number): Promise<ScmRepository[]> {
+  return requestJson<ScmRepository[]>(`${projectPath(projectId)}/scm/repositories`);
+}
+
 export function registerScmRepository(
   projectId: number,
   registration: ScmRepositoryRegistration,

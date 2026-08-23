@@ -27,6 +27,9 @@ import {
   getRequirement,
   listRevisions,
   publishRevision,
+  listAttachments,
+  promoteAttachment,
+  uploadAttachment,
   toDraft,
   type AcceptanceCriterionDraft,
   type ImplementationGuidance,
@@ -35,6 +38,7 @@ import {
   type Revision,
   type RevisionContent,
 } from "./api";
+import type { KnowledgeDocument } from "../knowledge/api";
 import {
   isTerminal,
   REQUIREMENT_STATUS_LABELS,
@@ -73,6 +77,10 @@ const qualityError = ref<string | null>(null);
 const guidance = ref<ImplementationGuidance | null>(null);
 const guidancePending = ref(false);
 const guidanceError = ref<string | null>(null);
+const attachments = ref<KnowledgeDocument[]>([]);
+const attachmentFile = ref<File | null>(null);
+const attachmentPending = ref(false);
+const attachmentError = ref<string | null>(null);
 let detailLoadToken = 0;
 
 const isLeader = computed(() => project.value?.myRole === "LEADER");
@@ -122,18 +130,20 @@ async function load(): Promise<void> {
   reviewActivity.value = null;
   qualityReport.value = null;
   guidance.value = null;
+  attachments.value = [];
   if (ids === null) {
     loading.value = false;
     return;
   }
   try {
-    const [loadedProject, loadedMembers, loadedDetail, loadedRevisions, loadedActivity] =
+    const [loadedProject, loadedMembers, loadedDetail, loadedRevisions, loadedActivity, loadedAttachments] =
       await Promise.all([
         getProject(ids.projectId),
         listMembers(ids.projectId),
         getRequirement(ids.projectId, ids.requirementId),
         listRevisions(ids.projectId, ids.requirementId),
         getRequirementReviewActivity(ids.projectId, ids.requirementId),
+        listAttachments(ids.projectId, ids.requirementId),
       ]);
     if (token !== detailLoadToken) {
       return;
@@ -142,6 +152,7 @@ async function load(): Promise<void> {
     members.value = loadedMembers;
     revisions.value = loadedRevisions;
     reviewActivity.value = loadedActivity;
+    attachments.value = loadedAttachments;
     applyDetail(loadedDetail);
   } catch (failure: unknown) {
     if (token === detailLoadToken) {
@@ -210,6 +221,28 @@ async function runGuidance(): Promise<void> {
   } finally {
     guidancePending.value = false;
   }
+}
+
+function pickAttachment(event: Event): void {
+  attachmentFile.value = (event.target as HTMLInputElement).files?.[0] ?? null;
+}
+
+async function uploadSelectedAttachment(): Promise<void> {
+  const ids = target();
+  const file = attachmentFile.value;
+  if (ids === null || file === null) return;
+  attachmentPending.value = true; attachmentError.value = null;
+  try { await uploadAttachment(ids.projectId, ids.requirementId, file.name, await file.text()); attachmentFile.value = null; attachments.value = await listAttachments(ids.projectId, ids.requirementId); }
+  catch (failure: unknown) { attachmentError.value = apiErrorMessage(failure); }
+  finally { attachmentPending.value = false; }
+}
+
+async function promote(documentId: number): Promise<void> {
+  const ids = target(); if (ids === null) return;
+  attachmentPending.value = true; attachmentError.value = null;
+  try { await promoteAttachment(ids.projectId, ids.requirementId, documentId); attachments.value = await listAttachments(ids.projectId, ids.requirementId); }
+  catch (failure: unknown) { attachmentError.value = apiErrorMessage(failure); }
+  finally { attachmentPending.value = false; }
 }
 
 function saveContent(): Promise<void> {
@@ -332,6 +365,14 @@ function saveAssignee(): Promise<void> {
         </dl>
       </section>
 
+      <section class="panel attachment-section" aria-labelledby="attachment-title">
+        <div class="section-action-head"><div><p class="eyebrow">Requirement-scoped context</p><h2 id="attachment-title" class="panel-title">需求附件与知识上下文</h2></div><span class="badge badge-info">私有检索边界</span></div>
+        <p class="field-hint">附件仅在本需求的 AI 场景中召回；提升后才复制为公共项目知识，原附件仍保留。</p>
+        <form v-if="isLeader" class="inline-form attachment-form" @submit.prevent="uploadSelectedAttachment"><div class="field"><label for="attachment-file">上传文本或 Markdown 附件</label><input id="attachment-file" type="file" accept=".txt,.md,text/plain,text/markdown" @change="pickAttachment" /><p v-if="attachmentFile" class="field-hint">已选择：{{ attachmentFile.name }}</p></div><button class="button button-primary" :disabled="attachmentFile === null || attachmentPending">上传附件</button></form>
+        <p v-if="attachmentError" class="alert" role="alert">{{ attachmentError }}</p><p v-if="attachments.length===0" class="empty-state">该需求还没有附件。</p>
+        <ol v-else class="record-list"><li v-for="document in attachments" :key="document.id" class="record"><div class="record-head"><h3 class="record-title">{{ document.title }}</h3><span class="badge badge-info">{{ document.status }}</span><button v-if="isLeader" class="button button-quiet" :disabled="attachmentPending" @click="promote(document.id)">提升为项目知识</button></div><p class="muted">{{ document.embeddedChunkCount }}/{{ document.chunkCount }} 向量 Chunk · 维度 {{ document.embeddingDimension ?? '未就绪' }} · {{ [document.embeddingProvider,document.embeddingModel].filter(Boolean).join(' · ') || '未记录 Profile' }}</p></li></ol>
+      </section>
+      <section class="ai-assistance" aria-labelledby="ai-assistance-title"><div class="ai-assistance-heading"><p class="eyebrow">AI development assistance</p><h2 id="ai-assistance-title">AI 研发辅助</h2><p>AI 提供一次性分析与知识证据，不会自动改变需求、代码或人工决定。</p></div>
       <div class="requirement-intelligence-grid">
         <section class="panel quality-section" aria-labelledby="quality-title">
           <div class="section-action-head">
@@ -375,9 +416,10 @@ function saveAssignee(): Promise<void> {
           <p class="field-hint">对当前不可变版本生成一次性实现建议；没有对话历史，也不会自动修改需求状态或代码。</p>
           <p v-if="!canGenerateGuidance" class="empty-state">项目负责人或该需求已指派的开发可以生成实现建议。</p>
           <p v-if="guidanceError" class="alert" role="alert">{{ guidanceError }}</p>
-          <div v-if="guidance" class="guidance-result"><p class="muted">基于 v{{ guidance.revisionSeq }}（版本 {{ guidance.revisionId }}）</p><pre>{{ guidance.guidance }}</pre></div>
+          <div v-if="guidance" class="guidance-result"><p class="muted">基于 v{{ guidance.revisionSeq }}（版本 {{ guidance.revisionId }}）与向量召回的项目知识。</p><h3 class="subsection-title">实现清单</h3><p v-if="guidance.checklist.length===0" class="muted">本次没有返回实现清单。</p><ul v-else class="advice-list"><li v-for="(item,index) in guidance.checklist" :key="index">{{item}}</li></ul><h3 class="subsection-title">相关规则</h3><p v-if="guidance.rules.length===0" class="muted">本次没有返回规则。</p><ul v-else class="advice-list"><li v-for="(item,index) in guidance.rules" :key="index">{{item}}</li></ul><h3 class="subsection-title">风险提示</h3><p v-if="guidance.risks.length===0" class="muted">本次没有返回风险提示。</p><ul v-else class="advice-list"><li v-for="(item,index) in guidance.risks" :key="index">{{item}}</li></ul><h3 class="subsection-title">实际召回的知识来源</h3><p v-if="guidance.knowledgeSources.length===0" class="muted">本次没有召回可展示的知识来源。</p><ol v-else class="advice-list"><li v-for="source in guidance.knowledgeSources" :key="`${source.documentId}-${source.chunkSeq}`"><strong>{{source.title}}</strong> <span class="badge badge-info">向量语义召回相似度 {{source.similarity.toFixed(3)}}</span><br /><span class="muted">{{source.excerpt}}</span></li></ol></div>
         </section>
       </div>
+      </section>
 
       <div class="requirement-edit-grid">
       <section v-if="editable" class="panel requirement-actions" aria-labelledby="requirement-actions-title">
@@ -509,6 +551,13 @@ function saveAssignee(): Promise<void> {
 .guidance-section {
   border-color: var(--fp-color-border-accent);
 }
+
+.attachment-section { border-color: var(--fp-color-border-accent); }
+.attachment-form { margin-top: var(--fp-space-5); }
+.ai-assistance { margin-bottom: var(--fp-space-6); }
+.ai-assistance-heading { margin-bottom: var(--fp-space-4); padding: var(--fp-space-5); border-left: 0.1875rem solid var(--fp-color-accent); background: var(--fp-color-accent-soft); }
+.ai-assistance-heading h2,.ai-assistance-heading p { margin: 0; }
+.ai-assistance-heading p:last-child { margin-top: var(--fp-space-2); color: var(--fp-color-text-muted); }
 
 .section-action-head {
   display: flex;

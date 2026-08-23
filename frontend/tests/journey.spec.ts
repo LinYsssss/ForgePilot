@@ -458,6 +458,9 @@ function handleProject(path: string, method: string, body: string | null): Respo
   if (path === "/api/projects/3" && method === "GET") {
     return json(projectView());
   }
+  if (path === "/api/projects/3/scm/repositories" && method === "GET") {
+    return json([]);
+  }
   if (path === "/api/projects/3/members" && method === "GET") {
     return json(server.members);
   }
@@ -551,11 +554,14 @@ function handleRequirement(
       },
     });
   }
+  if (path === "/api/projects/3/requirements/12/attachments" && method === "GET") {
+    return json([]);
+  }
   if (path === "/api/projects/3/requirements/12/quality" && method === "POST") {
     return json({ requirementId: 12, revisionId: server.revisionId, revisionSeq: 1, qualityVersion: "v1", checkedAt: "2026-08-21T04:00:00Z", rules: [], ai: null });
   }
   if (path === "/api/projects/3/requirements/12/guidance" && method === "POST") {
-    return json({ requirementId: 12, revisionId: server.revisionId, revisionSeq: 1, guidance: "先统一错误语义，再补路由测试。" });
+    return json({ requirementId: 12, revisionId: server.revisionId, revisionSeq: 1, checklist: ["先统一错误语义"], rules: [], risks: ["补路由测试"], knowledgeSources: [] });
   }
   if (path === "/api/projects/3/requirements/12/status" && method === "POST") {
     const payload = JSON.parse(body ?? "{}") as { status: string };
@@ -792,10 +798,12 @@ describe("three-role journey through the real App and router", () => {
     expect(lastCall("POST", "/api/auth/login")?.body).toBe(
       "username=lead&password=correct+horse+battery",
     );
-    expect(router.currentRoute.value.path).toBe("/projects");
-    expect(wrapper.find("main h1").text()).toBe("项目");
+    expect(router.currentRoute.value.path).toBe("/workspace");
+    expect(wrapper.find("main h1").text()).toBe("工作台");
 
     // 3. Creates the project.
+    await router.push("/projects");
+    await flushPromises();
     await wrapper.find("#new-project-name").setValue("ForgePilot");
     await wrapper.find("form.inline-form").trigger("submit");
     await flushPromises();
@@ -853,7 +861,7 @@ describe("three-role journey through the real App and router", () => {
     expect(wrapper.find(".requirement-status").text()).toBe("就绪");
 
     await wrapper.find("#requirement-assignee").setValue("2");
-    await wrapper.findAll("form.inline-form")[0].trigger("submit");
+    await wrapper.find(".requirement-actions form.inline-form").trigger("submit");
     await flushPromises();
     expect(lastCall("POST", "/api/projects/3/requirements/12/assignee")?.body).toBe(
       '{"userId":2}',
@@ -1081,7 +1089,7 @@ describe("three-role journey through the real App and router", () => {
     expect(wrapper.find("header").exists()).toBe(true);
     expect(wrapper.find('nav[aria-label="主导航"]').exists()).toBe(true);
     expect(wrapper.find("main#app-main").exists()).toBe(true);
-    expect(wrapper.findAll(".nav-link")).toHaveLength(3);
+    expect(wrapper.findAll(".nav-link")).toHaveLength(6);
 
     // Every section names itself through the heading it points at.
     const labelledSections = wrapper.findAll("section[aria-labelledby]");
@@ -1115,7 +1123,7 @@ describe("three-role journey through the real App and router", () => {
     expect(wrapper.findAll("main h2").length).toBeGreaterThan(0);
   });
 
-  it("keeps project integration settings honest and requirement advice on the requirement", async () => {
+  it("keeps repository credentials write-only and requirement advice on the requirement", async () => {
     server = new FakeServer();
     server.projectId = 3;
     server.projectName = "ForgePilot";
@@ -1148,23 +1156,19 @@ describe("three-role journey through the real App and router", () => {
 
     await bootstrapSession();
     const router = createAppRouter(createMemoryHistory());
-    await router.push("/projects/3/settings");
+    await router.push("/repositories?project=3");
     const wrapper = mount(App, { global: { plugins: [router] } });
     await flushPromises();
 
-    expect(wrapper.find("main h1").text()).toBe("ForgePilot");
+    expect(wrapper.find("main h1").text()).toBe("仓库接入");
     // The credential inputs exist, are password inputs, and start empty.
-    for (const selector of ["#scm-token", "#scm-webhook-secret"]) {
+    for (const selector of ["#repository-token", "#repository-webhook"]) {
       const input = wrapper.find(selector);
       expect(input.attributes("type")).toBe("password");
       expect((input.element as HTMLInputElement).value).toBe("");
       expect(wrapper.find(`label[for="${selector.slice(1)}"]`).exists()).toBe(true);
     }
-    // Knowledge upload has no endpoint yet and the page says so instead of
-    // offering a button that does nothing.
-    expect(wrapper.find(".knowledge-unavailable").text()).toContain("还没有对应的 HTTP 端点");
-    expect(wrapper.find("#quality-requirement").exists()).toBe(false);
-    expect(wrapper.text()).toContain("需求质量与实现建议回到对应需求详情中操作");
+    expect(wrapper.text()).toContain("页面和读取接口都不会显示 token 或 Webhook 密钥");
 
     await wrapper.find(".account-menu summary").trigger("click");
     await wrapper.find("#account-current-password").setValue("old-password");

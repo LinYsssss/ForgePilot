@@ -1,13 +1,15 @@
 import type { LocationQueryValue, RouteLocationRaw, RouteRecordRaw } from "vue-router";
 
 import LoginPage from "../features/auth/LoginPage.vue";
+import KnowledgePage from "../features/knowledge/KnowledgePage.vue";
 import ProjectMembersPage from "../features/project/ProjectMembersPage.vue";
-import ProjectSettingsPage from "../features/project/ProjectSettingsPage.vue";
 import ProjectsPage from "../features/project/ProjectsPage.vue";
 import RequirementDetailPage from "../features/requirement/RequirementDetailPage.vue";
 import RequirementsPage from "../features/requirement/RequirementsPage.vue";
 import ReviewDetailPage from "../features/review/ReviewDetailPage.vue";
 import ReviewsPage from "../features/review/ReviewsPage.vue";
+import RepositoryPage from "../features/scm/RepositoryPage.vue";
+import WorkspacePage from "../features/workspace/WorkspacePage.vue";
 
 declare module "vue-router" {
   interface RouteMeta {
@@ -18,8 +20,11 @@ declare module "vue-router" {
 }
 
 export const TOP_LEVEL_NAVIGATION = [
+  { label: "工作台", to: "/workspace" },
   { label: "项目", to: "/projects" },
   { label: "研发需求", to: "/requirements" },
+  { label: "项目知识", to: "/knowledge" },
+  { label: "仓库接入", to: "/repositories" },
   { label: "代码审查", to: "/reviews" },
 ] as const;
 
@@ -37,11 +42,14 @@ export const PROJECT_QUERY_KEY = "project";
 export const PULL_REQUEST_QUERY_KEY = "pullRequest";
 
 export const PRODUCT_ROUTE_PATHS = [
+  "/workspace",
   "/projects",
   "/projects/:id/members",
   "/projects/:id/settings",
   "/requirements",
   "/requirements/:id",
+  "/knowledge",
+  "/repositories",
   "/reviews",
   "/reviews/:id",
 ] as const;
@@ -51,7 +59,21 @@ export function projectMembersRoute(projectId: number): RouteLocationRaw {
 }
 
 export function projectSettingsRoute(projectId: number): RouteLocationRaw {
-  return { name: "project-settings", params: { id: String(projectId) } };
+  return { name: "repositories", query: { [PROJECT_QUERY_KEY]: String(projectId) } };
+}
+
+export function workspaceRoute(projectId?: number): RouteLocationRaw {
+  return projectId === undefined
+    ? { name: "workspace" }
+    : { name: "workspace", query: { [PROJECT_QUERY_KEY]: String(projectId) } };
+}
+
+export function knowledgeRoute(projectId: number): RouteLocationRaw {
+  return { name: "knowledge", query: { [PROJECT_QUERY_KEY]: String(projectId) } };
+}
+
+export function repositoriesRoute(projectId: number): RouteLocationRaw {
+  return { name: "repositories", query: { [PROJECT_QUERY_KEY]: String(projectId) } };
 }
 
 export function reviewsRoute(
@@ -109,6 +131,12 @@ export function parseId(
 export const routes: RouteRecordRaw[] = [
   { path: "/", redirect: HOME_ROUTE_PATH },
   {
+    path: "/workspace",
+    name: "workspace",
+    component: WorkspacePage,
+    meta: { title: "工作台", requiresSession: true },
+  },
+  {
     path: LOGIN_ROUTE_PATH,
     name: "login",
     component: LoginPage,
@@ -129,8 +157,20 @@ export const routes: RouteRecordRaw[] = [
   {
     path: "/projects/:id/settings",
     name: "project-settings",
-    component: ProjectSettingsPage,
-    meta: { title: "项目设置", requiresSession: true },
+    redirect: (to) => ({ path: "/repositories", query: { [PROJECT_QUERY_KEY]: String(to.params.id) } }),
+    meta: { title: "仓库接入", requiresSession: true },
+  },
+  {
+    path: "/knowledge",
+    name: "knowledge",
+    component: KnowledgePage,
+    meta: { title: "项目知识", requiresSession: true },
+  },
+  {
+    path: "/repositories",
+    name: "repositories",
+    component: RepositoryPage,
+    meta: { title: "仓库接入", requiresSession: true },
   },
   {
     path: "/requirements",

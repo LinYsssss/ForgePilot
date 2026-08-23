@@ -94,6 +94,9 @@ function respond(path: string, method: string): Response {
       },
     });
   }
+  if (path === "/api/projects/3/requirements/12/attachments") {
+    return jsonResponse([]);
+  }
   if (path === "/api/projects/3/requirements/12/quality" && method === "POST") {
     return jsonResponse({
       requirementId: 12,
@@ -110,7 +113,10 @@ function respond(path: string, method: string): Response {
       requirementId: 12,
       revisionId: 30,
       revisionSeq: 1,
-      guidance: "先统一错误语义，再补充路由测试。",
+      checklist: ["先统一错误语义"],
+      rules: ["保留统一错误返回"],
+      risks: ["路由回归"],
+      knowledgeSources: [{ documentId: 4, chunkSeq: 1, title: "登录规范", excerpt: "统一错误语义", similarity: 0.91 }],
     });
   }
   if (path === "/api/projects/3/requirements/12") {
@@ -193,5 +199,6 @@ describe("requirement detail contract", () => {
     expect(calls.some((call) => call.path.endsWith("/guidance") && call.method === "POST")).toBe(true);
     expect(wrapper.get(".quality-report").text()).toContain("v1");
     expect(wrapper.get(".guidance-result").text()).toContain("统一错误语义");
+    expect(wrapper.get(".guidance-result").text()).toContain("向量语义召回相似度");
   });
 });

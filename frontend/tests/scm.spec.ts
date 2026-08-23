@@ -30,7 +30,7 @@ describe("SCM provider settings", () => {
     });
   });
 
-  it("switches the registration contract and webhook guidance to GitLab", async () => {
+  it("loads the repository page and keeps the registration provider defaults", async () => {
     clearSession();
     vi.stubGlobal(
       "fetch",
@@ -39,18 +39,18 @@ describe("SCM provider settings", () => {
         if (path === "/api/auth/me") {
           return Promise.resolve(response({ id: 1, username: "lead" }));
         }
-        if (path === "/api/projects/1") {
+        if (path === "/api/projects") {
           return Promise.resolve(
-            response({
+            response([{
               id: 1,
               name: "ForgePilot",
               status: "ACTIVE",
               createdAt: "2026-08-22T00:00:00Z",
               myRole: "LEADER",
-            }),
+            }]),
           );
         }
-        if (path === "/api/projects/1/requirements") {
+        if (path === "/api/projects/1/scm/repositories") {
           return Promise.resolve(response([]));
         }
         throw new Error(`Unexpected request: ${path}`);
@@ -59,30 +59,90 @@ describe("SCM provider settings", () => {
 
     await bootstrapSession();
     const router = createAppRouter(createMemoryHistory());
-    await router.push("/projects/1/settings");
+    await router.push("/repositories?project=1");
     const wrapper = mount(App, { global: { plugins: [router] } });
     await flushPromises();
 
-    expect(wrapper.findAll(".nav-link")).toHaveLength(3);
-    const provider = wrapper.get("#scm-provider");
+    expect(wrapper.findAll(".nav-link")).toHaveLength(6);
+    const provider = wrapper.get("#repository-provider");
     expect(provider.findAll("option").map((option) => option.text())).toEqual([
       "GITHUB",
       "GITLAB",
     ]);
-    expect(wrapper.get<HTMLInputElement>("#scm-api-base").element.value).toBe(
+    expect(wrapper.get<HTMLInputElement>("#repository-api-base").element.value).toBe(
       SCM_PROVIDER_DEFAULTS.GITHUB,
     );
 
     await provider.setValue("GITLAB");
 
-    expect(wrapper.get<HTMLInputElement>("#scm-api-base").element.value).toBe(
+    expect(wrapper.get<HTMLInputElement>("#repository-api-base").element.value).toBe(
       SCM_PROVIDER_DEFAULTS.GITLAB,
     );
-    expect(wrapper.get(".scm-webhook-path").text()).toContain(
-      "/api/scm/gitlab/webhook",
+    expect(wrapper.text()).toContain("只写，不回显");
+  });
+
+  it("restores an existing safe repository and updates with its loaded id", async () => {
+    const requests: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: string | URL | Request, init?: RequestInit) => {
+        const path = String(input);
+        requests.push(`${init?.method ?? "GET"} ${path}`);
+        if (path === "/api/auth/me") {
+          return Promise.resolve(response({ id: 1, username: "lead" }));
+        }
+        if (path === "/api/projects") {
+          return Promise.resolve(response([{
+            id: 1,
+            name: "ForgePilot",
+            status: "ACTIVE",
+            createdAt: "2026-08-22T00:00:00Z",
+            myRole: "LEADER",
+          }]));
+        }
+        if (path === "/api/projects/1/scm/repositories") {
+          return Promise.resolve(response([{
+            id: 42,
+            projectId: 1,
+            provider: "GITLAB",
+            instanceIdentity: "gitlab.example.com",
+            externalId: "team/forgepilot",
+            apiBase: "https://gitlab.example.com/api/v4",
+            createdAt: "2026-08-22T00:00:00Z",
+            updatedAt: "2026-08-23T00:00:00Z",
+          }]));
+        }
+        if (path === "/api/projects/1/scm/repositories/42" && init?.method === "PATCH") {
+          return Promise.resolve(response({
+            id: 42,
+            projectId: 1,
+            provider: "GITLAB",
+            instanceIdentity: "gitlab.example.com",
+            externalId: "team/forgepilot",
+            apiBase: "https://gitlab.example.com/api/v4",
+            createdAt: "2026-08-22T00:00:00Z",
+            updatedAt: "2026-08-23T00:00:00Z",
+          }));
+        }
+        throw new Error(`Unexpected request: ${path}`);
+      }),
     );
-    expect(wrapper.get("label[for='scm-webhook-secret']").element.parentElement?.textContent)
-      .toContain("whsec_");
-    expect(wrapper.text()).toContain("legacy secret token");
+
+    await bootstrapSession();
+    const router = createAppRouter(createMemoryHistory());
+    await router.push("/repositories?project=1");
+    const wrapper = mount(App, { global: { plugins: [router] } });
+    await flushPromises();
+
+    expect(wrapper.get<HTMLInputElement>("#repository-external-id").element.value)
+      .toBe("team/forgepilot");
+    expect(wrapper.get<HTMLInputElement>("#repository-api-base").element.value)
+      .toBe("https://gitlab.example.com/api/v4");
+    expect(wrapper.find("#repository-provider").exists()).toBe(false);
+    expect(wrapper.text()).not.toContain("内部记录 ID");
+
+    await wrapper.get(".repository-form").trigger("submit");
+    await flushPromises();
+    expect(requests).toContain("PATCH /api/projects/1/scm/repositories/42");
   });
 });
