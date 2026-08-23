@@ -1,0 +1,4 @@
+{"file":".trellis/spec/backend/quality-guidelines.md","reason":"Check backend scope, architecture, credentials and full verify evidence."}
+{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"Check lint, strict types, tests, build and retained manual browser gaps."}
+{"file":".trellis/spec/guides/code-reuse-thinking-guide.md","reason":"Verify no live adapter, authority document or runtime source was mistaken for duplication."}
+{"file":".trellis/tasks/08-23-repository-cleanup-audit/research/audit-findings.md","reason":"Re-run each finding and confirm protected assets and retained items."}

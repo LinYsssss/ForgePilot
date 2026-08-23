@@ -1,0 +1,6 @@
+{"file":".trellis/spec/backend/index.md","reason":"Preserve backend architecture, build and scope gates while correcting Maven metadata."}
+{"file":".trellis/spec/backend/quality-guidelines.md","reason":"Use the authoritative backend verification and no-unused-complexity rules."}
+{"file":".trellis/spec/frontend/index.md","reason":"Preserve the production frontend boundary while removing only the superseded reference study."}
+{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"Run the official frontend gate and retain manual visual acceptance honestly."}
+{"file":".trellis/spec/guides/code-reuse-thinking-guide.md","reason":"Classify duplicated entry points and managed adapters by actual consumers before deletion."}
+{"file":".trellis/tasks/08-23-repository-cleanup-audit/research/audit-findings.md","reason":"Use the verified cleanup targets, broken-link counts and retention decisions."}
