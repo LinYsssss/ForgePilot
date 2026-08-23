@@ -11,28 +11,27 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 /**
- * Splits a pull request's changed files into batches and runs the batch phase of
- * one Review (D002, ARCHITECTURE.md 3.4).
+ * 把一个 PR 的变更文件切成若干批次，并运行一次 Review 的分批阶段
+ * （D002、ARCHITECTURE.md 3.4）。
  *
- * <p>"One Review" is not "one LLM call", but it is still one pipeline. A small
- * pull request produces a single batch and travels the same path as a large one;
- * there is no shortcut branch, because a batch that produced verdicts for the
- * small case would be exactly the second pipeline 3.4 forbids. Batches produce
- * finding candidates and AC evidence only — the final synthesis concludes.
+ * <p>“一次 Review”不等于“一次 LLM 调用”，但它仍然是**一条**流水线。
+ * 小 PR 只产生一个批次，走的是与大 PR 完全相同的路径；这里没有捷径分支，
+ * 因为一个会为小 PR 直接给出裁定的批次，恰恰就是 3.4 明令禁止的第二条流水线。
+ * 批次只产出 finding 候选与 AC 证据——下结论的是最终综合阶段。
  *
- * <p>Two failure rules are absolute here. If any batch answer is still invalid
- * after its one format repair, the <strong>whole Review</strong> is FAILED and
- * this returns nothing to store: half a report reads like a short one. And every
- * file that was not reviewed is named in the coverage manifest, because a diff
- * that was silently cut produces a clean-looking review of code nobody read.
+ * <p>这里有两条绝对的失败规则。若任何一个批次的回答在用掉它那一次格式修复之后
+ * 仍然非法，则<strong>整次 Review</strong> 判为 FAILED，本方法不返回任何可供
+ * 存储的东西：半份报告读起来就像一份短报告。以及，每一个未被审查的文件都会
+ * 出现在覆盖清单里，因为被静默裁掉的 diff 会产出一份「看上去很干净」的
+ * 审查结果——而那部分代码根本没人读过。
  */
 @Component
 public class ChangedFileBatcher {
 
     /**
-     * Appended to a patch that had to be cut, so the model is told its input is
-     * incomplete. Without it a truncated tail reads as absent code and invites a
-     * finding about something the file actually does further down.
+     * 追加在被迫裁剪过的 patch 之后，好让模型知道它拿到的输入并不完整。
+     * 没有它，被截断的尾部读起来就像「这段代码不存在」，
+     * 从而诱导模型对该文件后面其实已经做过的事情报告一条 finding。
      */
     static final String TRUNCATION_MARKER = "\n[patch truncated]";
 
@@ -42,10 +41,10 @@ public class ChangedFileBatcher {
     private final int batchBudgetChars;
 
     /**
-     * The three bounds are configuration, not constants in code. ARCHITECTURE.md
-     * 7.2 freezes their defaults from the Phase 6 maximum-budget measurement on
-     * the 4 GB target machine. Keeping them configurable makes an explicit
-     * deployment override possible without creating a second batching path.
+     * 这三个上界是配置项，而不是写死在代码里的常量。ARCHITECTURE.md 7.2
+     * 依据 4 GB 目标机上的 Phase 6 最大预算实测冻结了它们的默认值。
+     * 保持可配置，使得部署方可以显式覆盖它们，
+     * 而不必因此另开一条分批路径。
      */
     ChangedFileBatcher(ReviewOutputValidator validator,
             @Value("${forgepilot.review.max-changed-files:300}") int maxChangedFiles,
@@ -58,15 +57,15 @@ public class ChangedFileBatcher {
     }
 
     /**
-     * Decides what will be reviewed and in which batches, before anything is sent
-     * anywhere. Files are taken in the canonical path-byte order the fingerprint
-     * already uses, so the plan does not depend on the provider's paging.
+     * 在任何内容被发出去之前，先决定「要审查什么」以及「分在哪些批次里」。
+     * 文件按指纹已经采用的那套规范路径字节序取用，
+     * 因此这份计划不依赖 provider 的分页方式。
      *
-     * <p>A file goes to {@code notReviewed} when it is past the changed-file bound,
-     * when the provider supplied no patch at all (binary, or past the provider's own
-     * diff limit), or when not even one whole line of it fits a batch. An
-     * over-long patch is cut at a line boundary and marked, which is 7.2's rule
-     * and D002's spirit: cut, but never quietly.
+     * <p>一个文件会被放进 {@code notReviewed}，当它超出变更文件数上界、
+     * 当 provider 压根没提供 patch（二进制文件，或超出 provider 自身的 diff 上限），
+     * 或者当它连完整的一行都塞不进一个批次时。过长的 patch 会在行边界处裁剪
+     * 并加以标注——这既是 7.2 的规则，也是 D002 的精神：可以裁，
+     * 但绝不能悄悄地裁。
      */
     public Plan plan(List<ChangedFile> changedFiles) {
         List<FileCoverage> reviewed = new ArrayList<>();
@@ -107,17 +106,17 @@ public class ChangedFileBatcher {
     }
 
     /**
-     * Runs every batch and collects what they found.
+     * 运行每一个批次并汇总它们的发现。
      *
-     * <p>Candidates are not de-duplicated here and do not need to be: a batch may
-     * only report on the files it was shown, so the same path — and therefore the
-     * same {@code finding_key} (3.4.3) — cannot come back from two batches. Dedup
-     * within one answer is the validator's, next to the rest of its checks.
+     * <p>这里不对候选项去重，也不需要：一个批次只能对展示给它的文件作出报告，
+     * 因此同一个路径——也就是同一个 {@code finding_key}（3.4.3）——
+     * 不可能从两个批次里同时回来。单次回答内部的去重归校验器所有，
+     * 与它的其余检查放在一起。
      *
-     * <p>The first batch whose answer survives neither parsing nor its one repair
-     * ends the phase as FAILED, discarding what earlier batches produced. That
-     * discard is the point: a Review reporting three of five batches would look
-     * complete and be wrong about the other two.
+     * <p>第一个「解析不过、那一次修复也救不回来」的批次会让整个阶段以 FAILED 收场，
+     * 并丢弃此前各批次已经产出的东西。这次丢弃正是要点所在：
+     * 一个只报告了五个批次中三个的 Review 看上去是完整的，
+     * 而它对另外两个批次的判断是错的。
      */
     public BatchPhase run(Plan plan, ReviewOutputValidator.Context context, BatchReviewer reviewer) {
         List<FindingCandidate> candidates = new ArrayList<>();
@@ -145,7 +144,7 @@ public class ChangedFileBatcher {
         return BatchPhase.completed(candidates, evidence, warnings);
     }
 
-    /** Keeps whole lines only, and returns null when not even the first line fits. */
+    /** 只保留完整的行；若连第一行都塞不下则返回 null。 */
     private String cutAtLineBoundary(String patch) {
         int budget = maxPatchChars - TRUNCATION_MARKER.length();
         StringBuilder kept = new StringBuilder();
@@ -158,7 +157,7 @@ public class ChangedFileBatcher {
         return kept.isEmpty() ? null : kept + TRUNCATION_MARKER;
     }
 
-    /** What will be sent, and what will not. Both halves are stored: the manifest is part of the Review's snapshot. */
+    /** 哪些会被发送、哪些不会。两半都会存下来：这份清单是该 Review 快照的一部分。 */
     public record Plan(List<Batch> batches, Coverage coverage) {
 
         public Plan {
@@ -166,7 +165,7 @@ public class ChangedFileBatcher {
         }
     }
 
-    /** One call's worth of files. {@code index} is 1-based and only ever used to name a batch in a failure reason. */
+    /** 够一次调用用的那批文件。{@code index} 从 1 开始，且只用于在失败原因里点名某个批次。 */
     public record Batch(int index, List<ChangedFile> files) {
 
         public Batch {
@@ -175,9 +174,9 @@ public class ChangedFileBatcher {
     }
 
     /**
-     * The coverage manifest. {@code notReviewed} is a list that may be empty and
-     * is never omitted: the API contract requires "empty" and "absent" to stay
-     * distinguishable, because only one of them means "everything was read".
+     * 覆盖清单。{@code notReviewed} 是一个**可以为空、但绝不省略**的列表：
+     * API 契约要求「空」与「缺席」必须保持可区分，
+     * 因为二者之中只有一个意味着「全部内容都被读过了」。
      */
     public record Coverage(boolean truncated, List<FileCoverage> files, List<String> notReviewed) {
 
@@ -187,14 +186,14 @@ public class ChangedFileBatcher {
         }
     }
 
-    /** A reviewed file, and whether its patch had to be cut to fit (7.2's "标注"). */
+    /** 一个被审查过的文件，以及它的 patch 是否为了塞下而被裁剪过（7.2 所说的“标注”）。 */
     public record FileCoverage(String path, boolean patchTruncated) {
     }
 
     /**
-     * The batch phase's result, in the vocabulary of the execution state machine.
-     * The constructor enforces the rule that matters: a FAILED phase carries
-     * nothing to store, so no caller can persist a partial report by accident.
+     * 分批阶段的结果，用执行状态机的词汇表达。构造器强制了那条真正要紧的规则：
+     * FAILED 的阶段不携带任何可供存储的东西，
+     * 因此没有任何调用方能够意外地把一份残缺报告持久化下来。
      */
     public record BatchPhase(ReviewStatus status, List<FindingCandidate> candidates,
             List<AcEvidence> evidence, List<String> warnings, String failureReason) {
@@ -228,9 +227,9 @@ public class ChangedFileBatcher {
     }
 
     /**
-     * How one batch reaches the model. {@link #repair} is the single format repair
-     * 3.5 allows, and it is called at most once per batch — the budget belongs to
-     * the batch, not to the parse loop.
+     * 单个批次是如何抵达模型的。{@link #repair} 就是 3.5 允许的那唯一一次
+     * 格式修复，每个批次最多调用一次——这笔预算属于**批次**，
+     * 而不属于解析循环。
      */
     public interface BatchReviewer {
 

@@ -59,7 +59,7 @@ class ProjectMemberController {
     record AddMemberRequest(@NotBlank @Size(max = 64) String username, @NotNull ProjectRole role) {
     }
 
-    /** Every field is optional: this endpoint carries both role changes and SCM identity. */
+    /** 所有字段都是可选的：这个端点同时承载角色变更与 SCM 身份变更。 */
     record UpdateMemberRequest(ProjectRole role,
             @Size(max = 128) String scmExternalUserId,
             @Size(max = 128) String scmUsername) {

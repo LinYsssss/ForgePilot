@@ -1,6 +1,6 @@
 package com.forgepilot.knowledge;
 
-/** Ingestion state of a document. A FAILED document must carry its reason (ARCHITECTURE.md 6). */
+/** 文档的入库状态。FAILED 的文档必须带上失败原因（ARCHITECTURE.md 6）。 */
 public enum KnowledgeStatus {
     PENDING,
     READY,

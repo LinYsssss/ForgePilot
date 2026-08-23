@@ -14,39 +14,39 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * The human handling lifecycle of a Finding, and who may perform each step.
+ * 一条 Finding 的人工处理生命周期，以及每一步由谁执行。
  *
- * <p>The table below is PRD.md 3 transcribed cell by cell, including the two cells
- * that read like mistakes and are not: a LEADER may <strong>not</strong> claim a
- * finding and may <strong>not</strong> mark one fixed. PRD.md 3's LEADER column on
- * the "Finding 认领、标记已修复" row is ❌, and those two steps are the developer's
- * own record of their own work. Widening them because a LEADER "should be able to
- * do everything" would be granting a permission the specification withholds;
- * narrowing is the safe direction, widening is not.
+ * <p>下面那张表是 PRD.md 3 逐格抄录的结果，包括那两格看上去像笔误、
+ * 但其实不是的：LEADER <strong>不能</strong>认领 finding，
+ * 也<strong>不能</strong>把它标记为已修复。PRD.md 3 中
+ * “Finding 认领、标记已修复”那一行的 LEADER 列就是 ❌，
+ * 而这两步是开发者对自己工作的自我记录。因为“LEADER 理应什么都能干”
+ * 就去放宽它，等于授予了规格明确保留的权限；
+ * 收紧是安全方向，放宽不是。
  *
- * <p>Two rows are rulings rather than transcription, because PRD.md 3's matrix does
- * not name them. {@code VERIFIED -> CLOSED} goes to LEADER and REVIEWER as the
- * second step of verifying, and {@code REJECTED -> OPEN} goes to the same pair as
- * confirming and rejecting (design.md 3.1, 3.2). Neither ruling gives anybody a
- * step they did not already have next to it.
+ * <p>有两行是**裁定**而非抄录，因为 PRD.md 3 的矩阵没有点到它们。
+ * {@code VERIFIED -> CLOSED} 作为复核的第二步归 LEADER 与 REVIEWER；
+ * {@code REJECTED -> OPEN} 与确认、驳回一样归同一对角色
+ * （design.md 3.1、3.2）。这两条裁定都没有给任何人一个他本来在旁边
+ * 还没有的步骤。
  *
- * <p>Every move is a conditional update whose {@code from} is matched by the
- * database, and the audit row records that matched value. Reading the status and
- * then writing was measured to produce two events that both claim to start from
- * {@code OPEN} while only one of them describes what happened (research 7.5).
+ * <p>每一次变动都是条件更新，其 {@code from} 由数据库匹配，
+ * 而审计行记录的正是那个被匹配到的值。实测表明，
+ * 「先读状态再写入」会产生两个都声称自己从 {@code OPEN} 出发的事件，
+ * 而其中只有一个描述了真正发生的事（research 7.5）。
  */
 @Service
 public class FindingLifecycleService {
 
     /**
-     * From, to, the action it is called and who may perform it. Encoded as data so
-     * that the tests can assert it cell by cell instead of restating it in prose,
-     * and so that a change to authorization is a change to a table rather than to
-     * control flow.
+     * 起点、终点、这一步叫什么，以及谁可以执行它。写成数据，
+     * 使测试可以逐格断言而不必用散文再复述一遍；
+     * 也使一次授权变更成为一次**表的**变更，而不是控制流的变更。
      *
-     * <p>The key set is exactly the pairs {@link FindingStatus} allows; a test holds
-     * the two encodings together, because a transition that existed here but not
-     * there would be reachable without ever appearing in the state machine.
+     * <p>它的键集恰好就是 {@link FindingStatus} 允许的那些状态对；
+     * 有一个测试把两处编码绑在一起对照，因为一个只存在于这里、
+     * 却不存在于状态机里的流转，会成为一条根本没在状态机中出现过、
+     * 却依然可达的路径。
      */
     private static final Map<FindingStatus, Map<FindingStatus, Move>> MOVES = Map.of(
             FindingStatus.OPEN, Map.of(
@@ -54,10 +54,10 @@ public class FindingLifecycleService {
                     FindingStatus.REJECTED, Move.byReviewers(FindingAction.REJECT)),
             FindingStatus.CONFIRMED, Map.of(
                     FindingStatus.REJECTED, Move.byReviewers(FindingAction.REJECT),
-                    // Claiming: the developer's own, and a LEADER is refused here.
+                    // 认领：这是开发者自己的动作，LEADER 在这里会被拒绝。
                     FindingStatus.IN_PROGRESS, Move.byDeveloper(FindingAction.CLAIM)),
             FindingStatus.IN_PROGRESS, Map.of(
-                    // Marking fixed: likewise the developer's own, and likewise not a LEADER's.
+                    // 标记已修复：同样是开发者自己的动作，同样不属于 LEADER。
                     FindingStatus.FIXED, Move.byDeveloper(FindingAction.MARK_FIXED)),
             FindingStatus.FIXED, Map.of(
                     FindingStatus.VERIFIED, Move.byReviewers(FindingAction.VERIFY),
@@ -82,13 +82,12 @@ public class FindingLifecycleService {
     }
 
     /**
-     * Moves a finding to {@code target} and audits the move in the same transaction
-     * (api-contract.md 3.2).
+     * 把一条 finding 移动到 {@code target}，并在同一个事务里审计这次移动
+     * （api-contract.md 3.2）。
      *
-     * <p>The role is checked against the transition the caller's read says they are
-     * performing, and the update then only fires if that is still the transition
-     * available. So a concurrent move cannot turn an authorized request into an
-     * unauthorized one being carried out: it turns it into a 409.
+     * <p>角色是对照「调用方读到的、他自称正在执行的那次流转」来检查的，
+     * 而更新只有在那次流转**仍然可用**时才会真正发生。因此并发的移动
+     * 不可能把一个已授权的请求变成一次未授权的执行：它只会把它变成 409。
      */
     @Transactional
     public FindingStatusResult move(long projectId, long actorId, long findingId, FindingStatus target,
@@ -108,9 +107,9 @@ public class FindingLifecycleService {
 
         int updated = switch (move.action()) {
             case CLAIM -> decisions.claimFinding(projectId, findingId, actorId);
-            // Reopening carries the extra condition PRD.md 5 attaches to it: only an
-            // inherited suppression may come back. A plain rejection matches nothing
-            // and is refused for every role, which is what "irreversible" means.
+            // 重开带着 PRD.md 5 附加给它的那个额外条件：只有被继承的抑制项
+            // 才能回来。普通的驳回匹配不到任何行，对任何角色都会被拒绝，
+            // 而这正是“不可逆”的含义。
             case REOPEN -> decisions.reopenSuppressedFinding(projectId, findingId);
             default -> decisions.moveFinding(projectId, findingId, from.name(), target.name());
         };
@@ -118,19 +117,19 @@ public class FindingLifecycleService {
             throw ApiException.conflict("This finding is no longer in " + from + ".");
         }
 
-        // Same transaction as the move: a status that changed without an audit row,
-        // or an audit row describing a move that did not commit, are both worse than
-        // no audit at all. `from` is the value the update matched, not the one read.
+        // 与移动处于同一个事务：状态变了却没有审计行，或者审计行描述了一次
+        // 并未提交的移动，两者都比完全没有审计更糟。`from` 取的是**更新所匹配到**
+        // 的值，而不是此前读到的值。
         events.save(new FindingEvent(projectId, findingId, actorId, move.action(), from, target, comment));
         return new FindingStatusResult(target);
     }
 
-    /** api-contract.md 3.4. Any member of the project may read the trail. */
+    /** api-contract.md 3.4。项目内的任何成员都可以读取这条审计轨迹。 */
     @Transactional(readOnly = true)
     public List<FindingEventView> history(long projectId, long actorId, long findingId) {
         access.requireMember(projectId, actorId);
-        // Scoped by project first, so a finding from elsewhere answers exactly like
-        // one that never existed rather than exposing its history.
+        // 先按项目限定，因此来自别处的 finding 会与一个从未存在过的
+        // finding 答得一模一样，而不会暴露它的历史。
         findings.findByProjectIdAndId(projectId, findingId).orElseThrow(ApiException::notFound);
         return events.findByProjectIdAndFindingIdOrderByCreatedAtAscIdAsc(projectId, findingId).stream()
                 .map(event -> new FindingEventView(event.getId(), event.getActorId(), event.getAction(),
@@ -139,12 +138,12 @@ public class FindingLifecycleService {
                 .toList();
     }
 
-    /** Visible to the tests so the matrix can be asserted cell by cell rather than described. */
+    /** 对测试可见，以便逐格断言这张矩阵，而不是用文字去描述它。 */
     static Map<FindingStatus, Map<FindingStatus, Move>> moves() {
         return MOVES;
     }
 
-    /** One cell of PRD.md 3's matrix: what the step is called and who may take it. */
+    /** PRD.md 3 矩阵中的一格：这一步叫什么，以及谁可以执行它。 */
     record Move(FindingAction action, Set<ProjectRole> allowed) {
 
         private static Move byReviewers(FindingAction action) {

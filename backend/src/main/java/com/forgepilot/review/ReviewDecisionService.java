@@ -21,25 +21,23 @@ import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.node.ObjectNode;
 
 /**
- * The one-shot human verdict on a Review, and the read paths that show it.
+ * 对一次 Review 的一次性人工裁定，以及展示它的那些读取路径。
  *
- * <p>ARCHITECTURE.md 3.1 prescribes the write exactly: lock the {@code pull_request}
- * row, check six preconditions one by one, then update conditionally on
- * {@code decision = 'PENDING'} and treat anything but one affected row as a
- * conflict. It also forbids the two shortcuts that look equivalent — a plain
- * {@code EXISTS} check, or an unconditional save. This class follows that
- * sentence literally, because every clause of it was measured to matter:
+ * <p>ARCHITECTURE.md 3.1 把这次写入规定得一字不差：锁住 {@code pull_request} 行、
+ * 逐条检查六项前置条件，然后以 {@code decision = 'PENDING'} 为条件做更新，
+ * 并把「影响行数不等于 1」一律当作冲突。它同时禁止了两种看上去等价的捷径——
+ * 一次朴素的 {@code EXISTS} 检查，或者一次无条件保存。本类逐字遵循那句话，
+ * 因为它的每一个从句都经实测证明是要紧的：
  *
  * <ul>
- * <li>Without the pull request lock, the preconditions about head, fingerprint and
- * requirement revision are evaluated against a stale snapshot of the pull request,
- * and an {@code APPROVE} was granted for a head the SCM had already moved past.</li>
- * <li>Without the conditional update there is no affected-row count, and therefore
- * no honest basis for the 409 that a concurrent decision must receive.</li>
+ * <li>没有 PR 行锁时，关于 head、指纹与需求修订的那几条前置条件会针对一份
+ * 过期的 PR 快照求值，于是一个 SCM 早已越过的 head 拿到了 {@code APPROVE}。</li>
+ * <li>没有条件更新时就没有影响行数，因而也就没有诚实的依据去给并发决策
+ * 返回那个它必须收到的 409。</li>
  * </ul>
  *
- * <p>Decision is not overwritable, reversible or re-writable, so there is no
- * update path here and no way to reach one.
+ * <p>决策不可覆盖、不可撤销、不可改写，因此这里没有更新路径，
+ * 也没有任何途径能走到一条更新路径上去。
  */
 @Service
 public class ReviewDecisionService {
@@ -60,24 +58,23 @@ public class ReviewDecisionService {
     }
 
     /**
-     * Records the final human verdict (api-contract.md 2.4).
+     * 记录最终的人工裁定（api-contract.md 2.4）。
      *
-     * <p>LEADER and REVIEWER only. A DEVELOPER may trigger a review and may fix
-     * what it found, but PRD.md 3 does not let them close it, not even on their own
-     * pull request.
+     * <p>仅限 LEADER 与 REVIEWER。DEVELOPER 可以触发审查、也可以修复它发现的问题，
+     * 但 PRD.md 3 不允许他们把它关掉——即便是在自己的 PR 上也不行。
      */
     @Transactional
     public DecisionResult decide(long projectId, long actorId, long reviewId, ReviewDecision decision,
             String comment) {
         access.requireRole(projectId, actorId, ProjectRole.LEADER, ProjectRole.REVIEWER);
-        // After authorization, so a caller outside the project learns nothing about
-        // it, not even that their body was well formed.
+        // 放在鉴权之后，使项目外的调用方无从得知任何信息，
+        // 连「你的请求体格式是对的」这件事都不会泄露。
         if (decision != ReviewDecision.APPROVE && decision != ReviewDecision.REQUEST_CHANGES) {
             throw ApiException.unprocessable("A decision is either APPROVE or REQUEST_CHANGES.");
         }
 
-        // The parent id is read on its own so the lock can be taken before the
-        // Review itself is loaded. It is immutable, so reading it early is safe.
+        // 单独读出父级 id，以便在加载 Review 本身之前就把锁拿到手。
+        // 它是不可变的，因此提前读取是安全的。
         long pullRequestId = decisions.pullRequestIdOf(projectId, reviewId)
                 .orElseThrow(ApiException::notFound);
         String currentHead = decisions.lockPullRequestAndReadHead(projectId, pullRequestId)
@@ -87,9 +84,9 @@ public class ReviewDecisionService {
         Long currentRevisionId = decisions.currentRequirementRevisionId(projectId, pullRequestId)
                 .orElse(null);
 
-        // Loaded only now: under READ COMMITTED this is the first read of the row in
-        // this transaction, so it is a fresh one taken after the lock. A read issued
-        // before the lock would still show PENDING to the loser of a race.
+        // 到这一步才加载：在 READ COMMITTED 之下，这是本事务对该行的首次读取，
+        // 因此它是一次**在加锁之后**取得的新鲜读取。若在加锁之前就读，
+        // 竞争中的失败方仍然会看到 PENDING。
         Review review = reviews.findByProjectIdAndId(projectId, reviewId)
                 .orElseThrow(ApiException::notFound);
 
@@ -97,9 +94,8 @@ public class ReviewDecisionService {
 
         int updated = decisions.decideIfStillPending(projectId, reviewId, decision.name(), actorId, comment);
         if (updated != 1) {
-            // The six were true a moment ago and are not now. Nothing is written and
-            // nothing is retried here: a final human verdict is not something to
-            // re-attempt on the caller's behalf.
+            // 那六项条件在片刻之前还成立，现在不成立了。这里既不写入也不重试：
+            // 一次最终的人工裁定，不是可以替调用方去重新尝试的东西。
             throw ApiException.conflict("This review was decided or moved on concurrently.");
         }
 
@@ -108,7 +104,7 @@ public class ReviewDecisionService {
         return new DecisionResult(decided.getDecision(), decided.getDecisionBy(), decided.getDecisionAt());
     }
 
-    /** The six preconditions of ARCHITECTURE.md 3.1, in its order, so a refusal can name itself. */
+    /** ARCHITECTURE.md 3.1 的六项前置条件，按其原有顺序，使拒绝能够自报家门。 */
     private void checkPreconditions(Review review, String currentHead, String currentFingerprint,
             Long currentRevisionId) {
         if (review.getStatus() != ReviewStatus.COMPLETED) {
@@ -123,15 +119,13 @@ public class ReviewDecisionService {
         if (!currentFingerprint.equals(review.getReviewInputFingerprint())) {
             throw ApiException.conflict("The pull request's review inputs have changed since this review.");
         }
-        // NULL-safe on purpose: "neither side has a requirement revision" is a match,
-        // and comparing with equals() here is the same rule the SQL states with
-        // IS NOT DISTINCT FROM.
+        // 有意做成 NULL 安全的：「两侧都没有需求修订」算作匹配，
+        // 这里用 equals() 比较，与 SQL 里 IS NOT DISTINCT FROM 表达的是同一条规则。
         if (!Objects.equals(currentRevisionId, review.getRequirementRevisionId())) {
             throw ApiException.conflict("The pull request now points at a different requirement revision.");
         }
-        // Derived from the rows, against the pull request's current head. Changing
-        // the base, the association, the requirement revision or re-syncing the diff
-        // does not lift it; only a new head SHA does.
+        // 从数据行中推导，对照该 PR 当前的 head。改 base、改关联、改需求修订
+        // 或重新同步 diff 都解不开它；只有一个新的 head SHA 才能。
         if (reviews.existsByProjectIdAndPullRequestIdAndHeadShaAndDecision(
                 review.getProjectId(), review.getPullRequestId(), currentHead,
                 ReviewDecision.REQUEST_CHANGES)) {
@@ -139,7 +133,7 @@ public class ReviewDecisionService {
         }
     }
 
-    /** api-contract.md 2.2. Any member of the project may read a review. */
+    /** api-contract.md 2.2。项目内的任何成员都可以读取一次审查。 */
     @Transactional(readOnly = true)
     public ReviewDetail detail(long projectId, long actorId, long reviewId) {
         access.requireMember(projectId, actorId);
@@ -164,8 +158,8 @@ public class ReviewDecisionService {
     }
 
     /**
-     * api-contract.md 2.3. Every review of this pull request, oldest first by
-     * {@code (created_at, id)} so the order is the same on every run.
+     * api-contract.md 2.3。本 PR 的全部审查，按 {@code (created_at, id)}
+     * 从旧到新排列，使每次运行得到的顺序都相同。
      */
     @Transactional(readOnly = true)
     public List<ReviewSummary> history(long projectId, long actorId, long pullRequestId) {
@@ -180,11 +174,11 @@ public class ReviewDecisionService {
     }
 
     /**
-     * Every review in the project, newest first — the 代码审查 page's list.
+     * 项目内的全部审查，最新在前——也就是代码审查页面的那份列表。
      *
-     * <p>{@code isCurrent} is derived per pull request rather than per review, so a
-     * project with many reviews over few pull requests costs one input read each
-     * rather than one per row.
+     * <p>{@code isCurrent} 是**按 PR** 而不是按 review 推导的，
+     * 因此一个「审查很多、PR 很少」的项目，每个 PR 只付出一次输入读取，
+     * 而不是每一行都付出一次。
      */
     @Transactional(readOnly = true)
     public List<ProjectReviewRow> listForProject(long projectId, long actorId) {
@@ -234,18 +228,17 @@ public class ReviewDecisionService {
                 finding.getEvidenceHash(), finding.getBasisHash());
     }
 
-    /** Absent stays absent: an empty snapshot and a missing one are not the same answer. */
+    /** 缺席就保持缺席：一份空快照与一份不存在的快照不是同一个答案。 */
     private JsonNode parse(String stored) {
         return stored == null ? null : json.readTree(stored);
     }
 
     /**
-     * The Review context is stored in two immutable-at-completion halves for a
-     * causal reason: requirement/AC/PR/diff inputs are copied in the SCM
-     * transaction that creates the Review, while knowledge evidence and the
-     * truncation plan only exist after the post-commit worker performs retrieval
-     * and batching. The public context is their union, never a reconstruction from
-     * the pull request's current association or changed-files row.
+     * Review 的上下文分成「完成时即不可变」的两半存储，理由是因果性的：
+     * 需求/AC/PR/diff 这些输入是在创建该 Review 的那个 SCM 事务里复制下来的，
+     * 而知识证据与截断计划要等提交之后的 worker 完成检索与分批才存在。
+     * 对外的上下文是这两半的并集，**绝不是**从该 PR 当前的关联关系
+     * 或变更文件行重新拼出来的。
      */
     private JsonNode contextSnapshot(Review review, JsonNode summary) {
         JsonNode stored = parse(review.getContextSnapshotJson());
@@ -271,10 +264,9 @@ public class ReviewDecisionService {
     }
 
     /**
-     * The pull request's present inputs, and the derivation of {@code isCurrent}
-     * against them. The requirement <em>id</em> is deliberately not part of it: only
-     * head, diff fingerprint and requirement revision decide whether a review still
-     * applies (design.md 2.5).
+     * 该 PR 当下的输入，以及据此推导 {@code isCurrent} 的过程。
+     * 需求 <em>id</em> 刻意不在其中：决定一次审查是否仍然适用的，
+     * 只有 head、diff 指纹与需求修订三者（design.md 2.5）。
      */
     private record PullRequestInputs(String headSha, String fingerprint, Long requirementRevisionId) {
 

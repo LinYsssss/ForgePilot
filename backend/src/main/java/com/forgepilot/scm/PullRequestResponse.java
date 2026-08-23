@@ -3,8 +3,8 @@ package com.forgepilot.scm;
 import java.time.Instant;
 
 /**
- * The stored snapshot of a pull request. The changed-file manifest is deliberately
- * absent: nothing in batch 2 consumes it, and it is a review-sized payload.
+ * PR 存下来的快照。变更文件清单刻意缺席：批次 2 里没有任何东西消费它，
+ * 而它是一份 review 量级的载荷。
  */
 record PullRequestResponse(
         Long id,

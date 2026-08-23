@@ -11,9 +11,9 @@ import jakarta.persistence.Table;
 import org.hibernate.annotations.CreationTimestamp;
 
 /**
- * An acceptance criterion belonging to one revision. {@code acKey} is the stable
- * cross-revision business identity and is copied unchanged into later revisions;
- * {@code sortOrder} is display only and must never be used as identity (D011).
+ * 属于某一次修订的验收条件。{@code acKey} 是跨修订稳定的业务身份，
+ * 会原样复制进后续修订；{@code sortOrder} 仅供展示，
+ * 绝不允许当作身份使用（D011）。
  */
 @Entity
 @Table(name = "acceptance_criterion")
@@ -82,7 +82,7 @@ public class AcceptanceCriterion {
         return createdAt;
     }
 
-    /** In-place edit while DRAFT. acKey is deliberately absent: it never changes. */
+    /** DRAFT 期间的原地编辑。acKey 刻意缺席：它永不改变。 */
     public void edit(int sortOrder, String text) {
         this.sortOrder = sortOrder;
         this.text = text;

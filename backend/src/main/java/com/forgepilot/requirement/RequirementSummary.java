@@ -3,9 +3,8 @@ package com.forgepilot.requirement;
 import java.time.Instant;
 
 /**
- * A requirement in a list. The title comes from the current revision, because
- * the {@code requirement} row carries no prose (D011): the list is assembled
- * here rather than stitched together in the client.
+ * 列表中的一条需求。标题取自当前修订，因为 {@code requirement} 行本身不携带
+ * 任何文本（D011）：列表在服务端拼装，而不是丢给客户端去拼。
  */
 public record RequirementSummary(long id, String title, RequirementStatus status, Long assigneeId,
         String assigneeUsername, int currentRevisionSeq, Instant updatedAt) {

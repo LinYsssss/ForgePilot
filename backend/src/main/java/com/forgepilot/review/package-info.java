@@ -1,5 +1,5 @@
 /**
- * The single Review Engine and its human decision loop: immutable review
- * inputs, fenced execution attempts, findings, continuity and final decisions.
+ * 唯一的 Review Engine 及其人工决策闭环：不可变的审查输入、带围栏的执行尝试、
+ * Finding、血缘连续性，以及最终决策。
  */
 package com.forgepilot.review;

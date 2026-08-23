@@ -14,14 +14,12 @@ import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 /**
- * Enforces {@code user_account.session_version}. The value is captured into the
- * HttpSession when the session is established and compared with the stored one on
- * every later request, so a password change kills every session except the one
- * that performed it (design.md 7, D013.7).
+ * 强制执行 {@code user_account.session_version}。该值在会话建立时被捕获进
+ * HttpSession，此后每个请求都与库中存储的值比对，因此一次改密会杀掉除
+ * 执行改密的那个会话之外的所有会话（design.md 7、D013.7）。
  *
- * <p>The comparison is a primary-key read per authenticated request. There is
- * deliberately no cache: a stale cache would keep a revoked session alive, which
- * is the one thing this filter exists to prevent.
+ * <p>这个比对是每个已认证请求一次主键读。这里**有意**不做缓存：过期的缓存会让
+ * 已被吊销的会话继续存活，而那恰恰是本过滤器存在的唯一目的所要防止的。
  */
 final class SessionVersionFilter extends OncePerRequestFilter {
 

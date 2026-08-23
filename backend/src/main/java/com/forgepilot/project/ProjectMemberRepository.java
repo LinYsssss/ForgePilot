@@ -5,7 +5,7 @@ import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 
-/** Every read carries {@code projectId}; there is no bare-id lookup to bolt a check onto later. */
+/** 每次读取都带 {@code projectId}；这里根本不存在“日后再补一道检查”的裸 id 查询。 */
 public interface ProjectMemberRepository extends JpaRepository<ProjectMember, Long> {
 
     Optional<ProjectMember> findByProjectIdAndUserId(long projectId, long userId);

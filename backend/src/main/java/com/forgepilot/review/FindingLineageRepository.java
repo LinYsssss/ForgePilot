@@ -8,25 +8,22 @@ import org.springframework.data.repository.Repository;
 import org.springframework.data.repository.query.Param;
 
 /**
- * The reads behind Finding lineage (ARCHITECTURE.md 3.6). Every one of them is
- * scoped to a single pull request, because continuity is only ever computed
- * inside one: the same {@code finding_key} in another pull request describes
- * another change and must not carry a rejection over.
+ * 支撑 Finding 血缘的那些读取（ARCHITECTURE.md 3.6）。它们无一例外都限定在
+ * **单个** PR 之内，因为连续性只在一个 PR 内部计算：另一个 PR 里相同的
+ * {@code finding_key} 描述的是另一处改动，绝不能把驳回带过去。
  *
- * <p>Extends the plain {@code Repository} marker rather than {@code JpaRepository}:
- * lineage is a read, and nothing here should be able to write a Finding.
+ * <p>继承的是朴素的 {@code Repository} 标记接口而非 {@code JpaRepository}：
+ * 血缘是读操作，这里不应该有任何东西能写 Finding。
  */
 public interface FindingLineageRepository extends Repository<Finding, Long> {
 
     /**
-     * The immediately preceding COMPLETED Review of this pull request, ordered by
-     * {@code (created_at, id)} as 3.6.3 requires — two Reviews created inside the
-     * same clock tick would otherwise compare in whatever order the plan returned,
-     * and "the previous round" would not be a fact.
+     * 本 PR 紧邻的上一次 COMPLETED Review，按 3.6.3 要求以
+     * {@code (created_at, id)} 定序——否则同一个时钟刻度内创建的两个 Review
+     * 会按执行计划碰巧返回的顺序比较，「上一轮」也就不再是一个事实。
      *
-     * <p>Native because PostgreSQL's row-value comparison says "strictly before
-     * this Review" in one expression; JPQL has no such comparison and would need
-     * the created_at subquery written twice.
+     * <p>用原生 SQL，是因为 PostgreSQL 的行值比较能用一个表达式表达
+     * “严格早于这次 Review”；JPQL 没有这种比较，只能把 created_at 子查询写两遍。
      */
     @Query(value = """
             SELECT prev.id FROM review prev
@@ -45,19 +42,18 @@ public interface FindingLineageRepository extends Repository<Finding, Long> {
     List<Finding> findFindingsOfReview(@Param("projectId") long projectId, @Param("reviewId") long reviewId);
 
     /**
-     * The Finding behind the most recent human judgement on this
-     * {@code finding_key} anywhere in this pull request's history — but only when
-     * that judgement was a rejection (3.6.4).
+     * 在本 PR 的整个历史中，针对这个 {@code finding_key} 的**最近一次人工判断**
+     * 所对应的那条 Finding——但仅当该判断是一次驳回时才返回（3.6.4）。
      *
-     * <p>The rejection test is applied <em>after</em> the ordering, not inside it.
-     * Filtering on {@code to_status = 'REJECTED'} first would find the most recent
-     * rejection rather than the most recent judgement, so a finding that was
-     * rejected and later reopened would be re-suppressed on the next round and the
-     * reopening would silently undo itself.
+     * <p>「是否为驳回」这个判定是在排序<em>之后</em>施加的，而不是塞进排序里。
+     * 先按 {@code to_status = 'REJECTED'} 过滤，找到的会是「最近一次驳回」
+     * 而不是「最近一次判断」，于是一条被驳回、之后又被重开的 finding
+     * 会在下一轮被重新抑制，重开操作等于悄悄地自我撤销了。
      *
-     * <p>Ordering is {@code (finding_event.created_at, finding_event.id)}, which
-     * 3.6.4 names, and the join to {@code review} is what keeps a judgement made on
-     * another pull request out of this answer.
+     * <p>定序用的是 3.6.4 指定的
+     * {@code (finding_event.created_at, finding_event.id)}；
+     * 而与 {@code review} 的连接，正是把「在另一个 PR 上作出的判断」
+     * 挡在本次结果之外的那道门。
      */
     @Query(value = """
             SELECT latest.finding_id FROM (

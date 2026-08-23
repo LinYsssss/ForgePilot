@@ -8,17 +8,15 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Registration and password change. Authenticating a session is Spring Security's
- * job and lives in {@link SecurityConfig}; this class only owns what changes
- * {@code user_account}.
+ * 只负责注册与改密。给会话做身份认证是 Spring Security 的职责，落在
+ * {@link SecurityConfig}；本类只拥有那些会改动 {@code user_account} 的操作。
  */
 @Service
 class AuthService {
 
     /**
-     * BCrypt refuses anything longer and would fail the request with a 500. The
-     * limit is on bytes, not characters, so it is checked here rather than with a
-     * {@code @Size} on the request record.
+     * BCrypt 拒绝超过该长度的输入，否则请求会以 500 失败。这个上限是按**字节**
+     * 而非字符计的，因此在这里检查，而不是在请求记录上加 {@code @Size}。
      */
     private static final int MAX_PASSWORD_BYTES = 72;
 
@@ -31,9 +29,9 @@ class AuthService {
     }
 
     /**
-     * A duplicate username is rejected by {@code uq_user_account_username} and
-     * mapped to 409 by {@code ApiExceptionHandler}; re-checking it here would only
-     * add a race the constraint already closes.
+     * 用户名重复由 {@code uq_user_account_username} 拒绝，并经
+     * {@code ApiExceptionHandler} 映射为 409；在这里再查一次只会多出一个
+     * 该约束本已封死的竞态窗口。
      */
     @Transactional
     AccountResponse register(String username, String password) {
@@ -42,8 +40,8 @@ class AuthService {
     }
 
     /**
-     * @return the new {@code session_version}; the caller's own session has to adopt
-     *         it to survive {@link SessionVersionFilter}, every other session dies.
+     * @return 新的 {@code session_version}；调用方自己的会话必须采纳它才能在
+     *         {@link SessionVersionFilter} 下存活，其余所有会话就此失效。
      */
     @Transactional
     int changePassword(long userId, String currentPassword, String newPassword) {

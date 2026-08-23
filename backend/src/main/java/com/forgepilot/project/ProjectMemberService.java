@@ -12,9 +12,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Membership and the project-scoped SCM identity. Usernames come from
- * {@link UserDirectory}; this feature never injects {@code UserAccountRepository}
- * (D013.6).
+ * 成员关系与项目内的 SCM 身份。用户名来自 {@link UserDirectory}；
+ * 本功能模块绝不注入 {@code UserAccountRepository}（D013.6）。
  */
 @Service
 public class ProjectMemberService {
@@ -44,8 +43,8 @@ public class ProjectMemberService {
     @Transactional
     public MemberResponse add(long projectId, long actorId, String username, ProjectRole role) {
         access.requireRole(projectId, actorId, ProjectRole.LEADER);
-        // The account has to be resolved by name; no database constraint can do
-        // that for us. Everything else here is left to the constraints.
+        // 账号必须按名字解析，没有任何数据库约束能替我们做这件事。
+        // 除此之外的一切都交给约束去保证。
         AccountView account = users.byUsername(username)
                 .orElseThrow(() -> ApiException.unprocessable("No account with that username."));
         ProjectMember member = members.save(new ProjectMember(projectId, account.id(), role));
@@ -55,10 +54,9 @@ public class ProjectMemberService {
     @Transactional
     public MemberResponse update(long projectId, long actorId, long targetUserId, ProjectRole newRole,
             String scmExternalUserId, String scmUsername) {
-        // Lock the project row *before* checking the actor's role. Two concurrent
-        // transfers must serialise here (D013.8), and the loser must then re-read
-        // its own role: after the winner commits, the actor is no longer LEADER
-        // and the second transfer is rejected instead of acting on a stale read.
+        // 必须在检查操作者角色**之前**锁住项目行。两个并发的转移必须在此串行化
+        // （D013.8），失败的一方随后要重新读自己的角色：赢家提交之后，
+        // 操作者已不再是 LEADER，于是第二次转移会被拒绝，而不是基于过期读继续执行。
         projects.findByIdForUpdate(projectId).orElseThrow(ApiException::notFound);
         access.requireRole(projectId, actorId, ProjectRole.LEADER);
 
@@ -85,14 +83,13 @@ public class ProjectMemberService {
             ProjectMember incumbent = members.findByProjectIdAndRole(projectId, ProjectRole.LEADER)
                     .orElseThrow(() -> ApiException.conflict("This project has no LEADER to transfer from."));
             incumbent.changeRole(ProjectRole.DEVELOPER);
-            // The demote must reach the database before the promote. A single
-            // CASE swap is physically scan-order dependent and fails at random
-            // with 23505 (D013.8), so this flush is load-bearing, not a tidy-up.
+            // 降级必须先于升级到达数据库。单条 CASE 交换在物理上依赖扫描顺序，
+            // 会随机以 23505 失败（D013.8），因此这次 flush 是承重的，不是顺手整理。
             members.flush();
             target.changeRole(ProjectRole.LEADER);
         } else if (target.getRole() == ProjectRole.LEADER) {
-            // No immediate constraint can express "at least one LEADER"; this is
-            // the service half of that per-commit invariant (D013.9).
+            // 没有任何即时约束能表达“至少有一个 LEADER”；这里是那条
+            // 逐次提交不变式的服务层一半（D013.9）。
             throw ApiException.unprocessable(
                     "A project must keep a LEADER. Promote another member instead of demoting this one.");
         } else {

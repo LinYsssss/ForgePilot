@@ -11,7 +11,7 @@ import jakarta.persistence.Table;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
-/** A local demo account. Global scope: never carries a project id. */
+/** 本地演示账号。全局作用域：绝不携带 project id。 */
 @Entity
 @Table(name = "user_account")
 public class UserAccount {
@@ -29,7 +29,7 @@ public class UserAccount {
     @Column(name = "enabled", nullable = false)
     private boolean enabled;
 
-    /** Bumped on password change and forced logout; compared against the value captured in the session. */
+    /** 改密与强制登出时递增；与会话中捕获的值比对。 */
     @Column(name = "session_version", nullable = false)
     private int sessionVersion;
 
@@ -79,7 +79,7 @@ public class UserAccount {
         return updatedAt;
     }
 
-    /** Changing the password invalidates every other session (design.md 7). */
+    /** 改密会使其余所有会话失效（design.md 7）。 */
     public void changePassword(String newPasswordHash) {
         this.passwordHash = newPasswordHash;
         this.sessionVersion += 1;

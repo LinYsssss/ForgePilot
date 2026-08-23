@@ -24,68 +24,66 @@ import org.springframework.security.web.access.intercept.AuthorizationFilter;
 import tools.jackson.databind.ObjectMapper;
 
 /**
- * Form login over a server-side, in-process {@code HttpSession} with cookie-based
- * CSRF (D013.7). Everything the security filter chain answers is written here:
- * its 401 and 403 are produced before Spring MVC runs and therefore never reach
- * {@code ApiExceptionHandler}, so they would otherwise escape the single error
- * body shape of ARCHITECTURE.md 2.4.
+ * 基于服务端进程内 {@code HttpSession} 的表单登录，配合 Cookie 形式的 CSRF（D013.7）。
+ * 安全过滤器链要回答的一切都写在这里：它的 401 与 403 是在 Spring MVC 运行之前
+ * 产生的，因此永远不会到达 {@code ApiExceptionHandler}——若不在此统一处理，
+ * 它们就会逃出 ARCHITECTURE.md 2.4 规定的唯一错误体结构。
  */
 @Configuration
 class SecurityConfig {
 
     /**
-     * These bodies carry an empty {@code traceId} because nothing is logged here:
-     * {@code ApiExceptionHandler} mints one only where it also logs the cause, and
-     * a per-response value would additionally make the two login failure modes
-     * distinguishable byte for byte, which api-contract.md 1 forbids.
+     * 这些响应体的 {@code traceId} 为空，因为这里不写任何日志：
+     * {@code ApiExceptionHandler} 只在它同时记录原因的地方才生成 traceId；
+     * 而逐响应生成一个值还会让两种登录失败在字节层面变得可区分，
+     * 这是 api-contract.md 1 明令禁止的。
      */
     private static final ApiError UNAUTHENTICATED =
             new ApiError("unauthorized", "Authentication is required.", "");
     private static final ApiError BAD_CREDENTIALS =
             new ApiError("unauthorized", "Invalid username or password.", "");
-    /** In batch 1 the only source of an access denial is a missing or wrong CSRF token. */
+    /** 批次 1 中，访问被拒的唯一来源就是缺失或错误的 CSRF token。 */
     private static final ApiError FORBIDDEN =
             new ApiError("forbidden", "The request was rejected.", "");
 
-    /** D013.7: password hashes are Spring Security's default BCrypt. */
+    /** D013.7：口令哈希使用 Spring Security 默认的 BCrypt。 */
     @Bean
     PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
 
     /**
-     * Only a servlet application has a filter chain, while the batch 1 database
-     * tests run in a non-web context that shares this component scan.
+     * 只有 servlet 应用才有过滤器链，而批次 1 的数据库测试跑在共享同一份
+     * 组件扫描的非 Web 上下文里。
      */
     @Bean
     @ConditionalOnWebApplication(type = Type.SERVLET)
     SecurityFilterChain apiSecurityFilterChain(HttpSecurity http, UserAccountRepository accounts,
             ObjectMapper json) throws Exception {
-        // Also used by SessionVersionFilter, so a revoked session and an absent one
-        // are answered with the same body.
+        // SessionVersionFilter 也复用它，使「会话已被吊销」与「压根没有会话」
+        // 返回完全相同的响应体。
         AuthenticationEntryPoint unauthenticated = (request, response, exception) ->
                 write(response, json, HttpStatus.UNAUTHORIZED, UNAUTHENTICATED);
 
         return http
                 .authorizeHttpRequests(requests -> requests
-                        // A 404 or 500 reaches the client through a container ERROR dispatch
-                        // to /error. Measured: without this the dispatch is authorized afresh
-                        // as an anonymous request to /error, so a 404 on a permitted path is
-                        // answered 401. A client cannot reach this: the entry point below sets
-                        // the status directly instead of calling sendError, so a rejected
-                        // request never produces an ERROR dispatch of its own.
+                        // 404 或 500 是通过容器的 ERROR dispatch 转到 /error 才送达客户端的。
+                        // 实测：没有这一行时，该 dispatch 会被当作一个匿名请求重新鉴权，
+                        // 于是本来允许访问的路径上的 404 会被答成 401。客户端无法借此
+                        // 探测什么：下面的 entry point 直接设置状态码而不调用 sendError，
+                        // 因此被拒绝的请求本身不会产生 ERROR dispatch。
                         .dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/auth/register").permitAll()
-                        // Only `health` is exposed (application.yml), so permitting the whole
-                        // namespace exposes nothing else; the 404 that ActuatorExposureTest and
-                        // scripts/phase1-compose-smoke.sh demand for /actuator/metrics is what
-                        // keeps that honest.
+                        // application.yml 只暴露了 `health`，因此放行整个命名空间
+                        // 并不会多暴露任何东西；ActuatorExposureTest 与
+                        // scripts/phase1-compose-smoke.sh 要求 /actuator/metrics 必须
+                        // 返回 404，正是这条保证的守门人。
                         .requestMatchers("/actuator/**").permitAll()
                         .anyRequest().authenticated())
-                // Spring Security 7.1's own SPA wiring: the cookie repository plus a request
-                // handler that accepts the raw cookie value echoed in a header and resolves the
-                // token eagerly, so every response carries XSRF-TOKEN. Without it the deferred
-                // token is never written and the XOR handler rejects the raw cookie value.
+                // Spring Security 7.1 自带的 SPA 接线：Cookie 仓库 + 一个接受
+                // 「原始 cookie 值经 header 回显」并提前解析 token 的请求处理器，
+                // 使每个响应都带上 XSRF-TOKEN。没有它，延迟生成的 token 永远不会写出，
+                // XOR 处理器也会拒绝原始 cookie 值。
                 .csrf(CsrfConfigurer::spa)
                 .formLogin(login -> login
                         .loginProcessingUrl("/api/auth/login")
@@ -96,21 +94,21 @@ class SecurityConfig {
                             write(response, json, HttpStatus.OK,
                                     new AccountResponse(principal.getUserId(), principal.getUsername()));
                         })
-                        // One body for every failure, so a caller cannot tell an unknown
-                        // username from a wrong password or a disabled account.
+                        // 所有失败共用同一个响应体，使调用方无法区分
+                        // 用户名不存在、口令错误和账号被禁用。
                         .failureHandler((request, response, exception) ->
                                 write(response, json, HttpStatus.UNAUTHORIZED, BAD_CREDENTIALS)))
                 .logout(logout -> logout
                         .logoutUrl("/api/auth/logout")
                         .logoutSuccessHandler((request, response, authentication) ->
                                 response.setStatus(HttpStatus.NO_CONTENT.value())))
-                // Setting these explicitly also stops Spring Security from generating its
-                // HTML login and logout pages, which this JSON API has no use for.
+                // 显式设置这两项，同时也阻止 Spring Security 生成它自带的
+                // HTML 登录页与登出页——这个 JSON API 用不到它们。
                 .exceptionHandling(exceptions -> exceptions
                         .authenticationEntryPoint(unauthenticated)
                         .accessDeniedHandler((request, response, exception) ->
                                 write(response, json, HttpStatus.FORBIDDEN, FORBIDDEN)))
-                // Nothing is replayed after login, so no anonymous request needs a session.
+                // 登录后不重放任何请求，因此匿名请求无需占用 session。
                 .requestCache(RequestCacheConfigurer::disable)
                 .addFilterBefore(new SessionVersionFilter(accounts, unauthenticated), AuthorizationFilter.class)
                 .build();

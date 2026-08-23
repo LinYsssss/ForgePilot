@@ -13,13 +13,11 @@ import jakarta.persistence.Table;
 import org.hibernate.annotations.CreationTimestamp;
 
 /**
- * The audit of pull request to requirement association changes, written in the
- * same transaction as the change itself (D007).
+ * PR 与需求关联变更的审计记录，与变更本身写在同一个事务里（D007）。
  *
- * <p>The table records changes only, so a row with neither side or with both sides
- * equal is refused by a CHECK. Two producers write it through the same table: the
- * automatic {@code REQ-<n>} link at ingestion writes a {@code SYSTEM} row, and a
- * human correction writes a {@code USER} row naming the account that made it.
+ * <p>本表只记录**变化**，因此两侧都为空、或两侧相等的行会被 CHECK 拒绝。
+ * 有两个生产者通过同一张表写入：入库时的自动 {@code REQ-<n>} 关联写
+ * {@code SYSTEM} 行，人工纠正写点名了操作账号的 {@code USER} 行。
  */
 @Entity
 @Table(name = "pull_request_requirement_event")
@@ -69,7 +67,7 @@ public class PullRequestRequirementEvent {
         this.reason = reason;
     }
 
-    /** The automatic link at ingestion: no human acted, so the actor is null and the type is SYSTEM. */
+    /** 入库时的自动关联：没有人在操作，因此 actor 为 null，类型为 SYSTEM。 */
     static PullRequestRequirementEvent systemLink(Long projectId, Long pullRequestId, Long toRequirementId,
             String reason) {
         return new PullRequestRequirementEvent(projectId, pullRequestId, null, toRequirementId,
@@ -77,11 +75,10 @@ public class PullRequestRequirementEvent {
     }
 
     /**
-     * A person corrected the association (PRD P1, D007). {@code actorUserId} is
-     * mandatory in practice, not by this signature: the CHECK on the table refuses
-     * a USER row without one, so an anonymous human correction cannot be stored.
-     * Either side may be null — clearing the link is a correction like any other —
-     * but not both, and not two equal sides.
+     * 有人纠正了关联（PRD P1、D007）。{@code actorUserId} 的必填是由实践而非
+     * 本方法签名保证的：表上的 CHECK 会拒绝没有 actor 的 USER 行，
+     * 因此匿名的人工纠正根本存不进去。任意一侧都可以为 null——清除关联和其他
+     * 纠正一样是纠正——但不能两侧都为 null，也不能两侧相等。
      */
     static PullRequestRequirementEvent userCorrection(Long projectId, Long pullRequestId,
             Long fromRequirementId, Long toRequirementId, Long actorUserId, String reason) {

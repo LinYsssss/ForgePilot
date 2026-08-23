@@ -12,27 +12,25 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Decides where each finding of this round came from (ARCHITECTURE.md 3.6, D009).
+ * 判定本轮每一条 finding 是从哪来的（ARCHITECTURE.md 3.6、D009）。
  *
- * <p>Three rules, in this order, and the order is fixed at
- * {@code SUPPRESSED > PERSISTING > NEW}:
+ * <p>三条规则，按此顺序，且顺序固定为
+ * {@code SUPPRESSED > PERSISTING > NEW}：
  *
  * <ol>
- * <li><strong>SUPPRESSED</strong> — the most recent human judgement on this
- * {@code finding_key} anywhere in this pull request was a rejection, and both
- * hashes are unchanged. Only then is a rejection inherited, so a suppression
- * cannot outlive the code or the requirement it was made about.</li>
- * <li><strong>PERSISTING</strong> — the immediately preceding COMPLETED Review of
- * this pull request reported the same key. It starts at {@code OPEN} again: the
- * problem persisting does not mean anyone decided about it.</li>
- * <li><strong>NEW</strong> — neither.</li>
+ * <li><strong>SUPPRESSED</strong>——在本 PR 中针对这个 {@code finding_key}
+ * 的最近一次人工判断是驳回，且两个哈希都没有变化。只有此时驳回才被继承，
+ * 因此一个抑制项无法比它当初所针对的代码或需求活得更久。</li>
+ * <li><strong>PERSISTING</strong>——本 PR 紧邻的上一次 COMPLETED Review
+ * 报告过同一个 key。它会重新从 {@code OPEN} 开始：问题持续存在，
+ * 并不意味着有人对它作出过判断。</li>
+ * <li><strong>NEW</strong>——两者皆非。</li>
  * </ol>
  *
- * <p>The opposite direction is deliberately not symmetric. A key the previous
- * round reported and this one did not is derived as
- * {@link #notReported(long, long, long) NOT_REPORTED} on the way out and never
- * stored: "the model did not mention it this time" is not evidence that anyone
- * fixed it, and a stored FIXED would be a machine closing a human's finding.
+ * <p>反方向**刻意**不对称。上一轮报告过、而本轮没有报告的 key，
+ * 会在输出时被推导为 {@link #notReported(long, long, long) NOT_REPORTED}
+ * 且从不存储：“模型这次没提它”不能作为“有人修好了它”的证据，
+ * 而存下一个 FIXED 等于让机器去关闭一条人的 finding。
  */
 @Service
 public class FindingContinuityCalculator {
@@ -44,11 +42,11 @@ public class FindingContinuityCalculator {
     }
 
     /**
-     * The lineage of every candidate of one Review, keyed by {@code finding_key}
-     * (which is unique within a Review — {@code uq_finding_review_key}).
+     * 一次 Review 中每个候选项的血缘，以 {@code finding_key} 为键
+     * （它在单个 Review 内唯一——{@code uq_finding_review_key}）。
      *
-     * <p>Called before the findings are written, because continuity and
-     * {@code carried_from_finding_id} are columns of the rows being written.
+     * <p>在 finding 被写入**之前**调用，因为 continuity 与
+     * {@code carried_from_finding_id} 正是那些待写入行上的列。
      */
     @Transactional(readOnly = true)
     public Map<String, Lineage> lineageOf(long projectId, long pullRequestId, long reviewId,
@@ -64,12 +62,12 @@ public class FindingContinuityCalculator {
     }
 
     /**
-     * What the previous round reported and this one did not. Derived on read, never
-     * stored: {@code ck_finding_status} has no {@code NOT_REPORTED} value, and 3.6.3
-     * forbids turning this into an automatic fix.
+     * 上一轮报告过、而本轮没有报告的那些。读取时推导，从不存储：
+     * {@code ck_finding_status} 里没有 {@code NOT_REPORTED} 这个取值，
+     * 而 3.6.3 禁止把它变成一次自动修复。
      *
-     * <p>Reads this Review's own findings from the database, so it answers about a
-     * Review that has been written rather than one being computed.
+     * <p>它从数据库读取本次 Review 自己的 finding，
+     * 因此回答的是一个**已经写入**的 Review，而不是一个正在计算中的 Review。
      */
     @Transactional(readOnly = true)
     public List<Finding> notReported(long projectId, long pullRequestId, long reviewId) {
@@ -95,16 +93,16 @@ public class FindingContinuityCalculator {
     }
 
     /**
-     * Both hashes, not either. {@code evidence_hash} alone would keep suppressing a
-     * finding after the acceptance criterion it was judged against was rewritten;
-     * {@code basis_hash} alone would keep suppressing it after the code moved.
+     * 两个哈希都要，而不是任选其一。只看 {@code evidence_hash}，
+     * 会在它当初所对照的验收条件被改写之后仍继续抑制；
+     * 只看 {@code basis_hash}，则会在代码发生变动之后仍继续抑制。
      */
     private static boolean inheritable(Finding rejected, FindingCandidate candidate) {
         return rejected.getEvidenceHash().equals(candidate.evidenceHash())
                 && rejected.getBasisHash().equals(candidate.basisHash());
     }
 
-    /** The previous COMPLETED round's findings, in row order, or nothing when this is the first round. */
+    /** 上一次 COMPLETED 轮次的 finding，按行序返回；若这是第一轮则为空。 */
     private List<Finding> previousRound(long projectId, long pullRequestId, long reviewId) {
         return lineage.findPreviousCompletedReviewId(projectId, pullRequestId, reviewId)
                 .map(previousId -> lineage.findFindingsOfReview(projectId, previousId))
@@ -112,12 +110,12 @@ public class FindingContinuityCalculator {
     }
 
     /**
-     * Where one finding came from and what status it starts in.
+     * 一条 finding 从哪来，以及它以什么状态起步。
      *
-     * <p>The constructor states the two invariants the database also states:
-     * lineage exists exactly when something was inherited
-     * ({@code ck_finding_carried_from_matches_continuity}), and only an inherited
-     * suppression starts already rejected.
+     * <p>构造器声明了与数据库同样声明的那两条不变式：
+     * 当且仅当确有继承发生时血缘才存在
+     * （{@code ck_finding_carried_from_matches_continuity}），
+     * 且只有被继承的抑制项才会一出生就是被驳回状态。
      */
     public record Lineage(FindingContinuity continuity, Long carriedFromFindingId, FindingStatus initialStatus) {
 

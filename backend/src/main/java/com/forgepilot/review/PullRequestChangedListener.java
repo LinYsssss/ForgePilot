@@ -8,13 +8,13 @@ import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
 /**
- * The two halves of the automatic trigger. They are two methods, and that is not
- * a style choice: measured, a single method carrying both {@code @EventListener}
- * and {@code @TransactionalEventListener(AFTER_COMMIT)} is invoked <em>once</em>
- * and after the commit. The transactional factory wins, the plain adapter is
- * never created, and the container neither warns nor fails — so the in-transaction
- * half disappears while every single-threaded test stays green. What disappears
- * with it is the guarantee that a failing listener rolls the SCM transaction back.
+ * 自动触发的两半。它们是两个方法，这不是风格选择：实测表明，
+ * 一个同时挂着 {@code @EventListener} 与
+ * {@code @TransactionalEventListener(AFTER_COMMIT)} 的方法，
+ * 只会在**提交之后**被调用<em>一次</em>。事务型工厂胜出，
+ * 朴素适配器根本不会被创建，而容器既不警告也不报错——
+ * 于是「事务内」那一半悄然消失，同时所有单线程测试依然全绿。
+ * 随之一起消失的，是「监听器失败则 SCM 事务回滚」这条保证。
  */
 @Component
 public class PullRequestChangedListener {
@@ -28,12 +28,11 @@ public class PullRequestChangedListener {
     }
 
     /**
-     * Joins the transaction that updated the pull request and idempotently creates
-     * or takes the Review for its current four-tuple.
+     * 加入那个更新了 PR 的事务，并为它当前的四元组幂等地创建或接管 Review。
      *
-     * <p>Throwing here is meant to be fatal to the whole ingestion: there must be
-     * no committed state in which the pull request moved and the Review it implies
-     * is missing (ARCHITECTURE.md 3.1). Nothing is caught for that reason.
+     * <p>这里抛异常本就应该让整次入库致命失败：绝不能存在这样一种已提交状态
+     * ——PR 已经推进，而它所隐含的 Review 却缺席（ARCHITECTURE.md 3.1）。
+     * 正是出于这个理由，这里什么都不捕获。
      */
     @EventListener
     public void openTheReviewInTheSameTransaction(PullRequestChanged event) {
@@ -41,27 +40,27 @@ public class PullRequestChangedListener {
     }
 
     /**
-     * Hands the committed row to the executor, and does nothing else.
+     * 把已提交的那一行交给执行器，此外什么都不做。
      *
-     * <p>Nothing in this method may touch the database. Measured, at this point
-     * {@code isActualTransactionActive()} still answers true and
-     * {@code isConnectionTransactional()} still answers true, while the physical
-     * connection's autoCommit has already been restored — so
-     * {@code EntityManager.persist} fails outright with "No active transaction"
-     * (which is the good outcome) and a bare {@code JdbcTemplate.update} quietly
-     * <em>succeeds</em>, committing a single statement on a connection nothing can
-     * roll back. That last one is the dangerous case precisely because it looks
-     * like it works. If a write is ever needed here it must be
-     * {@code REQUIRES_NEW}, and the phase must never be decided by asking
-     * {@code TransactionSynchronizationManager} — measured, it answers wrongly.
+     * <p>本方法中的任何代码都不得触碰数据库。实测：在这个时点
+     * {@code isActualTransactionActive()} 仍返回 true，
+     * {@code isConnectionTransactional()} 也仍返回 true，
+     * 而物理连接的 autoCommit 其实已经被恢复了——于是
+     * {@code EntityManager.persist} 会直接以 “No active transaction” 失败
+     * （这反而是好结果），而一句裸的 {@code JdbcTemplate.update} 会悄无声息地
+     * <em>成功</em>，在一个任何东西都回滚不了的连接上提交了一条语句。
+     * 后者才是危险的情况，恰恰因为它看上去像是成功了。
+     * 如果这里将来确实需要写库，那必须用 {@code REQUIRES_NEW}；
+     * 而且绝不能通过询问 {@code TransactionSynchronizationManager} 来判断阶段
+     * ——实测它给的答案是错的。
      *
-     * <p>Nothing here may block either: the webhook's 202 waits for this method to
-     * return, measured almost exactly one-for-one with however long it takes.
+     * <p>这里同样不得有任何阻塞：webhook 的 202 会一直等本方法返回，
+     * 实测下来几乎是一比一地被拖长。
      *
-     * <p>{@link ReviewReady} rather than {@code PullRequestChanged} so that this
-     * needs no lookup to know which row to run — and so that the human trigger and
-     * the retry, which publish the same signal inside their own transaction, reach
-     * the executor by this one path instead of a second one.
+     * <p>用 {@link ReviewReady} 而非 {@code PullRequestChanged}，
+     * 是为了让这里无需再查一次就知道该跑哪一行——也是为了让人工触发与重试
+     * （它们在各自的事务内部发布同一个信号）经由这一条路径抵达执行器，
+     * 而不是另开第二条。
      */
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void handOffOnceTheRowIsCommitted(ReviewReady event) {

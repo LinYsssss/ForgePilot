@@ -3,8 +3,8 @@ package com.forgepilot.project;
 import java.time.Instant;
 
 /**
- * A member as the API shows it. {@code scmUsername} is display only: no
- * authorization decision anywhere may read it (D010).
+ * API 对外呈现的成员形态。{@code scmUsername} 仅供展示：
+ * 任何地方的授权判断都不得读取它（D010）。
  */
 public record MemberResponse(long userId, String username, ProjectRole role,
         String scmExternalUserId, String scmUsername, Instant scmIdentityVerifiedAt) {

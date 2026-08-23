@@ -1,6 +1,6 @@
 package com.forgepilot.requirement;
 
-/** An acceptance criterion as the API shows it. */
+/** API 对外呈现的验收条件。 */
 public record AcceptanceCriterionView(long id, String acKey, int sortOrder, String text) {
 
     static AcceptanceCriterionView of(AcceptanceCriterion criterion) {

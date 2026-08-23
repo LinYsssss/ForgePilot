@@ -11,21 +11,19 @@ interface PullRequestRepository extends JpaRepository<PullRequest, Long> {
     Optional<PullRequest> findByProjectIdAndId(long projectId, long id);
 
     /**
-     * A human correction is a read-modify-write too: the audit row's
-     * {@code from_requirement_id} is the value read here, so two concurrent
-     * corrections must not both read the same one. Without the lock they would
-     * record two changes out of the same starting point while only one of them
-     * describes what actually happened.
+     * 人工纠正同样是一次「读-改-写」：审计行的 {@code from_requirement_id}
+     * 就是这里读到的值，因此两次并发纠正绝不能读到同一个起点。没有这把锁，
+     * 它们会从同一个起点记下两次变更，而其中只有一次真正描述了实际发生的事。
      */
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     Optional<PullRequest> findWithLockByProjectIdAndId(long projectId, long id);
 
     /**
-     * The ordering rule is a compare-and-write, so the row is locked before its
-     * {@code source_updated_at} is read. Without this two concurrent deliveries
-     * both read the old value and the later commit wins by accident rather than by
-     * being newer. A first insert races on {@code (repository_id, external_number)}
-     * instead, and that conflict is left to the unique constraint.
+     * 定序规则是一次「比较并写入」，因此在读它的 {@code source_updated_at}
+     * 之前先锁住该行。没有这一步，两次并发投递会都读到旧值，
+     * 于是「后提交的赢」变成了偶然，而不是因为它确实更新。
+     * 首次插入的竞争则发生在 {@code (repository_id, external_number)} 上，
+     * 那次冲突交给唯一约束处理。
      */
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     Optional<PullRequest> findWithLockByProjectIdAndRepositoryIdAndExternalNumber(

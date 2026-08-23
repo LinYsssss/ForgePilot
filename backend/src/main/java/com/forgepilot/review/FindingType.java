@@ -1,13 +1,12 @@
 package com.forgepilot.review;
 
 /**
- * What kind of problem a Finding reports.
+ * 一个 Finding 报告的是哪一类问题。
  *
- * <p>The distinction is load-bearing for {@code finding_key}: a
- * {@link #CODE_QUALITY} key is path plus normalized position plus category,
- * while a {@link #REQUIREMENT} key must also carry {@code requirement_id} and
- * {@code ac_key} (ARCHITECTURE.md 3.6). It is also enforced in the schema —
- * a CODE_QUALITY finding may not reference an acceptance criterion.
+ * <p>这个区分对 {@code finding_key} 是承重的：{@link #CODE_QUALITY} 的 key 是
+ * 路径 + 归一化位置 + 类别，而 {@link #REQUIREMENT} 的 key 还必须带上
+ * {@code requirement_id} 与 {@code ac_key}（ARCHITECTURE.md 3.6）。
+ * 它在 schema 层面同样被强制——CODE_QUALITY 的 finding 不得引用验收条件。
  */
 public enum FindingType {
 

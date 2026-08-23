@@ -15,27 +15,24 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
 /**
- * Turns one model answer into a {@link ReviewOutput} that is true about this
- * Review's own context, or into a FAILED verdict (ARCHITECTURE.md 3.5).
+ * 把模型的一次回答，变成一个对本次 Review 自身上下文而言为真的
+ * {@link ReviewOutput}，或者变成一个 FAILED 裁定（ARCHITECTURE.md 3.5）。
  *
- * <p>Two rules shape everything here:
+ * <p>这里的一切由两条规则塑形：
  *
  * <ul>
- * <li>Every acceptance criterion of the reviewed revision ends with a verdict.
- * A criterion the model skipped is filled in as {@code NOT_FOUND}, so a silent
- * model can never shorten the report.</li>
- * <li>A structurally invalid answer gets <strong>one</strong> format repair.
- * If that fails the Review is FAILED — never an empty report that reads like a
- * clean pull request. {@link Outcome} makes that unrepresentable rather than
- * merely intended.</li>
+ * <li>被审查修订的**每一条**验收条件最终都会有一个裁定。模型跳过的条件
+ * 会被填成 {@code NOT_FOUND}，因此一个沉默的模型永远无法把报告缩短。</li>
+ * <li>结构非法的回答可以得到<strong>一次</strong>格式修复。修复仍不成功，
+ * 则该 Review 判为 FAILED——绝不产出一份读起来像「PR 很干净」的空报告。
+ * {@link Outcome} 让这一点从「本意如此」变成了**不可表达**。</li>
  * </ul>
  *
- * <p>Individual claims are treated differently from structural failure: a
- * citation the model invented is dropped and named in {@link ReviewOutput#warnings()}
- * rather than failing the whole Review. That is also what keeps the batch insert
- * whole — a Finding whose context disagrees with its parent would abort the
- * entire batch at the constraint trigger, so validation happens before the write
- * and the trigger stays the last line of defence, not the first (design.md 4.4).
+ * <p>单条断言的处理方式与结构性失败不同：模型编造出来的引用会被丢弃，
+ * 并记入 {@link ReviewOutput#warnings()}，而不是让整次 Review 失败。
+ * 这同时也是批量插入得以保持完整的原因——一条上下文与父行矛盾的 Finding
+ * 会在约束触发器处中止整批插入，因此校验发生在写入**之前**，
+ * 而触发器始终是最后一道防线，不是第一道（design.md 4.4）。
  */
 @Component
 public class ReviewOutputValidator {
@@ -47,12 +44,11 @@ public class ReviewOutputValidator {
     }
 
     /**
-     * Validates the final synthesis answer, allowing exactly one format repair.
+     * 校验最终综合阶段的回答，允许**恰好一次**格式修复。
      *
-     * <p>{@code formatRepair} receives the answer that would not parse and returns
-     * the model's second attempt. It is called at most once: 3.5 grants one repair,
-     * and a loop here would quietly turn the AI gateway's own bounded retry into
-     * four calls.
+     * <p>{@code formatRepair} 接收那个解析不了的回答，并返回模型的第二次尝试。
+     * 它最多被调用一次：3.5 只给一次修复机会，
+     * 而在这里写个循环，会悄悄把 AI 网关自身那次有界重试放大成四次调用。
      */
     public Outcome validate(String answer, UnaryOperator<String> formatRepair, Context context) {
         try {
@@ -67,14 +63,13 @@ public class ReviewOutputValidator {
     }
 
     /**
-     * Validates one batch answer. A batch reports candidates and evidence and
-     * <strong>never</strong> a verdict (D002): it has seen part of the diff, so its
-     * conclusion about an acceptance criterion would contradict another batch's.
-     * Any {@code acVerdicts} field is therefore not even read.
+     * 校验单个批次的回答。批次只报告候选项与证据，<strong>绝不</strong>给出裁定
+     * （D002）：它只看到了 diff 的一部分，因此它对某条验收条件下的结论
+     * 会与另一个批次矛盾。所以任何 {@code acVerdicts} 字段这里连读都不读。
      *
-     * <p>Throws rather than returning an outcome because the repair budget belongs
-     * to {@link ChangedFileBatcher}, which owns the whole batch phase and must fail
-     * the entire Review — not just this batch — when the repair does not take.
+     * <p>它抛异常而不是返回一个 outcome，因为修复预算归 {@link ChangedFileBatcher}
+     * 所有——后者拥有整个分批阶段，且在修复不奏效时必须让**整次 Review** 失败，
+     * 而不只是这一个批次。
      */
     BatchAnswer readBatch(String answer, Context context) {
         JsonNode root = parse(answer);
@@ -94,8 +89,8 @@ public class ReviewOutputValidator {
         for (Context.Ac criterion : context.acceptanceCriteria()) {
             AcVerdict verdict = reported.get(criterion.id());
             if (verdict == null) {
-                // 3.5: the model's omission becomes NOT_FOUND. The warning keeps
-                // "the model said nothing" distinguishable from "the model said no".
+                // 3.5：模型的遗漏被填成 NOT_FOUND。而那条警告，
+                // 让「模型什么都没说」与「模型说了没有」保持可区分。
                 verdict = AcVerdict.NOT_FOUND;
                 warnings.add("the answer skipped acceptance criterion " + criterion.key()
                         + ", recorded as NOT_FOUND");
@@ -110,8 +105,8 @@ public class ReviewOutputValidator {
         try {
             root = json.readTree(answer);
         } catch (JacksonException notJson) {
-            // The provider's own message can quote the answer, and the answer can
-            // quote the prompt; neither may reach an operator-visible reason.
+            // provider 自己的报错消息可能引用回答，而回答又可能引用 Prompt；
+            // 这两者都不得出现在运维可见的失败原因里。
             throw new MalformedAnswer("the answer is not JSON");
         }
         if (!root.isObject()) {
@@ -121,10 +116,9 @@ public class ReviewOutputValidator {
     }
 
     /**
-     * A missing array is a structural failure, not an empty result. "The model
-     * returned no findings" and "the model returned nothing shaped like an answer"
-     * lead to opposite actions, and collapsing them is how a failed Review starts
-     * looking like a clean pull request.
+     * 数组缺失是结构性失败，不是空结果。「模型返回了零条 finding」与
+     * 「模型返回的东西根本不像一个回答」会导向相反的处置，
+     * 而把二者混为一谈，正是一次失败的 Review 开始看起来像「PR 很干净」的方式。
      */
     private static JsonNode requireArray(JsonNode root, String field) {
         JsonNode value = root.path(field);
@@ -144,8 +138,8 @@ public class ReviewOutputValidator {
                 continue;
             }
             if (context.acceptanceCriterion(acId) == null) {
-                // 3.5: the acId must belong to the revision under review. A criterion
-                // from another revision reads plausibly and is about different text.
+                // 3.5：acId 必须属于本次被审查的那个修订。来自另一个修订的
+                // 验收条件读起来同样合情合理，但它针对的是另一段文本。
                 warnings.add("dropped the verdict for acceptance criterion " + acId
                         + ": it does not belong to the revision under review");
                 continue;
@@ -157,7 +151,7 @@ public class ReviewOutputValidator {
         return reported;
     }
 
-    /** Deduplicated by {@code finding_key}, which is what 3.4.3 requires and what {@code uq_finding_review_key} enforces. */
+    /** 按 {@code finding_key} 去重——这既是 3.4.3 的要求，也是 {@code uq_finding_review_key} 所强制的。 */
     private List<FindingCandidate> readFindings(JsonNode root, Context context, List<String> warnings) {
         Map<String, FindingCandidate> byKey = new LinkedHashMap<>();
         for (JsonNode item : requireArray(root, "findings")) {
@@ -181,19 +175,18 @@ public class ReviewOutputValidator {
         String path = stringOrNull(item, "path");
         ChangedFile file = context.visibleFile(path);
         if (file == null) {
-            // 3.5: the path must be one of the changed files — and specifically one
-            // this call was shown, so a batch cannot report on a file it never saw
-            // and no finding can appear for a file the coverage manifest calls
-            // unreviewed.
+            // 3.5：路径必须是变更文件之一——而且必须是**本次调用被展示过**的那些，
+            // 于是一个批次无法对它从未见过的文件作出报告，
+            // 也不会有任何 finding 出现在覆盖清单标为「未审查」的文件上。
             warnings.add("dropped a " + type + " finding for " + path
                     + ": it is not one of the files this review was shown");
             return null;
         }
         String evidence = stringOrNull(item, "evidence");
         if (evidence == null || evidence.isBlank()) {
-            // Without an excerpt there is nothing deterministic to hash, so every
-            // evidence-less finding would share one evidence_hash and a rejection
-            // of one could suppress an unrelated other.
+            // 没有证据片段就没有确定性的东西可供哈希，于是所有无证据的 finding
+            // 会共享同一个 evidence_hash，对其中一条的驳回就可能抑制掉
+            // 另一条毫不相干的。
             warnings.add("dropped a " + type + " finding for " + path + ": it carries no source excerpt");
             return null;
         }
@@ -208,9 +201,9 @@ public class ReviewOutputValidator {
                 return null;
             }
         } else if (acId != null) {
-            // ck_finding_code_quality_has_no_ac would reject the row and take the
-            // whole batch insert with it. Which of the two fields is wrong is not
-            // knowable here, and guessing would invent a finding nobody reported.
+            // ck_finding_code_quality_has_no_ac 会拒绝这一行，并把整批插入一起带走。
+            // 这两个字段到底哪个错了，在这里无从得知，
+            // 而猜一个，就等于凭空造出一条没人报告过的 finding。
             warnings.add("dropped a CODE_QUALITY finding for " + path + ": it cited acceptance criterion " + acId);
             return null;
         }
@@ -223,9 +216,8 @@ public class ReviewOutputValidator {
         Integer line = verifiedLine(item, file);
         String category = stringOrNull(item, "category");
         return new FindingCandidate(type, path, line, evidence,
-                // Copied from the Review, never read from the model: the constraint
-                // trigger compares these two columns with the parent's, and a value
-                // the model chose could only ever disagree.
+                // 从 Review 复制而来，绝不从模型读取：约束触发器会把这两列与父行
+                // 比对，而由模型挑出来的值只可能与之矛盾。
                 context.requirementId(), context.requirementRevisionId(),
                 criterion == null ? null : criterion.id(),
                 criterion == null ? null : criterion.key(),
@@ -233,8 +225,8 @@ public class ReviewOutputValidator {
                         criterion == null ? null : context.requirementId(),
                         criterion == null ? null : criterion.key()),
                 FindingKeys.evidenceHash(evidence),
-                // "被引用" is literal: a code-quality finding cites no requirement, so
-                // publishing a new requirement revision must not drop its suppression.
+                // “被引用”是字面意思：代码质量类 finding 不引用任何需求，
+                // 因此发布一个新的需求修订不得让它的抑制项失效。
                 FindingKeys.basisHash(criterion == null ? null : context.requirementText(),
                         criterion == null ? null : criterion.key(),
                         criterion == null ? null : criterion.text(),
@@ -260,10 +252,10 @@ public class ReviewOutputValidator {
     }
 
     /**
-     * Returns the excerpt hashes of the knowledge sources this finding cited, or
-     * {@code null} if it cited one that was never recalled for this Review (3.5:
-     * {@code sourceId} must be in this round's whitelist). A false citation is not
-     * repaired by dropping the citation — the claim rests on it.
+     * 返回这条 finding 所引用的知识来源的片段哈希；若它引用了某个本次 Review
+     * 根本没有召回过的来源，则返回 {@code null}（3.5：{@code sourceId} 必须在
+     * 本轮的白名单里）。一次虚假引用不能靠「把引用删掉」来修复——
+     * 它的整个断言正是架在那条引用上的。
      */
     private static List<String> citedExcerptHashes(JsonNode item, Context context,
             List<String> warnings, String path) {
@@ -291,9 +283,9 @@ public class ReviewOutputValidator {
     }
 
     /**
-     * The line the model gave, or {@code null} when the patch cannot confirm it.
-     * 3.5 is explicit: an unverifiable line is not emitted. A plausible wrong line
-     * sends a reviewer to the wrong place and looks exactly like a right one.
+     * 模型给出的行号；若 patch 无法确认它则返回 {@code null}。
+     * 3.5 说得很明确：无法核实的行号不予输出。一个看似合理的错误行号
+     * 会把 reviewer 引向错误的位置，而它看起来与正确行号一模一样。
      */
     private static Integer verifiedLine(JsonNode item, ChangedFile file) {
         Long line = integralOrNull(item, "line");
@@ -304,12 +296,12 @@ public class ReviewOutputValidator {
     }
 
     /**
-     * Walks a unified diff and asks whether {@code line} exists on its new side.
+     * 遍历一份 unified diff，判断 {@code line} 是否存在于它的新侧。
      *
-     * <p>A file with no patch — binary, or past the provider's own diff limit —
-     * verifies nothing, which is correct: nothing about its content was ever seen.
-     * Anything unparsable also verifies nothing, so a diff shape this walk does not
-     * understand loses precision rather than inventing it.
+     * <p>没有 patch 的文件——二进制，或超出 provider 自身 diff 上限——
+     * 什么都核实不了，而这是对的：它的内容从来没有被看到过。
+     * 解析不了的内容同样什么都核实不了，因此本遍历看不懂的 diff 形态
+     * 只会损失精确率，而不会凭空编造。
      */
     private static boolean isOnTheNewSide(String patch, long line) {
         if (patch == null) {
@@ -330,8 +322,8 @@ public class ReviewOutputValidator {
                 }
                 current++;
             }
-            // Removed rows and the "\ No newline at end of file" marker occupy no
-            // line on the new side, so they do not advance the counter.
+            // 被删除的行以及 "\ No newline at end of file" 标记在新侧不占任何行，
+            // 因此它们不推进计数器。
         }
         return false;
     }
@@ -378,13 +370,12 @@ public class ReviewOutputValidator {
     }
 
     /**
-     * Everything one answer may be checked against: the Review's own requirement
-     * context, the acceptance criteria of the revision it was created for, the
-     * recall whitelist, and the files this particular call was shown.
+     * 一次回答可以被对照检查的全部东西：该 Review 自己的需求上下文、
+     * 它所针对的那个修订的验收条件、召回白名单，
+     * 以及本次调用实际被展示过的那些文件。
      *
-     * <p>All of it comes from the Review's immutable snapshot rather than from the
-     * pull request's current state, so revalidating a historical answer cannot
-     * change its meaning (3.5).
+     * <p>这一切都来自该 Review 的不可变快照，而不是 PR 的当前状态，
+     * 因此重新校验一次历史回答不会改变它的含义（3.5）。
      */
     public record Context(Long requirementId, Long requirementRevisionId, String requirementText,
             List<Ac> acceptanceCriteria, Map<Long, String> knowledgeExcerptHashes,
@@ -392,8 +383,8 @@ public class ReviewOutputValidator {
 
         public Context {
             if ((requirementId == null) != (requirementRevisionId == null)) {
-                // The same pairing ck_review_requirement_pairing enforces: half of it
-                // is what makes the composite foreign key skip its own check.
+                // 与 ck_review_requirement_pairing 强制的是同一个配对关系：
+                // 只设一半，正是复合外键会跳过自身检查的原因。
                 throw new IllegalArgumentException(
                         "A review's requirement and revision are both present or both absent.");
             }
@@ -405,11 +396,11 @@ public class ReviewOutputValidator {
             visibleFiles = List.copyOf(visibleFiles);
         }
 
-        /** {@code key} is {@code ac_key}: stable across revisions, unlike {@link #id()}. */
+        /** {@code key} 就是 {@code ac_key}：与 {@link #id()} 不同，它跨修订稳定。 */
         public record Ac(long id, String key, String text) {
         }
 
-        /** The same context narrowed to one batch's files. Everything else is the Review's, not the batch's. */
+        /** 同一份上下文，收窄到单个批次的文件。其余一切都属于该 Review，而非该批次。 */
         Context withVisibleFiles(List<ChangedFile> files) {
             return new Context(requirementId, requirementRevisionId, requirementText,
                     acceptanceCriteria, knowledgeExcerptHashes, files);
@@ -424,7 +415,7 @@ public class ReviewOutputValidator {
             return null;
         }
 
-        /** Case sensitive: {@code Api.java} and {@code api.java} are two files (3.4). */
+        /** 大小写敏感：{@code Api.java} 与 {@code api.java} 是两个文件（3.4）。 */
         ChangedFile visibleFile(String path) {
             for (ChangedFile file : visibleFiles) {
                 if (file.path().equals(path)) {
@@ -436,13 +427,12 @@ public class ReviewOutputValidator {
     }
 
     /**
-     * The verdict on one answer, in the vocabulary of the execution state machine
-     * itself (3.2: {@code RUNNING -> COMPLETED} when the output passes validation,
-     * {@code RUNNING -> FAILED} when a repaired answer is still invalid).
+     * 对一次回答的裁定，用执行状态机自己的词汇表达
+     * （3.2：输出通过校验则 {@code RUNNING -> COMPLETED}，
+     * 修复过的回答仍然非法则 {@code RUNNING -> FAILED}）。
      *
-     * <p>The constructor is where "never a successful empty report" stops being a
-     * rule and becomes a fact: a FAILED outcome cannot carry an output, and a
-     * COMPLETED one cannot exist without it.
+     * <p>正是在这个构造器里，「绝不产出成功的空报告」从一条规则变成了一个事实：
+     * FAILED 的 outcome 无法携带 output，而 COMPLETED 的 outcome 没有它就无法存在。
      */
     public record Outcome(ReviewStatus status, ReviewOutput output, String failureReason) {
 
@@ -469,15 +459,15 @@ public class ReviewOutputValidator {
         }
     }
 
-    /** One batch's contribution: candidates and AC evidence, and no verdict (D002). */
+    /** 单个批次的贡献：候选项与 AC 证据，不含任何裁定（D002）。 */
     record BatchAnswer(List<FindingCandidate> candidates, List<AcEvidence> evidence, List<String> warnings) {
     }
 
-    /** Evidence that one criterion is addressed somewhere in the diff. The synthesis, not the batch, concludes. */
+    /** 「某条验收条件在 diff 的某处被涉及了」的证据。下结论的是综合阶段，不是批次。 */
     public record AcEvidence(long acId, String acKey, String path, Integer line, String excerpt) {
     }
 
-    /** An answer whose structure cannot be used. Carries no model text: it reaches operator-visible output. */
+    /** 结构上无法使用的回答。不携带任何模型文本：因为它会进入运维可见的输出。 */
     static final class MalformedAnswer extends RuntimeException {
 
         MalformedAnswer(String message) {

@@ -13,23 +13,21 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Ingesting and retrieving project knowledge. This module receives a requirement
- * id only as an opaque scope value and never looks a requirement up
- * (ARCHITECTURE.md 1.3); the attachment relation itself belongs to
- * {@code requirement}.
+ * 项目知识的入库与检索。本模块只把需求 id 当作不透明的作用域取值接收，
+ * 从不去查询任何需求（ARCHITECTURE.md 1.3）；附件关系本身归
+ * {@code requirement} 所有。
  *
- * <p>A document moves PENDING -> chunked -> embedded -> READY. It becomes READY
- * only once its chunks carry vectors, so a half-ingested document is never
- * retrievable and never silently returns nothing.
+ * <p>一份文档的流转是 PENDING → 分块 → 向量化 → READY。只有当它的分块都带上
+ * 向量之后才会变成 READY，因此半入库的文档永远不可被检索到，也永远不会
+ * 静默返回空结果。
  */
 @Service
 public class KnowledgeService {
 
     /**
-     * Chunking is deliberately dumb and deterministic: a fixed character budget,
-     * split at the last line break that fits so paragraphs survive where possible.
-     * Anything cleverer is a retrieval-quality decision, and Phase 6 is where that
-     * gets measured rather than guessed.
+     * 分块刻意做得又笨又确定：固定的字符预算，在放得下的最后一个换行处切开，
+     * 以便尽可能保住段落完整。任何更聪明的做法都属于检索质量决策，
+     * 而那要到 Phase 6 用实测来定，不能靠猜。
      */
     static final int MAX_CHUNK_CHARS = 1_200;
 
@@ -41,9 +39,9 @@ public class KnowledgeService {
     private final AiGateway ai;
 
     /**
-     * The embedding profile lives here rather than in {@code ai}: the columns that
-     * record it belong to {@code knowledge_chunk}, and D015.3 makes this module
-     * responsible for the dimension check that is the project's only defence.
+     * embedding 档案住在这里而不是 {@code ai}：记录它的那些列属于
+     * {@code knowledge_chunk}，且 D015.3 把维度检查——本项目唯一的防线——
+     * 的责任交给了本模块。
      */
     private final String provider;
     private final String model;
@@ -73,7 +71,7 @@ public class KnowledgeService {
         return ingest(KnowledgeDocument.projectKnowledge(projectId, title, text));
     }
 
-    /** {@code requirementId} is an opaque scope here; the database checks that it exists. */
+    /** 这里的 {@code requirementId} 只是不透明作用域；它是否存在由数据库负责检查。 */
     @Transactional
     public long createRequirementAttachment(long projectId, long actorId, long requirementId,
             String title, String text) {
@@ -83,10 +81,9 @@ public class KnowledgeService {
     }
 
     /**
-     * Promotion copies rather than rewrites (D005). The attachment keeps its
-     * ownership and its history; the copy is a new public document that starts its
-     * own ingestion, so nothing that already referenced the original changes
-     * meaning underneath it.
+     * 提升为公共知识采用**复制**而非改写（D005）。原附件保留自己的归属与历史；
+     * 副本是一份新的公共文档，会开始它自己的入库流程，因此任何原本引用了
+     * 原文档的东西都不会在脚下被改变含义。
      */
     @Transactional
     public long promoteToProjectKnowledge(long projectId, long actorId, long documentId) {
@@ -107,10 +104,9 @@ public class KnowledgeService {
     }
 
     /**
-     * Stores the document, splits it, embeds every piece and only then marks it
-     * READY. All of it is one transaction, so a document is never left looking
-     * retrievable while holding no vectors — which would return nothing and look
-     * like an empty corpus rather than a failure.
+     * 存下文档、切分、逐块向量化，只有全部完成之后才标记为 READY。
+     * 这一切都在**同一个**事务里，因此绝不会出现「看起来可检索、实际没有向量」
+     * 的文档——那种文档会返回空结果，看上去像语料为空，而不像一次失败。
      */
     private long ingest(KnowledgeDocument document) {
         KnowledgeDocument saved = documents.save(document);
@@ -124,16 +120,16 @@ public class KnowledgeService {
 
         List<float[]> embeddings = ai.embed(pieces, model, AiCallContext.ofProject(saved.getProjectId()));
         if (embeddings.size() != rows.size()) {
-            // A provider that returns the wrong count would otherwise pair vectors
-            // with the wrong chunks, which no constraint can detect.
+            // 若 provider 返回的数量不对，向量就会与错误的分块配对，
+            // 而这是任何约束都检测不出来的。
             throw ApiException.unprocessable("The provider returned " + embeddings.size()
                     + " embeddings for " + rows.size() + " chunks.");
         }
         for (int index = 0; index < rows.size(); index++) {
             KnowledgeChunk row = rows.get(index);
             row.recordEmbeddingProfile(provider, model, version);
-            // Writes embedding and dimension together, and refuses a dimension that
-            // disagrees with the rest of the project (D015.3).
+            // 同时写入 embedding 与 dimension，并拒绝与该项目其余部分
+            // 不一致的维度（D015.3）。
             vectors.writeEmbedding(saved.getProjectId(), row.getId(), embeddings.get(index));
         }
 

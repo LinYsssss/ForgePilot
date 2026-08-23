@@ -6,14 +6,12 @@ import com.forgepilot.common.ApiException;
 import org.springframework.stereotype.Service;
 
 /**
- * The single authorization entry point for everything inside a project.
- * {@code requirement} and any later feature go through here rather than reading
- * {@link ProjectMemberRepository} themselves.
+ * 项目内一切操作的**唯一**授权入口。{@code requirement} 以及此后的所有功能模块
+ * 都经由这里，而不是自己去读 {@link ProjectMemberRepository}。
  *
- * <p>A caller who is not a member gets the same answer as for a project that does
- * not exist, so ids cannot be probed across projects. A caller who <em>is</em> a
- * member but lacks the role gets 403: they already know the project exists, so
- * that answer leaks nothing further.
+ * <p>非成员得到的答案与「项目不存在」完全相同，因此无法跨项目探测 id。
+ * <em>是</em>成员但角色不足的调用方得到 403：他本就知道该项目存在，
+ * 这个答案不会再泄露任何信息。
  */
 @Service
 public class ProjectAccessService {

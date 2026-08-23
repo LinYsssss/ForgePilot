@@ -12,9 +12,8 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 /**
- * Turns failures into the single {@link ApiError} shape. A database constraint
- * conflict arrives here only after its transaction has already rolled back:
- * per D013.11 no code may catch one and carry on inside the same transaction.
+ * 把各类失败统一转换成唯一的 {@link ApiError} 结构。数据库约束冲突到达这里时，
+ * 其事务必定已经回滚：按 D013.11，任何代码都不得捕获约束冲突后在同一事务里继续执行。
  */
 @RestControllerAdvice
 class ApiExceptionHandler {
@@ -28,7 +27,7 @@ class ApiExceptionHandler {
 
     @ExceptionHandler(DataIntegrityViolationException.class)
     ResponseEntity<ApiError> handleConstraintViolation(DataIntegrityViolationException exception) {
-        // The constraint text names internal columns, so it is logged, never returned.
+        // 约束文本里含内部列名，因此只写日志，绝不返回给调用方。
         return respond(HttpStatus.CONFLICT, "conflict",
                 "The request conflicts with the current state.", exception);
     }
@@ -41,8 +40,8 @@ class ApiExceptionHandler {
 
     private ResponseEntity<ApiError> respond(HttpStatus status, String code, String message,
             Exception exception) {
-        // The traceId is the only link between what the caller sees and the cause,
-        // so it is minted and logged together with it.
+        // traceId 是调用方所见与真实原因之间唯一的关联线索，
+        // 因此在同一处生成并与异常一起写入日志。
         String traceId = UUID.randomUUID().toString();
         if (status.is5xxServerError()) {
             log.error("{} {} traceId={}", status.value(), code, traceId, exception);

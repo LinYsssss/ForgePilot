@@ -7,11 +7,11 @@ import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 /**
- * Every read carries {@code projectId}; there is no bare-id lookup to bolt a
- * project check onto afterwards (ARCHITECTURE.md 2.3).
+ * 每次读取都带 {@code projectId}；不存在那种“事后再补一道项目检查”的
+ * 裸 id 查询（ARCHITECTURE.md 2.3）。
  *
- * <p>The graph pulls in the current revision because every caller needs its
- * title and seq: the {@code requirement} row itself has no prose (D011).
+ * <p>抓取图里带上了当前修订，因为每个调用方都需要它的标题与 seq：
+ * {@code requirement} 行本身不携带任何文本（D011）。
  */
 public interface RequirementRepository extends JpaRepository<Requirement, Long> {
 

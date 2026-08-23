@@ -1,9 +1,9 @@
 package com.forgepilot.knowledge;
 
-/** Whether a document belongs to one requirement or to the project as a whole (D005). */
+/** 一份文档究竟属于某一条需求，还是属于整个项目（D005）。 */
 public enum KnowledgeSourceType {
-    /** Scoped to exactly one requirement; visible only to that requirement's AI scenarios. */
+    /** 作用域恰好是一条需求；只对该需求的 AI 场景可见。 */
     REQUIREMENT_ATTACHMENT,
-    /** Public project knowledge; carries no requirement scope. */
+    /** 公共项目知识；不携带任何需求作用域。 */
     PROJECT_KNOWLEDGE
 }

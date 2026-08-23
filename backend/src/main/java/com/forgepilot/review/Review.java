@@ -17,26 +17,23 @@ import org.hibernate.annotations.UpdateTimestamp;
 import org.hibernate.type.SqlTypes;
 
 /**
- * One review of one set of inputs: a pull request at a head SHA, with a specific
- * diff fingerprint, against a specific requirement revision.
+ * 针对**一组**输入的一次审查：处于某个 head SHA 的 PR、一个特定的 diff 指纹，
+ * 对照一个特定的需求修订。
  *
- * <p>Those four columns are the Review's <strong>identity</strong>
- * (ARCHITECTURE.md 3.1) and the database refuses to let them change after
- * creation — altering one would turn this row into a different Review. That is
- * also why old Reviews are never overwritten: a new head, a changed diff or a
- * newly published requirement revision all mint a new identity and therefore a
- * new row, and the previous one stays exactly as it was decided.
+ * <p>这四个列构成该 Review 的<strong>身份</strong>（ARCHITECTURE.md 3.1），
+ * 数据库拒绝它们在创建之后发生变化——改动其中任何一个，都会把这一行变成
+ * 另一个 Review。这也正是旧 Review 从不被覆盖的原因：新的 head、变化的 diff、
+ * 新发布的需求修订，都会铸造出一个新身份、从而是一行新记录，
+ * 而此前那一行则原封不动地保持它当初被裁定时的样子。
  *
- * <p>Whether this Review still applies to the pull request's current inputs is
- * <strong>derived</strong> by comparing those four columns against the pull
- * request, not stored. There is no {@code INVALIDATED} status: execution state
- * and semantic validity are different dimensions.
+ * <p>这次 Review 是否仍适用于该 PR 的当前输入，是把这四个列与 PR 比对后
+ * <strong>推导</strong>出来的，并不存储。这里没有 {@code INVALIDATED} 状态：
+ * 执行状态与语义有效性是两个不同的维度。
  *
- * <p>The fencing triple ({@code executionAttempt}, {@code executionToken},
- * {@code leaseUntil}) exists so execution recovery needs no task table. Claiming
- * is one atomic conditional update; every later write by a worker must match all
- * of them, so a worker whose lease expired can neither finish, fail, renew nor
- * insert a Finding.
+ * <p>那组围栏三元组（{@code executionAttempt}、{@code executionToken}、
+ * {@code leaseUntil}）的存在，使执行恢复不需要任何任务表。抢占是一次原子的
+ * 条件更新；worker 此后的每一次写入都必须同时匹配这三者，
+ * 因此租约已过期的 worker 既不能完成、不能置失败、不能续租，也不能插入 Finding。
  */
 @Entity
 @Table(name = "review")
@@ -59,10 +56,10 @@ public class Review {
     private String reviewInputFingerprint;
 
     /**
-     * Null exactly when {@link #requirementRevisionId} is null — the pull request
-     * carries no requirement association. A database CHECK enforces the pairing,
-     * and that CHECK is what makes the three-column foreign key load-bearing:
-     * under MATCH SIMPLE the key is skipped entirely if either column is null.
+     * 当且仅当 {@link #requirementRevisionId} 为 null 时它才为 null——
+     * 也就是该 PR 没有任何需求关联。这个配对关系由数据库 CHECK 强制，
+     * 而正是那条 CHECK 让三列外键成为承重结构：在 MATCH SIMPLE 之下，
+     * 只要任一列为 null，整个外键就会被完全跳过。
      */
     @Column(name = "requirement_id", updatable = false)
     private Long requirementId;
@@ -97,16 +94,15 @@ public class Review {
     private Instant leaseUntil;
 
     /**
-     * The immutable input snapshot: requirement and AC text, knowledge excerpts
-     * with their hashes, and the truncation manifest. History pages read this
-     * rather than the pull request's current association, so a later association
-     * change cannot rewrite what a past review meant.
+     * 不可变的输入快照：需求与 AC 文本、带哈希的知识片段，以及截断清单。
+     * 历史页面读的是它，而不是该 PR 当前的关联关系，
+     * 因此日后改动关联无法改写一次过往审查当初的含义。
      */
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "context_snapshot_json", updatable = false)
     private String contextSnapshotJson;
 
-    /** The output summary: per-AC verdicts and coverage. Kept apart from the input snapshot. */
+    /** 输出摘要：逐条 AC 的裁定与覆盖情况。与输入快照分开存放。 */
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "summary_json")
     private String summaryJson;
@@ -229,7 +225,7 @@ public class Review {
         return updatedAt;
     }
 
-    /** Written once, at creation, inside the same transaction that stores the row. */
+    /** 只在创建时写入一次，且与存储该行处于同一个事务内。 */
     public void recordContextSnapshot(String contextSnapshotJson) {
         this.contextSnapshotJson = contextSnapshotJson;
     }

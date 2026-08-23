@@ -14,22 +14,21 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 /**
- * One problem a Review reported, plus its lineage across rounds.
+ * 一次 Review 报告出的一个问题，连同它跨轮次的血缘。
  *
- * <p>{@code reviewAttempt} is not bookkeeping. Together with the parent's
- * {@code UNIQUE(project_id, id, execution_attempt)} it forms a composite foreign
- * key that stops a worker holding a stale attempt from inserting here at all —
- * at the database, not in a service check, because the check-then-insert version
- * has a measured window where a dead attempt's finding lands under a live Review.
+ * <p>{@code reviewAttempt} 不是记账字段。它与父行的
+ * {@code UNIQUE(project_id, id, execution_attempt)} 一起构成复合外键，
+ * 从根本上阻止持有过期 attempt 的 worker 往这里插入——是在**数据库**层面，
+ * 而不是服务层检查，因为「先检查再插入」的版本有一个实测存在的窗口，
+ * 会让一个已死 attempt 的 finding 落到一个活着的 Review 之下。
  *
- * <p>The cost is paid openly: findings left behind by a crashed attempt hold a
- * reference to that attempt number, so re-claiming must delete them in the same
- * transaction or the Review can never be recovered.
+ * <p>代价是明码标价的：崩溃的 attempt 遗留下来的 finding 持有对那个 attempt
+ * 编号的引用，因此重新抢占时必须在同一个事务里删掉它们，
+ * 否则这个 Review 将永远无法恢复。
  *
- * <p>{@link #status} and {@link #continuity} are orthogonal and must stay in
- * separate fields — one is what a person decided, the other is where this
- * finding came from. Reopening a suppressed finding keeps its continuity: the
- * lineage is a fact about history and does not change because the status did.
+ * <p>{@link #status} 与 {@link #continuity} 是正交的，必须分作两个字段——
+ * 一个是人做了什么判断，另一个是这条问题从哪来。重开一个被抑制的 finding
+ * 会保留它的血缘：血缘是关于历史的事实，不会因为状态变了就跟着变。
  */
 @Entity
 @Table(name = "finding")
@@ -49,9 +48,9 @@ public class Finding {
     private int reviewAttempt;
 
     /**
-     * Must equal the parent Review's, compared NULL-safely. A constraint trigger
-     * enforces it: nullable composite foreign keys are MATCH SIMPLE and therefore
-     * cannot express "same as the parent, including when both are absent".
+     * 必须与父 Review 的值相等，且比较是 NULL 安全的。由约束触发器强制：
+     * 可空的复合外键是 MATCH SIMPLE，因此表达不了
+     * “与父行相同，包括两者都缺席的情形”。
      */
     @Column(name = "requirement_id", updatable = false)
     private Long requirementId;
@@ -66,7 +65,7 @@ public class Finding {
     @Column(name = "finding_type", nullable = false, length = 32, updatable = false)
     private FindingType findingType;
 
-    /** Case sensitive, never lower-cased: it takes part in {@link #findingKey}. */
+    /** 大小写敏感，绝不转小写：它参与构成 {@link #findingKey}。 */
     @Column(name = "path", updatable = false)
     private String path;
 
@@ -87,15 +86,14 @@ public class Finding {
     private String findingKey;
 
     /**
-     * Covers deterministic source evidence only. Newlines are normalized and
-     * volatile line numbers removed, but indentation is never generally collapsed —
-     * Python and YAML mean different things at different indents. Model prose is
-     * excluded, or a suppression would drift with the model's wording.
+     * 只覆盖确定性的源码证据。会归一化换行、去掉易变的行号，
+     * 但绝不做通用的缩进折叠——Python 和 YAML 在不同缩进下含义不同。
+     * 模型生成的散文被排除在外，否则抑制项会随模型的措辞漂移。
      */
     @Column(name = "evidence_hash", nullable = false, length = 64, updatable = false)
     private String evidenceHash;
 
-    /** Covers the cited AC/revision content, knowledge excerpt hashes and the rule version. */
+    /** 覆盖被引用的 AC/修订内容、知识片段哈希以及规则版本。 */
     @Column(name = "basis_hash", nullable = false, length = 64, updatable = false)
     private String basisHash;
 
@@ -219,10 +217,10 @@ public class Finding {
     }
 
     /**
-     * Only for a finding created as an inherited suppression, which starts life
-     * already rejected. Every other status move goes through a conditional update
-     * in the service, so that the audit row's recorded {@code from} is the status
-     * the update actually matched rather than one read a moment earlier.
+     * 仅用于作为「被继承的抑制项」创建的 finding——它一出生就已是被驳回状态。
+     * 其余所有状态变动都走服务层的条件更新，
+     * 使审计行里记录的 {@code from} 是那次更新**实际匹配到**的状态，
+     * 而不是片刻之前读到的某个值。
      */
     public void startSuppressed() {
         this.status = FindingStatus.REJECTED;

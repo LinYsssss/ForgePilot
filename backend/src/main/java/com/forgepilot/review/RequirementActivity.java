@@ -3,13 +3,12 @@ package com.forgepilot.review;
 import java.util.List;
 
 /**
- * The derived review activity of <strong>one requirement</strong>, aggregated
- * over its associated pull requests (PRD.md 5).
+ * <strong>单条需求</strong>的派生审查活动状态，由它关联的各个 PR 聚合而来
+ * （PRD.md 5）。
  *
- * <p>Eight values: the six single-pull-request ones plus {@link #NO_PR} and
- * {@link #MIXED}, which exist only at this level. Never stored — PRD.md is
- * explicit that requirement status and review activity are shown side by side
- * and never merged.
+ * <p>八个取值：单 PR 层面的六个，加上只在这一层存在的 {@link #NO_PR}
+ * 与 {@link #MIXED}。从不存储——PRD.md 明确规定需求状态与审查活动并列展示，
+ * 绝不合并。
  */
 public enum RequirementActivity {
 
@@ -23,11 +22,10 @@ public enum RequirementActivity {
     MIXED;
 
     /**
-     * Risk states take precedence in this order, then unanimity, then MIXED
-     * (PRD.md 5). {@code MIXED} is the residue, not a priority: a requirement whose
-     * pull requests are CHANGES_REQUESTED and APPROVED reports
-     * {@code CHANGES_REQUESTED}, because the risk state wins before unanimity is
-     * ever considered.
+     * 风险状态按此顺序优先，其次是「全体一致」，最后才是 MIXED（PRD.md 5）。
+     * {@code MIXED} 是残余项而非优先项：一条需求若其 PR 分别是
+     * CHANGES_REQUESTED 与 APPROVED，报告的是 {@code CHANGES_REQUESTED}，
+     * 因为风险状态在「是否一致」被考虑之前就已经胜出。
      */
     private static final List<PullRequestActivity> RISK_ORDER =
             List.of(PullRequestActivity.FAILED, PullRequestActivity.CHANGES_REQUESTED);

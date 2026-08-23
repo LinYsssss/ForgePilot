@@ -88,9 +88,8 @@ class RequirementController {
     }
 
     /**
-     * One-shot implementation guidance for the requirement's current revision.
-     * POST rather than GET because it spends a provider call: it is neither safe
-     * nor cacheable, and nothing about it is stored to read back later.
+     * 针对需求当前修订的一次性实现建议。用 POST 而非 GET，因为它会花掉一次
+     * provider 调用：既非安全方法也不可缓存，而且它的结果完全不落库、无法回读。
      */
     @PostMapping("/{requirementId}/guidance")
     ImplementationGuidance generateGuidance(@PathVariable long projectId,
@@ -99,10 +98,9 @@ class RequirementController {
     }
 
     /**
-     * Requirement Quality: deterministic rules plus one structured AI call
-     * (api-contract 4). POST because it spends a provider call and writes the
-     * result onto the current revision. The answer is advice — this endpoint
-     * never moves the requirement's status (PRD 5).
+     * 需求质量检查：确定性规则加一次结构化 AI 调用（api-contract 4）。
+     * 用 POST，因为它会花掉一次 provider 调用并把结果写到当前修订上。
+     * 这个答案是建议——本端点从不改动需求状态（PRD 5）。
      */
     @PostMapping("/{requirementId}/quality")
     QualityReport checkQuality(@PathVariable long projectId, @PathVariable long requirementId,
@@ -111,17 +109,16 @@ class RequirementController {
     }
 
     /**
-     * The login identity is resolved to a user id here, in the controller, through
-     * the read-only account facade. Business services never see Spring Security
-     * and this feature never depends on how a session is established
-     * (ARCHITECTURE.md 1.3 as narrowed by D013.6).
+     * 登录身份在这里——控制器层——通过只读账号 facade 解析为 user id。
+     * 业务服务永远看不到 Spring Security，本功能模块也不依赖会话是如何建立的
+     * （ARCHITECTURE.md 1.3，并按 D013.6 收窄）。
      */
     private long userIdOf(Principal principal) {
         return users.byUsername(principal.getName()).map(AccountView::id)
                 .orElseThrow(ApiException::notFound);
     }
 
-    /** The wire shape of api-contract 3: {@code EditDraft} plus the mandatory reason. */
+    /** api-contract 3 的线上形态：{@code EditDraft} 再加上必填的变更原因。 */
     record PublishRevisionRequest(
             @NotBlank @Size(max = 200) String title,
             String background,

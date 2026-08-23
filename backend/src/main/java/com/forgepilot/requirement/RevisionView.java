@@ -3,7 +3,7 @@ package com.forgepilot.requirement;
 import java.time.Instant;
 import java.util.List;
 
-/** One revision as the API shows it, with the criteria that belong to that revision. */
+/** API 对外呈现的单次修订，附带属于该修订的验收条件。 */
 public record RevisionView(long id, int seq, String title, String background, String description,
         long createdBy, String createdByUsername, String changeReason, Instant createdAt,
         List<AcceptanceCriterionView> acceptanceCriteria) {

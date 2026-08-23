@@ -1,5 +1,5 @@
 package com.forgepilot.common;
 
-/** The single error body shape for every API failure (ARCHITECTURE.md 2.4). */
+/** 全部 API 失败响应的唯一错误体结构（ARCHITECTURE.md 2.4）。 */
 public record ApiError(String code, String message, String traceId) {
 }

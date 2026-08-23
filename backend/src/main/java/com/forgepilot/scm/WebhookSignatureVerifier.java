@@ -16,14 +16,13 @@ import javax.crypto.spec.SecretKeySpec;
 import org.springframework.stereotype.Component;
 
 /**
- * Verifies provider authentication over the <em>raw request bytes</em>.
+ * 对<em>原始请求字节</em>校验 provider 的认证信息。
  *
- * <p>The HMAC covers the exact octets the provider signed. Parsing the delivery
- * into an object and re-serializing it changes key order, whitespace, escaping and
- * number formatting, so honest deliveries would fail — and an implementation that
- * "fixes" that by canonicalizing before verifying has stopped authenticating the
- * bytes it then acts on. {@code WebhookSignatureVerifierTest} pins this with a body
- * that parses into an identical document but whose bytes differ.
+ * <p>HMAC 覆盖的是 provider 签名时的那一串确切字节。把投递解析成对象再重新
+ * 序列化，会改变键序、空白、转义和数字格式，于是诚实的投递反而会校验失败——
+ * 而一个通过「先规范化再校验」来“修好”这件事的实现，已经不再是在认证它随后
+ * 据以行动的那些字节了。{@code WebhookSignatureVerifierTest} 用一个能解析出
+ * 相同文档、但字节不同的请求体把这一点钉死。
  */
 @Component
 class WebhookSignatureVerifier {
@@ -52,14 +51,14 @@ class WebhookSignatureVerifier {
                 .getBytes(StandardCharsets.UTF_8);
         byte[] provided = signatureHeader.substring(GITHUB_PREFIX.length())
                 .toLowerCase(Locale.ROOT).getBytes(StandardCharsets.UTF_8);
-        // Constant time, and length safe: a truncated hex digest is simply unequal.
+        // 常数时间比较，且对长度安全：被截断的十六进制摘要只会判为不相等。
         return MessageDigest.isEqual(expected, provided);
     }
 
     /**
-     * Current GitLab signs Standard Webhooks; older installations send a plain
-     * secret token. A present but invalid Standard form never downgrades to the
-     * weaker legacy form.
+     * 当前版本的 GitLab 按 Standard Webhooks 签名；较老的安装则发送明文
+     * 秘密 token。若 Standard 形式存在但校验不通过，绝不会降级到更弱的
+     * 旧版形式。
      */
     boolean matchesGitLab(byte[] body, String secret, String signatureHeader,
             String messageId, String timestampHeader, String tokenHeader) {
@@ -113,7 +112,7 @@ class WebhookSignatureVerifier {
             }
             return mac.doFinal(parts[parts.length - 1]);
         } catch (GeneralSecurityException impossible) {
-            // HmacSHA256 is required of every JDK, and the key is never empty.
+            // HmacSHA256 是每个 JDK 都必须提供的，而密钥永远不为空。
             throw new IllegalStateException(impossible);
         }
     }

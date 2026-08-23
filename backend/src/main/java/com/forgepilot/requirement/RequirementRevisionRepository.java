@@ -4,7 +4,7 @@ import java.util.List;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 
-/** Every read carries {@code projectId}; revisions are never looked up by bare id. */
+/** 每次读取都带 {@code projectId}；修订绝不按裸 id 查询。 */
 public interface RequirementRevisionRepository extends JpaRepository<RequirementRevision, Long> {
 
     List<RequirementRevision> findByProjectIdAndRequirementIdOrderBySeqAsc(long projectId, long requirementId);

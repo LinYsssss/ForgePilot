@@ -13,17 +13,15 @@ import jakarta.persistence.Table;
 import org.hibernate.annotations.CreationTimestamp;
 
 /**
- * One human decision about a Finding, kept forever.
+ * 关于某个 Finding 的一次人工决定，永久保存。
  *
- * <p>{@code actorId} points at {@code user_account} rather than
- * {@code project_member}: leaving a project revokes live permissions but must not
- * erase an accomplished fact. {@code Finding.assigneeId} points the other way for
- * the opposite reason.
+ * <p>{@code actorId} 指向 {@code user_account} 而非 {@code project_member}：
+ * 离开项目会吊销当下的权限，但绝不该抹掉一件已经发生的事实。
+ * {@code Finding.assigneeId} 指向相反的方向，理由也正相反。
  *
- * <p>{@link #fromStatus} is taken from the conditional update that performed the
- * move, never from a status read beforehand. Under concurrency the read version
- * lets two events both claim to have started from the same status, which makes
- * the audit trail describe a history that did not happen.
+ * <p>{@link #fromStatus} 取自执行了那次流转的**条件更新**，而绝不取自事前的
+ * 一次状态读取。在并发下，「先读后写」的版本会让两个事件都声称自己从同一个
+ * 状态出发，于是审计轨迹描述出一段并未发生过的历史。
  */
 @Entity
 @Table(name = "finding_event")

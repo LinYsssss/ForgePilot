@@ -4,77 +4,72 @@ import java.time.Instant;
 import java.util.List;
 
 /**
- * The result of one Requirement Quality check on one revision (api-contract 4):
- * deterministic rules first, then a single structured AI assessment.
+ * 对某一次修订做一次需求质量检查的结果（api-contract 4）：
+ * 先跑确定性规则，再做一次结构化 AI 评估。
  *
- * <p>The revision is named in the answer because the result belongs to it (D011).
- * A quality result is <em>advice</em>: nothing here moves
- * {@code requirement.status}, and there is deliberately no overall verdict or
- * score field, because a number is exactly what would get read as a gate
- * (PRD 5, "质量检查是建议，不是工作流状态").
+ * <p>结果中点名了具体修订，因为这个结果就属于那次修订（D011）。质量结果是
+ * <em>建议</em>：这里没有任何东西会改动 {@code requirement.status}，
+ * 也刻意没有总评或评分字段——因为一个数字恰恰会被当成闸门来读
+ * （PRD 5，“质量检查是建议，不是工作流状态”）。
  *
- * <p>{@code qualityVersion} and {@code checkedAt} are the two persisted columns
- * that make a stored result interpretable later: a report is only meaningful
- * against the rule set and prompt that produced it, and against the prose that
- * existed when it ran.
+ * <p>{@code qualityVersion} 与 {@code checkedAt} 是让存下来的结果日后仍可解读的
+ * 两个持久化列：一份报告只有对着产生它的那套规则与 Prompt、以及运行当时存在的
+ * 那份文本，才有意义。
  */
 public record QualityReport(long requirementId, long revisionId, int revisionSeq, String qualityVersion,
         Instant checkedAt, List<RuleFinding> rules, AiAssessment ai) {
 
     /**
-     * The deterministic half. Each value names a failure that is decidable
-     * without a model, and each one can actually occur through the API — a rule
-     * for a state {@code RequirementContent}'s bean validation already rejects
-     * (a blank title, a criterion with no text, a revision with no criteria at
-     * all) would never fire and is therefore not here.
+     * 确定性的那一半。每个取值都指向一种无需模型即可判定的缺陷，
+     * 且每一种都能真的通过 API 发生——那些 {@code RequirementContent} 的
+     * bean validation 已经拒绝的状态（空标题、无正文的条件、一条验收条件都没有
+     * 的修订）永远不会触发，因此不在此列。
      */
     public enum Rule {
 
         /**
-         * Neither background nor description is present. Both are optional
-         * columns, so this is reachable, and it means
-         * {@code ReviewContext.requirement} (ARCHITECTURE.md 4.2) carries nothing
-         * but a title of at most 200 characters — the review has almost nothing
-         * to hold a diff against when looking for 需求违规 (PRD 2).
+         * 背景与描述都不存在。两者都是可选列，因此这种情况确实可达；
+         * 它意味着 {@code ReviewContext.requirement}（ARCHITECTURE.md 4.2）
+         * 除了一个最长 200 字符的标题之外什么都没带——审查在找“需求违规”
+         * （PRD 2）时，几乎没有任何东西可以拿来与 diff 对照。
          */
         MISSING_DESCRIPTION,
 
         /**
-         * Two criteria of this revision carry the same text. Every AC gets its own
-         * verdict (api-contract 2.2) and its own {@code finding_key}, which for a
-         * REQUIREMENT finding is {@code requirement_id + ac_key}
-         * (ARCHITECTURE.md 3.4). So one defect is reported twice under two keys,
-         * and because D009 suppresses per {@code finding_key}, rejecting one copy
-         * does not suppress the other on the next review — permanently.
+         * 本次修订中有两条验收条件文本完全相同。每条 AC 都会得到自己的裁定
+         * （api-contract 2.2）和自己的 {@code finding_key}，而 REQUIREMENT 类
+         * Finding 的 key 是 {@code requirement_id + ac_key}（ARCHITECTURE.md 3.4）。
+         * 于是同一个缺陷会以两个 key 被报告两次；又因为 D009 是按
+         * {@code finding_key} 抑制的，驳回其中一份并不会在下次审查时抑制另一份
+         * ——而且是永久如此。
          */
         DUPLICATE_CRITERION,
 
         /**
-         * The prompt this requirement produces is longer than the gateway's
-         * character budget (ARCHITECTURE.md 7.2), so {@code PromptSanitizer} cuts
-         * the tail off before any model sees it. Reporting that is the whole point:
-         * a truncated input that still answers successfully is the silent
-         * truncation D002 forbids.
+         * 这条需求产生的 Prompt 超过了网关的字符预算（ARCHITECTURE.md 7.2），
+         * 于是 {@code PromptSanitizer} 会在任何模型看到它之前把尾巴切掉。
+         * 把这件事报出来正是要点所在：被截断却仍然“成功作答”，
+         * 就是 D002 明令禁止的静默截断。
          */
         PROMPT_BUDGET_EXCEEDED
     }
 
-    /** One rule hit. {@code acKey} is set only by rules that are about one criterion. */
+    /** 命中的一条规则。只有针对单条验收条件的规则才会设置 {@code acKey}。 */
     public record RuleFinding(Rule rule, String acKey, String message) {
     }
 
-    /** The single structured AI answer. An empty {@code issues} list means the model found nothing. */
+    /** 唯一那次结构化 AI 回答。{@code issues} 为空列表表示模型没发现问题。 */
     public record AiAssessment(String summary, List<AiIssue> issues) {
     }
 
-    /** One problem the model reports, optionally against one acceptance criterion. */
+    /** 模型报告的一个问题，可选地挂在某一条验收条件上。 */
     public record AiIssue(String acKey, String message) {
     }
 
     /**
-     * Exactly what {@code requirement_revision.quality_json} carries. The version
-     * and the timestamp are their own columns on the same row, so repeating them
-     * inside the document would create two places to disagree.
+     * {@code requirement_revision.quality_json} 里存的正是这个结构。版本号与
+     * 时间戳在同一行上各有自己的列，因此在文档内部再重复一遍只会制造
+     * 两个可能互相矛盾的地方。
      */
     record Stored(List<RuleFinding> rules, AiAssessment ai) {
     }

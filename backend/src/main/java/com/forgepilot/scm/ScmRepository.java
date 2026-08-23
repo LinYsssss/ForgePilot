@@ -14,13 +14,12 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 /**
- * A project's one active source control repository, with its credentials at rest.
+ * 一个项目唯一的活动源码仓库，连同其静态存储的凭据。
  *
- * <p>{@code provider + instance_identity + external_id} is the stable identity
- * (D010). It is unique globally rather than per project (design.md 3.6) because a
- * webhook delivery is routed by the repository identity inside its payload: if two
- * projects could register one repository, a single delivery would have two targets
- * and two secrets and no signature check would be well defined.
+ * <p>{@code provider + instance_identity + external_id} 是它的稳定身份（D010）。
+ * 它是**全局唯一**而非项目内唯一（design.md 3.6），因为 webhook 投递是靠载荷
+ * 内部的仓库身份来路由的：如果两个项目能注册同一个仓库，一次投递就会有两个
+ * 目标、两份密钥，任何签名校验都将无从定义。
  */
 @Entity
 @Table(name = "scm_repository")
@@ -98,12 +97,12 @@ public class ScmRepository {
         return apiBase;
     }
 
-    /** Ciphertext, and only ever handed to {@link ScmSecretCipher}. Never serialized into a response. */
+    /** 密文，且只会交给 {@link ScmSecretCipher}。绝不会被序列化进任何响应。 */
     public String getEncryptedToken() {
         return encryptedToken;
     }
 
-    /** Ciphertext, and only ever handed to {@link ScmSecretCipher}. Never serialized into a response. */
+    /** 密文，且只会交给 {@link ScmSecretCipher}。绝不会被序列化进任何响应。 */
     public String getEncryptedSecret() {
         return encryptedSecret;
     }
@@ -117,10 +116,9 @@ public class ScmRepository {
     }
 
     /**
-     * The whole stable identity moves at once, because it is one fact. Whether it
-     * is allowed to move at all depends on another table having no rows, which no
-     * immediate constraint can express, so {@link ScmRepositoryService} decides it
-     * under a row lock (design.md 3.7).
+     * 整个稳定身份要一次性整体迁移，因为它本就是一个事实。它究竟允不允许迁移，
+     * 取决于另一张表里有没有行——这是任何即时约束都无法表达的，
+     * 因此由 {@link ScmRepositoryService} 在行锁下判定（design.md 3.7）。
      */
     void reidentify(ScmProvider provider, String instanceIdentity, String externalId) {
         this.provider = provider;

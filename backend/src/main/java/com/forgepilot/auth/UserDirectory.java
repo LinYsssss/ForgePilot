@@ -8,9 +8,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * The only way another feature may read account data (D013.6). It is a query
- * facade, not a repository: features stay free of {@code UserAccountRepository}
- * and of everything about how a session is established.
+ * 其他功能模块读取账号数据的**唯一**途径（D013.6）。它是查询 facade 而非
+ * 仓库：各功能模块因此既接触不到 {@code UserAccountRepository}，也接触不到
+ * 会话如何建立的任何细节。
  */
 @Service
 @Transactional(readOnly = true)
@@ -30,7 +30,7 @@ public class UserDirectory {
         return accounts.findByUsername(username).map(AccountView::of);
     }
 
-    /** Batch read for member and requirement lists, so they never loop over {@link #byId}. */
+    /** 供成员列表与需求列表批量读取，使它们不必循环调用 {@link #byId}。 */
     public List<AccountView> byIds(Collection<Long> userIds) {
         return accounts.findAllById(userIds).stream().map(AccountView::of).toList();
     }

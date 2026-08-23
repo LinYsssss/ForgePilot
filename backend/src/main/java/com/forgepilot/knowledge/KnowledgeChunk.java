@@ -13,20 +13,17 @@ import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
 /**
- * One retrievable slice of a document, plus the audit of which embedding profile
- * produced its vector.
+ * 文档的一个可检索切片，外加「哪一套 embedding 档案产生了它的向量」这份审计信息。
  *
- * <p>The {@code embedding} column is deliberately <strong>not mapped</strong>
- * (D015.4). Measured: mapping it as a String passes {@code ddl-auto=validate} and
- * then fails every write at runtime with 42804, which is the worst of the four
- * options; mapping it properly would cost a new dependency; and TopK retrieval
- * needs native SQL either way. {@code validate} only checks columns an entity
- * maps, so leaving it out is safe at startup. Every read and write of the vector
- * lives in {@link ChunkSearchRepository}, the only place allowed to name
- * {@code ::vector}.
+ * <p>{@code embedding} 列**刻意不做映射**（D015.4）。实测：把它映射成 String
+ * 能通过 {@code ddl-auto=validate}，却会让运行时的每一次写入都以 42804 失败，
+ * 这是四个选项里最糟的一个；正经映射它则要引入新依赖；而 TopK 检索无论如何
+ * 都要用原生 SQL。{@code validate} 只检查实体映射到的列，因此不映射它在启动
+ * 阶段是安全的。对向量的每一次读写都住在 {@link ChunkSearchRepository}——
+ * 唯一被允许写出 {@code ::vector} 的地方。
  *
- * <p>{@code dimension} is unmapped for the same reason — see
- * {@link #recordEmbeddingProfile}.
+ * <p>{@code dimension} 出于同样的理由也不映射，详见
+ * {@link #recordEmbeddingProfile}。
  */
 @Entity
 @Table(name = "knowledge_chunk")
@@ -117,12 +114,11 @@ public class KnowledgeChunk {
     }
 
     /**
-     * Records which profile produced the vector. The {@code dimension} column is
-     * deliberately absent from this entity, like {@code embedding}: the two are one
-     * unit and {@link ChunkSearchRepository} writes them together. Mapping
-     * dimension here would be a trap — Hibernate updates every mapped column, so
-     * flushing this entity would null the dimension out from under a stored vector
-     * and the CHECK would reject the row.
+     * 记录是哪套档案产生了该向量。{@code dimension} 列和 {@code embedding} 一样
+     * 刻意不在本实体中出现：二者是一个整体，由 {@link ChunkSearchRepository}
+     * 一并写入。把 dimension 映射到这里会是个陷阱——Hibernate 会更新所有被映射的
+     * 列，于是 flush 本实体就会在已存向量的脚下把 dimension 置空，随后 CHECK
+     * 会拒绝这一行。
      */
     public void recordEmbeddingProfile(String provider, String model, String version) {
         this.provider = provider;

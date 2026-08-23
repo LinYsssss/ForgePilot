@@ -20,14 +20,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Requirements, their immutable revisions and the state machine that governs
- * both (design.md 6.4). Authorization goes through {@link ProjectAccessService}
- * and usernames through {@link UserDirectory}: this feature injects neither
- * {@code ProjectMemberRepository} nor {@code UserAccountRepository} (D013.6).
+ * 需求、它们不可变的修订，以及支配二者的状态机（design.md 6.4）。授权走
+ * {@link ProjectAccessService}，用户名走 {@link UserDirectory}：本功能模块
+ * 既不注入 {@code ProjectMemberRepository} 也不注入
+ * {@code UserAccountRepository}（D013.6）。
  *
- * <p>Constraint conflicts — a cross-project parent, an assignee who is not a
- * member, a duplicate revision seq — are left to the database and roll their
- * transaction back (D013.11); none of them is caught and worked around here.
+ * <p>约束冲突——跨项目的父级、非成员的被指派人、重复的修订 seq——一律交给
+ * 数据库处理并让其事务回滚（D013.11）；这里不捕获、也不绕过其中任何一种。
  */
 @Service
 public class RequirementService {
@@ -35,9 +34,9 @@ public class RequirementService {
     private static final String AC_KEY_PREFIX = "AC-";
 
     /**
-     * The transition table of api-contract 3, as data. {@code IN_DEVELOPMENT} is
-     * deliberately absent from every value: its only entry is the first
-     * assignment, so {@link #changeStatus} can never reach it.
+     * 把 api-contract 3 的流转表写成数据。{@code IN_DEVELOPMENT} 刻意不出现在
+     * 任何取值里：进入它的唯一入口是首次指派，因此 {@link #changeStatus}
+     * 永远到不了那个状态。
      */
     private static final Map<RequirementStatus, Set<RequirementStatus>> ALLOWED_TARGETS = Map.of(
             RequirementStatus.DRAFT, Set.of(RequirementStatus.READY, RequirementStatus.CANCELED),
@@ -96,10 +95,9 @@ public class RequirementService {
     }
 
     /**
-     * Three steps in one transaction (D013.10): insert the requirement with a null
-     * pointer, insert revision 1 and its criteria, then backfill the pointer. The
-     * composite foreign key is MATCH SIMPLE, so it is skipped while the pointer is
-     * null and checked in full by the backfill.
+     * 一个事务里的三步（D013.10）：先插入指针为 null 的需求行，再插入修订 1
+     * 及其验收条件，最后回填指针。那个复合外键是 MATCH SIMPLE，
+     * 因此指针为 null 期间它被跳过，回填时才被完整检查。
      */
     @Transactional
     public RequirementDetail create(long projectId, long actorId, RequirementContent content) {
@@ -113,9 +111,8 @@ public class RequirementService {
     }
 
     /**
-     * In-place edit of revision 1, legal only while the requirement is still DRAFT.
-     * The quality result described the old prose, so it is cleared in the same
-     * transaction (design.md 6.4).
+     * 对修订 1 的原地编辑，只有在需求仍为 DRAFT 时才合法。质量结果描述的是
+     * 旧文本，因此在同一个事务里被清空（design.md 6.4）。
      */
     @Transactional
     public RequirementDetail editDraft(long projectId, long actorId, long requirementId,
@@ -132,11 +129,10 @@ public class RequirementService {
     }
 
     /**
-     * Once the requirement has left DRAFT its revision is frozen, so a change
-     * publishes {@code seq + 1} with a mandatory reason and backfills the pointer
-     * again. The current revision is always the newest one, which is why its seq
-     * is the one incremented; a concurrent second publish loses on the unique key
-     * {@code (requirement_id, seq)}.
+     * 需求一旦离开 DRAFT，其修订即被冻结，于是变更会带着必填的原因发布
+     * {@code seq + 1} 并再次回填指针。当前修订永远是最新的那一个，
+     * 这正是要递增它的 seq 的原因；并发的第二次发布会在唯一键
+     * {@code (requirement_id, seq)} 上落败。
      */
     @Transactional
     public RequirementDetail publishRevision(long projectId, long actorId, long requirementId,
@@ -175,11 +171,10 @@ public class RequirementService {
     }
 
     /**
-     * The only entry into IN_DEVELOPMENT (api-contract 3). Assignment is confined
-     * to the two states where work exists, so a READY requirement still has no
-     * assignee and this is exactly the first assignment; a later reassignment
-     * finds IN_DEVELOPMENT and leaves the status alone. That the assignee is a
-     * member of this project is proven by the composite foreign key, not here.
+     * 进入 IN_DEVELOPMENT 的唯一入口（api-contract 3）。指派被限制在「确有工作
+     * 存在」的那两个状态里，因此 READY 的需求必定还没有被指派人，
+     * 这里也就恰好是首次指派；此后的重新指派会看到 IN_DEVELOPMENT 并不动状态。
+     * 「被指派人是本项目成员」由复合外键证明，而不是在这里检查。
      */
     @Transactional
     public RequirementDetail assign(long projectId, long actorId, long requirementId, long assigneeId) {
@@ -201,16 +196,15 @@ public class RequirementService {
                 .orElseThrow(ApiException::notFound);
     }
 
-    /** DONE and CANCELED are the states the table gives no way out of. */
+    /** DONE 与 CANCELED 是流转表没有给出任何出口的两个状态。 */
     private static boolean isTerminal(RequirementStatus status) {
         return ALLOWED_TARGETS.get(status).isEmpty();
     }
 
     /**
-     * Writes every criterion of {@code content} as a new row of {@code revision}:
-     * used both when the requirement is created and when a revision is published,
-     * because a revision never shares rows with its predecessor. Entries that
-     * carry a key keep it, entries without one get the next never-used number.
+     * 把 {@code content} 的每一条验收条件都写成 {@code revision} 的新行：
+     * 创建需求和发布新修订都用它，因为一次修订绝不与它的前驱共享行。
+     * 带 key 的条目保留其 key，不带 key 的条目获得下一个从未用过的编号。
      */
     private List<AcceptanceCriterion> insertCriteria(RequirementRevision revision, List<CriterionInput> inputs,
             Set<String> usedKeys) {
@@ -227,10 +221,9 @@ public class RequirementService {
     }
 
     /**
-     * Rewrites the criteria of a DRAFT revision in place: a known key edits its
-     * row, a missing entry drops it and a keyless entry adds one. A DRAFT
-     * requirement has exactly one revision, so that revision's keys are its whole
-     * key history and the next number is derived from them.
+     * 原地重写 DRAFT 修订的验收条件：已知 key 的条目编辑对应行，缺席的条目
+     * 被删除，无 key 的条目则新增一行。DRAFT 需求恰好只有一次修订，
+     * 因此那次修订的 key 集合就是它的全部 key 历史，下一个编号由此推出。
      */
     private List<AcceptanceCriterion> rewriteCriteria(RequirementRevision revision, List<CriterionInput> inputs) {
         Map<String, AcceptanceCriterion> current = criteria
@@ -264,7 +257,7 @@ public class RequirementService {
         return rows;
     }
 
-    /** The key an entry keeps, refusing one that this requirement never used or that the request repeats. */
+    /** 条目要保留的那个 key；若本需求从未用过它，或请求中重复出现，则拒绝。 */
     private static String take(Set<String> available, String requested) {
         if (!available.remove(requested)) {
             throw ApiException.unprocessable("That acceptance criterion key does not belong to this requirement.");
@@ -272,7 +265,7 @@ public class RequirementService {
         return requested;
     }
 
-    /** One more than the highest number any revision of this requirement has used. */
+    /** 本需求的所有修订用过的最大编号加一。 */
     private static int nextNumber(Set<String> usedKeys) {
         return usedKeys.stream()
                 .mapToInt(key -> Integer.parseInt(key.substring(AC_KEY_PREFIX.length())))
@@ -293,7 +286,7 @@ public class RequirementService {
                 RevisionView.of(revision, usernames.get(revision.getCreatedBy()), acceptanceCriteria));
     }
 
-    /** One batch read for every account a response mentions, so no path loops over the directory. */
+    /** 对响应中提到的所有账号做一次批量读取，因此没有任何路径会循环访问用户目录。 */
     private Map<Long, String> usernames(Stream<Long> userIds) {
         return users.byIds(userIds.filter(Objects::nonNull).distinct().toList()).stream()
                 .collect(Collectors.toMap(AccountView::id, AccountView::username));

@@ -14,46 +14,45 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Review activity, the read-only derived quantity of PRD.md 5. It is computed on
- * every read and stored nowhere: there is no {@code IN_REVIEW} requirement status
- * and no {@code INVALIDATED} review status, because a stored copy would have to
- * be invalidated by every head push, diff change and published revision, and the
- * one that was missed would be a lie the UI could not detect.
+ * 审查活动状态，即 PRD.md 5 中那个只读的派生量。它在每次读取时现算、
+ * 任何地方都不存储：既没有 {@code IN_REVIEW} 这个需求状态，
+ * 也没有 {@code INVALIDATED} 这个审查状态——因为一份存下来的副本，
+ * 必须被每一次 head 推送、每一次 diff 变化、每一次修订发布所失效，
+ * 而漏掉的那一次就会变成 UI 无从察觉的谎言。
  *
- * <p>It lives in {@code review} rather than in {@code requirement} because it
- * needs {@code pull_request} and {@code review} together, and ARCHITECTURE.md 1.1
- * runs the dependency arrow {@code review -> requirement}. Having
- * {@code requirement} ask {@code review} would close a cycle in the feature graph
- * (design.md 2.1).
+ * <p>它住在 {@code review} 而非 {@code requirement}，因为它同时需要
+ * {@code pull_request} 与 {@code review}，而 ARCHITECTURE.md 1.1 的依赖箭头是
+ * {@code review -> requirement}。让 {@code requirement} 反过来问 {@code review}，
+ * 会在功能依赖图里闭合出一个环（design.md 2.1）。
  */
 @Service
 @Transactional(readOnly = true)
 public class ReviewActivityService {
 
     /**
-     * PRD.md 5's six-row mapping table, as data rather than an if-chain, in the
-     * same shape as {@code RequirementService.ALLOWED_TARGETS}.
+     * PRD.md 5 那张六行映射表，写成数据而不是 if 链，
+     * 形态与 {@code RequirementService.ALLOWED_TARGETS} 一致。
      *
-     * <p>Only the reachable pairs are listed. A decision may only be written to a
-     * COMPLETED Review (ARCHITECTURE.md 3.1 precondition 1) and
-     * {@code ck_review_decision_needs_completion} makes the other six pairs
-     * unstorable, so a miss below means that CHECK is gone rather than that a case
-     * was forgotten.
+     * <p>只列出可达的组合。决策只能写到 COMPLETED 的 Review 上
+     * （ARCHITECTURE.md 3.1 前置条件 1），而
+     * {@code ck_review_decision_needs_completion} 让另外六种组合根本存不进去，
+     * 因此下面若出现查不到的情况，意味着那条 CHECK 没了，
+     * 而不是漏想了某种情形。
      *
-     * <p>The three PENDINGs here are three different facts and the types keep them
-     * apart: {@code ReviewStatus.PENDING} is "queued, unclaimed",
-     * {@code ReviewDecision.PENDING} is "no human verdict yet", and
-     * {@code PullRequestActivity.PENDING} is what the first of those two produces.
-     * Reading the decision instead of the status would report {@code PENDING} for
-     * every finished review awaiting a human and swallow {@code REVIEWING} whole.
+     * <p>这里的三个 PENDING 是三件不同的事实，靠类型把它们区分开：
+     * {@code ReviewStatus.PENDING} 是“已排队、未被抢占”，
+     * {@code ReviewDecision.PENDING} 是“尚无人工裁定”，
+     * 而 {@code PullRequestActivity.PENDING} 是前两者中第一个所产生的结果。
+     * 若去读 decision 而不是 status，那么每一个已经跑完、正等待人工处理的
+     * 审查都会被报成 {@code PENDING}，{@code REVIEWING} 则会被整个吞掉。
      */
     private static final Map<ReviewState, PullRequestActivity> ACTIVITY_BY_STATE = Map.of(
             new ReviewState(ReviewStatus.PENDING, ReviewDecision.PENDING),
             PullRequestActivity.PENDING,
             new ReviewState(ReviewStatus.RUNNING, ReviewDecision.PENDING),
             PullRequestActivity.REVIEWING,
-            // Finished, but still waiting for a person: PRD.md 5's REVIEWING row
-            // covers this too, and it is not PENDING.
+            // 已经跑完，但仍在等人处理：PRD.md 5 的 REVIEWING 那一行同样覆盖
+            // 这种情况，而它不是 PENDING。
             new ReviewState(ReviewStatus.COMPLETED, ReviewDecision.PENDING),
             PullRequestActivity.REVIEWING,
             new ReviewState(ReviewStatus.COMPLETED, ReviewDecision.APPROVE),
@@ -75,9 +74,8 @@ public class ReviewActivityService {
     }
 
     /**
-     * One requirement's activity. A requirement belonging to another project
-     * answers exactly like one that was never created, so ids cannot be probed
-     * across projects.
+     * 单条需求的活动状态。属于其他项目的需求会与一条从未被创建过的需求
+     * 答得一模一样，因此无法跨项目探测 id。
      */
     public ActivityView forRequirement(long projectId, long userId, long requirementId) {
         access.requireMember(projectId, userId);
@@ -90,8 +88,8 @@ public class ReviewActivityService {
     }
 
     /**
-     * Every requirement in the project, so a list page fetches activity once
-     * instead of once per row.
+     * 项目内的每一条需求，使列表页只取一次活动状态，
+     * 而不是每行取一次。
      */
     public Map<Long, ActivityView> forProject(long projectId, long userId) {
         access.requireMember(projectId, userId);
@@ -100,8 +98,8 @@ public class ReviewActivityService {
                 .forEach(requirementId -> perRequirement.put(requirementId, new ArrayList<>()));
         for (CurrentReview row : activities.ofProject(projectId)) {
             if (row.requirementId() != null) {
-                // The pull request's composite foreign key already proves the
-                // requirement is in this project, so the list is always there.
+                // PR 的复合外键已经证明了该需求就在本项目内，
+                // 因此这个列表必定存在。
                 perRequirement.get(row.requirementId()).add(activityOf(row));
             }
         }
@@ -111,15 +109,15 @@ public class ReviewActivityService {
     }
 
     /**
-     * One pull request's activity. The return type is the six-valued enum on
-     * purpose: {@code NO_PR} and {@code MIXED} are answers about a requirement and
-     * cannot mean anything here, so they are not expressible.
+     * 单个 PR 的活动状态。返回类型有意用那个六值枚举：
+     * {@code NO_PR} 与 {@code MIXED} 是关于**需求**的答案，
+     * 在这里不可能有任何含义，因此干脆让它们无法被表达出来。
      */
     static PullRequestActivity activityOf(CurrentReview row) {
         if (!row.hasCurrentReview()) {
-            // PRD.md 5, first row: nothing matches the current head, fingerprint and
-            // revision. This is also what a published revision or a changed diff
-            // produces, which is the whole point of deriving instead of storing.
+            // PRD.md 5 第一行：没有任何东西匹配当前的 head、指纹与修订。
+            // 发布新修订或 diff 发生变化时产生的也是这个结果——
+            // 而这正是“推导而非存储”的全部意义所在。
             return PullRequestActivity.REVIEW_REQUIRED;
         }
         PullRequestActivity activity = ACTIVITY_BY_STATE.get(new ReviewState(row.status(), row.decision()));
@@ -130,18 +128,17 @@ public class ReviewActivityService {
         return activity;
     }
 
-    /** The two orthogonal columns PRD.md 5 reads, as one lookup key. */
+    /** PRD.md 5 所读取的那两个正交列，合成一个查表键。 */
     private record ReviewState(ReviewStatus status, ReviewDecision decision) {
     }
 
     /**
-     * A requirement's aggregated activity together with the per-state counts.
+     * 一条需求的聚合活动状态，连同各状态的计数。
      *
-     * <p>The counts are always present and always carry all six
-     * single-pull-request values, zeros included (design.md 2.8). PRD.md 5 only
-     * demands them when the aggregate is {@code MIXED}; always sending them costs
-     * a few bytes and removes an entire class of missing-key branch from the
-     * client.
+     * <p>计数永远存在，且永远携带全部六个单 PR 取值，包括为零的项
+     * （design.md 2.8）。PRD.md 5 只在聚合结果为 {@code MIXED} 时才要求它们；
+     * 而始终发送它们只多花几个字节，却从客户端消除了一整类
+     * “键不存在”的分支处理。
      */
     public record ActivityView(RequirementActivity activity, Map<PullRequestActivity, Integer> counts) {
 

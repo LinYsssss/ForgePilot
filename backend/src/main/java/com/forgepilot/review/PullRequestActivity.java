@@ -1,37 +1,34 @@
 package com.forgepilot.review;
 
 /**
- * The derived review activity of <strong>one pull request</strong> (PRD.md 5).
+ * <strong>单个 pull request</strong> 的派生审查活动状态（PRD.md 5）。
  *
- * <p>Six values, not eight. {@code NO_PR} and {@code MIXED} belong to
- * requirement-level aggregation and are meaningless here — DECISIONS.md D011
- * spells this domain out, and IMPLEMENTATION-PLAN.md's eight-value list is the
- * union of two levels rather than one level's domain. That is why this is a
- * separate enum from {@link RequirementActivity} instead of one shared enum:
- * a single eight-valued type would let {@code NO_PR} be returned for a pull
- * request, which cannot mean anything.
+ * <p>是六个取值，不是八个。{@code NO_PR} 与 {@code MIXED} 属于需求层面的聚合，
+ * 在这里毫无意义——DECISIONS.md D011 明确划定了这个值域，而
+ * IMPLEMENTATION-PLAN.md 里的八值清单是两个层面的并集，并非某一层的值域。
+ * 这正是它与 {@link RequirementActivity} 分成两个枚举而不是共用一个的原因：
+ * 单一的八值类型会允许给一个 PR 返回 {@code NO_PR}，而那不可能有任何含义。
  *
- * <p>Never stored. It is computed from the pull request's current head,
- * fingerprint and requirement revision against the Review carrying that same
- * identity.
+ * <p>从不存储。它是把 PR 当前的 head、指纹与需求修订，
+ * 与携带同一身份的那次 Review 比对后算出来的。
  */
 public enum PullRequestActivity {
 
-    /** No Review matches the pull request's current head, fingerprint and revision. */
+    /** 没有任何 Review 匹配该 PR 当前的 head、指纹与修订。 */
     REVIEW_REQUIRED,
 
-    /** The current Review's execution failed. */
+    /** 当前 Review 的执行失败了。 */
     FAILED,
 
-    /** The current Review's decision is REQUEST_CHANGES. */
+    /** 当前 Review 的决策是 REQUEST_CHANGES。 */
     CHANGES_REQUESTED,
 
-    /** The current Review is running, or finished and is waiting for a human. */
+    /** 当前 Review 正在运行，或已完成、正等待人工处理。 */
     REVIEWING,
 
-    /** The current Review is queued and unclaimed. */
+    /** 当前 Review 在排队中，尚未被抢占。 */
     PENDING,
 
-    /** The current Review's decision is APPROVE. */
+    /** 当前 Review 的决策是 APPROVE。 */
     APPROVED
 }

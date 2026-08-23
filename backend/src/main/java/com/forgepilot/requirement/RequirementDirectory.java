@@ -4,15 +4,14 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * The only way another feature may ask about a requirement (D015.6). It is a
- * query facade, not a repository, so {@code scm} stays free of
- * {@code RequirementRepository} and of everything about how requirements work.
+ * 其他功能模块询问需求的**唯一**途径（D015.6）。它是查询 facade 而非仓库，
+ * 因此 {@code scm} 既接触不到 {@code RequirementRepository}，
+ * 也接触不到需求内部是怎么运作的。
  *
- * <p>{@code scm} needs this because {@code REQ-<n>} has to be resolved
- * <em>before</em> the pull request row is written: the composite foreign key can
- * only fail the whole insert, and catching that violation to carry on is
- * forbidden (D013.11), while D007 requires a bad reference not to block
- * ingestion at all.
+ * <p>{@code scm} 之所以需要它，是因为 {@code REQ-<n>} 必须<em>先于</em>
+ * pull request 行的写入被解析：复合外键只能让整条插入失败，
+ * 而捕获那个违例后继续执行是被禁止的（D013.11）；同时 D007 又要求
+ * 一个错误的引用完全不能阻塞入库。
  */
 @Service
 @Transactional(readOnly = true)
@@ -25,9 +24,9 @@ public class RequirementDirectory {
     }
 
     /**
-     * Whether this requirement exists <em>in this project</em>. An id belonging to
-     * another project answers false, which is what turns a cross-project
-     * {@code REQ-<n>} into "no linked requirement" rather than an error (D013.2).
+     * 这条需求是否存在<em>于本项目之内</em>。属于别的项目的 id 会得到 false，
+     * 正是这一点把跨项目的 {@code REQ-<n>} 变成「没有关联需求」而不是一个错误
+     * （D013.2）。
      */
     public boolean existsInProject(long projectId, long requirementId) {
         return requirements.findByProjectIdAndId(projectId, requirementId).isPresent();

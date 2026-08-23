@@ -8,10 +8,8 @@ import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.Size;
 
 /**
- * The prose and acceptance criteria of one revision, as the caller sends them.
- * Used both when a requirement is created and whenever its content changes;
- * {@code sortOrder} is derived from the array position and is never accepted
- * from the client (api-contract 3).
+ * 调用方提交的某次修订的文本与验收条件。创建需求以及此后每次内容变更都用它；
+ * {@code sortOrder} 由数组下标推导，绝不接受客户端传入（api-contract 3）。
  */
 public record RequirementContent(
         @NotBlank @Size(max = 200) String title,

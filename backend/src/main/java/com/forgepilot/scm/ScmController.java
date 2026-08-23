@@ -57,10 +57,9 @@ class ScmController {
     }
 
     /**
-     * Sets or clears the pull request's requirement (PRD P1). PUT on the
-     * sub-resource rather than PATCH on the pull request, because clearing is a
-     * legal correction and a PATCH body cannot tell "leave it alone" apart from
-     * "set it to nothing".
+     * 设置或清除 PR 的关联需求（PRD P1）。用子资源上的 PUT 而不是 PR 上的
+     * PATCH，因为「清除」是一次合法纠正，而 PATCH 的请求体无法区分
+     * 「保持不变」与「设为无」。
      */
     @PutMapping("/pull-requests/{pullRequestId}/requirement")
     PullRequestResponse setRequirement(@PathVariable long projectId, @PathVariable long pullRequestId,
@@ -70,9 +69,9 @@ class ScmController {
     }
 
     /**
-     * The login identity is resolved to a user id here, in the controller, through
-     * the read-only account facade. Business services never see Spring Security
-     * (ARCHITECTURE.md 1.3 as narrowed by D013.6).
+     * 登录身份在这里——控制器层——通过只读账号 facade 解析为 user id。
+     * 业务服务永远看不到 Spring Security
+     * （ARCHITECTURE.md 1.3，并按 D013.6 收窄）。
      */
     private long userIdOf(Principal principal) {
         return users.byUsername(principal.getName()).map(AccountView::id)
@@ -87,7 +86,7 @@ class ScmController {
             @NotBlank String webhookSecret) {
     }
 
-    /** Every field is optional; a null one leaves that part of the connection alone. */
+    /** 所有字段都是可选的；某个字段为 null 表示该部分连接配置保持不变。 */
     record UpdateRequest(
             ScmProvider provider,
             @Size(max = 128) String externalId,
@@ -97,10 +96,9 @@ class ScmController {
     }
 
     /**
-     * {@code requirementId} is nullable on purpose: null means "this pull request
-     * implements no requirement", which is a correction the audit records like any
-     * other. {@code reason} follows the column, which ARCHITECTURE.md 2.1 leaves
-     * nullable — it is stored when given and never invented when not.
+     * {@code requirementId} 可空是有意为之：null 表示「这个 PR 不实现任何需求」，
+     * 而这与其他纠正一样会被审计记录下来。{@code reason} 跟随对应的列，
+     * ARCHITECTURE.md 2.1 让该列可空——给了就存，没给也绝不凭空编造。
      */
     record AssociationRequest(Long requirementId, @Size(max = 500) String reason) {
     }

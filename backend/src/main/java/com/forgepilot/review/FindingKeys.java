@@ -10,40 +10,39 @@ import java.util.Locale;
 import java.util.regex.Pattern;
 
 /**
- * The three deterministic keys a Finding carries across rounds (D009,
- * ARCHITECTURE.md 3.6.1 and 3.6.2), computed the same way
- * {@code ReviewInputFingerprint} computes its digest: every field is framed by a
- * NUL byte, which cannot occur in a path, an excerpt or a stored patch, so the
- * encoding is injective and two different inputs cannot collide into one digest.
+ * 一条 Finding 跨轮次携带的三个确定性 key（D009、ARCHITECTURE.md 3.6.1 与 3.6.2），
+ * 计算方式与 {@code ReviewInputFingerprint} 生成摘要的方式一致：
+ * 每个字段都用 NUL 字节框起来，而 NUL 不可能出现在路径、证据片段或已存 patch 中，
+ * 因此编码是单射的，两份不同的输入不可能碰撞成同一个摘要。
  *
- * <p><strong>Neither hash covers a single character the model wrote as prose.</strong>
- * That is the whole point of the mechanism. A rejection is inherited only when
- * both hashes are unchanged, so if a hash covered the model's description, the
- * next round's rewording would either lose a valid suppression or — worse —
- * suppress a finding whose code or requirement had actually moved underneath it.
+ * <p><strong>两个哈希都不覆盖模型写出的任何一个散文字符。</strong>
+ * 这正是整套机制的要点。只有当两个哈希都未变化时驳回才被继承；
+ * 因此若某个哈希覆盖了模型的描述文字，下一轮的换个说法要么会丢掉一个
+ * 本应有效的抑制项，要么——更糟——会去抑制一条其代码或需求其实已经
+ * 在它脚下变动过的 finding。
  *
- * <p>All three are frozen rules. {@link #RULE_VERSION} exists so that changing
- * them is a deliberate act with a visible consequence rather than a silent one.
+ * <p>这三条都是冻结规则。{@link #RULE_VERSION} 的存在，
+ * 使得改动它们成为一个有可见后果的、刻意的动作，而不是一次静默的变更。
  */
 final class FindingKeys {
 
     /**
-     * Part of every {@code basis_hash}. Bumping it changes every basis hash and
-     * therefore drops every inherited suppression, which is the intended effect:
-     * if the deterministic rules change, a human's earlier rejection was made
-     * against a different basis and must not carry over unexamined.
+     * 它是每一个 {@code basis_hash} 的组成部分。递增它会改变所有 basis hash，
+     * 从而丢弃所有被继承的抑制项——这正是预期效果：
+     * 如果确定性规则变了，那么人此前作出的驳回是针对另一套依据作出的，
+     * 不得未经复核就继续沿用。
      */
     static final String RULE_VERSION = "1";
 
     /**
-     * The one volatile-line-number form this pipeline actually handles. Patches
-     * arrive from the provider as unified diffs, and an unrelated edit above a
-     * hunk shifts these numbers without changing a byte of the evidence.
+     * 本流水线实际会遇到的**唯一**一种易变行号形态。patch 从 provider 那里
+     * 以 unified diff 形式到达，而某个 hunk 上方一处无关的编辑，
+     * 会在证据一个字节都没变的情况下改动这些数字。
      *
-     * <p>The trailing context after the closing {@code @@} is deliberately kept —
-     * it is source. And no other "line number" shape is stripped: a rule that
-     * removed a leading {@code 42: } gutter would also mutilate any real source
-     * line beginning with a number, and this codebase never produces that shape.
+     * <p>收尾 {@code @@} 之后的上下文是**刻意保留**的——那是源码。
+     * 此外不剥离任何其他形态的“行号”：一条会去掉开头 {@code 42: } 装订线的规则，
+     * 同样会毁掉任何真正以数字开头的源码行，
+     * 而本代码库根本不会产生那种形态。
      */
     private static final Pattern HUNK_HEADER =
             Pattern.compile("(?m)^@@ -\\d+(?:,\\d+)? \\+\\d+(?:,\\d+)? @@");
@@ -57,29 +56,27 @@ final class FindingKeys {
     }
 
     /**
-     * Does two jobs at once (3.6.1): dedup inside one Review and matching across
-     * Reviews of the same pull request.
+     * 它一次干两件事（3.6.1）：单个 Review 内部的去重，
+     * 以及同一个 PR 各次 Review 之间的匹配。
      *
-     * <p>{@code path} is case sensitive and never lower-cased — {@code Api.java}
-     * and {@code api.java} are two files on a case sensitive checkout, and folding
-     * them would let a rejection on one suppress a finding in the other.
-     * A {@code REQUIREMENT} finding additionally carries {@code requirementId} and
-     * {@code acKey}; {@code acKey} rather than the acceptance criterion's row id,
-     * because the row id changes with every published revision while the business
-     * identity it names does not (D011).
+     * <p>{@code path} 大小写敏感且绝不转小写——在大小写敏感的检出中，
+     * {@code Api.java} 与 {@code api.java} 是两个文件，
+     * 把它们折叠会让对其中一个的驳回抑制掉另一个里的 finding。
+     * {@code REQUIREMENT} 类 finding 还额外携带 {@code requirementId} 与
+     * {@code acKey}；用 {@code acKey} 而不是验收条件的行 id，
+     * 是因为行 id 会随每次修订发布而变，而它所指代的业务身份不会（D011）。
      *
-     * <p>The result is a digest rather than a readable concatenation because the
-     * column is {@code VARCHAR(255)}: a legitimately deep path plus a category
-     * would exceed it, and PostgreSQL would reject the insert (22001) — while
-     * truncating to fit would silently merge two different findings into one key.
+     * <p>结果是一个摘要而不是可读的拼接串，因为那个列是 {@code VARCHAR(255)}：
+     * 一个合法的深层路径加上类别就会超长，PostgreSQL 会以 22001 拒绝插入——
+     * 而为了塞下去做截断，则会把两条不同的 finding 静默合并成一个 key。
      */
     static String findingKey(FindingType findingType, String path, Integer line, String category,
             Long requirementId, String acKey) {
         MessageDigest digest = sha256();
         field(digest, findingType.name());
         field(digest, path);
-        // The normalized position: the line if the patch could verify one, absent
-        // otherwise (3.5 forbids emitting a line that could not be verified).
+        // 归一化后的位置：如果 patch 能核实出行号就用它，否则留空
+        // （3.5 禁止输出一个无法核实的行号）。
         field(digest, line == null ? null : line.toString());
         field(digest, normalizeCategory(category));
         field(digest, requirementId == null ? null : requirementId.toString());
@@ -88,13 +85,12 @@ final class FindingKeys {
     }
 
     /**
-     * Covers deterministic source evidence only: line endings unified, the diff
-     * hunk header's volatile numbers replaced, and nothing else touched.
+     * 只覆盖确定性的源码证据：统一行尾、替换掉 diff hunk 头部的易变数字，
+     * 此外一律不动。
      *
-     * <p>Whitespace is <strong>not</strong> collapsed. Python and YAML mean
-     * different things at different indents, so a general fold would make two
-     * genuinely different pieces of source hash alike — and a suppression that
-     * ignores indentation is a suppression that survives a real change.
+     * <p>空白<strong>不做</strong>折叠。Python 与 YAML 在不同缩进下含义不同，
+     * 因此通用的折叠会让两段确实不同的源码哈希成同一个值——
+     * 而一个无视缩进的抑制项，就是一个能在真实变更之后继续存活的抑制项。
      */
     static String evidenceHash(String excerpt) {
         MessageDigest digest = sha256();
@@ -103,15 +99,13 @@ final class FindingKeys {
     }
 
     /**
-     * Covers what the finding was judged <em>against</em>: the cited requirement
-     * and acceptance criterion as they read in this Review's revision, the hashes
-     * of the knowledge excerpts that were recalled, and the rule version.
+     * 覆盖这条 finding 是<em>对照什么</em>作出判断的：被引用的需求与验收条件
+     * 在本次 Review 所用修订中的原文、被召回的知识片段的哈希，以及规则版本。
      *
-     * <p>Excerpt hashes are sorted and de-duplicated so that the provider's recall
-     * order cannot change the result — the set of cited sources is the fact, their
-     * order is not. The excerpts enter as their own hashes rather than their text:
-     * ARCHITECTURE.md 3.5 stores an immutable excerpt plus hash exactly so that a
-     * later edit to the knowledge document cannot rewrite what a past Review meant.
+     * <p>片段哈希会排序并去重，使 provider 的召回顺序无法改变结果——
+     * 「被引用的来源集合」才是事实，它们的顺序不是。片段以自身的哈希而非文本
+     * 进入计算：ARCHITECTURE.md 3.5 之所以存储不可变片段加哈希，
+     * 正是为了让日后对知识文档的编辑无法改写一次过往 Review 当初的含义。
      */
     static String basisHash(String requirementText, String acKey, String acText,
             Collection<String> knowledgeExcerptHashes) {
@@ -130,16 +124,16 @@ final class FindingKeys {
     }
 
     /**
-     * The category is a label from the answer schema, not prose, and it takes part
-     * in the key rather than in a hash. Case and surrounding space are folded here
-     * — and only here — because {@code Null deref} and {@code null-deref} name one
-     * category, whereas two paths differing in case name two files.
+     * 类别是回答 schema 里的一个标签，不是散文，而且它参与的是 key 而非哈希。
+     * 大小写与首尾空白在这里——也只在这里——被折叠，
+     * 因为 {@code Null deref} 与 {@code null-deref} 指的是同一个类别，
+     * 而仅在大小写上不同的两个路径指的是两个文件。
      */
     static String normalizeCategory(String category) {
         return category == null ? "" : category.strip().toLowerCase(Locale.ROOT);
     }
 
-    /** Absent and empty must not hash alike, so presence is its own byte. */
+    /** 「缺席」与「空」绝不能哈希成同一个值，因此「是否存在」自占一个字节。 */
     private static void field(MessageDigest digest, String value) {
         digest.update(value == null ? ABSENT : PRESENT);
         if (value != null) {

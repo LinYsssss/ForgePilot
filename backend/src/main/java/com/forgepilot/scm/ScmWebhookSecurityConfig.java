@@ -12,8 +12,8 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 
 /**
- * The two provider webhook endpoints authenticate their own raw request bytes and
- * therefore do not use a browser session or cookie CSRF token.
+ * 两个 provider 的 webhook 端点各自对**原始请求字节**做认证，
+ * 因此不使用浏览器会话，也不使用 Cookie CSRF token。
  */
 @Configuration
 @ConditionalOnWebApplication(type = Type.SERVLET)

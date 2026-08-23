@@ -1,6 +1,6 @@
 package com.forgepilot.auth;
 
-/** What other features are allowed to see of an account (D013.6). Never carries the password hash. */
+/** 其他功能模块被允许看到的账号信息（D013.6）。绝不携带口令哈希。 */
 public record AccountView(long id, String username, boolean enabled) {
 
     static AccountView of(UserAccount account) {

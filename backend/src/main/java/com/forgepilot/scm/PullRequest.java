@@ -14,13 +14,13 @@ import org.hibernate.annotations.UpdateTimestamp;
 import org.hibernate.type.SqlTypes;
 
 /**
- * The authoritative snapshot of one pull request, as the provider reported it.
+ * 一个 pull request 的权威快照，内容即 provider 所报告的状态。
  *
- * <p>The webhook is only a signal: every column here comes from a fresh read of
- * the provider API, which is what makes a replay harmless. {@code source_revision}
- * and {@code source_updated_at} exist for ordering alone — an older delivery must
- * never roll base, head or the patches backwards — and neither may take part in
- * {@code review_input_fingerprint}, or event ordering would mint Review identities.
+ * <p>Webhook 只是一个信号：这里的每一列都来自对 provider API 的一次全新读取，
+ * 这正是重放无害的原因。{@code source_revision} 与 {@code source_updated_at}
+ * 只为定序而存在——一次较旧的投递绝不能把 base、head 或 patch 往回滚——
+ * 并且二者都不得参与 {@code review_input_fingerprint}，
+ * 否则事件顺序就会凭空铸造出 Review 身份。
  */
 @Entity
 @Table(name = "pull_request")
@@ -39,7 +39,7 @@ public class PullRequest {
     @Column(name = "external_number", nullable = false)
     private Integer externalNumber;
 
-    /** Provider-reported current title; prompt input, never Review identity. */
+    /** provider 报告的当前标题；只作 Prompt 输入，绝不参与 Review 身份。 */
     @Column(name = "title", nullable = false, length = 512)
     private String title;
 
@@ -59,9 +59,9 @@ public class PullRequest {
     private Instant sourceUpdatedAt;
 
     /**
-     * The changed-file manifest with every patch, as JSONB (D015.7). Stored rather
-     * than re-fetched at review time, because the fingerprint's inputs have to stay
-     * reproducible from the database for the row to be a snapshot at all.
+     * 带全部 patch 的变更文件清单，以 JSONB 存储（D015.7）。是**存下来**而不是
+     * 审查时再取，因为指纹的输入必须能从数据库里可复现地还原——否则这一行
+     * 根本算不上一个快照。
      */
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "changed_files", nullable = false)
@@ -77,12 +77,12 @@ public class PullRequest {
     private String authorUsername;
 
     /**
-     * The recomputable mapping onto a project member. It stays null in batch 2:
-     * computing it needs a lookup by {@code scm_external_user_id}, which {@code project}
-     * exposes no facade for, and ArchUnit rule 4 forbids reaching into
-     * {@code ProjectMemberRepository} from here. Nothing authorizes against it yet;
-     * "is this my pull request" is decided by the external id (D010), and the
-     * immutable author snapshot above is already stored.
+     * 可重算的「映射到某个项目成员」的结果。在批次 2 中它保持为 null：
+     * 计算它需要按 {@code scm_external_user_id} 做一次查找，而 {@code project}
+     * 没有为此暴露 facade，ArchUnit 规则 4 又禁止从这里伸进
+     * {@code ProjectMemberRepository}。目前也没有任何授权依赖它；
+     * “这是不是我的 PR”由外部 id 判定（D010），而上面那份不可变的作者快照
+     * 也已经存下来了。
      */
     @Column(name = "author_user_id")
     private Long authorUserId;
@@ -172,7 +172,7 @@ public class PullRequest {
         return updatedAt;
     }
 
-    /** Base, head, the manifest and the fingerprint move together or not at all. */
+    /** base、head、清单与指纹要么一起变，要么都不变。 */
     void applySnapshot(String baseSha, String headSha, String title, String reviewInputFingerprint,
             String changedFiles, String sourceRevision, Instant sourceUpdatedAt) {
         this.baseSha = baseSha;

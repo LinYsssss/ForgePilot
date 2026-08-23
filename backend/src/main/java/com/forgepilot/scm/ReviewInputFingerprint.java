@@ -7,24 +7,22 @@ import java.security.NoSuchAlgorithmException;
 import java.util.HexFormat;
 
 /**
- * The deterministic hash of a normalized review input (design.md 3.2, D003).
+ * 归一化后的审查输入的确定性哈希（design.md 3.2、D003）。
  *
- * <p>Inputs: the repository identity, base and head, and the changed-file manifest
- * with every patch. Explicitly <em>not</em> {@code source_revision} or
- * {@code source_updated_at} — those order events and must never mint an identity
- * of their own — and not the requirement association, which is a separate
- * component of Review identity.
+ * <p>输入包括：仓库身份、base 与 head，以及带全部 patch 的变更文件清单。
+ * 明确<em>不</em>包括 {@code source_revision} 与 {@code source_updated_at}——
+ * 那两者只用于事件定序，绝不能凭空铸造出自己的身份——也不包括需求关联，
+ * 后者是 Review 身份中另一个独立的组成部分。
  *
- * <p>Normalization: files in path byte order, paths case sensitive, patches as
- * UTF-8 bytes with line endings untouched (CRLF and LF are genuinely different
- * diffs, and folding them would collide two different inputs), and every field
- * framed by a NUL separator. NUL is the one byte that cannot occur in either a
- * path or a stored patch — PostgreSQL rejects it in text with 22021 — which makes
- * the encoding injective, so two different manifests cannot produce one digest.
+ * <p>归一化规则：文件按路径字节序排列、路径大小写敏感、patch 按 UTF-8 字节
+ * 且不改动行尾（CRLF 与 LF 是**确实不同**的 diff，折叠它们会让两份不同的输入
+ * 撞成同一个值），每个字段都用 NUL 分隔符框起来。NUL 是路径和已存 patch 中
+ * 都不可能出现的唯一字节——PostgreSQL 会以 22021 拒绝文本中的 NUL——
+ * 这使编码成为单射，因此两份不同的清单不可能产生同一个摘要。
  *
- * <p>This rule is frozen. Changing it invalidates every stored fingerprint and
- * therefore every Review identity that was ever derived from one, which is why
- * {@code ReviewInputFingerprintTest} pins an expected digest as a literal.
+ * <p>这条规则已经冻结。改动它会让所有已存指纹失效，从而让每一个由它派生出的
+ * Review 身份一并失效——这正是 {@code ReviewInputFingerprintTest} 把一个期望
+ * 摘要写成字面量钉死的原因。
  */
 final class ReviewInputFingerprint {
 

@@ -8,24 +8,22 @@ import com.forgepilot.requirement.RequirementDirectory;
 import org.springframework.stereotype.Component;
 
 /**
- * Resolves the first {@code REQ-<n>} in a pull request's branch name or title,
- * where {@code <n>} is the global {@code requirement.id} (D013.2).
+ * 解析 PR 分支名或标题中出现的第一个 {@code REQ-<n>}，其中 {@code <n>} 是全局的
+ * {@code requirement.id}（D013.2）。
  *
- * <p>Resolution is filtered by the pull request's own project, so an id that
- * belongs to another project resolves to "no linked requirement" exactly as if
- * there had been no token at all — not an error, and never a block on ingestion
- * (D007). The composite foreign key cannot do that filtering: it would fail the
- * whole insert, and catching that to carry on is forbidden (D013.11). So the
- * question is asked before the row is written, through {@code requirement}'s
- * read-only facade (D015.6); this class must never see a repository.
+ * <p>解析结果会按该 PR 自己的项目过滤，因此属于其他项目的 id 会被解析成
+ * 「没有关联需求」，与压根没写过这个 token 完全一样——既不是错误，
+ * 也永远不会阻塞入库（D007）。复合外键做不到这种过滤：它只会让整条插入失败，
+ * 而捕获它后继续执行是被禁止的（D013.11）。因此这个问题在写行之前就通过
+ * {@code requirement} 的只读 facade 问清楚（D015.6）；本类绝不能看到任何仓库。
  */
 @Component
 class RequirementReferenceParser {
 
     /**
-     * Case sensitive and anchored on a non-alphanumeric boundary. Every document
-     * writes the token as {@code REQ-}, so a lenient match would be an invention;
-     * the boundary keeps {@code PREQ-7} from being read as a reference.
+     * 大小写敏感，并锚定在非字母数字的边界上。所有文档都把这个 token 写作
+     * {@code REQ-}，因此宽松匹配等于凭空发明；边界则防止 {@code PREQ-7}
+     * 被读成一个引用。
      */
     private static final Pattern REFERENCE = Pattern.compile("(?<![A-Za-z0-9])REQ-(\\d{1,18})");
 
@@ -35,7 +33,7 @@ class RequirementReferenceParser {
         this.requirements = requirements;
     }
 
-    /** The branch wins over the title: it is the one a developer has to type correctly to push. */
+    /** 分支名优先于标题：分支名是开发者必须打对才能 push 的那一个。 */
     Optional<RequirementReference> resolve(long projectId, String branch, String title) {
         return firstReference(branch, "branch")
                 .or(() -> firstReference(title, "title"))

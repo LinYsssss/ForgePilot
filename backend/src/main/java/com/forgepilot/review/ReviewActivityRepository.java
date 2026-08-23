@@ -7,43 +7,39 @@ import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Repository;
 
 /**
- * The one read behind review activity: every pull request of a project paired
- * with the Review that is <em>currently valid</em> for it, or with nulls when
- * none is.
+ * 支撑审查活动状态的那**一次**读取：把项目内每一个 PR 与它<em>当前有效</em>的
+ * 那次 Review 配对；若没有，则配上一组 null。
  *
- * <p>It is plain SQL rather than JPA for two reasons that both matter.
+ * <p>它用朴素 SQL 而不是 JPA，有两个都很要紧的理由。
  *
- * <p>First, current validity has to be decided by the database. ARCHITECTURE.md
- * 3.1 pins the comparison for the requirement revision to
- * {@code IS NOT DISTINCT FROM}, "NULL 亦须相等". Written as {@code =}, a pull
- * request with no requirement compares null to null, the predicate is unknown,
- * the join drops the row, and that pull request reports {@code REVIEW_REQUIRED}
- * forever — no number of reviews and no manual trigger could ever clear it. The
- * Java equivalents fail the same way: {@code a.equals(b)} throws when {@code a}
- * is null, and {@code a == b} is false for two boxed {@code Long}s outside the
- * cache. Comparing in the database avoids all three.
+ * <p>其一，「当前是否有效」必须由数据库来判定。ARCHITECTURE.md 3.1 把
+ * 需求修订的比较钉死为 {@code IS NOT DISTINCT FROM}，即“NULL 亦须相等”。
+ * 若写成 {@code =}，没有关联需求的 PR 会拿 null 与 null 比较，谓词结果为 unknown，
+ * 连接因此丢掉这一行，于是该 PR 会永远报告 {@code REVIEW_REQUIRED}——
+ * 再多的审查、再多的手动触发都清不掉它。Java 侧的等价写法同样会出错：
+ * {@code a.equals(b)} 在 {@code a} 为 null 时抛异常，
+ * 而 {@code a == b} 对两个超出缓存范围的装箱 {@code Long} 为 false。
+ * 放在数据库里比较，三个坑一并避开。
  *
- * <p>Second, activity spans {@code pull_request} (owned by {@code scm}) and
- * {@code review}. ARCHITECTURE.md 1.1 runs the arrow {@code review -> scm}, and
- * {@code review} may not inject another feature's repository, so the join is
- * expressed here, in SQL, where it creates no type dependency.
+ * <p>其二，活动状态横跨 {@code pull_request}（归 {@code scm} 所有）与
+ * {@code review}。ARCHITECTURE.md 1.1 的箭头方向是 {@code review -> scm}，
+ * 而 {@code review} 不得注入另一个功能模块的仓库，
+ * 因此这次连接在这里用 SQL 表达——在这里它不会产生任何类型依赖。
  *
- * <p>One statement, not one per pull request: a requirement list page asks for a
- * whole project at once.
+ * <p>是**一条**语句，而不是每个 PR 一条：需求列表页一次要的是整个项目。
  */
 @Repository
 class ReviewActivityRepository {
 
     /**
-     * Written once and shared by both callers so the current-validity test cannot
-     * drift between them. The two joins are different in kind: {@code requirement}
-     * supplies the pull request's <em>current</em> revision (there is no such
-     * column on {@code pull_request}), and {@code review} is the identity match.
+     * 只写一次、由两个调用方共用，使「当前是否有效」的判定不会在二者之间漂移。
+     * 这两个连接性质不同：{@code requirement} 提供的是该 PR <em>当前的</em>修订
+     * （{@code pull_request} 上并没有这样一个列），
+     * 而 {@code review} 才是身份匹配。
      *
-     * <p>{@code review.requirement_id} is deliberately absent from the match
-     * (design.md 2.5): a revision belongs to exactly one requirement and the
-     * three-column foreign key enforces it, so matching the revision already
-     * implies matching the requirement.
+     * <p>{@code review.requirement_id} **刻意**不参与匹配（design.md 2.5）：
+     * 一个修订恰好属于一条需求，且三列外键强制了这一点，
+     * 因此匹配上修订本身就已经蕴含了匹配上需求。
      */
     private static final String CURRENT_REVIEW_PER_PULL_REQUEST = """
             select pr.requirement_id as requirement_id,
@@ -63,9 +59,8 @@ class ReviewActivityRepository {
             """;
 
     /**
-     * {@code review_status} and {@code review_decision} are both NOT NULL columns,
-     * so they are null together exactly when the left join found no currently
-     * valid Review.
+     * {@code review_status} 与 {@code review_decision} 都是 NOT NULL 列，
+     * 因此当且仅当左连接没有找到当前有效的 Review 时，它们才会同时为 null。
      */
     private static final RowMapper<CurrentReview> ROW = (rs, index) -> {
         String status = rs.getString("review_status");
@@ -81,11 +76,10 @@ class ReviewActivityRepository {
     }
 
     /**
-     * Every pull request in the project, including the ones with no requirement.
-     * Those are not filtered out here because they are not a defect: P1 lets a
-     * pull request exist with no association at all, it still has an activity of
-     * its own, and it belongs to no requirement's aggregate. Which of those two
-     * facts applies is the caller's decision, not this query's.
+     * 项目内的每一个 PR，包括那些没有关联需求的。这里不把它们过滤掉，
+     * 因为它们并不是缺陷：P1 允许一个 PR 完全没有关联，
+     * 它依然有属于自己的活动状态，只是不进入任何需求的聚合。
+     * 这两个事实中哪一个适用，是调用方的判断，而不是本查询的判断。
      */
     List<CurrentReview> ofProject(long projectId) {
         return jdbc.query(CURRENT_REVIEW_PER_PULL_REQUEST + "order by pr.id", ROW, projectId);
@@ -97,9 +91,9 @@ class ReviewActivityRepository {
     }
 
     /**
-     * Needed because a requirement with no pull request at all still has an
-     * activity — {@code NO_PR} — and no join over {@code pull_request} can produce
-     * a row for it.
+     * 之所以需要它，是因为一条一个 PR 都没有的需求仍然有它的活动状态
+     * ——{@code NO_PR}——而任何基于 {@code pull_request} 的连接都不可能
+     * 为它产生出一行来。
      */
     List<Long> requirementIds(long projectId) {
         return jdbc.queryForList("select id from requirement where project_id = ? order by id",
@@ -107,9 +101,8 @@ class ReviewActivityRepository {
     }
 
     /**
-     * One pull request, the requirement it is associated with (null when it has
-     * none), and the execution status and decision of its currently valid Review
-     * (both null when it has none).
+     * 一个 PR、它所关联的需求（没有则为 null），
+     * 以及它当前有效 Review 的执行状态与决策（没有则两者皆为 null）。
      */
     record CurrentReview(Long requirementId, ReviewStatus status, ReviewDecision decision) {
 

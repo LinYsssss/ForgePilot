@@ -15,22 +15,19 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 /**
- * Decides whether this deployment may make an outbound HTTP call to a caller
- * supplied URL (design.md 3.5).
+ * 判定本部署是否允许向调用方提供的 URL 发起出站 HTTP 调用（design.md 3.5）。
  *
- * <p>{@code scm_repository.api_base} is configured by a project LEADER and is then
- * dereferenced by the server, which makes it an SSRF entry point: pointed at
- * {@code 169.254.169.254} it reads cloud metadata, pointed at an internal address
- * it turns this system into a jump host. So the policy denies loopback, the
- * private ranges, link-local, unique-local and everything that is not http(s).
+ * <p>{@code scm_repository.api_base} 由项目 LEADER 配置，随后由服务端解引用，
+ * 这使它成为一个 SSRF 入口：指向 {@code 169.254.169.254} 就能读云元数据，
+ * 指向内网地址就把本系统变成跳板机。因此本策略拒绝回环地址、私有网段、
+ * 链路本地、唯一本地地址，以及一切非 http(s) 的协议。
  *
- * <p>The only way through is the explicit host allowlist in
- * {@code forgepilot.scm.allowed-hosts}, which is <strong>empty in production</strong>
- * because the property is declared nowhere. Integration tests add {@code 127.0.0.1}
- * to it so their stub provider is reachable while the policy itself stays switched
- * on; {@code OutboundUrlPolicyTest} constructs the policy with an empty allowlist
- * and pins each denial, so "deny by default" is proven independently of any test
- * seam. A policy that ships having never executed would be worse than none.
+ * <p>唯一的放行途径是 {@code forgepilot.scm.allowed-hosts} 里的显式主机白名单，
+ * 而它在<strong>生产环境中为空</strong>——因为该配置项根本没有在任何地方声明。
+ * 集成测试往里加 {@code 127.0.0.1}，让桩 provider 可达的同时策略本身仍然开启；
+ * {@code OutboundUrlPolicyTest} 则用空白名单构造策略并逐条钉死拒绝行为，
+ * 因此“默认拒绝”是独立于任何测试接缝被证明的。一条从未真正执行过的策略，
+ * 比没有策略更糟。
  */
 @Component
 public class OutboundUrlPolicy {
@@ -47,9 +44,8 @@ public class OutboundUrlPolicy {
     }
 
     /**
-     * Returns the URL as a URI if this deployment may call it, and refuses with the
-     * same 422 for every reason: a caller must not learn which internal address
-     * exists by comparing rejections.
+     * 若本部署允许调用该 URL 则返回其 URI，否则以**同一个** 422 拒绝所有情况：
+     * 调用方不得通过比较拒绝方式来推断哪个内网地址存在。
      */
     public URI requireAllowed(String url) {
         URI uri = parse(url);
@@ -83,7 +79,7 @@ public class OutboundUrlPolicy {
         }
     }
 
-    /** {@code URI.getHost()} keeps the brackets of an IPv6 literal; nothing else wants them. */
+    /** {@code URI.getHost()} 会保留 IPv6 字面量的方括号；此外没人想要它们。 */
     private static String hostOf(URI uri) {
         String host = uri.getHost();
         if (host == null) {
@@ -96,9 +92,8 @@ public class OutboundUrlPolicy {
     }
 
     /**
-     * A name is resolved before it is judged, otherwise {@code localhost} or any
-     * name an attacker controls walks straight past the literal checks. A name that
-     * does not resolve is refused rather than attempted.
+     * 域名先解析再判定，否则 {@code localhost} 或任何攻击者控制的名字都能
+     * 径直绕过针对字面量的检查。解析不出来的名字直接拒绝，而不是尝试连接。
      */
     private static InetAddress[] resolve(String host) {
         try {
@@ -117,7 +112,7 @@ public class OutboundUrlPolicy {
                 || isUniqueLocal(address);
     }
 
-    /** fc00::/7. {@code isSiteLocalAddress} only covers the deprecated fec0::/10. */
+    /** fc00::/7。{@code isSiteLocalAddress} 只覆盖已废弃的 fec0::/10。 */
     private static boolean isUniqueLocal(InetAddress address) {
         return address instanceof Inet6Address && (address.getAddress()[0] & 0xFE) == 0xFC;
     }

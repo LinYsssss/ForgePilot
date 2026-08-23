@@ -11,16 +11,13 @@ import jakarta.persistence.Table;
 import org.hibernate.annotations.CreationTimestamp;
 
 /**
- * The relation between a requirement and a knowledge document, and the single
- * source of truth for attachment ownership (ARCHITECTURE.md 2.3). It lives in
- * {@code requirement} because §1.2 gives this module the attachment relation;
- * {@code knowledge} only ever receives an opaque scope id and never looks a
- * requirement up.
+ * 需求与知识文档之间的关系，也是附件归属的唯一事实源（ARCHITECTURE.md 2.3）。
+ * 它住在 {@code requirement} 里，因为 §1.2 把附件关系判给了本模块；
+ * {@code knowledge} 永远只收到一个不透明的作用域 id，从不去查询需求。
  *
- * <p>Nothing here re-checks ownership. The row's three-column foreign key pins
- * the document's own scope to this requirement, so a public-knowledge document
- * cannot be attached at all, and both id columns are NOT NULL because a NULL
- * would make PostgreSQL skip that check entirely (D015.2).
+ * <p>这里不重复校验归属。本行的三列外键把文档自身的作用域钉死在这条需求上，
+ * 因此一份公共知识文档根本无法被挂为附件；两个 id 列都是 NOT NULL，
+ * 因为只要有一个为 NULL，PostgreSQL 就会整体跳过那次检查（D015.2）。
  */
 @Entity
 @Table(name = "requirement_attachment")

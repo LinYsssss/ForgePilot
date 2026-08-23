@@ -13,19 +13,16 @@ import jakarta.persistence.Table;
 import org.hibernate.annotations.CreationTimestamp;
 
 /**
- * One attempt against a provider — not one call. A retried call leaves two rows,
- * which is the only way "exactly one retry" can be audited after the fact
- * (ARCHITECTURE.md 2.1, purpose "评测与故障定位").
+ * 一次**尝试**，而不是一次调用。重试过的调用会留下两行，这是事后审计
+ * “恰好只重试一次”的唯一手段（ARCHITECTURE.md 2.1，用途为“评测与故障定位”）。
  *
- * <p>This is not logging. It is project-scoped data with a schema and no
- * appender, and its prompt and response payloads are deliberately not here:
- * {@code error} carries a classification such as {@code HTTP 429}, never a body
- * (.trellis/spec/backend/logging-guidelines.md).
+ * <p>这不是日志。它是有 schema、无 appender 的项目内数据；Prompt 与响应载荷
+ * **有意**不在这里：{@code error} 只放分类信息（例如 {@code HTTP 429}），
+ * 绝不放响应体（.trellis/spec/backend/logging-guidelines.md）。
  *
- * <p>{@code review_id} exists in the table but is intentionally unmapped: batch
- * 3 may only add its foreign key if every row written before then is NULL
- * (D015.1). Hibernate ignores columns no field claims, so the guarantee costs
- * nothing.
+ * <p>表里存在 {@code review_id} 列但故意不做映射：批次 3 要加它的外键，
+ * 前提是此前写入的每一行该列都为 NULL（D015.1）。Hibernate 会忽略没有字段
+ * 认领的列，因此这道保证不花任何代价。
  */
 @Entity
 @Table(name = "ai_call_log")
@@ -48,7 +45,7 @@ public class AiCallLog {
     @Column(name = "use_case", nullable = false, length = 32)
     private AiUseCase useCase;
 
-    /** The model actually used, so a Phase 8 evaluation can be reproduced. */
+    /** 实际使用的模型，使 Phase 8 的评测得以复现。 */
     @Column(name = "model", nullable = false, length = 128)
     private String model;
 
@@ -98,7 +95,7 @@ public class AiCallLog {
         return attempt;
     }
 
-    /** {@code error} must stay a classification: a provider body would leak the answer into storage. */
+    /** {@code error} 必须始终是分类信息：写入 provider 的响应体等于把回答泄漏进存储。 */
     static AiCallLog failure(AiCallContext context, AiUseCase useCase, String model, int latencyMs,
             AiCallStatus status, String error) {
         AiCallLog attempt = new AiCallLog(context, useCase, model, latencyMs, status);

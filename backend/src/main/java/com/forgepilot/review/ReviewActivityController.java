@@ -13,14 +13,13 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Review activity is served from {@code review}, not from the requirement
- * endpoints, because it is derived from {@code pull_request} and {@code review}
- * and the dependency arrow runs {@code review -> requirement} (design.md 2.1).
- * The cost is one extra request for the requirement pages; the alternative is a
- * cycle in the feature graph.
+ * 审查活动状态由 {@code review} 而非需求端点提供，因为它是从
+ * {@code pull_request} 与 {@code review} 推导出来的，而依赖箭头的方向是
+ * {@code review -> requirement}（design.md 2.1）。代价是需求页面多发一次请求；
+ * 另一种做法的代价则是功能依赖图成环。
  *
- * <p>Both reads are open to any project member: activity says nothing that the
- * pull request list does not already say.
+ * <p>两个读取接口对任何项目成员开放：活动状态说不出任何 PR 列表本身
+ * 没有说过的东西。
  */
 @RestController
 @RequestMapping("/api/projects/{projectId}")
@@ -40,7 +39,7 @@ class ReviewActivityController {
         return activities.forRequirement(projectId, userIdOf(principal), requirementId);
     }
 
-    /** Keyed by requirement id, so a list page reads the whole column in one call. */
+    /** 以需求 id 为键，使列表页一次调用就能读到整列数据。 */
     @GetMapping("/review-activity")
     Map<Long, ActivityView> forProject(@PathVariable long projectId, Principal principal) {
         return activities.forProject(projectId, userIdOf(principal));

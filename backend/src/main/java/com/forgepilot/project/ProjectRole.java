@@ -1,9 +1,8 @@
 package com.forgepilot.project;
 
 /**
- * Role inside one project. Deliberately not a Spring Security authority: project
- * roles are a project-scoped concept, global security only tells authenticated
- * from anonymous (design.md 5).
+ * 项目内的角色。刻意**不做**成 Spring Security authority：项目角色是项目内的
+ * 概念，全局安全体系只区分「已认证」与「匿名」（design.md 5）。
  */
 public enum ProjectRole {
     LEADER,

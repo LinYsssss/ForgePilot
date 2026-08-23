@@ -23,7 +23,7 @@ import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
 import tools.jackson.databind.JsonNode;
 
-/** Reads one internally consistent, authoritative merge-request snapshot. */
+/** 读取一份内部自洽的、权威的 merge request 快照。 */
 @Component
 class GitLabClient {
 

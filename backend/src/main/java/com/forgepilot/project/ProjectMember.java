@@ -14,9 +14,9 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 /**
- * Membership of one account in one project, plus that project's SCM identity for
- * the member. {@code scmExternalUserId} is the authorization key, {@code scmUsername}
- * is display only and must never drive a permission decision (D010).
+ * 某个账号在某个项目中的成员关系，以及该成员在这个项目里的 SCM 身份。
+ * {@code scmExternalUserId} 是授权键，{@code scmUsername} 仅供展示，
+ * 绝不允许参与任何权限判断（D010）。
  */
 @Entity
 @Table(name = "project_member")
@@ -102,7 +102,7 @@ public class ProjectMember {
         this.role = newRole;
     }
 
-    /** Both SCM columns move together: an identity without its display name is meaningless. */
+    /** 两个 SCM 列必须同进同退：只有身份没有显示名，这条记录就没有意义。 */
     public void assignScmIdentity(String externalUserId, String username, Instant verifiedAt) {
         this.scmExternalUserId = externalUserId;
         this.scmUsername = username;

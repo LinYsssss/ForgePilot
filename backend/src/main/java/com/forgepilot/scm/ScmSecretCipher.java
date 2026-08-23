@@ -15,24 +15,22 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 /**
- * Encrypts the provider token and the webhook secret at rest (design.md 3.3).
+ * 对 provider token 与 webhook 密钥做静态加密（design.md 3.3）。
  *
- * <p>AES-256-GCM under one symmetric key, taken from {@code forgepilot.scm.secret-key}
- * — which relaxed binding reads from the {@code FORGEPILOT_SCM_SECRET_KEY}
- * environment variable — and derived from it with SHA-256, so the deployment may
- * supply a secret of any length. <strong>There is no fallback and no default.</strong>
- * The value is read in this constructor, so a deployment without one fails at
- * startup rather than the first time someone connects a repository, exactly as
- * {@code FORGEPILOT_DB_PASSWORD} already behaves. The dangerous shape — quietly
- * encrypting under a weak built-in default — is therefore unreachable.
+ * <p>使用单个对称密钥下的 AES-256-GCM，密钥取自
+ * {@code forgepilot.scm.secret-key}——宽松绑定会从 {@code FORGEPILOT_SCM_SECRET_KEY}
+ * 环境变量读取——并用 SHA-256 派生，因此部署方可以提供任意长度的秘密值。
+ * <strong>没有任何兜底，也没有任何默认值。</strong>该值在本构造器中读取，
+ * 因此没有配置它的部署会在**启动时**失败，而不是等到有人第一次接入仓库时才失败，
+ * 这与 {@code FORGEPILOT_DB_PASSWORD} 的既有行为完全一致。于是最危险的那种形态
+ * ——用一个内置弱默认值悄悄加密——根本不可达。
  *
- * <p>SHA-256 spreads the secret over the full key, it does not create entropy: a
- * deployment that supplies a guessable phrase has a guessable key. Compose and CI
- * carry deliberately fake local-only values for that reason.
+ * <p>SHA-256 只是把秘密值摊开到整个密钥空间，它并不创造熵：提供一个容易猜到的
+ * 短语，就会得到一个容易猜到的密钥。Compose 与 CI 里带的都是刻意伪造的、
+ * 仅限本地使用的值，原因正在于此。
  *
- * <p>Batch 2 does not rotate keys. Rotation needs a key version column and a
- * re-encryption pass, which is new structure; the gap is recorded rather than
- * papered over with a second key that is silently tried on failure.
+ * <p>批次 2 不做密钥轮换。轮换需要一个密钥版本列加一次重加密扫描，那是新的结构；
+ * 这个缺口被如实记录下来，而不是用「失败时再静默试第二把密钥」来遮掩过去。
  */
 @Component
 public class ScmSecretCipher {
@@ -77,7 +75,7 @@ public class ScmSecretCipher {
             cipher.init(mode, new SecretKeySpec(key, "AES"), new GCMParameterSpec(TAG_BITS, iv));
             return cipher.doFinal(input);
         } catch (GeneralSecurityException failure) {
-            // Never carries the key, the plaintext or the ciphertext.
+            // 绝不携带密钥、明文或密文。
             throw new IllegalStateException("An SCM credential could not be processed.");
         }
     }

@@ -13,31 +13,27 @@ import com.forgepilot.project.ProjectRole;
 import org.springframework.stereotype.Service;
 
 /**
- * The one-shot Requirement Implementation Guidance of PRD 2 (IMPLEMENTATION-PLAN
- * Phase 4).
+ * PRD 2 所定义的一次性需求实现建议（IMPLEMENTATION-PLAN Phase 4）。
  *
- * <p>One request, one provider call, one answer. There is no conversation, no
- * session, no streaming and nothing persisted: the guidance is advice about the
- * requirement, not a business fact about it, and AI never changes business state
- * (PRD 3). The prompt is assembled here from this requirement's own revision and
- * acceptance criteria, because business prompts belong to their feature — there
- * is no prompt registry and no generic context builder (ARCHITECTURE.md 4).
+ * <p>一次请求、一次 provider 调用、一个答案。没有会话、没有 session、
+ * 没有流式输出，也不落任何库：建议是关于需求的**意见**，不是关于它的业务事实，
+ * 而 AI 从不改变业务状态（PRD 3）。Prompt 在这里用本需求自己的修订与验收条件
+ * 拼装，因为业务 Prompt 属于各自的功能模块——这里没有 Prompt 注册表，
+ * 也没有通用上下文构造器（ARCHITECTURE.md 4）。
  *
- * <p>Nothing here opens a transaction. A provider call may run to the gateway's
- * 120 s timeout, and the pool is five connections
- * ({@code application.yml}); holding one across that call would let three
- * concurrent requests starve every other caller. The two reads below each stand
- * alone safely: the criteria are fetched <em>by revision id</em>, so they always
- * belong to the revision that was read, whatever else is published meanwhile.
+ * <p>本类不开启任何事务。一次 provider 调用可能一直跑到网关的 120 秒超时，
+ * 而连接池只有五个连接（{@code application.yml}）；跨这次调用持有一个连接，
+ * 三个并发请求就能把其他所有调用方饿死。下面两次读取各自独立且安全：
+ * 验收条件是<em>按修订 id</em> 取的，因此无论期间又发布了什么，
+ * 它们始终属于刚才读到的那次修订。
  */
 @Service
 class ImplementationGuidanceService {
 
     /**
-     * Deliberately one constant, not a template registry. The last paragraph is
-     * ARCHITECTURE.md 4.3: requirement prose is untrusted data and must not be
-     * able to redirect the task. Masking and budget trimming happen once, inside
-     * the gateway, and are not repeated here.
+     * 刻意做成**一个常量**，而不是模板注册表。最后一段对应 ARCHITECTURE.md 4.3：
+     * 需求文本是不可信数据，不得有能力改写任务本身。掩码与预算裁剪只在网关内
+     * 做一次，这里不重复。
      */
     private static final String INSTRUCTION = """
             You are advising one developer who is about to implement the requirement below.
@@ -64,12 +60,11 @@ class ImplementationGuidanceService {
     }
 
     /**
-     * Guidance for the requirement's current revision, which is the one a
-     * developer is about to implement (PRD 3, "生成当前需求的一次性 AI 实现建议").
+     * 针对需求当前修订生成建议，也就是开发者即将去实现的那一版
+     * （PRD 3，“生成当前需求的一次性 AI 实现建议”）。
      *
-     * <p>The role matrix of PRD 3 is exactly two rules: a LEADER may ask for any
-     * requirement in the project, a DEVELOPER only for one assigned to them, and a
-     * REVIEWER not at all.
+     * <p>PRD 3 的角色矩阵恰好只有两条规则：LEADER 可以对项目内任何需求发起，
+     * DEVELOPER 只能对指派给自己的需求发起，REVIEWER 完全不能。
      */
     ImplementationGuidance generate(long projectId, long actorId, long requirementId) {
         ProjectMember member = access.requireRole(projectId, actorId,
@@ -84,16 +79,16 @@ class ImplementationGuidanceService {
         RequirementRevision revision = requirement.getCurrentRevision();
         List<AcceptanceCriterion> acceptanceCriteria = criteria
                 .findByProjectIdAndRequirementRevisionIdOrderBySortOrderAsc(projectId, revision.getId());
-        // No schema: guidance is prose for a person to read. Requirement Quality is
-        // the structured one, and inventing a shape for it here would be building
-        // Phase 6's contract a phase early (ARCHITECTURE.md 4.1).
+        // 不带 schema：建议是给人读的散文。结构化的那一半是需求质量检查，
+        // 在这里替它发明一个结构，等于提前一个阶段去建 Phase 6 的契约
+        // （ARCHITECTURE.md 4.1）。
         String guidance = ai.chat(prompt(revision, acceptanceCriteria), null,
                 AiUseCase.IMPLEMENTATION_GUIDANCE,
                 AiCallContext.ofRevision(projectId, requirementId, revision.getId()));
         return new ImplementationGuidance(requirementId, revision.getId(), revision.getSeq(), guidance);
     }
 
-    /** The revision's own prose and its criteria, and nothing else. */
+    /** 只有该修订自己的文本与它的验收条件，别的什么都不给。 */
     static String prompt(RequirementRevision revision, List<AcceptanceCriterion> acceptanceCriteria) {
         StringBuilder prompt = new StringBuilder(INSTRUCTION)
                 .append("\n\n# Requirement\n\nTitle: ").append(revision.getTitle()).append('\n');
@@ -107,7 +102,7 @@ class ImplementationGuidanceService {
         return prompt.toString();
     }
 
-    /** Both fields are optional on a revision; an empty heading tells the model nothing. */
+    /** 修订上这两个字段都是可选的；空标题对模型毫无信息量。 */
     private static void append(StringBuilder prompt, String label, String value) {
         if (value != null && !value.isBlank()) {
             prompt.append(label).append(": ").append(value).append('\n');

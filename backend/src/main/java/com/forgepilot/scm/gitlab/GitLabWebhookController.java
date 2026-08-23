@@ -17,7 +17,7 @@ import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
-/** GitLab webhook receiver: authenticate raw bytes, then fetch authoritative MR state. */
+/** GitLab webhook 接收端：先对原始字节做认证，再拉取权威的 MR 状态。 */
 @RestController
 class GitLabWebhookController {
 

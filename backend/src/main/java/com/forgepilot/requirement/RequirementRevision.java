@@ -13,9 +13,9 @@ import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
 /**
- * One version of a requirement's prose and the quality result for that version.
- * Frozen once the requirement leaves DRAFT: after that a change publishes
- * {@code seq + 1} instead of editing in place (D011, design.md 6.4).
+ * 需求文本的某一个版本，以及该版本对应的质量检查结果。一旦需求离开 DRAFT
+ * 它就被冻结：此后任何变更都是发布 {@code seq + 1}，而不是原地编辑
+ * （D011、design.md 6.4）。
  */
 @Entity
 @Table(name = "requirement_revision")
@@ -43,11 +43,11 @@ public class RequirementRevision {
     @Column(name = "description")
     private String description;
 
-    /** Points at user_account, not project_member: leaving a project must not erase an accomplished fact. */
+    /** 指向 user_account 而非 project_member：离开项目不该抹掉一件已经发生的事实。 */
     @Column(name = "created_by", nullable = false)
     private Long createdBy;
 
-    /** Required from revision 2 onwards; null on the revision created with the requirement. */
+    /** 从修订 2 起必填；随需求一起创建的那次修订为 null。 */
     @Column(name = "change_reason")
     private String changeReason;
 
@@ -133,9 +133,8 @@ public class RequirementRevision {
     }
 
     /**
-     * In-place edit, legal only while the requirement is still DRAFT. The quality
-     * result described the old prose, so it is cleared in the same transaction
-     * (design.md 6.4).
+     * 原地编辑，只有在需求仍为 DRAFT 时才合法。质量结果描述的是旧文本，
+     * 因此在同一个事务里被清空（design.md 6.4）。
      */
     public void editProse(String title, String background, String description) {
         this.title = title;

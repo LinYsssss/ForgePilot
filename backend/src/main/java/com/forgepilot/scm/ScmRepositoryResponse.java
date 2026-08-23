@@ -2,7 +2,7 @@ package com.forgepilot.scm;
 
 import java.time.Instant;
 
-/** What a LEADER may see of the connection. Neither the token nor the webhook secret appears here. */
+/** LEADER 能看到的连接信息。token 与 webhook 密钥都不出现在这里。 */
 record ScmRepositoryResponse(
         Long id,
         Long projectId,

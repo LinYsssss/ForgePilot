@@ -4,12 +4,11 @@ import org.springframework.security.core.authority.AuthorityUtils;
 import org.springframework.security.core.userdetails.User;
 
 /**
- * The authenticated account. It carries the account id and the {@code session_version}
- * read while authenticating, so neither has to be looked up by username afterwards.
+ * 已认证的账号。它携带账号 id 与认证过程中读到的 {@code session_version}，
+ * 使二者此后都不必再按用户名去查一次。
  *
- * <p>No authorities are granted: project roles are a project-scoped concept and stay
- * out of the global authority system, which only tells authenticated from anonymous
- * (design.md 5).
+ * <p>不授予任何 authority：项目角色是项目内的概念，不进入全局 authority 体系——
+ * 后者只区分「已认证」与「匿名」（design.md 5）。
  */
 final class AccountPrincipal extends User {
 

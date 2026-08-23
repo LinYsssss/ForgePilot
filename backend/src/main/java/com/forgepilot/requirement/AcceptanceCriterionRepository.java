@@ -6,7 +6,7 @@ import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
-/** Every read carries {@code projectId}; criteria are never looked up by bare id. */
+/** 每次读取都带 {@code projectId}；验收条件绝不按裸 id 查询。 */
 public interface AcceptanceCriterionRepository extends JpaRepository<AcceptanceCriterion, Long> {
 
     List<AcceptanceCriterion> findByProjectIdAndRequirementRevisionIdOrderBySortOrderAsc(
@@ -16,9 +16,8 @@ public interface AcceptanceCriterionRepository extends JpaRepository<AcceptanceC
             long projectId, Collection<Long> requirementRevisionIds);
 
     /**
-     * Every {@code acKey} this requirement has ever used, across all of its
-     * revisions. Retired numbers are never reused, so the next key is derived from
-     * this set and not from the current revision alone (api-contract 3).
+     * 这条需求在其**全部**修订中用过的每一个 {@code acKey}。退役的编号绝不复用，
+     * 因此下一个 key 是从这个集合推出来的，而不是只看当前修订（api-contract 3）。
      */
     @Query("select criterion.acKey from AcceptanceCriterion criterion, RequirementRevision revision "
             + "where criterion.projectId = :projectId "

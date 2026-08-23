@@ -14,13 +14,12 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 /**
- * Content shared by project knowledge and requirement attachments. Which one it
- * is depends on {@code sourceRequirementId}: null means public project
- * knowledge, non-null means it belongs to exactly that requirement (D005).
+ * 项目知识与需求附件共用的内容载体。到底属于哪一种，取决于
+ * {@code sourceRequirementId}：为 null 表示公共项目知识，非 null 表示
+ * 它恰好属于那一条需求（D005）。
  *
- * <p>The pairing of type and scope is enforced by a database CHECK, and the
- * attachment relation's three-column foreign key pins it further, so this class
- * carries no duplicate of either rule.
+ * <p>类型与作用域的配对由数据库 CHECK 强制，附件关系的三列外键又进一步
+ * 把它钉死，因此本类不重复这两条规则中的任何一条。
  */
 @Entity
 @Table(name = "knowledge_document")
@@ -84,8 +83,8 @@ public class KnowledgeDocument {
     }
 
     /**
-     * Promotion copies rather than rewrites (D005): the original attachment keeps
-     * its ownership and history, and the copy starts its own ingestion.
+     * 提升为公共知识采用**复制**而非改写（D005）：原附件保留自己的归属与历史，
+     * 副本则开始它自己的入库流程。
      */
     public KnowledgeDocument copyAsProjectKnowledge() {
         return projectKnowledge(projectId, title, text);
@@ -136,7 +135,7 @@ public class KnowledgeDocument {
         this.failureReason = null;
     }
 
-    /** The reason is not optional: a database CHECK refuses a FAILED row without one. */
+    /** 原因不是可选项：数据库 CHECK 会拒绝没有原因的 FAILED 行。 */
     public void markFailed(String reason) {
         this.status = KnowledgeStatus.FAILED;
         this.failureReason = reason;

@@ -7,17 +7,15 @@ import com.forgepilot.common.ApiException;
 import org.springframework.stereotype.Component;
 
 /**
- * Rejects text that must never reach the database, before any of it is chunked
- * or embedded.
+ * 在任何内容被分块或向量化之前，先拒绝那些绝不该进入数据库的文本。
  *
- * <p>This is not defensive duplication of a constraint. Two of these four checks
- * the database cannot make at all, and running the other two early avoids paying
- * an embedding provider for input that provably cannot land.
+ * <p>这不是对数据库约束的防御性重复。这四道检查里有两道数据库根本做不到；
+ * 另外两道提前做，是为了避免为**证明落不了库**的输入向 embedding provider 付费。
  */
 @Component
 public class KnowledgeUploadValidator {
 
-    /** ARCHITECTURE.md 7.2. The varlena limit is no defence: a 600 MB text was measured landing fine. */
+    /** ARCHITECTURE.md 7.2。varlena 上限起不到防护作用：实测 600 MB 文本照样落库成功。 */
     static final int MAX_TEXT_BYTES = 5 * 1024 * 1024;
     static final int MAX_TITLE_LENGTH = 255;
 
@@ -37,8 +35,7 @@ public class KnowledgeUploadValidator {
     }
 
     /**
-     * PostgreSQL rejects this with 22021, but only after chunking and embedding
-     * have already been paid for.
+     * PostgreSQL 会以 22021 拒绝它，但那已经是在分块和向量化的钱都花完之后了。
      */
     private void rejectNulByte(String text) {
         if (text.indexOf('\0') >= 0) {
@@ -47,10 +44,10 @@ public class KnowledgeUploadValidator {
     }
 
     /**
-     * The one case the database cannot catch. Measured: a lone UTF-16 surrogate is
-     * silently replaced with '?' by the JDBC driver, so PostgreSQL receives valid
-     * UTF-8 and never raises 22021 — the text is corrupted with no error anywhere
-     * (D015.5). {@link CharsetEncoder#canEncode} is where that becomes visible.
+     * 数据库唯一抓不住的那一种。实测：孤立的 UTF-16 代理项会被 JDBC 驱动
+     * 静默替换成 '?'，于是 PostgreSQL 收到的是合法 UTF-8，永远不会抛 22021——
+     * 文本被损坏了，却哪里都没有报错（D015.5）。
+     * {@link CharsetEncoder#canEncode} 正是让这件事变得可见的地方。
      */
     private void rejectUnencodableText(String text) {
         CharsetEncoder encoder = StandardCharsets.UTF_8.newEncoder();
@@ -60,7 +57,7 @@ public class KnowledgeUploadValidator {
         }
     }
 
-    /** Counted in UTF-8 bytes, because that is what the column stores. */
+    /** 按 UTF-8 字节计数，因为列里存的就是 UTF-8 字节。 */
     private void rejectOversizedText(String text) {
         int bytes = text.getBytes(StandardCharsets.UTF_8).length;
         if (bytes > MAX_TEXT_BYTES) {

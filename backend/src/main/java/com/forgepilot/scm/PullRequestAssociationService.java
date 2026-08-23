@@ -8,19 +8,17 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Human correction of a pull request's requirement association (PRD P1).
+ * 对 PR 与需求关联关系的人工纠正（PRD P1）。
  *
- * <p>The automatic {@code REQ-<n>} link is a guess made once at ingestion, and
- * D007 gives the page the last word over it. Every correction therefore writes
- * one {@code pull_request_requirement_event} row <em>in the same transaction</em>
- * as the change: an association that moved without an audit row, or an audit row
- * describing a move that did not commit, are both worse than no audit at all.
+ * <p>自动的 {@code REQ-<n>} 关联只是入库时做的一次猜测，D007 把最终话语权
+ * 交给了页面。因此每次纠正都会<em>在同一个事务里</em>写下一行
+ * {@code pull_request_requirement_event}：关联变了却没有审计行，
+ * 或有审计行却描述了一次并未提交的变更，两者都比完全没有审计更糟。
  *
- * <p>Only a LEADER reaches this. PRD P1 also lets a DEVELOPER correct their own
- * pull request "while the current head has no final human Decision", and that
- * half is deliberately not implemented: {@code review} does not exist in this
- * batch, so "no final decision" cannot be evaluated, and a check that always
- * answers "no decision exists" would silently grant more than P1 allows.
+ * <p>只有 LEADER 能走到这里。PRD P1 同时允许 DEVELOPER 在“当前 head 尚无
+ * 最终人工 Decision 时”纠正自己的 PR，而那一半刻意没有实现：本批次里
+ * {@code review} 还不存在，“没有最终决策”无从判定，而一个永远回答
+ * “不存在决策”的检查会静默地授予比 P1 更多的权限。
  */
 @Service
 class PullRequestAssociationService {
@@ -40,15 +38,13 @@ class PullRequestAssociationService {
     }
 
     /**
-     * Points the pull request at {@code requirementId}, or at nothing when it is
-     * null — clearing the link is a legal correction and is audited exactly like a
-     * move between two requirements.
+     * 把该 PR 指向 {@code requirementId}；传 null 则指向「无」——清除关联同样是
+     * 一次合法纠正，并且与两条需求之间的迁移一样要被审计。
      *
-     * <p>Setting the association to the value it already has is refused by
-     * {@code ck_pr_requirement_event_is_a_change} rather than pre-checked here:
-     * the audit table records changes only, and a request that produces no row is
-     * not a correction. That conflict rolls the whole transaction back, which is
-     * the point — nothing is written either way (D013.11).
+     * <p>把关联设成它已有的值，会由 {@code ck_pr_requirement_event_is_a_change}
+     * 拒绝，而不是在这里预先检查：审计表只记录**变化**，一个产生不了审计行的
+     * 请求就不是一次纠正。那次冲突会让整个事务回滚——这正是要点：
+     * 无论如何都不会有任何东西被写入（D013.11）。
      */
     @Transactional
     PullRequestResponse correct(long projectId, long actorId, long pullRequestId, Long requirementId,
@@ -56,12 +52,11 @@ class PullRequestAssociationService {
         access.requireRole(projectId, actorId, ProjectRole.LEADER);
         PullRequest pullRequest = pullRequests.findWithLockByProjectIdAndId(projectId, pullRequestId)
                 .orElseThrow(ApiException::notFound);
-        // Resolved through requirement's read-only facade and filtered by this pull
-        // request's own project (D015.6, D013.2). The composite foreign key would
-        // also refuse a foreign id, but only by failing the insert with a message
-        // naming a constraint; asking first turns it into an answer the caller can
-        // act on. An id from another project and an id that was never issued are
-        // indistinguishable here, so neither confirms the other project's contents.
+        // 经 requirement 的只读 facade 解析，并按本 PR 自己的项目过滤
+        // （D015.6、D013.2）。复合外键同样会拒绝外项目的 id，但只会以
+        // 「插入失败 + 一条点名约束的报错」的形式；先问一句，就把它变成了
+        // 调用方能据以行动的答案。在这里，来自别的项目的 id 与从未签发过的 id
+        // 不可区分，因此都不会泄露另一个项目的内容。
         if (requirementId != null && !requirements.existsInProject(projectId, requirementId)) {
             throw ApiException.unprocessable("That requirement does not belong to this project.");
         }

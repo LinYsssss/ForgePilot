@@ -18,9 +18,8 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 /**
- * The stable identity of a requirement. The prose lives in immutable
- * {@link RequirementRevision} rows (D011); this row only carries identity,
- * assignment, status and a pointer to the current revision.
+ * 需求的稳定身份。文本住在不可变的 {@link RequirementRevision} 行里（D011）；
+ * 本行只承载身份、指派、状态，以及一个指向当前修订的指针。
  */
 @Entity
 @Table(name = "requirement")
@@ -33,7 +32,7 @@ public class Requirement {
     @Column(name = "project_id", nullable = false)
     private Long projectId;
 
-    /** Composite FK to project_member(project_id, user_id): an assignee is always a member of this project. */
+    /** 指向 project_member(project_id, user_id) 的复合外键：被指派人必定是本项目成员。 */
     @Column(name = "assignee_id")
     private Long assigneeId;
 
@@ -41,7 +40,7 @@ public class Requirement {
     @Column(name = "status", nullable = false, length = 32)
     private RequirementStatus status;
 
-    /** Written through this scalar; the association below is read-only (D013.1 variant A). */
+    /** 写入走这个标量字段；下面那个关联是只读的（D013.1 方案 A）。 */
     @Column(name = "current_revision_id")
     private Long currentRevisionId;
 
@@ -54,12 +53,11 @@ public class Requirement {
     private Instant updatedAt;
 
     /**
-     * Read-only navigation for list and detail queries. Every column is
-     * insertable=false/updatable=false: project_id and id are already mapped above,
-     * and Hibernate refuses a @JoinColumns set that mixes writable and read-only
-     * columns (D013.1). The referenced triple is the unique key
-     * requirement_revision(project_id, requirement_id, id), so one foreign key
-     * proves same project, correct parent and existence at once.
+     * 供列表与详情查询使用的只读导航。每一列都是 insertable=false/updatable=false：
+     * project_id 与 id 在上面已经映射过，而 Hibernate 拒绝一个混合了可写列与
+     * 只读列的 @JoinColumns 集合（D013.1）。被引用的三元组是唯一键
+     * requirement_revision(project_id, requirement_id, id)，因此这一个外键
+     * 同时证明了「同项目」「父级正确」「确实存在」三件事。
      */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumns({
@@ -120,7 +118,7 @@ public class Requirement {
         this.assigneeId = assigneeId;
     }
 
-    /** Third step of the create/publish flow: the composite FK is only checked once this is non-null. */
+    /** 创建/发布流程的第三步：只有当这个值非 null 时，复合外键才会被真正检查。 */
     public void setCurrentRevisionId(Long currentRevisionId) {
         this.currentRevisionId = currentRevisionId;
     }

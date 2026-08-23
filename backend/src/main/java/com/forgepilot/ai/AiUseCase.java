@@ -1,14 +1,13 @@
 package com.forgepilot.ai;
 
 /**
- * Which scenario a call belongs to, mirroring {@code ai_call_log.use_case}'s
- * CHECK one for one (ARCHITECTURE.md 2.4: varchar + CHECK in the database, an
- * enum in Java). The values froze the moment {@code V4__knowledge_ai.sql} was
- * applied, so this list is a copy, not a choice.
+ * 一次调用属于哪个场景，与 {@code ai_call_log.use_case} 的 CHECK 一一对应
+ * （ARCHITECTURE.md 2.4：数据库用 varchar + CHECK，Java 侧用枚举）。这些取值
+ * 在 {@code V4__knowledge_ai.sql} 生效那一刻就冻结了，因此本列表是一份副本，
+ * 而不是一处可以自由发挥的选择。
  *
- * <p>{@code ai} itself never picks one: the caller says why it is calling, which
- * is the only thing that lets one gateway serve four scenarios without knowing
- * any of their business types (ARCHITECTURE.md 4.1).
+ * <p>{@code ai} 自己从不挑选场景：由调用方声明自己为何而来——这正是一个网关
+ * 能服务四种场景却不认识其中任何业务类型的原因（ARCHITECTURE.md 4.1）。
  */
 public enum AiUseCase {
 
@@ -16,9 +15,8 @@ public enum AiUseCase {
     IMPLEMENTATION_GUIDANCE,
     EMBEDDING,
     /**
-     * Reserved by the CHECK for batch 3's review engine. Nothing in batch 2
-     * produces it, the same way {@code ProjectStatus.ARCHIVED} was reserved by
-     * V2 with no transition behind it.
+     * 由 CHECK 为批次 3 的审查引擎预留。批次 2 中没有任何代码会产生它，
+     * 正如 V2 预留了 {@code ProjectStatus.ARCHIVED} 却没有任何流转指向它。
      */
     REVIEW
 }

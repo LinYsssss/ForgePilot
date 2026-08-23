@@ -14,8 +14,8 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 /**
- * A project boundary. {@code createdBy} records who created it and never moves;
- * the LEADER role is separate and transferable (D013.5).
+ * 一个项目边界。{@code createdBy} 记录创建者且永不变更；
+ * LEADER 角色是另一回事，可以转移（D013.5）。
  */
 @Entity
 @Table(name = "project")

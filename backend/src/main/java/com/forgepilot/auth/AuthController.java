@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
-/** The auth endpoints of api-contract.md 1 that are not handled by the filter chain. */
+/** api-contract.md 1 中不由安全过滤器链直接处理的那部分认证端点。 */
 @RestController
 @RequestMapping("/api/auth")
 class AuthController {
@@ -31,7 +31,7 @@ class AuthController {
         return this.auth.register(request.username(), request.password());
     }
 
-    /** Also the SPA's cold start: the response carries the XSRF-TOKEN cookie (api-contract.md 0). */
+    /** 同时也是 SPA 的冷启动入口：该响应会带上 XSRF-TOKEN cookie（api-contract.md 0）。 */
     @GetMapping("/me")
     AccountResponse me(@AuthenticationPrincipal AccountPrincipal principal) {
         return new AccountResponse(principal.getUserId(), principal.getUsername());
@@ -43,8 +43,8 @@ class AuthController {
             @Valid @RequestBody ChangePasswordRequest request, HttpSession session) {
         int sessionVersion = this.auth.changePassword(
                 principal.getUserId(), request.currentPassword(), request.newPassword());
-        // This session adopts the new version and stays usable; every other session
-        // keeps the old one and is ended by SessionVersionFilter.
+        // 本会话采纳新版本号因而继续可用；其余会话仍持有旧版本号，
+        // 会被 SessionVersionFilter 终止。
         session.setAttribute(SessionVersionFilter.SESSION_VERSION, sessionVersion);
     }
 

@@ -3,18 +3,17 @@ package com.forgepilot.review;
 import java.util.List;
 
 /**
- * The validated result of one Review: a verdict for every acceptance criterion,
- * the findings that survived validation, and what validation refused.
+ * 一次 Review 经过校验之后的结果：每条验收条件的裁定、通过校验存活下来的
+ * finding，以及校验拒绝掉了什么。
  *
- * <p>This is what {@link ReviewOutputValidator} produces, never what the model
- * returned. Every field here has been checked against the Review's own immutable
- * context — the acceptance criteria of its requirement revision, the recall
- * whitelist and the changed files it was actually shown.
+ * <p>这是 {@link ReviewOutputValidator} 产出的东西，绝不是模型直接返回的东西。
+ * 这里的每个字段都已对照该 Review 自己的不可变上下文校验过——
+ * 它那次需求修订的验收条件、召回白名单，以及实际展示给它的变更文件。
  *
- * <p>{@link #warnings} exists because dropping a hallucinated citation silently
- * would leave the operator with a shorter report and no way to tell it was
- * shortened. That is the same rule D002 states for unreviewed files, applied to
- * unreviewable claims.
+ * <p>{@link #warnings} 之所以存在，是因为静默丢弃一条幻觉引用，
+ * 只会让运维拿到一份更短的报告，却没有任何办法知道它被缩短过。
+ * 这与 D002 对「未被审查的文件」立下的是同一条规则，
+ * 只不过应用到了「无法核实的断言」上。
  */
 public record ReviewOutput(List<AcResult> acVerdicts, List<FindingCandidate> findings,
         List<String> warnings) {
@@ -26,28 +25,26 @@ public record ReviewOutput(List<AcResult> acVerdicts, List<FindingCandidate> fin
     }
 
     /**
-     * One AC's verdict. {@code acKey} travels alongside {@code acId} because it is
-     * the stable cross-revision identity (D011): the id changes when a new revision
-     * is published, the key does not, and history pages compare across revisions.
+     * 单条 AC 的裁定。{@code acKey} 与 {@code acId} 一并携带，因为它才是
+     * 跨修订稳定的身份（D011）：发布新修订时 id 会变，key 不会，
+     * 而历史页面需要跨修订做比对。
      */
     public record AcResult(long acId, String acKey, AcVerdict verdict) {
     }
 
     /**
-     * A finding that passed validation but has not been given its lineage yet —
-     * {@link FindingContinuityCalculator} decides {@code continuity} and
-     * {@code carried_from_finding_id} afterwards, because those depend on the pull
-     * request's history rather than on this answer.
+     * 一条已通过校验、但尚未被赋予血缘的 finding——{@code continuity} 与
+     * {@code carried_from_finding_id} 由 {@link FindingContinuityCalculator}
+     * 事后判定，因为它们取决于该 PR 的历史，而不是这一次的回答。
      *
-     * <p>{@code requirementId} and {@code requirementRevisionId} are copied from
-     * the Review's own context and never read from the model, so a finding cannot
-     * disagree with its parent. What the model does choose is {@code acId}, and
-     * that is checked against the current revision's criteria.
+     * <p>{@code requirementId} 与 {@code requirementRevisionId} 是从 Review
+     * 自己的上下文里复制来的，绝不从模型读取，因此一条 finding 不可能与
+     * 它的父行相矛盾。模型能选的只有 {@code acId}，而那个值会对照
+     * 当前修订的验收条件做检查。
      *
-     * <p>There is no field for the model's prose. The {@code finding} table has no
-     * column for a title, a severity or a description, and the three lineage keys
-     * must not cover model wording (D009) — so the only text carried is
-     * {@code evidence}, the excerpt itself.
+     * <p>这里没有承载模型散文的字段。{@code finding} 表没有标题、严重级别或
+     * 描述这样的列，而那三个血缘 key 也不得覆盖模型的措辞（D009）——
+     * 因此唯一携带的文本就是 {@code evidence}，也就是证据片段本身。
      */
     public record FindingCandidate(FindingType findingType, String path, Integer line, String evidence,
             Long requirementId, Long requirementRevisionId, Long acId, String acKey,

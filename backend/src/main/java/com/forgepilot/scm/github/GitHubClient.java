@@ -19,17 +19,16 @@ import org.springframework.web.client.RestClient;
 import tools.jackson.databind.JsonNode;
 
 /**
- * Reads the authoritative pull request snapshot from GitHub.
+ * 从 GitHub 读取权威的 PR 快照。
  *
- * <p>The base URI comes from {@code scm_repository.api_base} and a host is never
- * hardcoded (D015.8). That is not a testing concession: D010 requires self-hosted
- * instances to work, and the same column is what lets an integration test point a
- * repository at a loopback stub without a credential and without a production
- * change. Every call re-checks the address against {@link OutboundUrlPolicy},
- * because the column is LEADER-configurable and the policy may have narrowed since.
+ * <p>base URI 来自 {@code scm_repository.api_base}，代码中绝不硬编码任何 host
+ * （D015.8）。这不是为测试让步：D010 要求自建实例必须可用，而同一个列也正是
+ * 集成测试得以在无凭据、无生产改动的前提下把仓库指向回环桩服务的原因。
+ * 每次调用都会用 {@link OutboundUrlPolicy} 重新校验地址，因为该列可由 LEADER
+ * 配置，而策略可能在此期间收紧过。
  *
- * <p>The repository is addressed by its numeric id rather than {@code owner/repo}:
- * the id survives a rename or a transfer, the slug does not.
+ * <p>仓库以其数字 id 而非 {@code owner/repo} 来寻址：id 能在改名或转移后存活，
+ * slug 不能。
  */
 @Component
 class GitHubClient {
@@ -62,8 +61,8 @@ class GitHubClient {
                 required(pullRequest.path("head"), "sha", "head.sha"),
                 required(pullRequest.path("head"), "ref", "head.ref"),
                 required(pullRequest, "title"),
-                // GitHub exposes no stable diff revision, so that slot stays empty
-                // and ordering rests on updated_at alone.
+                // GitHub 不提供稳定的 diff 修订号，因此这一格保持为空，
+                // 定序完全依赖 updated_at。
                 null,
                 Instant.parse(required(pullRequest, "updated_at")),
                 required(pullRequest.path("user"), "id", "user.id"),
@@ -73,10 +72,9 @@ class GitHubClient {
 
     private RestClient clientFor(ScmRepository repository) {
         URI base = outbound.requireAllowed(repository.getApiBase());
-        // Built per repository rather than from an injected shared builder: api_base
-        // is per-repository data (D010 self-hosted instances), so there is no single
-        // base URI a shared builder could carry, and one carrying a fixed host would
-        // be exactly the hardcoding D015.8 forbids.
+        // 按仓库逐个构建，而不是用注入的共享 builder：api_base 是**按仓库**
+        // 存在的数据（D010 的自建实例），因此不存在一个共享 builder 能携带的
+        // 统一 base URI；而携带固定 host 的那种，正是 D015.8 禁止的硬编码。
         return RestClient.builder()
                 .baseUrl(base.toString())
                 .requestFactory(requestFactory)
@@ -88,10 +86,9 @@ class GitHubClient {
     }
 
     /**
-     * The file list is paginated and its order across pages is conventional rather
-     * than contractual, which is exactly why the fingerprint sorts. The loop is
-     * bounded by the same manifest limit the row is bounded by, so an outsized pull
-     * request fails explicitly instead of being accumulated in memory first.
+     * 文件列表是分页的，且跨页顺序是惯例而非契约——这正是指纹要排序的原因。
+     * 循环的上界与行本身的清单上限一致，因此超大 PR 会显式失败，
+     * 而不是先在内存里累积起来。
      */
     private List<ChangedFile> changedFiles(RestClient client, String externalId, int number) {
         List<ChangedFile> files = new ArrayList<>();
@@ -107,8 +104,8 @@ class GitHubClient {
                     .body(JsonNode.class);
             for (JsonNode file : batch) {
                 JsonNode patch = file.path("patch");
-                // Absent is not empty: a binary file or one past GitHub's own diff
-                // limit carries no patch at all, and the fingerprint distinguishes them.
+                // 「缺席」不等于「空」：二进制文件或超出 GitHub 自身 diff 上限的
+                // 文件根本不带 patch，而指纹会把这两种情况区分开。
                 String content = patch.isMissingNode() || patch.isNull() ? null : patch.asString();
                 ChangedFile changed = new ChangedFile(required(file, "filename"),
                         required(file, "status"), content);
@@ -126,13 +123,13 @@ class GitHubClient {
     }
 
     /**
-     * An authoritative field that is absent, null, or a container must fail loudly.
-     * {@code JsonNode.asString()} answers "" for a missing or null node, which would
-     * write base_sha='' or author_external_user_id='' — both satisfy NOT NULL, so
-     * the database cannot catch it, and the fingerprint would then be computed over
-     * empty SHAs. author_external_user_id is worse still: D010 makes it the
-     * authorization key, so every ghost-author pull request would share one identity.
-     * R3 requires malformed input to fail explicitly rather than store bad data.
+     * 一个权威字段若缺席、为 null 或是个容器，就必须大声失败。
+     * {@code JsonNode.asString()} 对缺失或 null 的节点会返回 ""，于是就会写下
+     * base_sha='' 或 author_external_user_id=''——两者都满足 NOT NULL，
+     * 数据库因此抓不住，而指纹随后会基于空 SHA 计算出来。
+     * author_external_user_id 更糟：D010 把它当作授权键，
+     * 于是所有「幽灵作者」的 PR 都会共享同一个身份。
+     * R3 要求畸形输入必须显式失败，而不是存下坏数据。
      */
     private static String required(JsonNode parent, String field, String label) {
         JsonNode node = parent.path(field);

@@ -1,9 +1,9 @@
 package com.forgepilot.auth;
 
 /**
- * The account shape every auth endpoint returns (api-contract.md 1). It exists
- * next to {@link AccountView} rather than reusing it because the API contract is
- * exactly {@code {id, username}}: {@code enabled} is an internal fact.
+ * 全部认证端点返回的账号结构（api-contract.md 1）。它与 {@link AccountView}
+ * 并存而不复用后者，是因为 API 契约恰好只有 {@code {id, username}}：
+ * {@code enabled} 属于内部事实。
  */
 record AccountResponse(long id, String username) {
 }

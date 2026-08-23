@@ -5,16 +5,14 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * A Finding's human handling lifecycle (PRD.md 5).
+ * 一条 Finding 的人工处理生命周期（PRD.md 5）。
  *
- * <p>This is <strong>orthogonal</strong> to {@link FindingContinuity}: one says
- * what a person decided, the other says where the finding came from across
- * rounds. PRD.md is explicit that they must not be merged into one field or one
- * UI label, so they are two enums and two columns.
+ * <p>它与 {@link FindingContinuity} <strong>正交</strong>：一个说的是人做了什么
+ * 判断，另一个说的是这条问题跨轮次的来源。PRD.md 明确规定二者不得合并成
+ * 一个字段或一个 UI 标签，因此它们是两个枚举、两个列。
  *
- * <p>{@code NOT_REPORTED} is deliberately absent. ARCHITECTURE.md 3.6 makes it a
- * query-derived observation about the previous round — it is never stored, and
- * "not reported this round" must never be read as "fixed".
+ * <p>{@code NOT_REPORTED} 刻意缺席。ARCHITECTURE.md 3.6 把它定义为对上一轮的
+ * 一个查询派生观察——它从不存储，而且“本轮没有再报告”绝不能被读成“已修复”。
  */
 public enum FindingStatus {
 
@@ -27,15 +25,13 @@ public enum FindingStatus {
     REJECTED;
 
     /**
-     * The transition table, encoded as data so the tests can assert it pair by
-     * pair rather than restating it in prose (the shape batch 1 established for
-     * {@code RequirementStatus}).
+     * 把流转表写成数据，使测试可以逐对断言，而不必用散文再复述一遍
+     * （沿用批次 1 为 {@code RequirementStatus} 确立的形态）。
      *
-     * <p>{@code REJECTED -> OPEN} is here, but reaching it takes more than a legal
-     * transition: PRD.md 5 allows reopening <strong>only</strong> an inherited
-     * suppression, so the service also requires {@code continuity = SUPPRESSED}.
-     * An ordinary rejection is terminal, and that extra condition cannot be
-     * expressed in this table.
+     * <p>{@code REJECTED -> OPEN} 在表里，但仅有一次合法流转还到不了它：
+     * PRD.md 5 <strong>只</strong>允许重开被继承的抑制项，
+     * 因此服务层还要求 {@code continuity = SUPPRESSED}。
+     * 普通的驳回是终态，而那个附加条件无法在这张表里表达。
      */
     private static final Map<FindingStatus, Set<FindingStatus>> ALLOWED_TARGETS = Map.of(
             OPEN, EnumSet.of(CONFIRMED, REJECTED),
