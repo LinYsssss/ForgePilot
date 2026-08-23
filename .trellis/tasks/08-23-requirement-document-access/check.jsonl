@@ -1,0 +1,5 @@
+{"file":".trellis/spec/backend/quality-guidelines.md","reason":"Check package boundaries, test scope and full backend gate."}
+{"file":".trellis/spec/backend/error-handling.md","reason":"Check read authorization and 404 isolation behavior."}
+{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"Check lint/typecheck/test/build and avoid extra dependencies or routes."}
+{"file":".trellis/spec/frontend/design-contract.md","reason":"Check two-view hierarchy, accessibility and responsive behavior."}
+{"file":".trellis/tasks/08-23-requirement-document-access/research/current-attachment-flow.md","reason":"Check implementation remains within the audited minimal reuse path."}

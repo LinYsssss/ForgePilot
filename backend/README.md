@@ -1,7 +1,7 @@
 # Backend
 
 ForgePilot V2 的 Spring Boot 模块化单体，Phase 2–8 的业务实现已全部落地：8 个顶层业务包、
-16 张业务表、7 个 Flyway 迁移，`./mvnw -B -ntp verify` 307 个测试全绿。
+16 张业务表、7 个 Flyway 迁移，`./mvnw -B -ntp verify` 316 个测试全绿。
 
 本地入口是 `./mvnw`；它使用仓库锁定的 Maven 3.9.16，不要求全局 Maven。分发包 URL 与
 sha256 校验值只在 `.mvn/wrapper/maven-wrapper.properties` 中定义。需要 Java 21

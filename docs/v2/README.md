@@ -2,7 +2,7 @@
 
 ForgePilot 是围绕需求驱动 Pull Request 审查建设的轻量级 AI 研发协作平台。
 
-状态：**R2.5 顶部导航基线（2026-08-23）**。Phase 0–8 已于 2026-08-22 全部完成并通过退出闸门。此后完成两次产品级补全：D017 交付六入口前端、只读工作台、Knowledge/附件用户流程、知识增强 Guidance 与 SCM 安全读取；D018 把桌面 Shell 改为顶部居中导航并统一单页面单 Logo。正式评测证据仍不可重跑或覆盖。
+状态：**R2.5 基线及需求文档补全（2026-08-23）**。Phase 0–8 已于 2026-08-22 全部完成并通过退出闸门。此后完成 D017 产品主链路、D018 顶部居中导航，以及一次最小需求文档补全：`.txt/.md` 阅读与下载、结构化 Markdown 导出，并复用现有 Guidance 召回。正式评测证据仍不可重跑或覆盖。
 
 ## 权威文档
 
@@ -28,7 +28,7 @@ Phase 0–8 全部完成，逐阶段验收证据在 `.trellis/tasks/archive/2026
 
 - **auth**：本地账号、进程内会话、Cookie CSRF、会话版本失效、改密。
 - **project**：项目与成员、唯一 LEADER 约束、项目级 SCM 身份、成员角色鉴权。
-- **requirement**：需求与验收条件、不可变修订、稳定 `ac_key`、需求质量检查、知识增强的一次性结构化实现建议。
+- **requirement**：需求与验收条件、不可变修订、稳定 `ac_key`、`.txt/.md` 需求文档阅读/下载、结构化 Markdown 导出、需求质量检查与知识增强 Guidance。
 - **knowledge / ai**：pgvector 项目知识库、按项目与当前需求隔离的附件检索、可见的真实向量索引元数据、统一 AI 网关、Prompt 净化与调用审计。
 - **scm**：GitHub 与 GitLab 双 Provider、Webhook 签名校验、PR 同步与需求关联、出站 URL 策略。
 - **review**：单一 Review Engine、分批审查与抢占围栏、Finding 生命周期与血缘、人工决策闭环、对账调度。

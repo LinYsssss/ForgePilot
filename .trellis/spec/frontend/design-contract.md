@@ -36,6 +36,10 @@ component change.
   Knowledge-enhanced Guidance, and the single Review Engine. Knowledge surfaces
   show real chunk/profile/index metadata and semantic-recall labels, never raw
   vectors or synthetic scores.
+- Requirement detail keeps structured Revision/AC and uploaded Requirement
+  documents as two complementary sections. Members may read/download `.txt` and
+  `.md`, LEADER alone uploads, and structured content exports to Markdown in the
+  browser. V1 renders uploaded Markdown as wrapped source text rather than HTML.
 - Review screens follow `context/index → selected evidence → human decision zone`.
 - Finding lifecycle, AI confidence, Requirement status, Review Decision, and
   review activity remain separate labels and containers; never merge them into

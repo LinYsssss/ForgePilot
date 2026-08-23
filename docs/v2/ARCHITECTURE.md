@@ -228,6 +228,8 @@ CHECK (
 
 附件的唯一事实源是 `requirement_attachment`，`knowledge_document.source_requirement_id` 只是受约束检索投影。附件 Document 必须满足 `source_type='REQUIREMENT_ATTACHMENT'` 且 scope 非空，公共知识必须 scope 为空；关系表通过 `(project_id,document_id,requirement_id) → knowledge_document(project_id,id,source_requirement_id)` 锁定二者相等，并以 `UNIQUE(project_id,document_id)` 保证一个 Document 最多属于一个 Requirement。Document 与关系同事务写入；提升为公共知识时复制为新 Document，不就地改写原附件。
 
+需求文档首版仅接受 `.txt/.md` 的 UTF-8 文本：列表仍只返回元数据，项目成员点击后才通过带 `project_id + requirement_id + document_id` 的受保护 GET 路由读取正文或下载。文档必须同时匹配项目和附件关系；跨项目、跨需求与非成员统一返回 404。下载从已存 `title + text` 生成 UTF-8 响应，不增加原始二进制副本。
+
 附件检索必须在 SQL 中同时硬过滤项目与 Requirement：
 
 ```sql
@@ -434,6 +436,7 @@ Requirement、文档、PR 标题、代码注释**全部是不可信数据**，�
 
 工作台是浏览器端组合现有列表 API 的只读项目总览，不新增 Dashboard 表、缓存或统计服务。Knowledge 与 Repository 是正式一级页面；Metrics、Agent、Patch、AI Logs 仍不做一级页面。
 工作台、需求和 Review 页面突出三段上下文内 AI 能力，但不得创建通用 AI/Assistant 入口、聊天框或第二条运行管线。Knowledge 页面展示真实文档/Chunk 数、已嵌入数、向量维度和 Embedding Profile；任何 HTTP 响应均不得返回原始向量。
+需求详情将结构化 Revision 与需求文档分区展示：前者可在浏览器导出 Markdown，后者按需读取存储原文并下载。`.md` 首版作为源文本展示，不引入 HTML 渲染或解析依赖。
 同一页面只使用一种可见 Logo：已登录 Shell 使用横版 Logo，登录页只使用应用图标，应用图标同时作为 favicon；不得在登录页并排堆放两份 Logo。
 普通用户不获得手工向量查询调试台；项目成员只读查看文档状态、失败原因与真实向量索引元数据，LEADER 执行上传和提升。
 一次性实现建议位于 Requirement 详情页，不创建 Assistant 一级菜单或 Conversation 页面。

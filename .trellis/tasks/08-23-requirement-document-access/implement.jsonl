@@ -1,0 +1,8 @@
+{"file":".trellis/spec/backend/index.md","reason":"Backend package and verification entry point."}
+{"file":".trellis/spec/backend/error-handling.md","reason":"Project-scoped reads must preserve the existing 404 isolation contract."}
+{"file":".trellis/spec/backend/quality-guidelines.md","reason":"Backend architecture and focused/full verification constraints."}
+{"file":".trellis/spec/frontend/index.md","reason":"Frontend implementation and quality entry point."}
+{"file":".trellis/spec/frontend/component-guidelines.md","reason":"Accessible native document controls and component-local behavior."}
+{"file":".trellis/spec/frontend/design-contract.md","reason":"Requirement surface layout and responsive design boundaries."}
+{"file":".trellis/spec/frontend/type-safety.md","reason":"Typed API content contract and strict frontend boundary."}
+{"file":".trellis/tasks/08-23-requirement-document-access/research/current-attachment-flow.md","reason":"Verified existing attachment storage, permissions and Guidance reuse."}

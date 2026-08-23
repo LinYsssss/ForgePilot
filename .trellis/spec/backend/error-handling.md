@@ -74,6 +74,61 @@ for two reasons: nothing is logged there, and `api-contract.md` §1 requires a
 login failure to be byte-identical whether the username is unknown or the
 password is wrong — a per-response random value would break that.
 
+## Scenario: read and download a Requirement document
+
+### 1. Scope / Trigger
+
+Use this contract for the text body of a Requirement attachment. The metadata
+list remains small and never gains a `text` field.
+
+### 2. Signatures
+
+```text
+GET /api/projects/{projectId}/requirements/{requirementId}/attachments/{documentId}/content
+GET /api/projects/{projectId}/requirements/{requirementId}/attachments/{documentId}/download
+```
+
+### 3. Contracts
+
+The content response is `{documentId, fileName, mediaType, text}`. `mediaType`
+is `text/plain` for `.txt` and `text/markdown` for `.md`. Download returns the
+same stored UTF-8 text with `Content-Disposition: attachment`; no temporary or
+second binary copy is created.
+
+### 4. Validation & Error Matrix
+
+| Condition | Result |
+|---|---|
+| LEADER uploads `.txt` / `.md` | existing ingestion flow |
+| Other suffix | 422 before embedding |
+| Project member reads the owning Requirement's document | 200 |
+| Cross-project, cross-Requirement, missing document, or non-member | 404 |
+
+### 5. Good / Base / Bad Cases
+
+- Good: a REVIEWER selects `spec.md`, reads all stored text, and downloads it
+  under the stored filename.
+- Base: attachment metadata loads without loading any text until selection.
+- Bad: a document id attached to Requirement A is requested through Requirement
+  B and returns the same 404 as a missing resource.
+
+### 6. Tests Required
+
+- Extend the attachment service test for suffix rejection, member content read,
+  and one cross-Requirement 404.
+- Exercise both GET representations through the real security/MVC chain,
+  asserting JSON fields plus download filename, media type, and bytes.
+
+### 7. Wrong vs Correct
+
+```java
+// Wrong: document id alone loses Requirement ownership.
+knowledge.content(projectId, actorId, documentId);
+
+// Correct: prove the Requirement/document relation before reading Knowledge text.
+attachments.content(projectId, actorId, requirementId, documentId);
+```
+
 ## Common mistakes to avoid
 
 - Returning a Spring default error body (the `/error` page shape) from a new

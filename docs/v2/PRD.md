@@ -49,6 +49,8 @@ flowchart LR
 | 创建项目、管理成员与角色 | ✅ | ❌ | ❌ |
 | 配置 SCM 仓库、上传项目知识 | ✅ | ❌ | ❌ |
 | 创建/编辑需求与 AC | ✅ | ❌ | ❌ |
+| 上传 `.txt/.md` 需求文档 | ✅ | ❌ | ❌ |
+| 阅读/下载需求文档、导出结构化需求 | ✅ | ✅ | ✅ |
 | 运行需求质量检查 | ✅ | ❌ | ❌ |
 | 需求 DRAFT → READY、指派开发 | ✅ | ❌ | ❌ |
 | 生成当前需求的一次性 AI 实现建议 | ✅ | 仅被指派需求 | ❌ |
@@ -69,7 +71,8 @@ flowchart LR
 - 最小账户、项目成员与三角色。
 - Requirement、AC、指派与简化状态机。
 - 一个项目一个活动 GitHub/GitLab 仓库；PR/MR 与 Requirement 关联。
-- Requirement 附件复用 Project Knowledge 文档，不做双份解析。
+- Requirement 附件复用 Project Knowledge 文档，不做双份解析；首版只允许 LEADER 上传 `.txt/.md`，所有项目成员可阅读和下载。
+- Requirement 详情并列结构化 Revision 与需求文档；结构化内容可导出 Markdown，两者不自动同步或映射。
 - Requirement Quality Check：确定性规则 + 一次结构化 AI 分析。
 - Requirement Implementation Guidance：基于 Requirement、AC 与项目知识生成一次性实现清单、相关规则和风险提示，不保存对话。
 - Project Knowledge：上传、切片、Embedding、项目内检索。
@@ -181,6 +184,7 @@ READY 后正文与 AC 锁定；修改由 LEADER 创建新的不可变 Revision �
 - [x] Requirement Revision 或 PR Diff 变化后显示 `REVIEW_REQUIRED`，旧 Review 不可对当前输入作终局决定。
 - [x] A 项目用户无法看到或操作 B 项目的任何资源。
 - [x] 同项目 A 需求的私有附件不会进入 B 需求的 Guidance 或 Review；公共项目知识和当前需求附件可以召回。
+- [x] 项目成员可在需求详情阅读/下载 `.txt/.md` 文档，并将结构化 Revision 导出为 Markdown；只有 LEADER 可上传。
 - [x] 用户可在独立 Knowledge/仓库页面完成上传、查看向量索引状态、读取并编辑安全的 SCM 配置；任何响应不回显凭据或原始向量。
 - [x] 工作台以真实数据展示项目脉搏和“质量检查 → 知识增强 Guidance → 唯一 Review Engine”的 AI 能力链，不伪造评分或运行状态。
 - [ ] 1440 / 768 / 390 三档宽度与 `prefers-reduced-motion` 两种模式的视觉与响应式验收——**人工验收**，清单见 `frontend/MANUAL-ACCEPTANCE.md`。
