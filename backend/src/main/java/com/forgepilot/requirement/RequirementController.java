@@ -1,5 +1,6 @@
 package com.forgepilot.requirement;
 
+import java.nio.charset.StandardCharsets;
 import java.security.Principal;
 import java.util.List;
 
@@ -13,6 +14,10 @@ import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -101,6 +106,27 @@ class RequirementController {
     KnowledgeDocumentView attach(@PathVariable long projectId, @PathVariable long requirementId,
             @Valid @RequestBody AttachmentRequest request, Principal principal) {
         return attachments.create(projectId, userIdOf(principal), requirementId, request.title(), request.text());
+    }
+
+    @GetMapping("/{requirementId}/attachments/{documentId}/content")
+    RequirementAttachmentService.AttachmentContent attachmentContent(@PathVariable long projectId,
+            @PathVariable long requirementId, @PathVariable long documentId, Principal principal) {
+        return attachments.content(projectId, userIdOf(principal), requirementId, documentId);
+    }
+
+    @GetMapping("/{requirementId}/attachments/{documentId}/download")
+    ResponseEntity<byte[]> downloadAttachment(@PathVariable long projectId, @PathVariable long requirementId,
+            @PathVariable long documentId, Principal principal) {
+        RequirementAttachmentService.AttachmentContent content = attachments
+                .content(projectId, userIdOf(principal), requirementId, documentId);
+        byte[] body = content.text().getBytes(StandardCharsets.UTF_8);
+        MediaType type = new MediaType(MediaType.parseMediaType(content.mediaType()), StandardCharsets.UTF_8);
+        return ResponseEntity.ok()
+                .contentType(type)
+                .contentLength(body.length)
+                .header(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition.attachment()
+                        .filename(content.fileName(), StandardCharsets.UTF_8).build().toString())
+                .body(body);
     }
 
     @PostMapping("/{requirementId}/attachments/{documentId}/promote")

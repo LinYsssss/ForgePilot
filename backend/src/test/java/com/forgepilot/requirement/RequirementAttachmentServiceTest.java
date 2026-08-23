@@ -1,6 +1,7 @@
 package com.forgepilot.requirement;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.when;
@@ -10,6 +11,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import com.forgepilot.PostgresTestBase;
 import com.forgepilot.ai.AiGateway;
+import com.forgepilot.common.ApiException;
 import com.forgepilot.knowledge.ChunkSearchRepository.ChunkMatch;
 import com.forgepilot.knowledge.KnowledgeDocumentView;
 import com.forgepilot.knowledge.KnowledgeService;
@@ -19,6 +21,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.http.HttpStatus;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 /**
@@ -53,6 +56,10 @@ class RequirementAttachmentServiceTest extends PostgresTestBase {
     @Test
     void attachmentsPersistTheirOwnershipPromoteByCopyAndStayRequirementScopedInRetrieval() {
         Fixture fixture = new Fixture();
+        assertThatThrownBy(() -> attachments.create(fixture.project, fixture.leader,
+                fixture.firstRequirement, "brief.pdf", "unsupported"))
+                .isInstanceOfSatisfying(ApiException.class,
+                        error -> assertThat(error.getStatus()).isEqualTo(HttpStatus.UNPROCESSABLE_ENTITY));
         long publicDocument = knowledge.createProjectKnowledge(fixture.project, fixture.leader,
                 "public.md", "public project rule");
         KnowledgeDocumentView first = attachments.create(fixture.project, fixture.leader,
@@ -65,6 +72,17 @@ class RequirementAttachmentServiceTest extends PostgresTestBase {
                 fixture.project, fixture.firstRequirement, first.id())).isOne();
         assertThat(attachments.list(fixture.project, fixture.leader, fixture.firstRequirement))
                 .extracting(KnowledgeDocumentView::id).containsExactly(first.id());
+        assertThat(attachments.content(fixture.project, fixture.developer,
+                fixture.firstRequirement, first.id()))
+                .satisfies(content -> {
+                    assertThat(content.fileName()).isEqualTo("first.md");
+                    assertThat(content.mediaType()).isEqualTo("text/markdown");
+                    assertThat(content.text()).isEqualTo("first requirement-only rule");
+                });
+        assertThatThrownBy(() -> attachments.content(fixture.project, fixture.developer,
+                fixture.secondRequirement, first.id()))
+                .isInstanceOfSatisfying(ApiException.class,
+                        error -> assertThat(error.getStatus()).isEqualTo(HttpStatus.NOT_FOUND));
 
         KnowledgeDocumentView promoted = attachments.promote(fixture.project, fixture.leader,
                 fixture.firstRequirement, first.id());
@@ -90,6 +108,7 @@ class RequirementAttachmentServiceTest extends PostgresTestBase {
     private final class Fixture {
 
         private final long leader;
+        private final long developer;
         private final long project;
         private final long firstRequirement;
         private final long secondRequirement;
@@ -102,6 +121,10 @@ class RequirementAttachmentServiceTest extends PostgresTestBase {
                     "attachment-project-" + SEQUENCE.incrementAndGet(), leader);
             jdbc.update("insert into project_member (project_id, user_id, role) values (?, ?, 'LEADER')",
                     project, leader);
+            developer = jdbc.queryForObject("insert into user_account (username, password_hash) values (?, 'x') "
+                    + "returning id", Long.class, "attachment-developer-" + SEQUENCE.incrementAndGet());
+            jdbc.update("insert into project_member (project_id, user_id, role) values (?, ?, 'DEVELOPER')",
+                    project, developer);
             firstRequirement = requirement();
             secondRequirement = requirement();
         }

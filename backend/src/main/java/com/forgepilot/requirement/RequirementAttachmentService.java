@@ -2,6 +2,7 @@ package com.forgepilot.requirement;
 
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 import com.forgepilot.common.ApiException;
@@ -53,25 +54,53 @@ public class RequirementAttachmentService {
             String title, String text) {
         access.requireRole(projectId, actorId, ProjectRole.LEADER);
         require(projectId, requirementId);
+        requireSupportedFileName(title);
         long documentId = knowledge.createRequirementAttachment(projectId, actorId, requirementId, title, text);
         attachments.save(new RequirementAttachment(projectId, requirementId, documentId));
         return knowledge.document(projectId, actorId, documentId);
     }
 
+    @Transactional(readOnly = true)
+    public AttachmentContent content(long projectId, long actorId, long requirementId, long documentId) {
+        require(projectId, requirementId);
+        requireAttached(projectId, requirementId, documentId);
+        KnowledgeService.DocumentContent document = knowledge.content(projectId, actorId, documentId);
+        return new AttachmentContent(document.documentId(), document.title(), mediaType(document.title()),
+                document.text());
+    }
+
     @Transactional
     public KnowledgeDocumentView promote(long projectId, long actorId, long requirementId, long documentId) {
         access.requireRole(projectId, actorId, ProjectRole.LEADER);
+        requireAttached(projectId, requirementId, documentId);
+        long promotedId = knowledge.promoteToProjectKnowledge(projectId, actorId, documentId);
+        return knowledge.document(projectId, actorId, promotedId);
+    }
+
+    private void requireAttached(long projectId, long requirementId, long documentId) {
         if (attachments.findByProjectIdAndRequirementIdOrderByIdAsc(projectId, requirementId).stream()
                 .noneMatch(attachment -> attachment.getDocumentId() == documentId)) {
             throw ApiException.notFound();
         }
-        long promotedId = knowledge.promoteToProjectKnowledge(projectId, actorId, documentId);
-        return knowledge.document(projectId, actorId, promotedId);
+    }
+
+    private static void requireSupportedFileName(String fileName) {
+        String lower = fileName.toLowerCase(Locale.ROOT);
+        if (!lower.endsWith(".txt") && !lower.endsWith(".md")) {
+            throw ApiException.unprocessable("Requirement documents must use .txt or .md.");
+        }
+    }
+
+    private static String mediaType(String fileName) {
+        return fileName.toLowerCase(Locale.ROOT).endsWith(".md") ? "text/markdown" : "text/plain";
     }
 
     private void require(long projectId, long requirementId) {
         if (requirements.findByProjectIdAndId(projectId, requirementId).isEmpty()) {
             throw ApiException.notFound();
         }
+    }
+
+    public record AttachmentContent(long documentId, String fileName, String mediaType, String text) {
     }
 }

@@ -5,7 +5,10 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.hamcrest.Matchers.containsString;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -24,7 +27,7 @@ import com.forgepilot.ai.AiCallContext;
 import com.forgepilot.ai.AiGateway;
 import com.forgepilot.ai.AiUseCase;
 import com.forgepilot.common.ApiException;
-import com.forgepilot.knowledge.ChunkSearchRepository;
+import com.forgepilot.knowledge.KnowledgeDocumentView;
 import com.forgepilot.project.ProjectRole;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -32,6 +35,7 @@ import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpHeaders;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -66,10 +70,10 @@ class ImplementationGuidanceTest extends PostgresTestBase {
     private RequirementService requirements;
 
     @Autowired
-    private JdbcTemplate jdbc;
+    private RequirementAttachmentService attachments;
 
     @Autowired
-    private ChunkSearchRepository vectors;
+    private JdbcTemplate jdbc;
 
     @Autowired
     private WebApplicationContext context;
@@ -130,19 +134,20 @@ class ImplementationGuidanceTest extends PostgresTestBase {
     void guidanceAddsScopedKnowledgeToThePromptAndReturnsItsReference() {
         Fixture fixture = new Fixture();
         long requirement = fixture.requirement("登录", "错误口令会被拒绝");
-        fixture.knowledge("认证约定", "会话 Cookie 必须标记为 HttpOnly。");
+        attachments.create(fixture.project, fixture.leader, requirement,
+                "认证约定.md", "会话 Cookie 必须标记为 HttpOnly。");
 
         ImplementationGuidance produced = guidance.generate(fixture.project, fixture.leader, requirement);
 
         assertThat(produced.knowledgeSources()).singleElement().satisfies(source -> {
-            assertThat(source.title()).isEqualTo("认证约定");
+            assertThat(source.title()).isEqualTo("认证约定.md");
             assertThat(source.excerpt()).contains("HttpOnly");
             assertThat(source.similarity()).isEqualTo(1.0d);
         });
         ArgumentCaptor<String> prompt = ArgumentCaptor.forClass(String.class);
         ArgumentCaptor<String> schema = ArgumentCaptor.forClass(String.class);
         verify(ai).chat(prompt.capture(), schema.capture(), eq(AiUseCase.IMPLEMENTATION_GUIDANCE), any());
-        assertThat(prompt.getValue()).contains("[Document: 认证约定, chunk 1]")
+        assertThat(prompt.getValue()).contains("[Document: 认证约定.md, chunk 1]")
                 .contains("会话 Cookie 必须标记为 HttpOnly。");
         assertThat(schema.getValue()).contains("\"checklist\"").contains("\"rules\"")
                 .contains("\"risks\"");
@@ -228,6 +233,26 @@ class ImplementationGuidanceTest extends PostgresTestBase {
         mockMvc.perform(MockMvcRequestBuilders.post(path)
                         .with(user(fixture.usernameOf(reviewer))).with(csrf()))
                 .andExpect(status().isForbidden());
+
+        KnowledgeDocumentView document = attachments.create(fixture.project, fixture.leader, requirement,
+                "spec.md", "# Login\n\nUse one error response.");
+        String documentPath = "/api/projects/" + fixture.project + "/requirements/" + requirement
+                + "/attachments/" + document.id();
+
+        mockMvc.perform(MockMvcRequestBuilders.get(documentPath + "/content")
+                        .with(user(fixture.usernameOf(reviewer))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.fileName").value("spec.md"))
+                .andExpect(jsonPath("$.mediaType").value("text/markdown"))
+                .andExpect(jsonPath("$.text").value("# Login\n\nUse one error response."));
+
+        mockMvc.perform(MockMvcRequestBuilders.get(documentPath + "/download")
+                        .with(user(fixture.usernameOf(reviewer))))
+                .andExpect(status().isOk())
+                .andExpect(header().string(HttpHeaders.CONTENT_DISPOSITION, containsString("spec.md")))
+                .andExpect(content().contentTypeCompatibleWith("text/markdown"))
+                .andExpect(content().bytes("# Login\n\nUse one error response."
+                        .getBytes(java.nio.charset.StandardCharsets.UTF_8)));
     }
 
     // ------------------------------------------------------------------ helpers
@@ -274,17 +299,6 @@ class ImplementationGuidanceTest extends PostgresTestBase {
             requirements.changeStatus(project, leader, requirement, RequirementStatus.READY);
             requirements.assign(project, leader, requirement, assignee);
             return requirement;
-        }
-
-        private void knowledge(String title, String content) {
-            long document = jdbc.queryForObject("insert into knowledge_document "
-                    + "(project_id, source_type, title, text, status) values (?, 'PROJECT_KNOWLEDGE', ?, ?, "
-                    + "'READY') returning id", Long.class, project, title, content);
-            long chunk = jdbc.queryForObject("insert into knowledge_chunk "
-                    + "(project_id, document_id, seq, content, provider, model, version) "
-                    + "values (?, ?, 1, ?, 'test', 'test', 'test') returning id", Long.class,
-                    project, document, content);
-            vectors.writeEmbedding(project, chunk, new float[] {1.0f, 0.0f});
         }
 
         private long currentRevisionOf(long requirementId) {
