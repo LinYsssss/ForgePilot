@@ -38,7 +38,7 @@ Before planning or changing this repository, read these files completely:
 
 ## Current execution gate
 
-- **Phase 0 through Phase 8 are complete and gated as of 2026-08-22.** Per-phase acceptance evidence lives in `.trellis/tasks/archive/2026-08/<task>/result.md`. D017's `08-23-product-flow-completion` implementation and automated validation are recorded in its `result.md`; it remains uncommitted/unarchived until the user confirms commit grouping.
+- **Phase 0 through Phase 8 are complete and gated as of 2026-08-22.** Per-phase acceptance evidence lives in `.trellis/tasks/archive/2026-08/<task>/result.md`. D017's `08-23-product-flow-completion` implementation and automated validation are recorded in its archived `result.md` and committed as the accepted R2.4 product surface.
 - The Phase 8 baseline delivered 8 backend business packages, 16 business tables across 7 Flyway migrations, 307 backend tests green, a 3-entry/7-route frontend, GitHub and GitLab providers, and a completed three-arm formal evaluation. D017 supersedes only the frontend navigation/product-flow surface with six approved entries and its minimal supporting APIs.
 - Any further change still goes through Trellis Plan -> Execute -> Finish with one independently verifiable task active at a time. "Everything is done" is not a licence to edit the repository ad hoc.
 - **The formal evaluation assets are immutable.** The configuration freeze, corpus manifest, holdout ledger, and raw outputs must never be deleted, overwritten, or re-run. The holdout ran exactly once, after freeze; re-running it or tuning against it permanently destroys the only unbiased estimate in the thesis. A different experiment requires a new case-set and configuration identity.

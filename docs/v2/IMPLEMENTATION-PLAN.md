@@ -134,13 +134,13 @@ Phase 0–8 验收时形态：16 张业务表 / 7 个 Flyway 迁移、8 个后�
 前端当时为 3 个一级导航 / 7 条产品路由、32 个测试全绿；Compose 空卷冷启动通过；
 三臂正式评测完成且 holdout 只运行一次。
 
-## D017 产品主链路补全（已实现并验证，待提交/归档）
+## D017 产品主链路补全（已实现、验证并归档）
 
 - 保持 16 张业务表、8 个后端顶层包、单一 Review Engine 与正式评测证据不变。
 - 补齐 Project Knowledge/需求附件读写提升、按当前 Requirement 的 SQL 检索隔离、知识增强结构化 Guidance，以及 SCM 安全读取。
 - 前端改为工作台、项目、研发需求、项目知识、仓库接入、代码审查六个入口，加入两份正式 Logo、真实向量元数据和显著但仍在上下文内的 AI 能力展示。
 - 只增加关键回归测试，完成后各运行一次后端 `verify` 与前端 lint/typecheck/test/build；不做负载、Compose 容量或正式评测重跑。
-- 实施与验收证据见 `.trellis/tasks/08-23-product-flow-completion/result.md`；当前未自动提交或推送，待用户确认提交分组后再归档。
+- 实施与验收证据见 `.trellis/tasks/archive/2026-08/08-23-product-flow-completion/result.md`；工作提交和任务归档已按 Trellis Finish 流程完成。
 
 后续工作仍受本文件的授权闸门与测试纪律约束：任何新增表、模块、一级页面、运行时依赖，
 或改变已接受决策的行为，都必须先补充并批准新的决策记录，再立 Trellis 任务。

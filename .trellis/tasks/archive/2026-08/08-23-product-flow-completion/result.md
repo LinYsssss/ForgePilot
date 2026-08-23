@@ -1,6 +1,6 @@
 # Result — 前端完整功能展示与后端链路补全
 
-状态：实现与自动化验证完成，尚未提交或推送。
+状态：实现与自动化验证完成，工作提交已落库，任务已归档。
 
 ## Delivered
 
@@ -30,6 +30,6 @@ No Chromium/Playwright/browser executable is installed in this workspace, so aut
 
 ## Repository state
 
-- No commit or push was performed.
+- Work was committed in three reviewable groups before task archival; push and runtime deployment are external release actions rather than task acceptance evidence.
 - Root `logo-app.png` and `logo-lockup.png` remain the user-provided untracked source assets; their frontend copies are part of this implementation.
 - Formal evaluation freeze, corpus, ledger, raw outputs, and the known archived-path issue were untouched.
