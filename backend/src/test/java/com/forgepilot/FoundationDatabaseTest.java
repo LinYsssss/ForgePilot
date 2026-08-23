@@ -14,11 +14,11 @@ import org.springframework.jdbc.core.JdbcTemplate;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
 class FoundationDatabaseTest extends PostgresTestBase {
 
-    /** Thirteen of the sixteen tables exist; review, finding and finding_event arrive with batch 3. */
-    // Sixteen, which is the cap. ARCHITECTURE.md 2.1 fixes the model at exactly
-    // this set, so a seventeenth table is a design change and not a migration.
-    // Compared by name rather than by count on purpose: a count still passes when
-    // one planned table is missing and one unplanned table took its place.
+    /** 十六张表中已有十三张；review、finding 与 finding_event 随批次 3 到位。 */
+    // 十六张，也就是上限。ARCHITECTURE.md 2.1 把数据模型固定为**恰好**这一组，
+    // 因此第十七张表是一次设计变更，而不是一次迁移。
+    // 刻意按**名字**而不是按数量比对：只按数量比，会在「少了一张计划内的表、
+    // 又多出一张计划外的表顶替它」时照样通过。
     private static final List<String> EXPECTED_TABLES = List.of(
             "acceptance_criterion", "ai_call_log", "finding", "finding_event",
             "knowledge_chunk", "knowledge_document", "project", "project_member",
@@ -49,8 +49,8 @@ class FoundationDatabaseTest extends PostgresTestBase {
                         + "where table_schema = 'public' and table_type = 'BASE TABLE' "
                         + "and table_name <> 'flyway_schema_history'",
                 String.class);
-        // Order is the database collation's business, not this test's. The set is
-        // what matters: an unplanned table has to fail here.
+        // 顺序是数据库排序规则的事，不是本测试的事。要紧的是这个**集合**：
+        // 任何计划外的表都必须在这里失败。
         assertThat(tables).containsExactlyInAnyOrderElementsOf(EXPECTED_TABLES);
     }
 

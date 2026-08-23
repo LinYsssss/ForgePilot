@@ -20,9 +20,9 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
- * Proves that the batch 1 constraints are enforced by PostgreSQL itself, not by
- * a service check that a future caller could bypass. Every rejection here is
- * produced by writing straight through JdbcTemplate, below any application code.
+ * 证明批次 1 的那些约束是由 PostgreSQL 自己强制的，而不是由某个未来调用方
+ * 可以绕开的服务层检查强制的。这里的每一次拒绝，都是直接通过 JdbcTemplate
+ * 写入、绕到所有应用代码之下产生的。
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
 class DatabaseConstraintTest extends PostgresTestBase {
@@ -42,7 +42,7 @@ class DatabaseConstraintTest extends PostgresTestBase {
     @PersistenceContext
     private EntityManager entityManager;
 
-    // ---------------------------------------------------------------- members
+    // ---------------------------------------------------------------- 成员
 
     @Test
     void atMostOneLeaderPerProject() {
@@ -79,8 +79,8 @@ class DatabaseConstraintTest extends PostgresTestBase {
         insertMember(project, owner, "LEADER");
         insertMember(project, successor, "DEVELOPER");
 
-        // Promoting first collides with the still-present LEADER: this is why
-        // D013.8 forbids a single CASE statement and requires demote -> flush -> promote.
+        // 先升级会与仍然在位的 LEADER 撞车：这正是 D013.8 禁止用单条 CASE 语句、
+        // 并要求「降级 -> flush -> 升级」的原因。
         assertThat(sqlStateOf(() -> setRole(project, successor, "LEADER")))
                 .isEqualTo(UNIQUE_VIOLATION);
 
@@ -125,15 +125,15 @@ class DatabaseConstraintTest extends PostgresTestBase {
         assertThat(sqlStateOf(() -> setScmIdentity(project, developer, "gh-1")))
                 .isEqualTo(UNIQUE_VIOLATION);
 
-        // The same SCM account may appear in another project.
+        // 同一个 SCM 账号可以出现在另一个项目里。
         setScmIdentity(otherProject, elsewhere, "gh-1");
 
-        // Unconfigured identities stay NULL and do not collide: PostgreSQL treats
-        // NULLs as distinct in a plain UNIQUE constraint.
+        // 未配置的身份保持为 NULL 且互不冲突：在普通 UNIQUE 约束里，
+        // PostgreSQL 把各个 NULL 视为互不相同。
         assertThat(unconfiguredIdentityCount(project)).isEqualTo(1);
     }
 
-    // ----------------------------------------------------------- requirements
+    // ----------------------------------------------------------- 需求
 
     @Test
     void requirementIsCreatedWithoutARevisionAndBackfilledAfterwards() {
@@ -141,9 +141,8 @@ class DatabaseConstraintTest extends PostgresTestBase {
         long project = insertProject(author);
         insertMember(project, author, "LEADER");
 
-        // Step 1: current_revision_id is NULL, so MATCH SIMPLE skips the composite
-        // foreign key entirely -- this is what makes the cycle resolvable without
-        // DEFERRABLE.
+        // 第 1 步：current_revision_id 为 NULL，因此 MATCH SIMPLE 会完全跳过
+        // 那个复合外键——正是这一点让这个循环无需 DEFERRABLE 就能解开。
         long requirement = insertRequirement(project);
         assertThat(currentRevisionOf(requirement)).isNull();
 
@@ -226,7 +225,7 @@ class DatabaseConstraintTest extends PostgresTestBase {
                 .isEqualTo(CHECK_VIOLATION);
     }
 
-    // ------------------------------------------------------ acceptance criteria
+    // ------------------------------------------------------ 验收条件
 
     @Test
     void acceptanceCriterionKeyIsUniqueWithinARevisionAndStableAcrossThem() {
@@ -240,7 +239,7 @@ class DatabaseConstraintTest extends PostgresTestBase {
         assertThat(sqlStateOf(() -> insertAcceptanceCriterion(project, first, "AC-1", 2)))
                 .isEqualTo(UNIQUE_VIOLATION);
 
-        // The same business key carried into the next revision is a different row.
+        // 同一个业务 key 被带进下一个修订之后，是另一行记录。
         insertAcceptanceCriterion(project, second, "AC-1", 1);
         assertThat(acKeysOf(second)).containsExactly("AC-1");
     }
@@ -257,7 +256,7 @@ class DatabaseConstraintTest extends PostgresTestBase {
                 .isEqualTo(FOREIGN_KEY_VIOLATION);
     }
 
-    // ----------------------------------------------------------- entity mapping
+    // ----------------------------------------------------------- 实体映射
 
     @Test
     void hibernateWritesTheThreeStepBackfillAndReadsTheRevisionBack() {
@@ -278,8 +277,8 @@ class DatabaseConstraintTest extends PostgresTestBase {
             return requirement.getId();
         });
 
-        // The read-only association (D013.1 variant A) resolves the three-column
-        // foreign key without ever writing project_id or id through it.
+        // 那个只读关联（D013.1 方案 A）解析了三列外键，
+        // 却从不通过它写入 project_id 或 id。
         String title = transactions.execute(status ->
                 entityManager.find(Requirement.class, requirementId).getCurrentRevision().getTitle());
 
@@ -306,7 +305,7 @@ class DatabaseConstraintTest extends PostgresTestBase {
                 .allSatisfy((column, value) -> assertThat(value).isNull());
     }
 
-    // ------------------------------------------------------------------ helpers
+    // ------------------------------------------------------------------ 辅助方法
 
     private long insertUser() {
         String username = "user-" + SEQUENCE.incrementAndGet();
@@ -405,7 +404,7 @@ class DatabaseConstraintTest extends PostgresTestBase {
         return id;
     }
 
-    /** The SQLState PostgreSQL rejected the statement with, so tests name the real rule. */
+    /** PostgreSQL 拒绝该语句时给出的 SQLState，使测试能点名真正的那条规则。 */
     private static String sqlStateOf(ThrowingCallable action) {
         Throwable thrown = catchThrowable(action);
         assertThat(thrown).as("statement was expected to be rejected").isNotNull();

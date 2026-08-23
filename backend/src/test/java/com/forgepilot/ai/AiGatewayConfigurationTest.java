@@ -14,13 +14,13 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 /**
- * What happens when nobody has configured a provider.
+ * 当没有任何人配置过 provider 时会发生什么。
  *
- * <p>There is no default base URI and no default key anywhere in the code
- * (D015.8, and {@code quality-guidelines.md} on fallback credentials), so an
- * unconfigured deployment must refuse rather than reach for something. The
- * refusal happens at the call and not at startup, because batch 2 must not stop
- * an application from booting for a feature its operator has not enabled yet.
+ * <p>代码里任何地方都没有默认 base URI、也没有默认密钥
+ * （D015.8，以及 {@code quality-guidelines.md} 关于兜底凭据的规定），
+ * 因此未配置的部署必须**拒绝**，而不是去随手抓一个什么来用。
+ * 这次拒绝发生在调用时而非启动时，因为批次 2 不应该为了一个运维尚未启用的功能
+ * 而阻止应用启动。
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE,
         properties = {"forgepilot.ai.base-url=", "forgepilot.ai.chat-model=stub-chat-model"})
@@ -50,8 +50,8 @@ class AiGatewayConfigurationTest extends PostgresTestBase {
                 .isInstanceOf(ApiException.class)
                 .hasMessage("The AI provider is not configured.");
 
-        // Nothing was attempted, so nothing is recorded: ai_call_log holds
-        // attempts against a provider, not configuration mistakes.
+        // 什么都没尝试，因此什么都不记录：ai_call_log 存的是对 provider 的**尝试**，
+        // 而不是配置错误。
         assertThat(callLogs.findByProjectIdOrderByIdAsc(project)).isEmpty();
     }
 

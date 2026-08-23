@@ -25,11 +25,10 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
 /**
- * The batch 1 loop over real HTTP: register, log in, create a project, add a
- * member, write a requirement with acceptance criteria, freeze it, assign it,
- * and read the revision history back. Every other test in this batch works one
- * slice at a time; this is the only place where the wiring between them —
- * security filter chain, CSRF, error mapping, JSON shape — is actually proven.
+ * 批次 1 在真实 HTTP 之上的完整闭环：注册、登录、创建项目、添加成员、
+ * 写一条带验收条件的需求、冻结它、指派它，再把修订历史读回来。
+ * 本批次其余测试都只针对单个切片；只有这里真正证明了它们之间的接线——
+ * 安全过滤器链、CSRF、错误映射、JSON 结构。
  */
 @SpringBootTest
 class BatchOneApiTest extends PostgresTestBase {
@@ -60,8 +59,8 @@ class BatchOneApiTest extends PostgresTestBase {
         leader.post("/api/projects/" + project + "/members", """
                 {"username": "%s", "role": "DEVELOPER"}""".formatted(developer.username));
 
-        // The SCM identity is configured by the LEADER and is a key plus a display
-        // name only: nothing in this batch authorises against it.
+        // SCM 身份由 LEADER 配置，且只有「一个 key + 一个显示名」：
+        // 本批次里没有任何东西拿它做授权判断。
         leader.patch("/api/projects/" + project + "/members/" + developer.userId, """
                 {"scmExternalUserId": "gh-2001", "scmUsername": "octodev"}""");
 
@@ -78,11 +77,11 @@ class BatchOneApiTest extends PostgresTestBase {
         JsonNode created = leader.read(base);
         assertThat(created.path("status").asString()).isEqualTo("DRAFT");
         assertThat(created.path("currentRevision").path("seq").asInt()).isEqualTo(1);
-        // Batch 3 moved review activity out of this response entirely. It is derived
-        // from pull_request and review, and the dependency arrow runs review ->
-        // requirement, so requirement cannot compute it without cycling the feature
-        // graph. Asserting its absence here is the boundary check: if it ever comes
-        // back, something reached across in the wrong direction.
+        // 批次 3 已经把审查活动状态整个移出了这个响应。它由 pull_request 与 review
+        // 共同推导，而依赖箭头的方向是 review -> requirement，
+        // 因此 requirement 要算它就必然让功能依赖图成环。
+        // 在这里断言它**不存在**就是那道边界检查：一旦它又回来了，
+        // 说明有人朝错误的方向伸手了。
         assertThat(created.has("reviewActivity")).isFalse();
         JsonNode firstCriteria = created.path("currentRevision").path("acceptanceCriteria");
         assertThat(firstCriteria.size()).isEqualTo(2);
@@ -90,7 +89,7 @@ class BatchOneApiTest extends PostgresTestBase {
         String secondKey = firstCriteria.get(1).path("acKey").asString();
         assertThat(firstKey).isNotBlank().isNotEqualTo(secondKey);
 
-        // A DEVELOPER reads everything in the project and changes nothing.
+        // DEVELOPER 能读项目内的一切，但什么都改不了。
         assertThat(developer.read(base).path("id").asLong()).isEqualTo(requirement);
         developer.postExpecting(base + "/status", """
                 {"status": "READY"}""", status().isForbidden());
@@ -98,25 +97,25 @@ class BatchOneApiTest extends PostgresTestBase {
         leader.post(base + "/status", """
                 {"status": "READY"}""");
 
-        // Frozen: the DRAFT edit path closes once the requirement is READY. Judging
-        // that needs the current status, so it is a 409 (api-contract 0).
+        // 已冻结：需求一旦进入 READY，DRAFT 编辑通道就关闭了。
+        // 作出这个判断需要看当前状态，因此返回 409（api-contract 0）。
         leader.patchExpecting(base, """
                 {"title": "Sneak an edit in", "acceptanceCriteria": [{"acKey": "%s", "text": "changed"}]}"""
                 .formatted(firstKey), status().isConflict());
 
-        // First assignment moves READY -> IN_DEVELOPMENT in the same transaction.
+        // 首次指派会在同一个事务里把 READY 推进到 IN_DEVELOPMENT。
         JsonNode assigned = leader.post(base + "/assignee", """
                 {"userId": %d}""".formatted(developer.userId));
         assertThat(assigned.path("status").asString()).isEqualTo("IN_DEVELOPMENT");
         assertThat(assigned.path("assigneeId").asLong()).isEqualTo(developer.userId);
         assertThat(assigned.path("assigneeUsername").asString()).isEqualTo(developer.username);
 
-        // Reassignment moves the status neither back nor forward.
+        // 重新指派既不会把状态往回退，也不会把它往前推。
         assertThat(leader.post(base + "/assignee", """
                 {"userId": %d}""".formatted(leader.userId)).path("status").asString())
                 .isEqualTo("IN_DEVELOPMENT");
 
-        // Publishing a new revision keeps each existing acKey and reorders freely.
+        // 发布新修订会保留每一个已有的 acKey，同时可以自由重排顺序。
         JsonNode published = leader.post(base + "/revisions", """
                 {"title": "Log in with a local account",
                  "changeReason": "Reviewers asked for an explicit lockout rule.",
@@ -133,7 +132,7 @@ class BatchOneApiTest extends PostgresTestBase {
         assertThat(history.get(1).path("changeReason").asString())
                 .isEqualTo("Reviewers asked for an explicit lockout rule.");
 
-        // The same criterion kept its key across the revision, despite moving position.
+        // 同一条验收条件跨修订保住了它的 key，尽管它的位置变了。
         JsonNode republished = history.get(1).path("acceptanceCriteria");
         assertThat(republished.get(0).path("acKey").asString()).isEqualTo(secondKey);
         assertThat(republished.get(1).path("acKey").asString()).isEqualTo(firstKey);
@@ -153,15 +152,14 @@ class BatchOneApiTest extends PostgresTestBase {
         long ownProject = outsider.post("/api/projects", """
                 {"name": "Mine"}""").path("id").asLong();
 
-        // Someone else's project answers exactly like an id that was never issued,
-        // so existence cannot be probed.
+        // 别人的项目与一个从未签发过的 id 答得一模一样，因此无法探测存在性。
         outsider.readExpecting("/api/projects/" + foreign, status().isNotFound());
         outsider.readExpecting("/api/projects/" + (foreign + 9_000), status().isNotFound());
         outsider.readExpecting("/api/projects/" + foreign + "/members", status().isNotFound());
         outsider.readExpecting("/api/projects/" + foreign + "/requirements/" + foreignRequirement,
                 status().isNotFound());
 
-        // Nor can a foreign requirement be dragged into a project the caller owns.
+        // 也不能把一条外项目的需求硬拽进调用方自己拥有的项目里。
         outsider.readExpecting("/api/projects/" + ownProject + "/requirements/" + foreignRequirement,
                 status().isNotFound());
         outsider.postExpecting("/api/projects/" + ownProject + "/requirements/" + foreignRequirement
@@ -197,7 +195,7 @@ class BatchOneApiTest extends PostgresTestBase {
         assertThat(result.getResponse().getContentAsString()).doesNotContain("password");
     }
 
-    // -------------------------------------------------------------------- client
+    // -------------------------------------------------------------------- 客户端
 
     private Client register() throws Exception {
         Client client = new Client("pilot-" + SEQUENCE.incrementAndGet());
@@ -208,7 +206,7 @@ class BatchOneApiTest extends PostgresTestBase {
         return client;
     }
 
-    /** One browser: its session, plus the CSRF cookie it echoes back as a header. */
+    /** 一个浏览器：它的会话，加上它会以 header 回显的那个 CSRF cookie。 */
     private final class Client {
 
         private static final String PASSWORD = "correct-horse-battery";
@@ -223,7 +221,7 @@ class BatchOneApiTest extends PostgresTestBase {
         }
 
         private void bootstrapCsrf() throws Exception {
-            // Anonymous, but it must still hand out the token a JS client needs.
+            // 匿名请求，但它仍然必须把 JS 客户端所需的 token 发出来。
             csrf = mockMvc.perform(MockMvcRequestBuilders.get("/api/auth/me").session(session))
                     .andReturn().getResponse().getCookie("XSRF-TOKEN");
             assertThat(csrf).as("GET /api/auth/me must issue the XSRF-TOKEN cookie").isNotNull();
@@ -238,7 +236,7 @@ class BatchOneApiTest extends PostgresTestBase {
                             .header("X-XSRF-TOKEN", csrf.getValue()))
                     .andExpect(status().isOk())
                     .andReturn();
-            // Spring Security re-issues the token on authentication; keep the new one.
+            // Spring Security 会在认证时重新签发 token；这里保留新的那个。
             Cookie reissued = result.getResponse().getCookie("XSRF-TOKEN");
             if (reissued != null && reissued.getValue() != null && !reissued.getValue().isEmpty()) {
                 csrf = reissued;

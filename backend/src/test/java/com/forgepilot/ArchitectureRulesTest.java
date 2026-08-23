@@ -21,7 +21,7 @@ class ArchitectureRulesTest {
             "common", "auth", "project", "requirement", "scm", "knowledge", "ai", "review");
     private static final Set<String> FORBIDDEN_FEATURES = Set.of(
             "agent", "patch", "mq", "rag", "repo", "pullrequest", "context", "assistant", "finding");
-    /** The only subpackages ARCHITECTURE.md 1.1 sanctions; everything else lives in the feature package itself. */
+    /** ARCHITECTURE.md 1.1 认可的仅有的那几个子包；其余一切都住在功能包自身里。 */
     private static final Set<String> ALLOWED_SUBPACKAGES = Set.of("scm.github", "scm.gitlab", "ai.openai");
     private static final JavaClasses PRODUCTION_CLASSES = new ClassFileImporter()
             .withImportOption(ImportOption.Predefined.DO_NOT_INCLUDE_TESTS)
@@ -86,11 +86,11 @@ class ArchitectureRulesTest {
         JavaClasses fixtures = new ClassFileImporter().importPackages(
                 "com.forgepilot.knowledge.fixture", "com.forgepilot.ai.fixture");
 
-        // A class parked in an unlisted subpackage of an otherwise allowed feature.
+        // 一个被塞进「合法功能包的未列名子包」里的类。
         assertThatThrownBy(() -> classes().should(resideInAnAllowedSubpackage()).check(fixtures))
                 .isInstanceOf(AssertionError.class);
 
-        // A cross-feature Spring Data repository that the name suffix alone would miss.
+        // 一个跨功能模块的 Spring Data 仓库——仅靠名字后缀会漏掉它。
         assertThatThrownBy(() -> classes().should(notDependOnRepositoryInAnotherFeature()).check(fixtures))
                 .isInstanceOf(AssertionError.class);
     }
@@ -148,16 +148,14 @@ class ArchitectureRulesTest {
     }
 
     /**
-     * Naming alone is not a boundary: a repository can be called anything. The
-     * Spring Data type is the real signal, and the suffix only catches the ones
-     * that do not extend it.
+     * 光靠命名构不成边界：一个仓库可以叫任何名字。真正的信号是 Spring Data 类型，
+     * 后缀只用来兜住那些没有继承它的情形。
      *
-     * <p>Entities are excluded first, because the suffix is ambiguous in the other
-     * direction too. The table {@code scm_repository} gives an entity named
-     * {@code ScmRepository}, which is correct per ARCHITECTURE.md 2.4 and is not a
-     * repository at all. Without this, a future feature legitimately naming that
-     * entity would trip the rule, and the natural response to a false positive is
-     * to work around the rule rather than obey it.
+     * <p>要先把实体排除掉，因为这个后缀在另一个方向上同样有歧义。表
+     * {@code scm_repository} 对应的实体就叫 {@code ScmRepository}，
+     * 这按 ARCHITECTURE.md 2.4 是正确的，而它根本不是一个仓库。
+     * 没有这一步，将来某个功能模块正当地这样命名实体就会误触这条规则；
+     * 而面对误报，人的自然反应是绕开规则，而不是遵守它。
      */
     private static boolean isRepository(JavaClass target) {
         if (target.isAnnotatedWith("jakarta.persistence.Entity")) {
