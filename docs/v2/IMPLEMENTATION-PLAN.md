@@ -2,7 +2,7 @@
 
 规范依据：[ARCHITECTURE.md](./ARCHITECTURE.md)（技术规则）+ [PRD.md](./PRD.md)（产品规则）+ [DECISIONS.md](./DECISIONS.md)（决策理由）。本文只定义实施顺序、授权闸门、验证纪律和退出条件，不重复字段或业务规则。
 
-状态：**R2.3 文档基线已于 2026-08-20 验收；Phase 1 最小绿地底座已于 2026-08-21 完成并验收；批次 1（Phase 2+3）已于 2026-08-21 完成并通过退出闸门**，证据分别见 `.trellis/tasks/archive/2026-08/08-20-phase-1-foundation/result.md` 与 `.trellis/tasks/archive/2026-08/08-21-batch-1-auth-project-requirement/result.md`。后续按 [D012](./DECISIONS.md#d012) 批次化授权，批次评审职责按 [D014](./DECISIONS.md#d014) 委托给编排会话——闸门本身不取消，只是不再由用户逐批开口。
+状态：**Phase 0–8 已于 2026-08-22 全部完成并通过退出闸门**，逐阶段证据见文末「全部阶段已完成」一节列出的归档任务。授权按 [D012](./DECISIONS.md#d012) 批次化，批次评审职责按 [D014](./DECISIONS.md#d014) 委托给编排会话——闸门本身从未取消，只是不再由用户逐批开口。本文以下各 Phase 小节保留为**已交付内容与退出条件的存档**，供答辩追溯，不再是待办清单。
 
 ## 不可违反的实施纪律
 
@@ -37,34 +37,34 @@
 
 空库启动、构建、CI、pgvector 与 PostgreSQL 15+ 硬约束验证全绿；ArchUnit 证明顶层包无环且 `scm` 不依赖 `review`；前端视觉方向已选定并固化；评测评分器能重算快速集；容量原始数据、命令和结论已版本化；无业务源码和业务表。
 
-## Phase 2：Auth + Project
+## Phase 2：Auth + Project ✅
 
 - 本地账户、Cookie/Session、CSRF、登录失效；Project、ProjectMember、三角色和恰好一个 LEADER。
 - 成员项目级 SCM 身份由 LEADER 配置，稳定外部 ID 唯一。
 - 界面：登录、项目列表、成员管理。
 - 退出：跨项目猜 id、角色越权、Leader 唯一性和 SCM 身份唯一性集成测试通过。
 
-## Phase 3：Requirement
+## Phase 3：Requirement ✅
 
 - Requirement/AC CRUD、指派、`DRAFT/READY/IN_DEVELOPMENT/DONE/CANCELED` 状态；不可变 Revision 与稳定 `ac_key`。
 - DRAFT 原地编辑，READY 冻结；之后由 LEADER 创建带变更原因的新 Revision；质量结果归属 Revision。
 - 界面：需求列表、详情和版本历史；无 AI/SCM 也能完成创建、确认和指派。
 
-## Phase 4：AI Gateway + Knowledge
+## Phase 4：AI Gateway + Knowledge ✅
 
 - 统一 chat/embed Gateway、超时、一次 retry、PromptSanitizer、`ai_call_log`。
 - KnowledgeDocument/Chunk、单 vector 列、project-scoped 检索、附件关系与安全上传。
 - 一次性 Requirement Implementation Guidance；不建 Conversation、SSE 或 Assistant 模块。
 - 退出：项目隔离、非法 UTF-8/NUL/超限/维度不匹配显式失败，附件关系和检索边界通过测试。
 
-## Phase 5：GitHub SCM
+## Phase 5：GitHub SCM ✅
 
 - 一个项目一个活动 `scm_repository`；稳定身份为 provider + 规范化 instance identity + external id，有 PR 后冻结。
 - 验签后读取 Provider 权威快照；保存 source revision/time、base/head、changed files、patch 和确定性 `review_input_fingerprint`。
 - PR 关联解析、作者稳定外部 ID 映射、人工纠正和 `PullRequestChanged` 同步事件。
 - 退出：重放幂等、乱序/并发不回退、Base/Diff 变化更新 fingerprint、非法签名不写数据、编译依赖无 `review`。
 
-## Phase 6：Requirement Quality + Review Engine
+## Phase 6：Requirement Quality + Review Engine ✅
 
 - 规则 + 一次结构化 AI Quality；唯一 Review Engine；大 PR 分批产 evidence/candidate、Final Synthesis 统一产出。
 - Review 身份为 `(pull_request_id, head_sha, review_input_fingerprint, requirement_revision_id)`，当前有效性同时匹配四项输入；旧 Review 保留。
@@ -75,14 +75,14 @@
 - 在目标 4 GB 机以生产 JVM/PostgreSQL 上限运行至少一个最大预算 Review，据实把并发 Review 冻结为 1 或 2，并记录峰值、失败与降级行为。
 - 退出：非法 JSON 不假成功、大 PR 不静默丢文件、after-commit 失败可恢复、fencing/父 FK/上下文/聚合矩阵集成测试全绿；Review 详情只读页可用。
 
-## Phase 7：人工闭环 + 三页面统一验收
+## Phase 7：人工闭环 + 三页面统一验收 ✅
 
 - Finding 人工生命周期与审计；抑制项可按规则重开。
 - Review Decision 仅 `PENDING → APPROVE|REQUEST_CHANGES` 一次；PR 行锁、完整前置校验和条件更新保证并发只有一个成功；同 head 的 REQUEST_CHANGES 只能由新 head 解除。
 - 三个一级页面完成浏览器、可访问性、响应式和视觉漂移验收。
 - 退出：三角色可重复演示“需求→PR→Finding→退回→修复→新 Review→通过→DONE”；Revision/Diff 变化显示 `REVIEW_REQUIRED`。
 
-## Phase 8：GitLab + 正式评测与答辩
+## Phase 8：GitLab + 正式评测与答辩 ✅
 
 - GitLab 使用同一 Provider contract；沿用 development 26 + holdout 12，不重新切分。
 - 配置冻结后首次运行 holdout；报告 Precision、Recall、误报/漏报、需求违规召回、AC verdict、结构失败、Token、耗时、notRun，并说明小样本不确定性。
@@ -115,26 +115,27 @@
 - 评测固定模型、温度、Prompt 版本和语料；只在 development 集调参，holdout 只在 Phase 8 配置冻结后首次运行，不得泄漏。
 - 任何新增表、模块、一级页面、运行时依赖或改变已接受决策的行为都必须先补充并批准新的决策记录。
 
-## 下一步：批次 2（Phase 4 + Phase 5）
+## 全部阶段已完成
 
-批次 1 已完成：六张表、Auth/Project/Requirement 三个切片、七条 ArchUnit 规则、五个前端界面，
-`mvnw verify` 59 个测试全绿、前端五条命令全绿、Compose 空库冷启动通过、CI 四个 job 全绿。
-证据见 `.trellis/tasks/archive/2026-08/08-21-batch-1-auth-project-requirement/result.md`。
+Phase 0–8 已于 2026-08-22 全部完成并通过退出闸门，各阶段证据见
+`.trellis/tasks/archive/2026-08/<任务>/result.md`：
 
-Phase 1 遗留的三条前置条件在批次 1 中已全部闭环：CI 首次真实运行四个 job 全绿；
-ArchUnit 补齐子包白名单与 Spring Data Repository 识别（各有反证 fixture）；
-`.trellis/spec/backend/error-handling.md` 已按真实代码填写。
+| 批次 | 覆盖阶段 | 证据任务 |
+|---|---|---|
+| — | Phase 0 契约与治理 | `08-19-final-execution-plan-review`、`08-20-r2-3-contract-hardening` |
+| — | Phase 1 最小绿地底座 | `08-20-phase-1-foundation` |
+| 批次 1 | Phase 2 Auth + Project、Phase 3 Requirement | `08-21-batch-1-auth-project-requirement` |
+| 批次 2 | Phase 4 AI + Knowledge、Phase 5 GitHub SCM | `08-21-batch-2-ai-knowledge-scm` |
+| 批次 3 | Phase 6 Review Engine、Phase 7 人工闭环 | `08-21-batch-3-review-engine-human-loop` |
+| — | Phase 8 GitLab + 正式评测 | `08-22-phase-8-gitlab-evaluation-defense` |
+| — | 前端视觉与能力补全 | `08-22-frontend-visual-rebuild`、`08-22-restore-full-dynamic-frontend`、`08-22-frontend-capability-completion` |
 
-**批次 1 的退出闸门已按 [D014](./DECISIONS.md#d014) 的标准逐条自证通过**：构建与测试全绿且无 skip、
-Compose 空库冷启动通过、CI 全部 job 绿、边界检查（无计划外的表/顶层包/一级菜单/运行时依赖）通过、
-`result.md` 已如实记录偏差与缺口且把 AC11 标为**部分通过**（缺自动化浏览器点击闭环）。
+最终形态：16 张业务表 / 7 个 Flyway 迁移、8 个后端顶层包、307 个后端测试全绿；
+前端 3 个一级导航 / 7 条产品路由、32 个测试全绿；Compose 空卷冷启动通过；
+三臂正式评测完成且 holdout 只运行一次。
 
-批次 2 开始前必须先回答的开放项（详见批次 1 `result.md` §10）：
-
-1. 成员移出项目的语义——`requirement.assignee` 如何处置，决定了成员删除接口能否存在。
-2. 若引入禁用账户的接口，必须同时递增 `session_version`，否则已存在的会话不会被踢掉。
-3. 需求状态审计若确有需要，须带正式决策新增第 17 张表（[D013.3](./DECISIONS.md#d013) 已把它列为 MVP 缺口）。
-
-**批次 2 的硬约束：CI 不得依赖任何 AI/SCM 凭据或仓库秘密。** AI Gateway、Embedding、
-GitHub Webhook 与 PR 快照的测试一律打到进程内或本地的假服务端，不打真实 provider。
+后续工作仍受本文件的授权闸门与测试纪律约束：任何新增表、模块、一级页面、运行时依赖，
+或改变已接受决策的行为，都必须先补充并批准新的决策记录，再立 Trellis 任务。
+正式评测资产（配置冻结、语料清单、holdout 台账、原始输出）为不可变证据，
+不得删除、覆盖或重跑；换实验必须换新的 case-set 与配置身份。
 真实凭据只在人工验证时使用，且不进仓库。

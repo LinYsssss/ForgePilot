@@ -1,6 +1,8 @@
 # Frontend
 
-这里将承载 ForgePilot V2 的 Vue 3 前端。
+ForgePilot V2 的 Vue 3 前端，已覆盖全部对外可用的后端工作流（登录与改密、项目与成员、
+需求与验收条件、需求质量与实现建议、审查发现与结构化证据、Finding 审计与人工决策、
+GitHub/GitLab 仓库设置）。`npm run test -- --run` 11 个文件 / 32 个测试全绿。
 
 Vue 3 + TypeScript + Vite 应用采用用户确认的 **Precision Review Console / 精密审查台**。
 2026-08-22 的视觉重建以 `ForgePilot-Frontend/` 设计稿为参考，使用单一深色分层界面，

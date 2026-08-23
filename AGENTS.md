@@ -38,12 +38,12 @@ Before planning or changing this repository, read these files completely:
 
 ## Current execution gate
 
-- Phase 0, the R2.3 contract/document consolidation, **Phase 1 (minimal greenfield foundation)** and **batch 1 (Phase 2 + Phase 3)** are complete. Phase 1 was accepted on 2026-08-21; batch 1 completed on 2026-08-21 with evidence in `.trellis/tasks/08-21-batch-1-auth-project-requirement/result.md`.
-- Authorization is **batched** per `docs/v2/DECISIONS.md` D012: batch 1 = Phase 2+3, batch 2 = Phase 4+5, batch 3 = Phase 6+7, Phase 8 alone and last.
-- **Batch 2 (Phase 4 + Phase 5) is authorized under `docs/v2/DECISIONS.md` D014**, which records that the user delegated the per-batch review gate to the orchestrating session. The gate itself is not removed: before opening a batch, the previous batch's `result.md` must show a green build with no skips, a passing Compose cold start, all CI jobs green, the boundary checks clean, and every partial pass honestly recorded as partial. If any of those fails, stop.
-- D012's three non-relaxable rules survive D014 untouched: the holdout stays locked to Phase 8 and runs once, Phase 6's runtime bounds are measured outputs rather than pre-written constants, and D006's schema feedback loop still sends conflicts back to a decision instead of a compatibility branch in code.
-- What batch 1 delivered: local accounts with in-process sessions and cookie CSRF, Project/ProjectMember with exactly one LEADER, project-level SCM identity, Requirement/AC with immutable Revisions and stable `ac_key`, and the login, project, member and requirement screens. Six of the sixteen tables exist; the other ten arrive with the phase that uses them.
-- **The holdout set stays locked to Phase 8 and runs exactly once, after configuration freeze.** Running it early, running it repeatedly, or tuning against it permanently destroys the only unbiased estimate in the thesis and cannot be undone by re-running.
+- **Phase 0 through Phase 8 are all complete and gated as of 2026-08-22.** Per-phase acceptance evidence lives in `.trellis/tasks/archive/2026-08/<task>/result.md`. The repository is in the defense-preparation period: feature development is closed, not paused.
+- Delivered: 8 backend business packages, 16 business tables across 7 Flyway migrations, 307 backend tests green; a Vue 3 frontend with exactly 3 top-level navigation entries and 7 product routes, 32 tests green; GitHub and GitLab providers; and a completed three-arm formal evaluation.
+- Any further change still goes through Trellis Plan -> Execute -> Finish with one independently verifiable task active at a time. "Everything is done" is not a licence to edit the repository ad hoc.
+- **The formal evaluation assets are immutable.** The configuration freeze, corpus manifest, holdout ledger, and raw outputs must never be deleted, overwritten, or re-run. The holdout ran exactly once, after freeze; re-running it or tuning against it permanently destroys the only unbiased estimate in the thesis. A different experiment requires a new case-set and configuration identity.
+- The original freeze recorded the wrong provider endpoint and was corrected once by an independently content-addressed wrapper that changed only the endpoint. Preserve that record; never fold it into the original freeze or rewrite it to conceal the protocol deviation.
+- D012's other non-relaxable rules remain in force for any future work: Phase 6's runtime bounds are measured outputs rather than pre-written constants, and D006's schema feedback loop still sends conflicts back to a decision instead of a compatibility branch in code.
 
 ## Product and architecture guardrails
 
