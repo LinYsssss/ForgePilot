@@ -30,3 +30,6 @@ evaluation/results/*
 
 # Claude Code machine-local settings
 .claude/settings.local.json
+
+# 设计参考目录（未跟踪，仅供前端视觉参考）
+/ForgePilot-Frontend/
