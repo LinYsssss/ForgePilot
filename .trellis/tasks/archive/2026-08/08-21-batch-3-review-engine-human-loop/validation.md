@@ -27,13 +27,13 @@ cd backend && flock /root/.claude/jobs/e84ffece/tmp/maven.lock docker run --rm -
 - [ ] `review` 唯一键是 `UNIQUE NULLS NOT DISTINCT` 四元组——查 `pg_index.indnullsnotdistinct` 确认，
       **不是**按名字猜。写成默认 `NULLS DISTINCT` 时未关联需求的 PR 能堆积同四元组 Review。
 - [ ] `review` 的「requirement_id 与 requirement_revision_id 同空或同非空」CHECK 存在；
-      **反证**：临时表上去掉该 CHECK 后，半 NULL 行使三列复合外键静默失效（同 [D015.2](../../../docs/v2/DECISIONS.md#d015) 手法）。
+      **反证**：临时表上去掉该 CHECK 后，半 NULL 行使三列复合外键静默失效（同 [D015.2](../../../../../docs/v2/DECISIONS.md#d015) 手法）。
 - [ ] 约束触发器是 **IMMEDIATE**，父子上下文不一致被 `23514` 当场拒绝。
 - [ ] `review` 身份列（`pull_request_id`/`head_sha`/`review_input_fingerprint`/`requirement_id`/
       `requirement_revision_id`/`context_snapshot_json`）创建后**不可改**，改动被拒。
 - [ ] `finding` 的 attempt 复合外键存在；旧 attempt 插 Finding 被数据库拒绝。
 - [ ] `idx_finding_carried_from` 存在。
-- [ ] `ai_call_log.review_id` **现在有**外键了——反转批次 2 的断言，且反转与 [D016.2](../../../docs/v2/DECISIONS.md#d016) 一起做。
+- [ ] `ai_call_log.review_id` **现在有**外键了——反转批次 2 的断言，且反转与 [D016.2](../../../../../docs/v2/DECISIONS.md#d016) 一起做。
 - [ ] 跨项目写入被数据库拒绝，测试须绕过 Service 直写，覆盖三张新表。
 
 ## 4. fencing 与执行（**四条路径缺一不可**）
@@ -101,13 +101,13 @@ scripts/phase1-compose-smoke.sh forgepilot-phase1-batch3-<unique>
 - [ ] 在目标 **4 GB** 机、生产 JVM/PostgreSQL 上限下跑至少一个**最大预算** Review。
 - [ ] 记录峰值内存、连接池占用、失败与降级行为。
 - [ ] **据实**把并发 Review 冻结为 1 或 2——若实测结论是 1，就写 1。
-- [ ] **不得预写常量再补一个「能跑」的测试**（[D012](../../../docs/v2/DECISIONS.md#d012).2、[D014](../../../docs/v2/DECISIONS.md#d014).6）。
+- [ ] **不得预写常量再补一个「能跑」的测试**（[D012](../../../../../docs/v2/DECISIONS.md#d012).2、[D014](../../../../../docs/v2/DECISIONS.md#d014).6）。
 - [ ] 若跑不动：**如实记录失败与降级行为**，不得为了有个数字而缩小「最大预算」的定义。
 
 ## 11. 边界人工检查
 
 - [ ] 恰好 16 张表，**不得有第 17 张**；无新增顶层包、无新增一级菜单、无新增运行时依赖。
-- [ ] 无向量索引、无维度绑定（[D001](../../../docs/v2/DECISIONS.md#d001) 仍然有效）。
+- [ ] 无向量索引、无维度绑定（[D001](../../../../../docs/v2/DECISIONS.md#d001) 仍然有效）。
 - [ ] 迁移中除 `author_user_id` 外无 `ON DELETE`。
 - [ ] **holdout 未被读取、未被运行**（锁死 Phase 8）。
 - [ ] Phase 6 调参只用 development 集。
@@ -123,4 +123,4 @@ git diff --check && git status --short
 - [ ] 非数据库执行的不变式如实记为「非数据库执行」（至少：`REJECTED → OPEN` 的 SUPPRESSED 限制）。
 - [ ] **浏览器/响应式/视觉漂移三项如实记为部分通过**——jsdom 测试**不是**浏览器验收（`design.md` §3.5）。
 - [ ] 已关闭 PR 持续计入聚合这一产品限制如实记录（`design.md` §2.3）。
-- [ ] 按 [D014](../../../docs/v2/DECISIONS.md#d014) 逐条自证退出闸门，不合格就停。
+- [ ] 按 [D014](../../../../../docs/v2/DECISIONS.md#d014) 逐条自证退出闸门，不合格就停。

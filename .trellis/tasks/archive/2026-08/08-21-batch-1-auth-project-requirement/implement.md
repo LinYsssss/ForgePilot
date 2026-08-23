@@ -2,7 +2,7 @@
 
 ## 0. 启动前闸门
 
-- [ ] `prd.md`、`design.md`、本文件与 `validation.md` 已就绪；[D013](../../../docs/v2/DECISIONS.md#d013) 已提交。
+- [ ] `prd.md`、`design.md`、本文件与 `validation.md` 已就绪；[D013](../../../../../docs/v2/DECISIONS.md#d013) 已提交。
 - [ ] `implement.jsonl` / `check.jsonl` 已填入真实条目。
 - [ ] 运行 `python3 ./.trellis/scripts/task.py start 08-21-batch-1-auth-project-requirement`。
 - [ ] 记录 `git status --short`，识别并隔离既有改动。
@@ -13,11 +13,11 @@
 **范围**：`backend/src/main/resources/db/migration/V2__auth_project.sql`、`V3__requirement.sql`，六个实体类，以及仅验证约束的集成测试。
 
 - [ ] 按 `design.md` §2 写两条迁移；枚举用 `varchar + CHECK`；不写 `ON DELETE`；不加 §2.1 未规定的列。
-- [ ] 六个实体按 [D013.1](../../../docs/v2/DECISIONS.md#d013) 变体 A 映射；**先让应用启动成功**再往下走。
+- [ ] 六个实体按 [D013.1](../../../../../docs/v2/DECISIONS.md#d013) 变体 A 映射；**先让应用启动成功**再往下走。
 - [ ] 集成测试逐条断言约束真的生效：部分唯一索引拒绝第二个 LEADER、复合外键拒绝跨项目写入（23503）、三步回填成功且指向别的需求/项目被拒、`(requirement_revision_id, ac_key)` 唯一。
 - [ ] 运行 `./mvnw -B -ntp verify`。
 
-**闸门 A（必须）**：若变体 A 在真实实体上不成立，或任一约束行为与 `research/pg15-hibernate-constraints.md` 的实测不符，**停止**并回到决策，不得改用 Service 校验绕过（[D006](../../../docs/v2/DECISIONS.md#d006)）。
+**闸门 A（必须）**：若变体 A 在真实实体上不成立，或任一约束行为与 `research/pg15-hibernate-constraints.md` 的实测不符，**停止**并回到决策，不得改用 Service 校验绕过（[D006](../../../../../docs/v2/DECISIONS.md#d006)）。
 
 **验收点**：AC1、AC7 的数据库部分。
 
@@ -40,8 +40,8 @@
 
 - [ ] `Project`、`ProjectMember`、`ProjectRole`、各自 Repository（读路径一律带 `projectId`）。
 - [ ] `ProjectAccessService` 作为唯一授权入口；不存在与无权限返回同一结果。
-- [ ] 创建项目 = 插 project + 插 LEADER 成员，同事务（[D013.5](../../../docs/v2/DECISIONS.md#d013)）。
-- [ ] LEADER 转移 = 降级 → flush → 升级，`project` 行锁串行化（[D013.8](../../../docs/v2/DECISIONS.md#d013)）；**禁止单条 CASE 交换**。
+- [ ] 创建项目 = 插 project + 插 LEADER 成员，同事务（[D013.5](../../../../../docs/v2/DECISIONS.md#d013)）。
+- [ ] LEADER 转移 = 降级 → flush → 升级，`project` 行锁串行化（[D013.8](../../../../../docs/v2/DECISIONS.md#d013)）；**禁止单条 CASE 交换**。
 - [ ] 成员增删改角色、SCM 身份配置（仅 LEADER）。
 - [ ] 成员列表经 `UserDirectory` 取用户名，不注入 `UserAccountRepository`。
 - [ ] 测试：恰一 LEADER、并发转移只有一个成功、SCM 身份唯一、跨项目猜 id、角色越权。
@@ -97,7 +97,7 @@
 ## 8. Finish 与提交闸门
 
 - [ ] 更新 `result.md`：完成/未完成、代理分工、文件范围、命令与结果、边界、Legacy 依据、风险、回滚、批次 2 前置条件。
-- [ ] Trellis spec update：把 [D013.1](../../../docs/v2/DECISIONS.md#d013) 的映射形态、三步回填、LEADER 转移写法写入 `.trellis/spec/backend/`；前端新增约定写入 `.trellis/spec/frontend/`。
+- [ ] Trellis spec update：把 [D013.1](../../../../../docs/v2/DECISIONS.md#d013) 的映射形态、三步回填、LEADER 转移写法写入 `.trellis/spec/backend/`；前端新增约定写入 `.trellis/spec/frontend/`。
 - [ ] 展示提交分组与 commit message，等待确认；不 amend、不自动推送。
 - [ ] 批次 1 验收后停止，不创建、不启动批次 2。
 
@@ -116,5 +116,5 @@
 ## 回滚点
 
 - 每个切片按独立文件组回滚。数据库回滚等价于重建空库（本批次尚无生产数据）。
-- 闸门 A 未过即停止，回到 `design.md` / [D013](../../../docs/v2/DECISIONS.md#d013) 重新裁定，不在代码里加兼容分支。
+- 闸门 A 未过即停止，回到 `design.md` / [D013](../../../../../docs/v2/DECISIONS.md#d013) 重新裁定，不在代码里加兼容分支。
 - 发现与产品/架构决策冲突时，先更新文档或新增决策，不用代码自行解释。

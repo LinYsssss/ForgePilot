@@ -25,7 +25,7 @@ body: {}                                     无请求体字段
 
 权限：**LEADER ✅ / REVIEWER ✅ / DEVELOPER 仅本人 PR**（PRD §3「触发/重试 Review（含版本过期后的重审）」）。
 「本人」由 `pull_request.author_external_user_id` 对 `project_member.scm_external_user_id` 判定，
-**禁止按用户名**（P11 / [D010](../../../docs/v2/DECISIONS.md#d010)）。
+**禁止按用户名**（P11 / [D010](../../../../../docs/v2/DECISIONS.md#d010)）。
 
 语义按 Review Identity 四元组（**取 PR 当前值**）find-or-create：
 
@@ -59,7 +59,7 @@ GET /api/projects/{projectId}/reviews/{reviewId}
 
 权限：项目成员即可读（`requireMember`）。
 `isCurrent` **是派生的，不是列**——不设 `INVALIDATED` 状态（ARCHITECTURE §3.5）。
-`notReviewed` 为空数组与「字段缺失」必须可区分：未审查文件禁止静默截断（[D002](../../../docs/v2/DECISIONS.md#d002)）。
+`notReviewed` 为空数组与「字段缺失」必须可区分：未审查文件禁止静默截断（[D002](../../../../../docs/v2/DECISIONS.md#d002)）。
 
 ### 2.3 一个 PR 的 Review 历史
 

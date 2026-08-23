@@ -1,6 +1,6 @@
 # 批次 1：Auth + Project + Requirement 纵向切片
 
-对应 `docs/v2/IMPLEMENTATION-PLAN.md` 的 Phase 2 与 Phase 3，按 [D012](../../../docs/v2/DECISIONS.md#d012) 合并为一个批次交付。
+对应 `docs/v2/IMPLEMENTATION-PLAN.md` 的 Phase 2 与 Phase 3，按 [D012](../../../../../docs/v2/DECISIONS.md#d012) 合并为一个批次交付。
 
 ## Goal
 
@@ -13,7 +13,7 @@
 - Phase 1 底座已于 2026-08-21 验收，证据见 `.trellis/tasks/archive/2026-08/08-20-phase-1-foundation/result.md`。
 - 顶层包仍限于 `common/auth/project/requirement/scm/knowledge/ai/review`；本批次只新建 `auth`、`project`、`requirement` 下的类。
 - 数据模型上限仍为 16 张表。本批次落其中 6 张：`user_account`、`project`、`project_member`、`requirement`、`requirement_revision`、`acceptance_criterion`。**不新增任何表外结构。**
-- 规划期完成三项研究，其中 PG15 + Hibernate 约束为真实实测；由此产生的 12 条实现裁定见 [D013](../../../docs/v2/DECISIONS.md#d013)，**没有一条改动 16 表定义**。
+- 规划期完成三项研究，其中 PG15 + Hibernate 约束为真实实测；由此产生的 12 条实现裁定见 [D013](../../../../../docs/v2/DECISIONS.md#d013)，**没有一条改动 16 表定义**。
 - PostgreSQL 15 与 pgvector 是硬依赖；Flyway 只增不改，业务表随本批次以新迁移加入。
 - Phase 1 遗留前置：CI 尚未真实运行过；ArchUnit 的子包深度与 Repository 识别规则待加固（见下 R7）。
 
@@ -36,7 +36,7 @@
 
 ### R2. 角色与权限
 
-- 每个项目恰有一个 LEADER：至多一个由数据库部分唯一索引保证，至少一个由 Service 事务保证（[D004](../../../docs/v2/DECISIONS.md#d004)，语义按 [D013.9](../../../docs/v2/DECISIONS.md#d013) 为每次提交后的不变式）。
+- 每个项目恰有一个 LEADER：至多一个由数据库部分唯一索引保证，至少一个由 Service 事务保证（[D004](../../../../../docs/v2/DECISIONS.md#d004)，语义按 [D013.9](../../../../../docs/v2/DECISIONS.md#d013) 为每次提交后的不变式）。
 - 权限判定按 `PRD.md` §3 的矩阵；本批次涉及的每一行都要有对应的拒绝路径测试。
 - 「本人 PR」类判定依赖项目级 SCM 稳定外部 ID，本批次只落库与配置，不做授权使用（Phase 5 才有 PR）。
 
@@ -51,14 +51,14 @@
 
 - 持久状态仅 `DRAFT/READY/IN_DEVELOPMENT/DONE/CANCELED`。
 - `READY → IN_DEVELOPMENT` 与**首次指派**同事务完成，后续更换负责人不再改变状态。
-- `CANCELED` 可由任意非终态到达且不可恢复（[D013.4](../../../docs/v2/DECISIONS.md#d013)）。
+- `CANCELED` 可由任意非终态到达且不可恢复（[D013.4](../../../../../docs/v2/DECISIONS.md#d013)）。
 - 本批次没有 AI/Webhook/PR/Review，但代码中不得预留任何由它们推进状态的入口。
 
 ### R5. 认证与会话
 
-- 服务端进程内 `HttpSession` + Spring Security 默认机制，CSRF 用 cookie token repository，密码用 BCrypt（[D013.7](../../../docs/v2/DECISIONS.md#d013)）。
+- 服务端进程内 `HttpSession` + Spring Security 默认机制，CSRF 用 cookie token repository，密码用 BCrypt（[D013.7](../../../../../docs/v2/DECISIONS.md#d013)）。
 - 不新增 session 表、不引入 Redis。进程重启会话失效是被接受的代价，须在部署说明中写明。
-- 业务模块不依赖 auth 的认证机制；账户展示信息经 `auth` 的只读 Query facade 读取（[D013.6](../../../docs/v2/DECISIONS.md#d013)）。
+- 业务模块不依赖 auth 的认证机制；账户展示信息经 `auth` 的只读 Query facade 读取（[D013.6](../../../../../docs/v2/DECISIONS.md#d013)）。
 
 ### R6. 前端
 
@@ -69,9 +69,9 @@
 
 ### R7. 架构与实现形态
 
-- 复合外键关联统一采用 [D013.1](../../../docs/v2/DECISIONS.md#d013) 的变体 A，并写入 `.trellis/spec/backend/`。
-- 外键保持 `NOT DEFERRABLE` 与 `MATCH SIMPLE`；需求创建走三步回填（[D013.10](../../../docs/v2/DECISIONS.md#d013)）。
-- 约束冲突一律不捕获后继续，统一映射 409/422（[D013.11](../../../docs/v2/DECISIONS.md#d013)）。
+- 复合外键关联统一采用 [D013.1](../../../../../docs/v2/DECISIONS.md#d013) 的变体 A，并写入 `.trellis/spec/backend/`。
+- 外键保持 `NOT DEFERRABLE` 与 `MATCH SIMPLE`；需求创建走三步回填（[D013.10](../../../../../docs/v2/DECISIONS.md#d013)）。
+- 约束冲突一律不捕获后继续，统一映射 409/422（[D013.11](../../../../../docs/v2/DECISIONS.md#d013)）。
 - ArchUnit 补两条：feature 内部子包白名单（仅允许 `scm.github`/`scm.gitlab`/`ai.openai`）、Repository 识别不再只靠类名后缀。
 
 ## Acceptance Criteria
@@ -93,17 +93,17 @@
 
 ## Out of Scope
 
-- Knowledge 文档、上传、切片、Embedding、检索；需求附件关系（[D005](../../../docs/v2/DECISIONS.md#d005) 属批次 2）。
+- Knowledge 文档、上传、切片、Embedding、检索；需求附件关系（[D005](../../../../../docs/v2/DECISIONS.md#d005) 属批次 2）。
 - AI Gateway、任何真实模型调用、需求质量检查、一次性实现建议。
-- SCM 仓库配置、Webhook、PR、`REQ-<n>` 解析（[D013.2](../../../docs/v2/DECISIONS.md#d013) 只定义了 `<n>` 的含义，解析实现属 Phase 5）。
+- SCM 仓库配置、Webhook、PR、`REQ-<n>` 解析（[D013.2](../../../../../docs/v2/DECISIONS.md#d013) 只定义了 `<n>` 的含义，解析实现属 Phase 5）。
 - Review、Finding、评审活动派生（本批次所有需求恒为 `NO_PR`）。
-- 需求状态转换的审计留痕（[D013.3](../../../docs/v2/DECISIONS.md#d013) 明确列为 MVP 缺口）。
+- 需求状态转换的审计留痕（[D013.3](../../../../../docs/v2/DECISIONS.md#d013) 明确列为 MVP 缺口）。
 - 批次 2 及以后的任何实现。
 
 ## Execution Checkpoints
 
 1. 本规划经确认后执行 `task.py start`。
-2. 数据库迁移与实体映射先行并通过真实 PostgreSQL 集成测试，再写 Service 与 API——[D013.1](../../../docs/v2/DECISIONS.md#d013) 的映射形态若在真实实体上不成立，必须立刻停下重新裁定，不得改用 Service 校验绕过。
+2. 数据库迁移与实体映射先行并通过真实 PostgreSQL 集成测试，再写 Service 与 API——[D013.1](../../../../../docs/v2/DECISIONS.md#d013) 的映射形态若在真实实体上不成立，必须立刻停下重新裁定，不得改用 Service 校验绕过。
 3. 后端 API 稳定后再做前端，避免前端对着未定契约返工。
 4. 全部验收证据齐备后更新 `result.md`，展示提交分组等待确认；不自动推送。
 5. 批次 1 完成后停止，等待批次 2 的单独授权。

@@ -2,7 +2,7 @@
 
 ## 0. 启动前闸门
 
-- [ ] `prd.md`、`design.md`、本文件与 `validation.md` 就绪；[D015](../../../docs/v2/DECISIONS.md#d015) 已提交。
+- [ ] `prd.md`、`design.md`、本文件与 `validation.md` 就绪；[D015](../../../../../docs/v2/DECISIONS.md#d015) 已提交。
 - [ ] `implement.jsonl` / `check.jsonl` 填入真实条目。
 - [ ] 运行 `python3 ./.trellis/scripts/task.py start 08-21-batch-2-ai-knowledge-scm`。
 - [ ] 记录 `git status --short`，识别并隔离既有改动。
@@ -18,9 +18,9 @@
 
 - [ ] 按 `design.md` §2 写两条迁移；枚举用 `varchar + CHECK`；除 §2.3 为 `author_user_id` 规定的
       `ON DELETE SET NULL` 外不写任何 `ON DELETE`；不建向量索引。
-- [ ] `requirement_attachment.requirement_id` / `document_id` 必须 `NOT NULL`（[D015.2](../../../docs/v2/DECISIONS.md#d015)，承重）。
-- [ ] `knowledge_chunk.embedding` **不映射**进实体（[D015.4](../../../docs/v2/DECISIONS.md#d015)）；先让应用启动成功再往下走。
-- [ ] `ai_call_log.review_id` 建列不建外键，迁移里写明批次 3 补（[D015.1](../../../docs/v2/DECISIONS.md#d015)）。
+- [ ] `requirement_attachment.requirement_id` / `document_id` 必须 `NOT NULL`（[D015.2](../../../../../docs/v2/DECISIONS.md#d015)，承重）。
+- [ ] `knowledge_chunk.embedding` **不映射**进实体（[D015.4](../../../../../docs/v2/DECISIONS.md#d015)）；先让应用启动成功再往下走。
+- [ ] `ai_call_log.review_id` 建列不建外键，迁移里写明批次 3 补（[D015.1](../../../../../docs/v2/DECISIONS.md#d015)）。
 - [ ] 集成测试逐条断言约束真的生效：公共知识挂 Requirement 被 `23503`；`requirement_id` 可空时
       整条检查蒸发（反证 fixture）；维度自洽 CHECK 被 `23514`；`(document_id, seq)` 唯一；
       `(provider, instance_identity, external_id)` 全局唯一。
@@ -28,7 +28,7 @@
 - [ ] 运行容器内 `./mvnw -B -ntp verify`。
 
 **闸门 A（必须）**：若任一约束行为与 `research/pgvector-hibernate-measured.md` 的实测不符，
-**停止**并回到决策，不得改用 Service 校验绕过（[D006](../../../docs/v2/DECISIONS.md#d006)）。
+**停止**并回到决策，不得改用 Service 校验绕过（[D006](../../../../../docs/v2/DECISIONS.md#d006)）。
 
 ## 2. AI Gateway 切片
 
@@ -48,8 +48,8 @@
 
 - [ ] `KnowledgeDocument` / `KnowledgeChunk` + Repository；`ChunkSearchRepository` 是**唯一**
       出现 `::vector` 与 `<=>` 的地方。
-- [ ] `KnowledgeUploadValidator`：大小上限、**孤立代理项拒绝**（[D015.5](../../../docs/v2/DECISIONS.md#d015)）、NUL 与非法 UTF-8。
-- [ ] 写入 embedding 前校验维度一致（[D015.3](../../../docs/v2/DECISIONS.md#d015)：这是唯一防线）。
+- [ ] `KnowledgeUploadValidator`：大小上限、**孤立代理项拒绝**（[D015.5](../../../../../docs/v2/DECISIONS.md#d015)）、NUL 与非法 UTF-8。
+- [ ] 写入 embedding 前校验维度一致（[D015.3](../../../../../docs/v2/DECISIONS.md#d015)：这是唯一防线）。
 - [ ] 附件关系与 Document 同事务写入；提升为公共知识是**复制**新 Document，不就地改写。
 - [ ] 检索一律带 `projectId`；一次性 Implementation Guidance。
 
@@ -63,7 +63,7 @@
 - [ ] `OutboundUrlPolicy`（`design.md` §3.5）——先写它和它的独立测试，再写 `GitHubClient`。
 - [ ] `WebhookSignatureVerifier`：原始字节验签；失败 `401` 且不写任何数据。
 - [ ] `ReviewInputFingerprint`：按 `design.md` §3.2 规范化，测试钉死确定性。
-- [ ] `RequirementReferenceParser`：经 `requirement` 只读 facade 解析（[D015.6](../../../docs/v2/DECISIONS.md#d015)），
+- [ ] `RequirementReferenceParser`：经 `requirement` 只读 facade 解析（[D015.6](../../../../../docs/v2/DECISIONS.md#d015)），
       解析失败不阻断入库。
 - [ ] 乱序保护：旧 `source_updated_at` 不得回退 head/base/patch；重放幂等。
 - [ ] `PullRequestChanged` 同步进程内事件——批次 2 没有 `review` 监听者，只证明它在同事务内发布。
@@ -83,7 +83,7 @@
 - [ ] 更新 `result.md`：完成/未完成、命令与真实结果、偏差、**§2.1 补列必须单独列出**、
       非数据库执行的不变式（`design.md` §3.7）、密钥轮换缺口、风险、批次 3 前置条件。
 - [ ] Trellis spec update：把向量列不映射、`::vector` 只在一处、无凭据测试形态写入 `.trellis/spec/backend/`。
-- [ ] 按 [D014](../../../docs/v2/DECISIONS.md#d014) 逐条自证退出闸门，不合格就停。
+- [ ] 按 [D014](../../../../../docs/v2/DECISIONS.md#d014) 逐条自证退出闸门，不合格就停。
 
 ## 文件所有权与派发顺序
 

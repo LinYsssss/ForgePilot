@@ -48,7 +48,7 @@
 
 | # | 事项 | 不可放松的理由 |
 |---|---|---|
-| 4.1 | **4 GB 目标机最大预算 Review 实测** | [D012](../../../docs/v2/DECISIONS.md#d012) 第 2 条与 [D014](../../../docs/v2/DECISIONS.md#d014) 第 6 条两处明确：运行边界是**实测输出**，不得预写常量 |
+| 4.1 | **4 GB 目标机最大预算 Review 实测** | [D012](../../../../../docs/v2/DECISIONS.md#d012) 第 2 条与 [D014](../../../../../docs/v2/DECISIONS.md#d014) 第 6 条两处明确：运行边界是**实测输出**，不得预写常量 |
 | 4.2 | 据实把并发冻结为 **1 或 2** | 同上。同时量连接池占用（`design.md` §5.6：Hikari 只有 5 条） |
 | 4.3 | 人工检查清单 | `design.md` §3.5：把「无人可执行」变成「用户可执行」 |
 | 4.4 | `result.md` + D014 逐条自证 | 部分通过必须记为部分通过 |
@@ -70,5 +70,5 @@
 1. `./mvnw -B -ntp verify` 全绿无 skip；`backend/pom.xml` 与 `frontend/package.json` 零改动。
 2. Compose 空库冷启动断言 **16 张全名**。
 3. CI 四 job 全绿，`ci.yml` 仍无 `secrets.*`。
-4. 按 [D014](../../../docs/v2/DECISIONS.md#d014) 五条逐条自证，任一不成立就停。
+4. 按 [D014](../../../../../docs/v2/DECISIONS.md#d014) 五条逐条自证，任一不成立就停。
 5. 归档任务，记录 session。

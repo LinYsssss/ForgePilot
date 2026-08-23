@@ -26,7 +26,7 @@ cd backend && flock /root/.claude/jobs/e84ffece/tmp/maven.lock docker run --rm -
 - [ ] 空库 Flyway 后恰好 **13 张**业务表 + `flyway_schema_history`，逐名比对。
 - [ ] 公共知识（`source_requirement_id IS NULL`）挂到 Requirement 被 `23503` 拒绝。
 - [ ] **反证**：把 `requirement_attachment.requirement_id` 改可空后，不存在的 `document_id` 能落库——
-      证明 `NOT NULL` 是承重的而非装饰（[D015.2](../../../docs/v2/DECISIONS.md#d015)）。该测试用临时表，不改真实 schema。
+      证明 `NOT NULL` 是承重的而非装饰（[D015.2](../../../../../docs/v2/DECISIONS.md#d015)）。该测试用临时表，不改真实 schema。
 - [ ] 维度自洽 CHECK 被 `23514` 拒绝；`(document_id, seq)`、`(provider, instance_identity, external_id)` 唯一。
 - [ ] 跨项目写入被数据库拒绝，测试须绕过 Service 直写。
 - [ ] `ai_call_log.review_id` 此刻**全为 NULL**（批次 3 补外键前的前置断言）。
@@ -45,7 +45,7 @@ cd backend && flock /root/.claude/jobs/e84ffece/tmp/maven.lock docker run --rm -
 - [ ] NUL（`22021`）、非法 UTF-8（`22021`）显式失败。
 - [ ] **孤立代理项被应用层拒绝**，且有字节级往返断言证明它没有被静默改成 `?`。
 - [ ] 超限上传被 `KnowledgeUploadValidator` 拒绝。
-- [ ] 错维度 embedding 写入被应用层拒绝（数据库此时**不会**拦，见 [D015.3](../../../docs/v2/DECISIONS.md#d015)）。
+- [ ] 错维度 embedding 写入被应用层拒绝（数据库此时**不会**拦，见 [D015.3](../../../../../docs/v2/DECISIONS.md#d015)）。
 - [ ] 检索一律带 `projectId`；A 项目检索不到 B 项目的 chunk。
 - [ ] 提升为公共知识产生**新** Document，原附件行未被改写。
 - [ ] grep：`::vector` 与 `<=>` 只出现在 `ChunkSearchRepository`。
@@ -101,4 +101,4 @@ git diff --check && git status --short
 - [ ] `result.md` 含全部证据与偏差，**§2.1 补列（`title`/`failure_reason`）单独列出**。
 - [ ] 非数据库执行的不变式（三元组冻结）如实记为「非数据库执行」。
 - [ ] 密钥轮换缺口如实记录。
-- [ ] 按 [D014](../../../docs/v2/DECISIONS.md#d014) 逐条自证退出闸门。
+- [ ] 按 [D014](../../../../../docs/v2/DECISIONS.md#d014) 逐条自证退出闸门。

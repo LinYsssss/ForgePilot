@@ -5,8 +5,8 @@
   （4）与 Phase 6 批量插入 Finding 的冲突、（5）父外键与 D013.1 变体 A 的共存
 - **Scope**: internal（真实 PostgreSQL 15.19 + pgvector 0.8.6 + Spring Boot 4.1.0 / Hibernate 7.4.1 实测，非文献推理）
 - **Date**: 2026-08-21
-- **前提决策**: [D006](../../../../docs/v2/DECISIONS.md#d006)、[D013.11](../../../../docs/v2/DECISIONS.md#d013)、
-  [D015.9](../../../../docs/v2/DECISIONS.md#d015)
+- **前提决策**: [D006](../../../../../../docs/v2/DECISIONS.md#d006)、[D013.11](../../../../../../docs/v2/DECISIONS.md#d013)、
+  [D015.9](../../../../../../docs/v2/DECISIONS.md#d015)
 - **对标**: 批次 1 `pg15-hibernate-constraints.md` §4/§6b、批次 2 `pgvector-hibernate-measured.md` §5。
   同一标准：每条结论附命令与原始 SQLSTATE，推理与实测分开标注。
 
@@ -253,7 +253,7 @@ LOCATION:  ExecConstraints, execMain.c:2074
 #### 歧义 B：「覆盖父表更新」与「拒绝身份列变化」，在延迟模式下**不再等价**
 
 §2.3 给了两个备选：「触发器也必须覆盖对父 Review 上下文列的更新，**或**直接拒绝这些身份列在创建后变化」。
-[D013.12](../../../../docs/v2/DECISIONS.md#d013) 前向记录说这两条在实测中「收敛为同一个」，
+[D013.12](../../../../../../docs/v2/DECISIONS.md#d013) 前向记录说这两条在实测中「收敛为同一个」，
 理由是 `INITIALLY IMMEDIATE` 下父子协同改写在任何顺序都失败。
 
 **实测：这个收敛只在 `INITIALLY IMMEDIATE` 下成立。** 换成 `INITIALLY DEFERRED` 后，
@@ -757,7 +757,7 @@ COMMIT;
 
 ### 3.5 D015.9 在**延迟**触发器下是否仍成立（实测：成立，而且口子更大）
 
-[D015.9](../../../../docs/v2/DECISIONS.md#d015) 的措辞是「SQL 层的 `SAVEPOINT` 可以救回，JPA 层不行」。
+[D015.9](../../../../../../docs/v2/DECISIONS.md#d015) 的措辞是「SQL 层的 `SAVEPOINT` 可以救回，JPA 层不行」。
 延迟模式下重测，结论分成三段：
 
 **(a) 纯 SQL 层：能救回，且比非延迟更容易**（§3.3 的 3b：连报错都不必等，直接 `ROLLBACK TO SAVEPOINT` 就把事件丢了）。
@@ -888,7 +888,7 @@ J13 —— 先读父 Review 的上下文，只写匹配的行：
 - 后果：4 条合法 Finding 提交，1 条被拒的在应用层可见、可记日志、可计数。
 - **它不违反 D013.11**：D013.11 禁的是「捕获数据库约束冲突后在同一事务里继续」；
   这里根本没有产生约束冲突，是写入前的业务校验。
-  语义上与 [D015.6](../../../../docs/v2/DECISIONS.md#d015) 让 `scm` 在写 PR 之前
+  语义上与 [D015.6](../../../../../../docs/v2/DECISIONS.md#d015) 让 `scm` 在写 PR 之前
   先问 `requirement` facade 完全同型——**同一个模式在本项目已经有先例。**
 
 #### 选项 (c)：每条 Finding 一个事务（实测可行，但制造部分成功）
@@ -942,7 +942,7 @@ Engine 是从这个快照生成 Finding 的。**如果实现正确，这个触�
 **这台机器噪声很大**（延迟模式的 INSERT 有一次低于无触发器，这在物理上不可能），
 三次重复的极差接近均值的一半。**唯一可以下的结论**：两种模式的总耗时同数量级，
 差异被噪声淹没，**不构成选型依据**。
-**这些数字绝不可以进 `ARCHITECTURE.md` §7.2** —— [D012](../../../../docs/v2/DECISIONS.md#d012) 第 2 条
+**这些数字绝不可以进 `ARCHITECTURE.md` §7.2** —— [D012](../../../../../../docs/v2/DECISIONS.md#d012) 第 2 条
 要求 Phase 6 的运行边界必须在**目标 4 GB 机**上实测，本研究的机器不是那台机器。
 
 ---
@@ -1086,7 +1086,7 @@ INVARIANT_HOLDS=false finding_rev=2 review_rev=1
 
 机制（推理，基于 PostgreSQL 的 key-share 锁规则，未读源码验证）：
 Finding 的父 FK 在 `review` 行上取 `FOR KEY SHARE`；`requirement_revision_id`
-恰好是 [D003](../../../../docs/v2/DECISIONS.md#d003) 的
+恰好是 [D003](../../../../../../docs/v2/DECISIONS.md#d003) 的
 `UNIQUE NULLS NOT DISTINCT (pull_request_id, head_sha, review_input_fingerprint, requirement_revision_id)`
 的一列，于是改它算「key update」，与 `FOR KEY SHARE` 冲突 → B 阻塞 → 串行化 → 安全。
 **这是一条没有任何文档记载的、跨决策的隐式依赖：D006 的触发器在并发下正确，依赖 D003 的唯一键包含那一列。**
@@ -1130,7 +1130,7 @@ Finding 的父 FK 在 `review` 行上取 `FOR KEY SHARE`；`requirement_revision
 做法：把仓库真实的 `V1`…`V5` 原样复制到一个一次性 Spring Boot 应用的
 `db/migration`，再加一个 `V6__review_finding.sql`（含 `UNIQUE NULLS NOT DISTINCT`、
 `CREATE FUNCTION ... $fn$ ... $fn$`、`CREATE CONSTRAINT TRIGGER`、以及
-[D015.1](../../../../docs/v2/DECISIONS.md#d015) 承诺的 `ALTER TABLE ai_call_log ADD CONSTRAINT fk_ai_call_log_review`），
+[D015.1](../../../../../../docs/v2/DECISIONS.md#d015) 承诺的 `ALTER TABLE ai_call_log ADD CONSTRAINT fk_ai_call_log_review`），
 指向一个全新的空库，`spring.flyway.baseline-on-migrate=false`、`clean-disabled=true`：
 
 ```

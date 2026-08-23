@@ -37,7 +37,7 @@
 **理由**：任何让 `requirement` 去问 `review` 的方案都会造成 `requirement ↔ review` 双向依赖，
 被 ArchUnit 的 `featureSlicesAreFreeOfCycles` 当场打回。
 批次 2 已有先例：`scm` 需要 `requirement` 的数据时，走的是 `RequirementDirectory` 只读 facade
-（[D015.6](../../../docs/v2/DECISIONS.md#d015)），方向是 `scm → requirement`，与依赖图一致。
+（[D015.6](../../../../../docs/v2/DECISIONS.md#d015)），方向是 `scm → requirement`，与依赖图一致。
 这里方向要求相反，所以不能照搬 facade，只能把计算搬到 `review` 侧。
 
 **代价**（如实记录）：需求列表页多一次 HTTP 往返。可接受——它换来的是依赖图不成环，
@@ -146,7 +146,7 @@ reconciliation 周期才是这个窗口的正确解，不是在展示层打补�
 
 ### 3.4 前端 OPEN-1：devDependency 是否在「不新增依赖」之内 —— **裁定：在**
 
-权威文档措辞只写「运行时依赖」，但 [D015.8](../../../docs/v2/DECISIONS.md#d015) 已经把
+权威文档措辞只写「运行时依赖」，但 [D015.8](../../../../../docs/v2/DECISIONS.md#d015) 已经把
 只可能是 test scope 的 WireMock/MockWebServer 当作「新增依赖」明确禁止，
 且 `frontend/scripts/lint.mjs:57-63` 把 `devDependencies` 与 `dependencies` 合并检查。
 
@@ -184,7 +184,7 @@ Review 详情页本就展示其 PR，关联下拉框放在该页头部。
 ### 3.8 前端 OPEN-5 / OPEN-6
 
 - Finding 一次性全量渲染，不做分页或虚拟化（如实记为限制）。
-- 三角色演示**串行登出/登录**。[D013.7](../../../docs/v2/DECISIONS.md#d013) 是进程内会话，
+- 三角色演示**串行登出/登录**。[D013.7](../../../../../docs/v2/DECISIONS.md#d013) 是进程内会话，
   同一浏览器本来就只能有一个会话，演示脚本写死这一种。
 
 ## 4. 迁移 `V6__review.sql`（实测支撑，见 `research/finding-constraint-trigger-measured.md`）
@@ -215,14 +215,14 @@ Review 详情页本就展示其 PR，关联下拉框放在该页头部。
 - `finding` 需 `UNIQUE(project_id, id)` 供 `finding_event` 父 FK。
 - `ARCHITECTURE.md:206-220` 的四条行内 CHECK 逐字落地，外加 §2.7 裁定的
   `CHECK (decision = 'PENDING' OR status = 'COMPLETED')`。
-- 同时补 `ai_call_log.review_id` 的外键（[D015.1](../../../docs/v2/DECISIONS.md#d015)），
+- 同时补 `ai_call_log.review_id` 的外键（[D015.1](../../../../../docs/v2/DECISIONS.md#d015)），
   并反转 `aiCallLogHasNoReviewForeignKeyYetAndNoRowsUsingIt` 的断言。
 
 **必须写进迁移注释的承重点**：`review` 的三列复合外键
 `(project_id, requirement_id, requirement_revision_id) → requirement_revision(project_id, requirement_id, id)`
 在 `MATCH SIMPLE` 下，任一列为 NULL 整条外键**就被跳过**。
 让它承重的是那条「同空或同非空」的 CHECK——与批次 2 `requirement_attachment` 的 NOT NULL 同型
-（[D015.2](../../../docs/v2/DECISIONS.md#d015)）。**删掉那条 CHECK，外键会静默失效。**
+（[D015.2](../../../../../docs/v2/DECISIONS.md#d015)）。**删掉那条 CHECK，外键会静默失效。**
 
 ### 4.2 约束触发器用 **IMMEDIATE**，不用 `INITIALLY DEFERRED`
 
@@ -241,7 +241,7 @@ COMMIT 报 `23514` 并**点名具体 finding id**；JPA 侧是 `DataIntegrityVio
 Finding 的上下文是插入时从父 Review 复制的，不存在需要临时违规的合法场景。
 延迟只会把「第 3 条 Finding 写错了」的报错时点推迟到 COMMIT，还附赠两个陷阱。
 
-（顺带实测结论保留在研究里：[D015.9](../../../docs/v2/DECISIONS.md#d015) 担心的绕过口子**真实存在**——
+（顺带实测结论保留在研究里：[D015.9](../../../../../docs/v2/DECISIONS.md#d015) 担心的绕过口子**真实存在**——
 在 JPA 事务内用 `doWork()` + savepoint + `SET CONSTRAINTS IMMEDIATE` 能救回并成功提交。
 本批次选 IMMEDIATE 使这条路径不可达，算是顺手关掉。）
 

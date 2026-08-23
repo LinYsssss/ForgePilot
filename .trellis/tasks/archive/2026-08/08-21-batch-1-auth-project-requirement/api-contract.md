@@ -11,7 +11,7 @@
 - **409 与 422 的分界**：只看请求体就能判定的拒绝是 `422`（长度、空值、缺 `changeReason`、引用了不存在的 `acKey`、
   非法状态转换）；必须读到资源当前状态才能判定的拒绝是 `409`（对已冻结需求原地编辑、对 `DRAFT` 发新版本、
   对终态指派、并发 LEADER 转移的失败方、唯一键冲突）。前端两者都按「操作被拒绝，展示 message」处理。
-- 会话是服务端进程内 `HttpSession`（[D013.7](../../../docs/v2/DECISIONS.md#d013)），进程重启即失效。
+- 会话是服务端进程内 `HttpSession`（[D013.7](../../../../../docs/v2/DECISIONS.md#d013)），进程重启即失效。
 - CSRF：cookie token repository。写请求（POST/PATCH/PUT/DELETE）必须带 `X-XSRF-TOKEN` 请求头，
   值取自 `XSRF-TOKEN` cookie。`GET /api/auth/me` 必须下发该 cookie，供前端冷启动引导。
   登录会重签 token，登录响应里的新 cookie 要覆盖旧值。
@@ -49,8 +49,8 @@ Member  = { "userId": 7, "username": "…", "role": "DEVELOPER",
 
 - `name` 1–120 字符；`role` ∈ `LEADER|DEVELOPER|REVIEWER`。
 - `PATCH` 把 `role` 改为 `LEADER` 即 LEADER 转移：同事务「原 LEADER 降级为 `DEVELOPER` → flush → 目标升级」
-  （[D013.8](../../../docs/v2/DECISIONS.md#d013)），并对 `project` 行加锁串行化；失败者 `409`。
-- 不允许把唯一的 LEADER 降级（[D013.9](../../../docs/v2/DECISIONS.md#d013) 的每次提交后不变式）→ `422`。
+  （[D013.8](../../../../../docs/v2/DECISIONS.md#d013)），并对 `project` 行加锁串行化；失败者 `409`。
+- 不允许把唯一的 LEADER 降级（[D013.9](../../../../../docs/v2/DECISIONS.md#d013) 的每次提交后不变式）→ `422`。
   想换人就直接把目标成员改成 `LEADER`，转移是一个动作而不是两个。
 - 直接以 `role=LEADER` 新增成员会被数据库部分唯一索引拒绝 → `409`；先加成员再转移。
 - `scmExternalUserId` 与 `scmUsername` 同时给出；同项目重复的 `scmExternalUserId` → `409`。
@@ -97,7 +97,7 @@ PublishRevision   = EditDraft + { "changeReason": "…" }                       
 - `PATCH`（`DRAFT` 原地编辑）同事务清空 `quality_json/quality_version/quality_checked_at`。
 - `reviewActivity` 本批次恒为字符串 `"NO_PR"`，是只读派生量，不落表、不可写。
 
-### 状态机（`design.md` §6.4，[D013.4](../../../docs/v2/DECISIONS.md#d013)）
+### 状态机（`design.md` §6.4，[D013.4](../../../../../docs/v2/DECISIONS.md#d013)）
 
 | 起点 | 允许 | 方式 |
 |---|---|---|

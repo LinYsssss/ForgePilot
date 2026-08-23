@@ -19,7 +19,7 @@ cd backend && ./mvnw -B -ntp verify
 ```
 
 - [ ] 全部测试通过，无 skip；依赖仍无 prerelease。
-- [ ] 应用能启动——[D013.1](../../../docs/v2/DECISIONS.md#d013) 的映射形态若不成立会在**启动期**失败，这是最早的信号。
+- [ ] 应用能启动——[D013.1](../../../../../docs/v2/DECISIONS.md#d013) 的映射形态若不成立会在**启动期**失败，这是最早的信号。
 
 ## 3. 数据库约束（真实 PostgreSQL 15，不得用 H2 或跳过）
 
@@ -90,7 +90,7 @@ scripts/phase1-compose-smoke.sh forgepilot-phase1-<unique>
 ## 10. 边界人工检查
 
 - [ ] 无 Knowledge / AI / SCM / Review / Finding 相关代码或表。
-- [ ] 无需求状态审计表（[D013.3](../../../docs/v2/DECISIONS.md#d013) 明确列为 MVP 缺口）。
+- [ ] 无需求状态审计表（[D013.3](../../../../../docs/v2/DECISIONS.md#d013) 明确列为 MVP 缺口）。
 - [ ] 未新增第 17 张表、未新增顶层包、未新增一级菜单。
 - [ ] 迁移中无 `ON DELETE`、无向量索引、无维度绑定。
 - [ ] Legacy 仅按迁移矩阵取用，未整包复制、未继承旧 Flyway 历史。

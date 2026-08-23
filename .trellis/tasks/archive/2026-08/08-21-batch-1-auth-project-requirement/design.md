@@ -1,11 +1,11 @@
 # 批次 1 技术设计
 
-依据：`prd.md`、`docs/v2/ARCHITECTURE.md`、[D013](../../../docs/v2/DECISIONS.md#d013)，以及 `research/` 下三份研究（`auth-project-contracts.md`、`requirement-contracts.md`、`pg15-hibernate-constraints.md`）。本文只写实现形态，不复述权威文档已定义的事实。
+依据：`prd.md`、`docs/v2/ARCHITECTURE.md`、[D013](../../../../../docs/v2/DECISIONS.md#d013)，以及 `research/` 下三份研究（`auth-project-contracts.md`、`requirement-contracts.md`、`pg15-hibernate-constraints.md`）。本文只写实现形态，不复述权威文档已定义的事实。
 
 ## 1. 设计原则
 
 - **数据库是隔离与完整性的执行者**，Service 不做数据库已经能拒绝的重复校验。跨项目写入靠复合外键，恰一 LEADER 靠部分唯一索引。
-- **零新增结构**：不加表、不加列、不加顶层包、不加抽象层。所有开放问题按 [D013](../../../docs/v2/DECISIONS.md#d013) 已裁定的简单解落地。
+- **零新增结构**：不加表、不加列、不加顶层包、不加抽象层。所有开放问题按 [D013](../../../../../docs/v2/DECISIONS.md#d013) 已裁定的简单解落地。
 - **先约束后代码**：迁移与实体映射先通过真实 PostgreSQL 集成测试，再写业务逻辑。
 - 每个 feature 只建实际需要的类，不为目录对称造空分层（`ARCHITECTURE.md` §1.1）。
 
@@ -47,10 +47,10 @@ ALTER TABLE requirement ADD CONSTRAINT fk_requirement_current_revision
 ### 2.3 迁移纪律
 
 - 不写 `ON DELETE`（§2.3 未规定的地方一律不自行添加）。成员移除与需求删除的语义见 §6.4。
-- 不建向量索引、不绑模型维度（[D001](../../../docs/v2/DECISIONS.md#d001)）。
+- 不建向量索引、不绑模型维度（[D001](../../../../../docs/v2/DECISIONS.md#d001)）。
 - 每条迁移都要有对应的集成测试断言其约束真的生效，而不是只断言"表存在"。
 
-## 3. 实体映射形态（[D013.1](../../../docs/v2/DECISIONS.md#d013) 变体 A）
+## 3. 实体映射形态（[D013.1](../../../../../docs/v2/DECISIONS.md#d013) 变体 A）
 
 **全局统一**：含 `project_id` 的复合外键关联，`@JoinColumn` 全部 `insertable=false, updatable=false`，写入由标量 `Long xxxId` 承担。
 
@@ -93,7 +93,7 @@ requirement/  RequirementController · RequirementService · Requirement · Requ
 ```
 
 - 不建 `domain/application/infrastructure/web` 四层目录。
-- `project` 与 `requirement` 通过 `UserDirectory` 读取账户展示信息（[D013.6](../../../docs/v2/DECISIONS.md#d013)），不注入 `UserAccountRepository`——后者会触发 ArchUnit 规则 4。
+- `project` 与 `requirement` 通过 `UserDirectory` 读取账户展示信息（[D013.6](../../../../../docs/v2/DECISIONS.md#d013)），不注入 `UserAccountRepository`——后者会触发 ArchUnit 规则 4。
 - `requirement` 经 `ProjectAccessService` 做授权判定，不自行查 `ProjectMemberRepository`。
 
 ## 5. 授权模型
@@ -101,23 +101,23 @@ requirement/  RequirementController · RequirementService · Requirement · Requ
 `ProjectAccessService` 是唯一入口，暴露形如 `requireRole(projectId, userId, ProjectRole...)` 的方法，返回成员身份或抛出。约定：
 
 - Controller 从登录上下文取 `userId`（`ARCHITECTURE.md` §1.3），作为参数传入 Service；业务 Service 不接触 Spring Security。
-- 具体形态：`project` / `requirement` 的 Controller 接收 JDK 的 `java.security.Principal`，再经 `auth` 的只读 `UserDirectory.byUsername` 换成 `userId`。这样业务模块既不 import Spring Security，也不依赖 `auth` 的认证机制，只用到 [D013.6](../../../docs/v2/DECISIONS.md#d013) 明确放行的只读 facade。代价是每个请求多一次按唯一索引的账户查询，MVP 接受。
+- 具体形态：`project` / `requirement` 的 Controller 接收 JDK 的 `java.security.Principal`，再经 `auth` 的只读 `UserDirectory.byUsername` 换成 `userId`。这样业务模块既不 import Spring Security，也不依赖 `auth` 的认证机制，只用到 [D013.6](../../../../../docs/v2/DECISIONS.md#d013) 明确放行的只读 facade。代价是每个请求多一次按唯一索引的账户查询，MVP 接受。
 - 项目角色**不进入** Spring Security 的全局权限体系——角色是项目内概念，全局权限只区分「已认证/未认证」。
 - **不存在的资源与无权访问的资源返回同一种结果**，避免通过状态码差异探测跨项目资源是否存在。
 
 ## 6. 关键流程
 
-### 6.1 创建项目（[D013.5](../../../docs/v2/DECISIONS.md#d013)）
+### 6.1 创建项目（[D013.5](../../../../../docs/v2/DECISIONS.md#d013)）
 
 单事务：插 `project`（`created_by = 当前用户`）→ 插 `project_member(role=LEADER)`。`created_by` 与 LEADER 是两件事，LEADER 可转移而 `created_by` 不变。
 
-### 6.2 LEADER 转移（[D013.8](../../../docs/v2/DECISIONS.md#d013)）
+### 6.2 LEADER 转移（[D013.8](../../../../../docs/v2/DECISIONS.md#d013)）
 
 单事务，顺序不可换：把原 LEADER 降级 → **flush** → 把目标成员升级。
 
 禁止写成单条 `UPDATE ... CASE`：实测其成败依赖物理扫描顺序，同一条 SQL 可能成功也可能 23505。并发转移由 `project` 行锁串行化，失败者按 409 返回。
 
-### 6.3 创建需求（[D013.10](../../../docs/v2/DECISIONS.md#d013)）
+### 6.3 创建需求（[D013.10](../../../../../docs/v2/DECISIONS.md#d013)）
 
 单事务三步：插 `requirement`（`current_revision_id = NULL`，此时复合外键因 `MATCH SIMPLE` 跳过校验）→ 插 `requirement_revision(seq=1)` 与其 AC → 回填 `current_revision_id`（三列全非空，此刻才真正校验）。
 
@@ -139,7 +139,7 @@ Hibernate 的 flush 顺序（INSERT 先于 UPDATE）天然产出该顺序，实�
 
 删除语义：本批次**不提供**项目、成员、需求的硬删除接口。外键未声明 `ON DELETE`，硬删会被数据库挡住；成员移出项目的能力若需要，须先回答 `requirement.assignee` 的处置，属批次 2 之前的开放项，本批次不实现。
 
-## 7. 认证与会话（[D013.7](../../../docs/v2/DECISIONS.md#d013)）
+## 7. 认证与会话（[D013.7](../../../../../docs/v2/DECISIONS.md#d013)）
 
 - Spring Security 表单登录 + 服务端进程内 `HttpSession`；BCrypt `PasswordEncoder`。
 - CSRF 用 Spring Security 的 cookie token repository；所有写请求校验。
@@ -173,7 +173,7 @@ GET    /api/projects/{projectId}/requirements/{id}/revisions
 `register` 与 `password` 是规划期补入的：AC2 要求「可注册或由种子数据获得账户」并要求「改密码后其它会话失效」，
 而 `.trellis/spec/backend/database-guidelines.md` 不允许迁移里放种子行，注册接口是不新增结构的那个解。
 
-错误响应用 `common` 的统一 `{code, message, traceId}`；约束冲突映射 409/422（[D013.11](../../../docs/v2/DECISIONS.md#d013)），**不捕获后在同一事务内继续**——实测约束触发器错误会使事务进入 25P02，savepoint 也救不回来。
+错误响应用 `common` 的统一 `{code, message, traceId}`；约束冲突映射 409/422（[D013.11](../../../../../docs/v2/DECISIONS.md#d013)），**不捕获后在同一事务内继续**——实测约束触发器错误会使事务进入 25P02，savepoint 也救不回来。
 
 ## 9. 前端
 
@@ -219,11 +219,11 @@ GET    /api/projects/{projectId}/requirements/{id}/revisions
 
 - 密码只存 BCrypt 哈希，任何响应与日志都不回显。
 - 跨项目一律不可见：不存在与无权限返回同一结果。
-- `scm_external_user_id` 是权限依据，`scm_username` 仅显示，任何授权判定都不读后者（[D010](../../../docs/v2/DECISIONS.md#d010)）。
+- `scm_external_user_id` 是权限依据，`scm_username` 仅显示，任何授权判定都不读后者（[D010](../../../../../docs/v2/DECISIONS.md#d010)）。
 - 输入校验覆盖长度、非法 UTF-8 与 NUL；错误信息不回显内部标识。
 
 ## 12. 回滚
 
 - 迁移只增不改，回滚以「丢弃本批次提交」为单位，不写 down migration。
 - 后端、前端可按文件组独立回滚；数据库回滚等价于重建空库（本批次尚无生产数据）。
-- 若 [D013](../../../docs/v2/DECISIONS.md#d013) 的任一裁定在真实实体上不成立，**停止实现并回到决策**，不得在代码里加兼容分支或降级为 Service 校验绕过——这正是 [D006](../../../docs/v2/DECISIONS.md#d006) 明确禁止的行为。
+- 若 [D013](../../../../../docs/v2/DECISIONS.md#d013) 的任一裁定在真实实体上不成立，**停止实现并回到决策**，不得在代码里加兼容分支或降级为 Service 校验绕过——这正是 [D006](../../../../../docs/v2/DECISIONS.md#d006) 明确禁止的行为。

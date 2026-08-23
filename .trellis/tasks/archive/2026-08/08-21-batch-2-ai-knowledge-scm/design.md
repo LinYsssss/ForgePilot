@@ -1,14 +1,14 @@
 # 批次 2 技术设计
 
-依据：`prd.md`、`docs/v2/ARCHITECTURE.md`、[D015](../../../docs/v2/DECISIONS.md#d015)，以及 `research/` 下三份研究。
-本文只写实现形态，不复述权威文档已定义的事实。[D015](../../../docs/v2/DECISIONS.md#d015) 已裁定的不再重复理由，只写结论。
+依据：`prd.md`、`docs/v2/ARCHITECTURE.md`、[D015](../../../../../docs/v2/DECISIONS.md#d015)，以及 `research/` 下三份研究。
+本文只写实现形态，不复述权威文档已定义的事实。[D015](../../../../../docs/v2/DECISIONS.md#d015) 已裁定的不再重复理由，只写结论。
 
 ## 1. 设计原则（延续批次 1）
 
 - **数据库是隔离与完整性的执行者**；Service 不做数据库已经能拒绝的重复校验。
-- **零新增表、零新增依赖**：七张表全部来自 §2.1，测试用 JDK 自带 HTTP 服务器（[D015.8](../../../docs/v2/DECISIONS.md#d015)）。
+- **零新增表、零新增依赖**：七张表全部来自 §2.1，测试用 JDK 自带 HTTP 服务器（[D015.8](../../../../../docs/v2/DECISIONS.md#d015)）。
 - **先约束后代码**：迁移与实体映射先过真实 PostgreSQL 集成测试，再写业务逻辑。
-- 复合外键关联沿用 [D013.1](../../../docs/v2/DECISIONS.md#d013) 变体 A（关联只读、标量写入）。
+- 复合外键关联沿用 [D013.1](../../../../../docs/v2/DECISIONS.md#d013) 变体 A（关联只读、标量写入）。
 
 ## 2. 迁移
 
@@ -70,8 +70,8 @@ CONSTRAINT ck_knowledge_chunk_dimension
 ```
 
 - `knowledge_document` 必须有 `UNIQUE (project_id, id, source_requirement_id)`，否则上面的三列外键无目标。
-- `embedding vector`（无维度）；**不建任何向量索引**（[D015.3](../../../docs/v2/DECISIONS.md#d015)）。
-- `ai_call_log.review_id` 建列不建外键，迁移中写明批次 3 补（[D015.1](../../../docs/v2/DECISIONS.md#d015)）；
+- `embedding vector`（无维度）；**不建任何向量索引**（[D015.3](../../../../../docs/v2/DECISIONS.md#d015)）。
+- `ai_call_log.review_id` 建列不建外键，迁移中写明批次 3 补（[D015.1](../../../../../docs/v2/DECISIONS.md#d015)）；
   `requirement_id` / `requirement_revision_id` 的复合外键**现在就建**，它们指向的表已存在。
 - 不写 `ON DELETE`（延续批次 1）。
 
@@ -83,7 +83,7 @@ CONSTRAINT ck_knowledge_chunk_dimension
   **列级 `ON DELETE SET NULL`**。
 - **与批次 1「全表不写 ON DELETE」并不矛盾**：批次 1 的理由是 §2.3 没有为那些表规定删除语义。
   §2.3 **恰恰只为这一列规定了** `ON DELETE SET NULL`。规则始终是「照 §2.3 写」，不是「一律不写」。
-- changed-file manifest 与 patch 存 JSONB（[D015.7](../../../docs/v2/DECISIONS.md#d015)），带大小上限，超限显式失败。
+- changed-file manifest 与 patch 存 JSONB（[D015.7](../../../../../docs/v2/DECISIONS.md#d015)），带大小上限，超限显式失败。
 
 ## 3. 仍未定且本设计就地裁定的 SCM 细节
 
@@ -158,7 +158,7 @@ Webhook 路径不带 `{projectId}`,按 payload 里的 repository 身份路由—
 external_id,返回 `409`。`api_base` 可改,但必须验证仍指向同一实例（规范化后 `instance_identity` 不变）。
 
 **理由**:这是跨行规则(「本行的列能不能改」取决于另一张表有没有行),没有任何 immediate 约束能表达,
-而 §2.1 只为 `finding` 授权了约束触发器。因此它与 [D013.9](../../../docs/v2/DECISIONS.md#d013)
+而 §2.1 只为 `finding` 授权了约束触发器。因此它与 [D013.9](../../../../../docs/v2/DECISIONS.md#d013)
 「至少一个 LEADER」属同一类:**每次提交后的 Service 不变式**,由集成测试覆盖而非由数据库执行。
 `database-guidelines.md` 那句「只由 Service 执行的约束不算被执行」的用意是禁止用 Service 校验去**替代**
 数据库能做的事;此处数据库做不到,不属该禁令范围——但必须在 `result.md` 如实记为「非数据库执行」。
@@ -178,7 +178,7 @@ requirement/  新增 RequirementDirectory（只读 facade，供 scm 用，D015.6
 ```
 
 - `scm.github` 是子包白名单允许的两个之一（ArchUnit 规则 6），其余一律直接放在 feature 包下。
-- `ChunkSearchRepository` 是**唯一**允许出现 `::vector` 与 `<=>` 的地方（[D015.4](../../../docs/v2/DECISIONS.md#d015)）。
+- `ChunkSearchRepository` 是**唯一**允许出现 `::vector` 与 `<=>` 的地方（[D015.4](../../../../../docs/v2/DECISIONS.md#d015)）。
 
 ## 4.1 批次 2 新增的两个端点（供 Phase 7 前端冻结形状）
 

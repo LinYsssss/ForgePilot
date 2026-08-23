@@ -1,6 +1,6 @@
 # 批次 3 需求（Phase 6 + Phase 7）
 
-授权依据：[D012](../../../docs/v2/DECISIONS.md#d012)（批次划分）、[D014](../../../docs/v2/DECISIONS.md#d014)（闸门执行者）。
+授权依据：[D012](../../../../../docs/v2/DECISIONS.md#d012)（批次划分）、[D014](../../../../../docs/v2/DECISIONS.md#d014)（闸门执行者）。
 上一批次：`.trellis/tasks/archive/2026-08/08-21-batch-2-ai-knowledge-scm/result.md`（§9 载有 D014 闸门自证，五条全部成立）。
 
 > **状态：验收条件待研究落地后回填**（见 §8）。范围、边界与规则来自权威文档，与研究结论无关。
@@ -30,12 +30,12 @@
    生成新 `execution_token`、写 `lease_until`。**过期 Worker 的完成、失败、续租与插入 Finding 影响行数必须为 0。**
 5. **reconciliation**：只处理**已落库但未执行或停滞**的任务（未被领取的超时 PENDING、lease 过期的 RUNNING），
    统一回到同一领取/执行路径。**禁止补建缺失 Review**——需求关联或版本变化后的重审一律人工触发。
-6. **大 PR 分批**（[D002](../../../docs/v2/DECISIONS.md#d002)）：Batch 只产 Finding candidate 与 AC evidence，
+6. **大 PR 分批**（[D002](../../../../../docs/v2/DECISIONS.md#d002)）：Batch 只产 Finding candidate 与 AC evidence，
    **不产 AC verdict**；全部 Batch 完成后 Final Synthesis 统一产出；任一 Batch 非法 JSON 且修复失败 → **整个 Review = FAILED**；
    必须保存 truncation/coverage manifest 且在 UI 显式呈现。
 7. **输出校验**：每条 AC 最终必须有 `COVERED | NOT_FOUND | AT_RISK`，模型漏项由 Validator 补 `NOT_FOUND`；
    `acId` 属于当前 Revision、`sourceId` 在本次召回白名单、`filePath` 在 changed files 内、行号落在 patch 可验证范围。
-8. **Finding 跨轮血缘**（[D009](../../../docs/v2/DECISIONS.md#d009)）：`finding_key` / `evidence_hash` / `basis_hash` /
+8. **Finding 跨轮血缘**（[D009](../../../../../docs/v2/DECISIONS.md#d009)）：`finding_key` / `evidence_hash` / `basis_hash` /
    `continuity` / `carried_from_finding_id`。两个 hash **均不得包含 LLM 自由文本**。
    优先级固定 `SUPPRESSED > PERSISTING > NEW`；连续性只在**同一 PR** 内计算。
 9. **运行边界实测**：在目标 4 GB 机、生产 JVM/PostgreSQL 上限下跑至少一个**最大预算** Review，
@@ -106,7 +106,7 @@ P6 与 §3.5：非法 JSON 允许**一次** format-repair；仍失败则 FAILED�
 
 ### R5. 运行边界是实测输出，不是常量
 
-[D012](../../../docs/v2/DECISIONS.md#d012) 第 2 条与 [D014](../../../docs/v2/DECISIONS.md#d014) 都明确：
+[D012](../../../../../docs/v2/DECISIONS.md#d012) 第 2 条与 [D014](../../../../../docs/v2/DECISIONS.md#d014) 都明确：
 Phase 6 的并发上限与 batch 预算**必须实测得到**。
 先写死一个 2 再补个测试证明"2 能跑"，不算实测——必须是在 4 GB 目标机上跑出峰值后**据实冻结**。
 若实测结论是 1，就写 1；这不是降级，是诚实。
@@ -120,9 +120,9 @@ Phase 6 的并发上限与 batch 预算**必须实测得到**。
 
 ### R7. 补上批次 2 欠下的两条
 
-[D016.2](../../../docs/v2/DECISIONS.md#d016)：`review` 表落地后**必须**补上 P1 的 DEVELOPER 半条授权
+[D016.2](../../../../../docs/v2/DECISIONS.md#d016)：`review` 表落地后**必须**补上 P1 的 DEVELOPER 半条授权
 （本人 PR 且当前 head 尚无人工终局 Decision 时可改关联）。
-[D015.1](../../../docs/v2/DECISIONS.md#d015)：补 `ai_call_log.review_id` 的外键——
+[D015.1](../../../../../docs/v2/DECISIONS.md#d015)：补 `ai_call_log.review_id` 的外键——
 `aiCallLogHasNoReviewForeignKeyYetAndNoRowsUsingIt` 已把「此刻全为 NULL」钉死，补外键不会撞历史数据。
 
 ## 5. 已知会被本批次打破的东西
@@ -141,10 +141,10 @@ Phase 6 的并发上限与 batch 预算**必须实测得到**。
 
 来自批次 2 `result.md` §11 与 §7.5：
 
-1. **[D016.2](../../../docs/v2/DECISIONS.md#d016) 的 DEVELOPER 半条**：`review` 建表后即可表达，本批次必须补。
+1. **[D016.2](../../../../../docs/v2/DECISIONS.md#d016) 的 DEVELOPER 半条**：`review` 建表后即可表达，本批次必须补。
 2. **三元组冻结的并发竞争未测**（批次 2 §7.5）：本批次引入更多并发写入点，应顺手补上。
 3. **`GitHubClient.required()` 的拒绝分支未测**、**changed-file 超限路径零覆盖**
-   （[D016.1](../../../docs/v2/DECISIONS.md#d016)）：两条都是「守卫存在但拒绝分支未测量」，成本很低，应补。
+   （[D016.1](../../../../../docs/v2/DECISIONS.md#d016)）：两条都是「守卫存在但拒绝分支未测量」，成本很低，应补。
 4. **缺密钥启动失败未断言**（批次 2 §7.4）：一条被声明却未被测量的 fail-closed 属性。
 5. **无自动化浏览器点击闭环**（批次 1 AC11 部分通过的原因）：Phase 7 的验收要求「浏览器、可访问性、
    响应式、视觉漂移」四项。**若在不新增依赖的前提下仍做不到，必须再次如实记为部分通过，不得粉饰。**

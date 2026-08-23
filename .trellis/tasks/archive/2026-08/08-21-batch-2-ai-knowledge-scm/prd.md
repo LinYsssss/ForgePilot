@@ -1,6 +1,6 @@
 # 批次 2 需求（Phase 4 + Phase 5）
 
-授权依据：[D012](../../../docs/v2/DECISIONS.md#d012)（批次划分）、[D014](../../../docs/v2/DECISIONS.md#d014)（闸门执行者）。
+授权依据：[D012](../../../../../docs/v2/DECISIONS.md#d012)（批次划分）、[D014](../../../../../docs/v2/DECISIONS.md#d014)（闸门执行者）。
 上一批次：`.trellis/tasks/archive/2026-08/08-21-batch-1-auth-project-requirement/result.md`。
 
 > **状态：验收条件已回填**（研究落地后补全，见 §7）。范围、边界与规则来自权威文档，与研究结论无关。
@@ -20,21 +20,21 @@
 
 1. **AI Gateway**：统一 chat/embed 调用、超时、**一次** retry、`PromptSanitizer`、`ai_call_log` 落库。
 2. **Knowledge**：`knowledge_document` / `knowledge_chunk`、单个无维度 `vector` 列、项目内检索、安全上传。
-3. **附件关系**：`requirement_attachment` 与 [D005](../../../docs/v2/DECISIONS.md#d005) 的归属约束；提升为公共知识是**复制**而非就地改写。
+3. **附件关系**：`requirement_attachment` 与 [D005](../../../../../docs/v2/DECISIONS.md#d005) 的归属约束；提升为公共知识是**复制**而非就地改写。
 4. **一次性 Requirement Implementation Guidance**：不建 Conversation、不建 SSE、不建 Assistant 模块。
 5. **GitHub SCM**：一个项目一个活动 `scm_repository`；稳定身份 = provider + 规范化 instance identity + external id，有 PR 后冻结。
 6. **PR 快照**：验签后读 Provider 权威数据，保存 base/head、changed files、patch 与确定性 `review_input_fingerprint`。
-7. **PR ↔ 需求关联**：`REQ-<n>` 解析（[D013.2](../../../docs/v2/DECISIONS.md#d013)：`<n>` 即 `requirement.id`，按 PR 所属项目过滤）、人工纠正、
-   `pull_request_requirement_event` 审计（[D007](../../../docs/v2/DECISIONS.md#d007)）。
+7. **PR ↔ 需求关联**：`REQ-<n>` 解析（[D013.2](../../../../../docs/v2/DECISIONS.md#d013)：`<n>` 即 `requirement.id`，按 PR 所属项目过滤）、人工纠正、
+   `pull_request_requirement_event` 审计（[D007](../../../../../docs/v2/DECISIONS.md#d007)）。
 8. **作者映射**：不可变作者快照 + 可重算 `author_user_id`；授权键是 `scm_external_user_id`，
-   **禁止按用户名授权**（[P11](../../../docs/v2/PRD.md) / [D010](../../../docs/v2/DECISIONS.md#d010)）。
+   **禁止按用户名授权**（[P11](../../../../../docs/v2/PRD.md) / [D010](../../../../../docs/v2/DECISIONS.md#d010)）。
 9. **`PullRequestChanged`**：在更新 PR 的同一事务内发布的进程内同步事件。
 
 ## 3. 明确不做
 
 - 不做 Review 引擎、Finding、人工决策闭环——那是批次 3。本批次**不得**新建 `review` / `finding` / `finding_event`。
 - 不做 GitLab（Phase 8）。`scm` 的子包白名单已允许 `scm.github` / `scm.gitlab`，但本批次只落 `github`。
-- 不建向量索引、不绑定 embedding 维度（[D001](../../../docs/v2/DECISIONS.md#d001)）。
+- 不建向量索引、不绑定 embedding 维度（[D001](../../../../../docs/v2/DECISIONS.md#d001)）。
 - 不建 Conversation / 多轮会话 / SSE / 通用 Assistant。
 - 不建 Prompt Registry、不建万能 ContextBuilder（ARCHITECTURE §4）。
 - 不新增第 17 张表、不新增顶层包、不新增一级菜单。
@@ -68,8 +68,8 @@ Provider 的权威快照才是真值；`source_revision` / `source_updated_at` �
 ### R5. 项目隔离照旧由数据库执行
 
 七张新表全部携带 `project_id`，项目内引用一律复合外键，被引用表提供对应唯一键。
-Repository 读路径一律接受 `projectId`。约束冲突不捕获后继续（[D013.11](../../../docs/v2/DECISIONS.md#d013)），统一映射 409/422。
-复合外键关联沿用 [D013.1](../../../docs/v2/DECISIONS.md#d013) 变体 A，已写入 `.trellis/spec/backend/database-guidelines.md`。
+Repository 读路径一律接受 `projectId`。约束冲突不捕获后继续（[D013.11](../../../../../docs/v2/DECISIONS.md#d013)），统一映射 409/422。
+复合外键关联沿用 [D013.1](../../../../../docs/v2/DECISIONS.md#d013) 变体 A，已写入 `.trellis/spec/backend/database-guidelines.md`。
 
 ### R6. `ai_call_log` 不是日志
 
@@ -93,11 +93,11 @@ Repository 读路径一律接受 `projectId`。约束冲突不捕获后继续（
    已经带列级 `ON DELETE SET NULL`（§2.3 唯一规定了删除语义的地方），与批次 1「全表不写 ON DELETE」
    并存，需要在 design 中说清两者为何不矛盾。
 2. 若引入禁用账户接口，必须同时递增 `session_version`。本批次预计不引入。
-3. 需求状态审计表仍是 MVP 缺口（[D013.3](../../../docs/v2/DECISIONS.md#d013)），本批次不补。
+3. 需求状态审计表仍是 MVP 缺口（[D013.3](../../../../../docs/v2/DECISIONS.md#d013)），本批次不补。
 
 ## 7. 验收条件
 
-研究已落地，**最关键的一条「如何在无凭据前提下测」已被证实可行**（[D015.8](../../../docs/v2/DECISIONS.md#d015)：
+研究已落地，**最关键的一条「如何在无凭据前提下测」已被证实可行**（[D015.8](../../../../../docs/v2/DECISIONS.md#d015)：
 `jdk.httpserver` 与 `MockRestServiceServer` 均已在 classpath 上，零依赖增量），因此以下 AC 全部可断言。
 
 - [ ] **AC1**　空库 Flyway 后恰好 13 张业务表；七张新表的项目内引用均为含 `project_id` 的复合外键，
@@ -105,15 +105,15 @@ Repository 读路径一律接受 `projectId`。约束冲突不捕获后继续（
       而不是只靠 Service 校验。
 - [ ] **AC2**　公共知识（`source_requirement_id IS NULL`）无法被挂成需求附件（`23503`）；
       附件被钉在其 Document 自身归属的那个需求上；**并有反证测试**证明子表 `requirement_id` 一旦可空，
-      整条三列检查就蒸发（[D015.2](../../../docs/v2/DECISIONS.md#d015)）。
+      整条三列检查就蒸发（[D015.2](../../../../../docs/v2/DECISIONS.md#d015)）。
 - [ ] **AC3**　文档类型与归属不匹配被 `23514` 拒绝；`FAILED` 文档必须带失败原因，否则被数据库拒绝。
 - [ ] **AC4**　`knowledge_chunk` 维度自洽 CHECK 生效（`23514`）；**与本项目既有维度不符的向量写入被应用层拒绝**；
-      并有记录性测试说明混维度会让整个项目的 TopK 查询失败（[D015.3](../../../docs/v2/DECISIONS.md#d015)）。
+      并有记录性测试说明混维度会让整个项目的 TopK 查询失败（[D015.3](../../../../../docs/v2/DECISIONS.md#d015)）。
 - [ ] **AC5**　NUL 与非法 UTF-8 显式失败；**孤立代理项被应用层拒绝**，且测试先断言"驱动确实会静默改成 `?`"，
-      使该断言不可能空转（[D015.5](../../../docs/v2/DECISIONS.md#d015)）；超限文本被 `KnowledgeUploadValidator` 拒绝。
+      使该断言不可能空转（[D015.5](../../../../../docs/v2/DECISIONS.md#d015)）；超限文本被 `KnowledgeUploadValidator` 拒绝。
 - [ ] **AC6**　检索一律带 `projectId`；A 项目检索不到 B 项目的 chunk。`::vector` 与 `<=>` 只出现在
       `ChunkSearchRepository` 一处。
-- [ ] **AC7**　提升为公共知识产生**新** Document，原附件行未被就地改写（[D005](../../../docs/v2/DECISIONS.md#d005)）。
+- [ ] **AC7**　提升为公共知识产生**新** Document，原附件行未被就地改写（[D005](../../../../../docs/v2/DECISIONS.md#d005)）。
 - [ ] **AC8**　AI Gateway：超时真的触发并记为 `TIMEOUT`；**可重试错误下 stub 请求计数恰为 2，永久错误恰为 1**；
       两次尝试都落 `ai_call_log`；畸形 JSON 判定为失败而非"成功空结果"；`Authorization` 头携带配置值
       且**全仓库不存在任何真实 key**。
@@ -137,7 +137,7 @@ Repository 读路径一律接受 `projectId`。约束冲突不捕获后继续（
 - [ ] **AC19**　`./mvnw -B -ntp verify` 全绿无 skip；**`backend/pom.xml` 零改动**；
       Compose 空库冷启动通过且断言十三张表；CI 四个 job 全绿且 `ci.yml` 中仍无 `secrets.*`。
 - [ ] **AC20**　`result.md` 完整：§2.1 补列（`title` / `failure_reason`）单独列出；
-      非数据库执行的不变式如实标注；密钥轮换缺口如实记录；未触发 [D015](../../../docs/v2/DECISIONS.md#d015) 之外的新决策。
+      非数据库执行的不变式如实标注；密钥轮换缺口如实记录；未触发 [D015](../../../../../docs/v2/DECISIONS.md#d015) 之外的新决策。
 
 **记法约定**（延续批次 1）：验收条件只有通过与不通过，**部分通过必须记为部分通过**，
 不得为了凑绿而放宽措辞。

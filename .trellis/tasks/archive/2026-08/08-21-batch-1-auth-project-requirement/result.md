@@ -1,7 +1,7 @@
 # 批次 1 结果
 
 任务：`08-21-batch-1-auth-project-requirement`（Phase 2 + Phase 3）。
-授权依据：[D012](../../../docs/v2/DECISIONS.md#d012)。实现裁定：[D013](../../../docs/v2/DECISIONS.md#d013)。
+授权依据：[D012](../../../../../docs/v2/DECISIONS.md#d012)。实现裁定：[D013](../../../../../docs/v2/DECISIONS.md#d013)。
 
 本文只记录**实际发生的事实**：真实执行过的命令、真实输出、真实偏差。计划见 `implement.md`，验收清单见 `validation.md`。
 
@@ -41,16 +41,16 @@ compose smoke 断言、以及全部规划与 spec 文档。
 
 ## 3. 关键实现形态（与决策的对应）
 
-- **[D013.1](../../../docs/v2/DECISIONS.md#d013) 变体 A 成立**：`Requirement.currentRevision` 用三列复合外键做只读导航，
+- **[D013.1](../../../../../docs/v2/DECISIONS.md#d013) 变体 A 成立**：`Requirement.currentRevision` 用三列复合外键做只读导航，
   `@JoinColumn` 全部 `insertable=false, updatable=false`，写入走标量 `currentRevisionId`。
   `ddl-auto: validate` 在应用启动期通过，这是闸门 A 要求的**最早信号**，第一次构建即通过。
-- **[D013.10](../../../docs/v2/DECISIONS.md#d013) 三步回填成立**：`current_revision_id` 为 NULL 时 `MATCH SIMPLE` 跳过整条复合键，
+- **[D013.10](../../../../../docs/v2/DECISIONS.md#d013) 三步回填成立**：`current_revision_id` 为 NULL 时 `MATCH SIMPLE` 跳过整条复合键，
   回填时三列俱全才真正校验。指向别的需求或别的项目的 revision 被 `23503` 拒绝，有测试。
-- **[D013.8](../../../docs/v2/DECISIONS.md#d013) LEADER 转移**：降级 → `flush()` → 升级，禁止单条 CASE 交换。
+- **[D013.8](../../../../../docs/v2/DECISIONS.md#d013) LEADER 转移**：降级 → `flush()` → 升级，禁止单条 CASE 交换。
   **实现时发现并修正了一处授权顺序缺陷**：原本先查角色再锁 `project` 行，导致并发转移的失败方
   在自己已经不是 LEADER 之后仍能继续操作（基于陈旧读）。改为**先锁行、再查角色**，失败方重读时
   已被降级，直接 403。这同时让 AC3「并发转移只有一个成功」在语义上真正成立。
-- **[D013.11](../../../docs/v2/DECISIONS.md#d013)**：全仓库 grep 确认没有任何一处捕获
+- **[D013.11](../../../../../docs/v2/DECISIONS.md#d013)**：全仓库 grep 确认没有任何一处捕获
   `DataIntegrityViolation`/`ConstraintViolation`/`PersistenceException`/`SQLException`。
 - **404 与 403 的信息流**：非成员一律 404（与「id 不存在」不可区分），成员但角色不足才 403。
   由 `BatchOneApiTest.anotherProjectsIdsAreInvisibleOverHttp` 在 HTTP 层断言。
@@ -61,7 +61,7 @@ compose smoke 断言、以及全部规划与 spec 文档。
    「改密后其它会话失效」，而 `database-guidelines.md` 不允许迁移放种子行——注册接口是不新增结构的解，
    也避免把口令写进仓库。
 2. **业务模块如何拿到 `userId`**。`ARCHITECTURE.md` §1.3 禁止业务模块依赖 auth，但成员/需求都需要身份。
-   定型为：Controller 收 JDK 的 `java.security.Principal`，经 [D013.6](../../../docs/v2/DECISIONS.md#d013) 明确放行的只读
+   定型为：Controller 收 JDK 的 `java.security.Principal`，经 [D013.6](../../../../../docs/v2/DECISIONS.md#d013) 明确放行的只读
    `UserDirectory.byUsername` 换 id。业务模块因此既不 import Spring Security，也不碰认证机制。
    代价是每请求多一次唯一索引查询，MVP 接受。
 3. **409 与 422 的分界**。只看请求体可判定的拒绝是 422，必须读资源当前状态才能判定的是 409。
@@ -185,12 +185,12 @@ CI 在推送 `f6c93b2` 后运行 `32471329945`，**四个 job 全部 success**�
 
 本批次**未复制任何 Legacy 代码**。`LEGACY-MIGRATION-MATRIX.md` 中与本批次相关的条目按 REWRITE/REFERENCE 处理：
 认证的「失败不区分用户不存在与密码错误」是 REWRITE 要点，按该要点重新实现；
-Legacy 的私有 Token 协议是 REFERENCE，按 [D013.7](../../../docs/v2/DECISIONS.md#d013) 明确不继承，改用框架自带 `HttpSession` + CSRF cookie repository。
+Legacy 的私有 Token 协议是 REFERENCE，按 [D013.7](../../../../../docs/v2/DECISIONS.md#d013) 明确不继承，改用框架自带 `HttpSession` + CSRF cookie repository。
 
 ## 6. 边界（有意不做）
 
 - 无 Knowledge / AI / SCM / Review / Finding 相关代码或表；无向量索引、无维度绑定。
-- 无需求状态审计表——[D013.3](../../../docs/v2/DECISIONS.md#d013) 明确列为 MVP 缺口，需正式决策才能新增第 17 张表。
+- 无需求状态审计表——[D013.3](../../../../../docs/v2/DECISIONS.md#d013) 明确列为 MVP 缺口，需正式决策才能新增第 17 张表。
 - 迁移中无 `ON DELETE`：`ARCHITECTURE.md` §2.3 只为 `pull_request.author_user_id` 规定了删除语义，
   其余一律让外键挡住硬删，直到某个 Phase 回答「删除意味着什么」。
 - 不提供项目/成员/需求的硬删除接口；成员移出项目需先回答 `requirement.assignee` 的处置，属批次 2 之前的开放项。
@@ -199,7 +199,7 @@ Legacy 的私有 Token 协议是 REFERENCE，按 [D013.7](../../../docs/v2/DECIS
 
 ## 7. 风险与已知缺口
 
-1. **进程重启会话即失效**（[D013.7](../../../docs/v2/DECISIONS.md#d013) 已接受的代价，须写进部署说明）。单节点部署下无 Redis、无 session 表。
+1. **进程重启会话即失效**（[D013.7](../../../../../docs/v2/DECISIONS.md#d013) 已接受的代价，须写进部署说明）。单节点部署下无 Redis、无 session 表。
 2. **`session_version` 每个已认证请求一次主键查询**，外加 `Principal → userId` 一次唯一索引查询。
    两次都是索引命中，MVP 规模无碍；有缓存的诱惑但故意不加——陈旧缓存会让被撤销的会话继续存活。
 3. **禁用账户不会踢掉已存在的会话**：`session_version` 只在改密时递增，`enabled` 只在登录时检查。
@@ -250,5 +250,5 @@ Legacy 的私有 Token 协议是 REFERENCE，按 [D013.7](../../../docs/v2/DECIS
 1. 成员移出项目的语义（`requirement.assignee` 如何处置）必须先有决策，才能实现成员删除。
 2. 若引入禁用账户，必须同时递增 `session_version`（见 §7.3）。
 3. `scm` 切片落地时，`project_member.scm_external_user_id` 已是现成的授权键；`scm_username` 永远只做展示。
-4. 复合外键关联一律沿用 [D013.1](../../../docs/v2/DECISIONS.md#d013) 变体 A，已写入 `.trellis/spec/backend/database-guidelines.md`。
+4. 复合外键关联一律沿用 [D013.1](../../../../../docs/v2/DECISIONS.md#d013) 变体 A，已写入 `.trellis/spec/backend/database-guidelines.md`。
 5. 新增的每一条迁移都必须带一条「断言约束真的拒绝」的集成测试，而不是只断言表存在。

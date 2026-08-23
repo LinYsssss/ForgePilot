@@ -1,7 +1,7 @@
 # 批次 2 结果（Phase 4 + Phase 5）
 
 任务：`08-21-batch-2-ai-knowledge-scm`
-授权依据：[D012](../../../docs/v2/DECISIONS.md#d012)（批次划分）、[D014](../../../docs/v2/DECISIONS.md#d014)（闸门由编排会话执行）。
+授权依据：[D012](../../../../../docs/v2/DECISIONS.md#d012)（批次划分）、[D014](../../../../../docs/v2/DECISIONS.md#d014)（闸门由编排会话执行）。
 上一批次：`.trellis/tasks/archive/2026-08/08-21-batch-1-auth-project-requirement/result.md`。
 
 > **这份报告的记法**（延续批次 1）：验收条件只有通过与不通过，**部分通过必须记为部分通过**。
@@ -46,7 +46,7 @@
    **由 `ScmRepositoryApiTest.oncePullRequestsExistTheIdentityIsFrozenButTheApiBaseStillMoves` 单线程覆盖；
    并发路径未测**（见 §7.5）。
 
-2. **与项目既有维度不符的向量被拒**（AC4 / [D015.3](../../../docs/v2/DECISIONS.md#d015)）。
+2. **与项目既有维度不符的向量被拒**（AC4 / [D015.3](../../../../../docs/v2/DECISIONS.md#d015)）。
    数据库只有「自洽 CHECK」（`dimension = vector_dims(embedding)`），管不了跨行一致。
    真正的防线在 `ChunkSearchRepository.writeEmbedding`，由 `KnowledgeGuardTest` 覆盖。
    `KnowledgeAndScmConstraintTest.aDimensionlessColumnAcceptsAnythingUntilAQueryNeedsThem`
@@ -79,7 +79,7 @@ git log --oneline -- backend/pom.xml | head -1
 # f1d02e1 feat(auth): add local accounts, sessions and CSRF   ← 批次 1 的提交
 ```
 
-`pom.xml` 自批次 1 起未再改动。[D015.8](../../../docs/v2/DECISIONS.md#d015) 的前提成立：
+`pom.xml` 自批次 1 起未再改动。[D015.8](../../../../../docs/v2/DECISIONS.md#d015) 的前提成立：
 `jdk.httpserver` 与 `MockRestServiceServer` 都已在 classpath 上，WireMock/MockWebServer 一个都没加。
 
 ### Compose 空库冷启动
@@ -127,15 +127,15 @@ grep -rn "AiUseCase.REVIEW" …/main/java                             → 无（
 
 | 形态 | 决策 | 落点 |
 |---|---|---|
-| `ai_call_log.review_id` 建列不建外键，且全为 NULL | [D015.1](../../../docs/v2/DECISIONS.md#d015) | `aiCallLogHasNoReviewForeignKeyYetAndNoRowsUsingIt` |
-| `requirement_attachment` 两列 NOT NULL 是承重的 | [D015.2](../../../docs/v2/DECISIONS.md#d015) | `aNullableRequirementIdWouldMakeTheOwnershipCheckEvaporate`（临时表反证，不改真实 schema） |
-| 不建向量索引、不绑定维度 | [D001](../../../docs/v2/DECISIONS.md#d001) / [D015.3](../../../docs/v2/DECISIONS.md#d015) | 迁移中无 `USING ivfflat/hnsw`；`vector` 列无维度参数 |
-| `embedding` 与 `dimension` 都不映射进实体 | [D015.4](../../../docs/v2/DECISIONS.md#d015) | `KnowledgeChunk` javadoc 记录了「映射 dimension 是陷阱」的实测理由 |
-| 孤立代理项在应用层拒绝 | [D015.5](../../../docs/v2/DECISIONS.md#d015) | `aLoneSurrogateIsRejectedBecauseTheDatabaseNeverSeesIt` |
-| `scm` 只经只读 facade 用 `requirement` | [D015.6](../../../docs/v2/DECISIONS.md#d015) | `RequirementDirectory`；grep 确认 `scm` 未注入 `RequirementRepository` |
-| 无凭据测试打到 JDK 自带 HTTP 服务器 | [D015.8](../../../docs/v2/DECISIONS.md#d015) | `AiGatewayTest`、`GitHubWebhookIngestionTest` 均起真实 socket |
-| 提升为公共知识是复制 | [D005](../../../docs/v2/DECISIONS.md#d005) | `promotingCopiesTheDocumentAndLeavesTheOriginalAttachmentAlone` |
-| 授权键是 `scm_external_user_id`，不读用户名 | [D010](../../../docs/v2/DECISIONS.md#d010) / P11 | `removingAMemberClearsOnlyThePullRequestAuthorColumn` + grep |
+| `ai_call_log.review_id` 建列不建外键，且全为 NULL | [D015.1](../../../../../docs/v2/DECISIONS.md#d015) | `aiCallLogHasNoReviewForeignKeyYetAndNoRowsUsingIt` |
+| `requirement_attachment` 两列 NOT NULL 是承重的 | [D015.2](../../../../../docs/v2/DECISIONS.md#d015) | `aNullableRequirementIdWouldMakeTheOwnershipCheckEvaporate`（临时表反证，不改真实 schema） |
+| 不建向量索引、不绑定维度 | [D001](../../../../../docs/v2/DECISIONS.md#d001) / [D015.3](../../../../../docs/v2/DECISIONS.md#d015) | 迁移中无 `USING ivfflat/hnsw`；`vector` 列无维度参数 |
+| `embedding` 与 `dimension` 都不映射进实体 | [D015.4](../../../../../docs/v2/DECISIONS.md#d015) | `KnowledgeChunk` javadoc 记录了「映射 dimension 是陷阱」的实测理由 |
+| 孤立代理项在应用层拒绝 | [D015.5](../../../../../docs/v2/DECISIONS.md#d015) | `aLoneSurrogateIsRejectedBecauseTheDatabaseNeverSeesIt` |
+| `scm` 只经只读 facade 用 `requirement` | [D015.6](../../../../../docs/v2/DECISIONS.md#d015) | `RequirementDirectory`；grep 确认 `scm` 未注入 `RequirementRepository` |
+| 无凭据测试打到 JDK 自带 HTTP 服务器 | [D015.8](../../../../../docs/v2/DECISIONS.md#d015) | `AiGatewayTest`、`GitHubWebhookIngestionTest` 均起真实 socket |
+| 提升为公共知识是复制 | [D005](../../../../../docs/v2/DECISIONS.md#d005) | `promotingCopiesTheDocumentAndLeavesTheOriginalAttachmentAlone` |
+| 授权键是 `scm_external_user_id`，不读用户名 | [D010](../../../../../docs/v2/DECISIONS.md#d010) / P11 | `removingAMemberClearsOnlyThePullRequestAuthorColumn` + grep |
 
 **加密密钥的往返正确性是被证明的，但不是被直接断言的**：`ScmRepositoryApiTest` 只断言了
 「响应体不含明文」「列里不是明文」。真正证明 `decrypt(encrypt(x)) == x` 的是 webhook 路径——
@@ -172,13 +172,13 @@ grep -rn "AiUseCase.REVIEW" …/main/java                             → 无（
 
 ### 7.2 D015.7 的「在 PR 行上标记超限」未实现
 
-[D015.7](../../../docs/v2/DECISIONS.md#d015) 原文要求「超限显式失败并**在 PR 行上标记**，不静默截断」。
+[D015.7](../../../../../docs/v2/DECISIONS.md#d015) 原文要求「超限显式失败并**在 PR 行上标记**，不静默截断」。
 实现只做到前半条：超过 `ChangedFile.MAX_TOTAL_CHARS`（4,000,000 字符）时抛 `422`，**整条投递什么都不写**。
 `PullRequestSyncService.manifest()` 的 javadoc 自己写明了原因：`pull_request` 上没有可以标记的列。
 
 **判断**：不静默截断这一条的实质（Review 绝不会被告知一份残缺的 diff 是完整的）已经达成，
 但「标记」这半条确实没做。补它需要在 `pull_request` 上再加一列——那超出本批次授权的 §2.1 扩充范围。
-**这半条记为未实现，不记为通过。** 已正式化为 [D016.1](../../../docs/v2/DECISIONS.md#d016)。
+**这半条记为未实现，不记为通过。** 已正式化为 [D016.1](../../../../../docs/v2/DECISIONS.md#d016)。
 
 **并且该路径完全没有测试**：`MAX_TOTAL_CHARS` 在测试代码中零引用。超限分支从未被执行过。
 
@@ -188,7 +188,7 @@ grep -rn "AiUseCase.REVIEW" …/main/java                             → 无（
 PRD P1 的另一半——「本人 PR 且当前 head 尚无人工终局 Decision」——**故意没做**：
 批次 2 没有 `review` 表，「尚无终局 Decision」无法表达；写一个恒答「没有终局」的判断会**多授权**，
 比不做更危险。理由已写进 service javadoc 与 `design.md` §4.1，并正式化为
-[D016.2](../../../docs/v2/DECISIONS.md#d016)。**批次 3 建 `review` 后必须补上。**
+[D016.2](../../../../../docs/v2/DECISIONS.md#d016)。**批次 3 建 `review` 后必须补上。**
 
 对照：`POST …/requirements/{id}/guidance` 的 DEVELOPER 规则**已实现**（限本人被指派的需求），
 因为 `assignee_id` 今天就存在，规则可以完整表达。这个不对称是有理由的，不是随手。
@@ -248,7 +248,7 @@ PRD P1 的另一半——「本人 PR 且当前 head 尚无人工终局 Decision
 | AC19 `verify` 全绿无 skip；**pom 零改动**；Compose 十三表；CI 四 job 绿且无 `secrets.*` | 通过 | 见 §4。`7daf632` 曾红（§7.1），但**当前提交** `2892059` 四 job 全绿 |
 | AC20 `result.md` 完整：§2.1 补列单列、非库执行标注、密钥轮换记录、未触发 D015 外新决策 | **部分通过** | 前三项见 §2/§3/§7.4，均已落实；但本批次出现了 **D015 未覆盖的两处实现级偏离**——见下 |
 
-**AC20 只记部分通过。** 它要求「未触发 [D015](../../../docs/v2/DECISIONS.md#d015) 之外的新决策」，
+**AC20 只记部分通过。** 它要求「未触发 [D015](../../../../../docs/v2/DECISIONS.md#d015) 之外的新决策」，
 而本批次实际做了两个 D015 没有授权、也没有回写成 D0xx 的判断：
 
 1. **D015.7 的「标记」半条被放弃**（§7.2）。这不是执行 D015.7，是偏离它。
@@ -256,10 +256,10 @@ PRD P1 的另一半——「本人 PR 且当前 head 尚无人工终局 Decision
    但它是一个产品级授权范围的收窄，只写在 `design.md` §4.1 和 javadoc 里，没有升格为决策。
 
 把 AC20 记成「通过」会让这份报告在**它自己要求诚实的那一条上**失真。两处偏离都已在上面写清，
-并已补为 [D016](../../../docs/v2/DECISIONS.md#d016)（D016.1 超限只拒绝不标记、D016.2 P1 半条推迟到批次 3）。
+并已补为 [D016](../../../../../docs/v2/DECISIONS.md#d016)（D016.1 超限只拒绝不标记、D016.2 P1 半条推迟到批次 3）。
 D016 是在写这份报告的过程中补的，**不是**批次 2 施工时就有的授权——记为部分通过正是因为这个时间差。
 
-## 9. 退出闸门自证（[D014](../../../docs/v2/DECISIONS.md#d014)）
+## 9. 退出闸门自证（[D014](../../../../../docs/v2/DECISIONS.md#d014)）
 
 D014 把评审职责委托给编排会话，但标准不降低，且必须以**可复现的命令与真实输出**为准。逐条：
 
@@ -278,9 +278,9 @@ D014 把评审职责委托给编排会话，但标准不降低，且必须以**�
 过闸的。真正会挡下闸门的，是把部分通过写成通过；而那正是本报告拒绝做的事。
 
 D012 的三条不可放松规则本批次未被触碰：holdout 仍锁死在 Phase 8（本批次未读取、未运行）；
-Phase 6 的运行边界仍未预写为常量（本批次不含 Phase 6 代码）；[D006](../../../docs/v2/DECISIONS.md#d006)
-的 schema 反馈回路被实际使用了两次——`requirement_attachment` 的 NOT NULL（[D015.2](../../../docs/v2/DECISIONS.md#d015)）
-与 `knowledge_chunk.dimension` 不映射（[D015.4](../../../docs/v2/DECISIONS.md#d015)）都是撞了约束之后**回到决策**，
+Phase 6 的运行边界仍未预写为常量（本批次不含 Phase 6 代码）；[D006](../../../../../docs/v2/DECISIONS.md#d006)
+的 schema 反馈回路被实际使用了两次——`requirement_attachment` 的 NOT NULL（[D015.2](../../../../../docs/v2/DECISIONS.md#d015)）
+与 `knowledge_chunk.dimension` 不映射（[D015.4](../../../../../docs/v2/DECISIONS.md#d015)）都是撞了约束之后**回到决策**，
 而不是在代码里加兼容分支。
 
 ## 10. 回滚
@@ -291,9 +291,9 @@ Phase 6 的运行边界仍未预写为常量（本批次不含 Phase 6 代码）
 
 ## 11. 批次 3 的前置条件
 
-1. [D016](../../../docs/v2/DECISIONS.md#d016) 已补，两处偏离已正式化（D016.1 / D016.2）。
+1. [D016](../../../../../docs/v2/DECISIONS.md#d016) 已补，两处偏离已正式化（D016.1 / D016.2）。
 2. 建 `review` 表的同一批次内，**必须**补上 P1 的 DEVELOPER 半条授权（§7.3 / D016.2），并补 `ai_call_log.review_id`
-   的外键（[D015.1](../../../docs/v2/DECISIONS.md#d015)）——`aiCallLogHasNoReviewForeignKeyYetAndNoRowsUsingIt`
+   的外键（[D015.1](../../../../../docs/v2/DECISIONS.md#d015)）——`aiCallLogHasNoReviewForeignKeyYetAndNoRowsUsingIt`
    已经把「此刻全为 NULL」这个前置条件钉死，补外键不会撞上历史数据。
 3. `review` 是十六张表里的第 14 张；`finding`、`finding_event` 是第 15、16 张。**批次 3 之后不得再有新表。**
 4. `PullRequestChanged` 事件已在写 PR 的同一事务内发布（`theChangedEventIsPublishedInsideTheTransactionThatWroteTheRow`
