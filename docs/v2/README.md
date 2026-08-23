@@ -2,7 +2,7 @@
 
 ForgePilot 是围绕需求驱动 Pull Request 审查建设的轻量级 AI 研发协作平台。
 
-状态：**Phase 0–8 已于 2026-08-22 全部完成并通过退出闸门**。功能开发已收口，仓库进入答辩准备期。后续任何改动仍走 Trellis 任务流程（`prd.md`、`design.md`、`implement.md` 经确认并 `task.py start`），且不得重跑或覆盖已封存的评测证据。
+状态：**Phase 0–8 已于 2026-08-22 全部完成并通过退出闸门**。D017 产品主链路补全已于 2026-08-23 完成实现和自动化验证，交付六入口前端、只读工作台、Knowledge/附件用户流程、知识增强 Guidance 与 SCM 安全读取；当前尚未提交/归档，正式评测证据仍不可重跑或覆盖。
 
 ## 权威文档
 
@@ -26,8 +26,8 @@ Phase 0–8 全部完成，逐阶段验收证据在 `.trellis/tasks/archive/2026
 
 - **auth**：本地账号、进程内会话、Cookie CSRF、会话版本失效、改密。
 - **project**：项目与成员、唯一 LEADER 约束、项目级 SCM 身份、成员角色鉴权。
-- **requirement**：需求与验收条件、不可变修订、稳定 `ac_key`、需求质量检查、一次性实现建议。
-- **knowledge / ai**：pgvector 项目知识库与按 `project_id` 隔离的检索、统一 AI 网关、Prompt 净化与调用审计。
+- **requirement**：需求与验收条件、不可变修订、稳定 `ac_key`、需求质量检查、知识增强的一次性结构化实现建议。
+- **knowledge / ai**：pgvector 项目知识库、按项目与当前需求隔离的附件检索、可见的真实向量索引元数据、统一 AI 网关、Prompt 净化与调用审计。
 - **scm**：GitHub 与 GitLab 双 Provider、Webhook 签名校验、PR 同步与需求关联、出站 URL 策略。
 - **review**：单一 Review Engine、分批审查与抢占围栏、Finding 生命周期与血缘、人工决策闭环、对账调度。
 - **evaluation**：三臂对照实验工具链、确定性打分器、配置冻结与一次性 holdout 台账。
@@ -39,7 +39,7 @@ Phase 0–8 全部完成，逐阶段验收证据在 `.trellis/tasks/archive/2026
 - 后端是模块化单体，顶层包仅为 `common/auth/project/requirement/scm/knowledge/ai/review`。
 - 首版数据模型上限为 16 张表；Finding 内聚于 `review`，只有一个 Review Engine。
 - `scm` 发布 `PullRequestChanged` 事件但不依赖 `review`；AI 不直接改变业务状态或代码。
-- 禁止 Agent、Patch、MQ/Outbox、第二 AI runtime、本地 clone/Git、第二 Review Pipeline、代码向量库和额外一级菜单。
+- 禁止 Agent、Patch、MQ/Outbox、第二 AI runtime、本地 clone/Git、第二 Review Pipeline、代码向量库和未经过产品决策的额外一级菜单；D017 批准的六个入口不属于额外扩张。
 - PostgreSQL 15+ 与 pgvector 是业务事实源；所有项目内引用和查询必须保持 `project_id` 隔离。
 - Legacy RepoSage 只读，按迁移矩阵逐项提取，不整包复制，也不继承其迁移历史。
 

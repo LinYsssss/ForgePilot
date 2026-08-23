@@ -13,10 +13,10 @@ defined once in [ARCHITECTURE.md](../../../docs/v2/ARCHITECTURE.md) §1, §2 and
 database, test, and configuration conventions this repository enforces, and
 name the file or command that enforces each one.
 
-The implementation now covers the Phase 1 foundation and batches 1–3: local
-accounts, projects, requirements, knowledge, SCM, the AI gateway, the single
-Review Engine and its human decision loop. The guides describe those runtime
-conventions; Phase 8 remains outside the current implementation boundary.
+The implementation covers the Phase 1 foundation, batches 1–3, Phase 8, and
+D017's product-flow completion: local accounts, projects, requirements,
+knowledge/attachments, SCM, the AI gateway, the single Review Engine and its
+human decision loop. These guides describe the resulting runtime conventions.
 
 ---
 

@@ -1,6 +1,6 @@
 # ForgePilot V2 产品需求
 
-状态：**R2.3 已验收开发基线（2026-08-20）**。本文是**产品权威**：定位、角色、范围、流程与验收标准。Phase 1 已获授权进入任务级规划，具体实现仍须通过 Trellis 计划确认闸门。
+状态：**R2.4 产品链路补全基线（2026-08-23）**。本文是**产品权威**：定位、角色、范围、流程与验收标准。Phase 0–8 的历史闸门保持有效；D017 批准的产品主链路补全通过独立 Trellis 任务执行。
 
 技术规范（模块、16 表、依赖、运行边界）见 [ARCHITECTURE.md](./ARCHITECTURE.md)，本文不复述。
 
@@ -73,6 +73,8 @@ flowchart LR
 - Requirement Quality Check：确定性规则 + 一次结构化 AI 分析。
 - Requirement Implementation Guidance：基于 Requirement、AC 与项目知识生成一次性实现清单、相关规则和风险提示，不保存对话。
 - Project Knowledge：上传、切片、Embedding、项目内检索。
+- 六入口产品界面：工作台、项目、研发需求、项目知识、仓库接入、代码审查；工作台只读组合真实业务数据。
+- Knowledge 与需求附件展示真实切片、Embedding Profile、维度和语义索引状态，不展示原始向量。
 - 唯一 Review Engine：Requirement/AC + Knowledge + PR patch → Finding。
 - Finding 人工生命周期 + PR 的 APPROVE/REQUEST_CHANGES。
 - 修复后按新 head SHA 产生新 Review，保留前后结果。
@@ -81,13 +83,13 @@ flowchart LR
 ### 不做
 
 - 通用聊天助手、聊天历史、SSE、多轮记忆。
-- Workbench、代码仓库/知识/AI 日志一级菜单。
+- 通用编排工作台、代码仓库浏览器、AI 日志或通用 Assistant 一级菜单。
 - 多仓库、多 SCM Connection、通用 Commit 审查、本地 clone/Git CLI。
 - 相关代码语义检索、代码向量库、AST/调用图。
 - Agent、Planner、Tool、Memory、Patch、自动改代码/提交。
 - MQ/Redis、微服务、独立 Sandbox、复杂 Observability。
 
-后置能力（核心 E2E 完成前不得实施）：多轮 Requirement Assistant、Workbench、多仓库、相关代码读取、报告导出、高级监控。
+后置能力（核心 E2E 完成前不得实施）：多轮 Requirement Assistant、多仓库、相关代码读取、报告导出、高级监控。D017 只批准只读项目工作台，不批准编排、聊天或自动执行。
 
 ## 5. 业务状态
 
@@ -175,6 +177,9 @@ READY 后正文与 AC 锁定；修改由 LEADER 创建新的不可变 Revision �
 - [ ] 需求状态与派生的评审活动在页面上分开呈现，互不污染。
 - [ ] Requirement Revision 或 PR Diff 变化后显示 `REVIEW_REQUIRED`，旧 Review 不可对当前输入作终局决定。
 - [ ] A 项目用户无法看到或操作 B 项目的任何资源。
+- [ ] 同项目 A 需求的私有附件不会进入 B 需求的 Guidance 或 Review；公共项目知识和当前需求附件可以召回。
+- [ ] 用户可在独立 Knowledge/仓库页面完成上传、查看向量索引状态、读取并编辑安全的 SCM 配置；任何响应不回显凭据或原始向量。
+- [ ] 工作台以真实数据展示项目脉搏和“质量检查 → 知识增强 Guidance → 唯一 Review Engine”的 AI 能力链，不伪造评分或运行状态。
 
 ## 8. 风险与边界声明
 

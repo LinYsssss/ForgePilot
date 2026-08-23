@@ -24,8 +24,8 @@ placeholder getters.
 ## Required patterns
 
 - Use semantic landmarks, a visible keyboard focus indicator, and the global
-  skip link; preserve the three approved top-level entries and seven approved
-  product paths.
+  skip link; preserve D017's six approved top-level entries and compatibility
+  detail paths.
 - Use `<script setup lang="ts">`, strict TypeScript, typed props/events, and
   `requestJson<T>` for JSON I/O.
 - Use token-backed styles and keep DOM order aligned with operational reading
@@ -72,8 +72,8 @@ substantial:
 - [ ] No new reusable color, spacing, radius, shadow, breakpoint, or motion
       value was added without a named token.
 - [ ] Browser console/network checks show no new errors or accidental retries.
-- [ ] No fourth top-level menu, business data, or Phase 2 capability slipped
-      into the shell.
+- [ ] No seventh top-level menu, fabricated business data, or unauthorized
+      Assistant/Agent capability slipped into the shell.
 
 ## Code review checklist
 

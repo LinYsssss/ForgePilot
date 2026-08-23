@@ -1,0 +1,10 @@
+{"file":".trellis/spec/frontend/index.md","reason":"Frontend package routing and authoritative sub-spec index."}
+{"file":".trellis/spec/frontend/design-contract.md","reason":"Approved shell, responsive, AI, vector, and visual constraints."}
+{"file":".trellis/spec/frontend/component-guidelines.md","reason":"Vue component, accessibility, and token usage rules."}
+{"file":".trellis/spec/frontend/state-management.md","reason":"URL project context and no-global-store boundary."}
+{"file":".trellis/spec/frontend/type-safety.md","reason":"Typed route, API, and view boundary requirements."}
+{"file":".trellis/spec/backend/database-guidelines.md","reason":"Transaction, project scoping, pgvector, and repository rules."}
+{"file":".trellis/spec/backend/error-handling.md","reason":"Existing backend HTTP and domain error contract."}
+{"file":".trellis/spec/backend/quality-guidelines.md","reason":"Direct service implementation and focused integration-test conventions."}
+{"file":".trellis/spec/guides/cross-layer-thinking-guide.md","reason":"Cross-module dependency and controller-to-service boundaries."}
+{"file":".trellis/tasks/08-23-product-flow-completion/research/current-gap-audit.md","reason":"Verified current implementation gaps and concrete integration points."}

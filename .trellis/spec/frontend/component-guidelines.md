@@ -78,8 +78,8 @@ horizontal overflow.
 
 ## Common mistakes to avoid
 
-- Adding a fourth top-level navigation item or a Workbench/Knowledge/Agent/
-  Patch/Metrics page during a foundation task.
+- Adding a seventh top-level navigation item or a general Assistant/Agent/Patch/
+  Metrics/AI Logs page beyond D017's six approved product entries.
 - Putting placeholder business data, forms, buttons, or review conclusions in
   a Phase 1 view.
 - Hiding important content behind animation, hover-only affordances, or a

@@ -1,6 +1,6 @@
 # ForgePilot V2 架构规范
 
-状态：**R2.3 已验收开发基线（2026-08-20）**。本文是 V2 的**技术权威**：模块边界、数据模型、流程契约、技术栈与运行边界。Phase 1 已获授权进入任务级规划，具体实现仍须通过 Trellis 计划确认闸门。
+状态：**R2.4 产品链路补全基线（2026-08-23）**。本文是 V2 的**技术权威**：模块边界、数据模型、流程契约、技术栈与运行边界。Phase 0–8 历史基线保持有效；D017 的补全仍须通过独立 Trellis Finish 闸门。
 
 - 产品定义（定位、角色、范围、验收）见 [PRD.md](./PRD.md)。
 - 决策理由见 [DECISIONS.md](./DECISIONS.md)；本文只陈述**规则**，不重复论证。
@@ -406,20 +406,24 @@ Requirement、文档、PR 标题、代码注释**全部是不可信数据**，�
 
 ## 6. 前端信息架构
 
-一级导航只有三个：**项目**、**研发需求**、**代码审查**。
+一级导航按 D017 固定为六个：**工作台**、**项目**、**研发需求**、**项目知识**、**仓库接入**、**代码审查**。桌面使用侧边导航，窄屏在既有断点降级为紧凑、可横向滚动的顶部导航。
 
 ```text
+/workspace
 /projects
 /projects/:id/members
-/projects/:id/settings       # SCM + Knowledge
 /requirements
 /requirements/:id
+/knowledge
+/repositories
 /reviews
 /reviews/:id
+/projects/:id/settings       # compatibility redirect → /repositories?project=:id
 ```
 
-Workbench、Knowledge、Repository、Metrics、Agent、Patch、AI Logs 均**不做**一级页面。
-知识检索测试不面向普通用户；管理员只需看到文档状态与失败原因。
+工作台是浏览器端组合现有列表 API 的只读项目总览，不新增 Dashboard 表、缓存或统计服务。Knowledge 与 Repository 是正式一级页面；Metrics、Agent、Patch、AI Logs 仍不做一级页面。
+工作台、需求和 Review 页面突出三段上下文内 AI 能力，但不得创建通用 AI/Assistant 入口、聊天框或第二条运行管线。Knowledge 页面展示真实文档/Chunk 数、已嵌入数、向量维度和 Embedding Profile；任何 HTTP 响应均不得返回原始向量。
+普通用户不获得手工向量查询调试台；项目成员只读查看文档状态、失败原因与真实向量索引元数据，LEADER 执行上传和提升。
 一次性实现建议位于 Requirement 详情页，不创建 Assistant 一级菜单或 Conversation 页面。
 AI 置信度、Finding 人工状态、Review Decision 在 UI 上必须明确分开呈现；需求状态与派生的评审活动（D011）同样是两个正交维度，不得合并为一个标签。
 

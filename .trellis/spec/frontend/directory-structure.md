@@ -83,5 +83,5 @@ in Phase 1, and do not move the existing shell merely for symmetry.
 - [AppShell.vue](../../../frontend/src/components/AppShell.vue) demonstrates
   the document shell and navigation boundary.
 - [routes.ts](../../../frontend/src/app/routes.ts) is the source of truth for
-  the seven approved Phase 1 paths.
+  D017's approved product paths and compatibility redirects.
 - [http.ts](../../../frontend/src/lib/http.ts) is the only request utility.

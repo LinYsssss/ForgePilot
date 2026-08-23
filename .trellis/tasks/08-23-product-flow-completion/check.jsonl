@@ -1,0 +1,7 @@
+{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"Frontend lint, type, focused test, build, and visual drift checks."}
+{"file":".trellis/spec/frontend/design-contract.md","reason":"Six-entry shell, accessibility, responsive, AI, and vector acceptance."}
+{"file":".trellis/spec/backend/quality-guidelines.md","reason":"Backend focused test and final verification discipline."}
+{"file":".trellis/spec/backend/database-guidelines.md","reason":"Audit SQL requirement isolation, transactionality, and schema invariants."}
+{"file":".trellis/spec/guides/code-reuse-thinking-guide.md","reason":"Check for unnecessary wrappers or duplicated request/runtime abstractions."}
+{"file":".trellis/spec/guides/cross-layer-thinking-guide.md","reason":"Check package direction and API-to-UI contract completeness."}
+{"file":".trellis/tasks/08-23-product-flow-completion/research/current-gap-audit.md","reason":"Compare final code against the recorded gap baseline."}

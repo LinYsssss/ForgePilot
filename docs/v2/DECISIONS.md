@@ -1,6 +1,6 @@
 # ForgePilot V2 决策记录
 
-状态：**R2.3 已验收开发基线（2026-08-20）**。
+状态：**R2.4 产品链路补全基线（2026-08-23）**。
 
 本文将原来分散的 11 份 ADR 收敛为一个决策记录，只解释“为什么这样定”和不可逆后果；可执行规则分别以 [PRD](./PRD.md)、[ARCHITECTURE](./ARCHITECTURE.md) 和 [IMPLEMENTATION-PLAN](./IMPLEMENTATION-PLAN.md) 为准。未来新增决策按 `D012...` 追加；修改已接受决策须用户明确批准并在 Git 历史中留痕。
 
@@ -440,3 +440,14 @@ PRD P1 的另一半「本人 PR 且当前 head 尚无人工终局 Decision」**�
 
 **本决策不改变**：16 张表的定义、[D001](#d001) 的不绑维度、模块边界、ArchUnit 七条规则、
 holdout 纪律，以及 [D001](#d001)–[D015](#d015) 的任何其它已接受结论。
+
+<a id="d017"></a>
+## D017 六入口产品界面与主链路补全
+
+**决定**：正式前端采用“工作台 / 项目 / 研发需求 / 项目知识 / 仓库接入 / 代码审查”六个一级入口。工作台只在浏览器端组合真实列表 API，展示项目研发概况与“需求质量检查 → 知识增强实现建议 → 唯一 AI Review Engine”的能力链；它不是聊天、Agent、自动执行或新的业务域。项目知识与仓库接入成为独立页面，旧 `/projects/:id/settings` 只作兼容跳转。
+
+Project Knowledge 与 Requirement 附件补齐正式 HTTP 用户流程；附件关系仍以 `requirement_attachment` 为唯一事实源并与 Document 同事务写入。向量检索在 SQL 中同时按项目与当前 Requirement 过滤，无 Requirement 上下文时只能召回公共 Project Knowledge。Guidance 使用 Requirement、AC、公共知识与当前需求附件，一次性返回 `checklist/rules/risks` 和真实召回引用。SCM 读取只返回安全元数据。
+
+**理由**：原三入口界面隐藏了已经属于主因果链的 Knowledge 与 SCM，并且缺少上传、附件、刷新读取和知识增强 Guidance 的用户闭环。只读工作台和真实向量元数据能让用户理解系统亮点，同时不增加持久化、第二运行时或虚构遥测。
+
+**后果**：前端契约由 3 个一级入口扩展为 6 个，桌面 Shell 改为侧边导航并保留窄屏可达性；两份用户 Logo 成为正式品牌资源。允许展示 Chunk 数、已嵌入数、维度、Embedding Profile、索引状态和语义召回相似度，但禁止返回原始向量或凭据。16 表、8 包、一个仓库/项目、唯一 Review Engine、AI 不改变业务状态和不可变评测证据均不改变。
