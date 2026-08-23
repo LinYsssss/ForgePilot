@@ -1,0 +1,4 @@
+{"file": ".trellis/spec/frontend/design-contract.md", "reason": "Shell, navigation, responsive and branding contract"}
+{"file": ".trellis/spec/frontend/component-guidelines.md", "reason": "Shared page and form component conventions"}
+{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "Frontend validation and accessibility requirements"}
+{"file": ".trellis/tasks/08-23-topnav-ui-data-reset/research/preimplementation-audit.md", "reason": "Exact Shell, test and database cleanup impact audit"}
