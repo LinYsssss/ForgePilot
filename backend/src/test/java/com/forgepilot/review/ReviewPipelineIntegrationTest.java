@@ -441,6 +441,62 @@ class ReviewPipelineIntegrationTest extends PostgresTestBase {
                 .contains(binary);
     }
 
+    /**
+     * The category vocabulary is declared in three places that have to agree: the
+     * two schemas, {@link FindingCategory}, and {@code ck_finding_category}. A value
+     * the schema offers but the constraint rejects does not lose its own row — it
+     * aborts the <em>entire</em> batch insert, so one drifted word costs every
+     * finding in the review. Walking the enum end to end is what makes that
+     * disagreement impossible to introduce quietly.
+     *
+     * <p>The explanation and the suggestion travel as two adjacent {@code String}
+     * parameters from the validator through {@code ReviewPipeline} into the entity.
+     * Swapping them compiles and mislabels every finding ever written, so one of
+     * them is asserted by value rather than by presence.
+     */
+    @Test
+    void everyCategoryAndTheModelsProseSurviveIntoTheDatabase() {
+        Fixture fixture = new Fixture(List.of(new ChangedFile(REVIEWED_PATH, "modified", REVIEWED_PATCH)));
+        provider.onBatch(prompt -> emptyBatchAnswer());
+        provider.onSynthesis(prompt -> {
+            StringBuilder findings = new StringBuilder();
+            for (FindingCategory category : FindingCategory.values()) {
+                if (!findings.isEmpty()) {
+                    findings.append(',');
+                }
+                findings.append("{\"type\": \"CODE_QUALITY\", \"category\": \"").append(category)
+                        .append("\", \"path\": \"").append(REVIEWED_PATH)
+                        .append("\", \"line\": 2, \"evidence\": \"").append(QUOTED_EVIDENCE)
+                        .append("\", \"explanation\": \"why ").append(category)
+                        .append(" matters here\", \"suggestion\": \"what to do about ").append(category)
+                        .append("\", \"confidence\": \"MEDIUM\", \"acId\": null, \"sourceIds\": []}");
+            }
+            return "{\"acVerdicts\": [], \"findings\": [" + findings + "]}";
+        });
+
+        long review = fixture.deliver();
+
+        assertThat(awaitTerminalStatus(review)).isEqualTo("COMPLETED");
+        assertThat(jdbc.queryForList("select category from finding where review_id = ?",
+                String.class, review))
+                .as("a category the schema offers but ck_finding_category rejects takes the whole "
+                        + "batch insert down with it, not just its own row")
+                .containsExactlyInAnyOrderElementsOf(
+                        List.of(FindingCategory.values()).stream().map(Enum::name).toList());
+        assertThat(jdbc.queryForObject(
+                "select explanation from finding where review_id = ? and category = 'SECURITY'",
+                String.class, review))
+                .as("explanation and suggestion are adjacent String parameters the whole way down")
+                .isEqualTo("why SECURITY matters here");
+        assertThat(jdbc.queryForObject(
+                "select suggestion from finding where review_id = ? and category = 'SECURITY'",
+                String.class, review))
+                .isEqualTo("what to do about SECURITY");
+        assertThat(jdbc.queryForList("select distinct confidence from finding where review_id = ?",
+                String.class, review))
+                .containsExactly("MEDIUM");
+    }
+
     // --------------------------------------------------------------- the schemas
 
     /**
@@ -448,20 +504,25 @@ class ReviewPipelineIntegrationTest extends PostgresTestBase {
      * replaces that provider — so a schema that is not JSON would be caught by
      * nothing here and by production on the first real call.
      *
-     * <p>The category enum is checked to be identical in both because it feeds
-     * {@code finding_key}: if the batch and the synthesis disagreed about the
-     * vocabulary, keys would stop matching across rounds and every suppression
-     * would quietly stop being inherited.
+     * <p>The two finding literals are deliberately duplicated rather than shared
+     * (see {@code ReviewPrompts}'s class javadoc), so the one thing worth
+     * asserting is that they still describe the same finding. Whole-node
+     * equality covers the category vocabulary — which feeds {@code finding_key},
+     * so a disagreement there would stop keys matching across rounds and quietly
+     * stop every suppression being inherited — and it covers the prose fields
+     * the same way: a synthesis that is never asked for an explanation silently
+     * drops the one the batches produced.
      */
     @Test
-    void bothSchemasAreValidJsonAndAgreeOnTheCategoryVocabulary() {
+    void bothSchemasAreValidJsonAndDescribeTheSameFinding() {
         JsonNode batch = json.readTree(ReviewPrompts.BATCH_SCHEMA);
         JsonNode synthesis = json.readTree(ReviewPrompts.SYNTHESIS_SCHEMA);
 
-        JsonNode batchCategories = categoryEnum(batch);
-        assertThat(batchCategories.isArray()).isTrue();
-        assertThat(batchCategories.size()).isGreaterThan(1);
-        assertThat(categoryEnum(synthesis)).isEqualTo(batchCategories);
+        assertThat(categoryEnum(batch).isArray()).isTrue();
+        assertThat(categoryEnum(batch).size()).isGreaterThan(1);
+        assertThat(findingItems(synthesis))
+                .as("the two finding literals are duplicated on purpose; they may not drift")
+                .isEqualTo(findingItems(batch));
 
         // Requirement two of agent B's: evidence is a quotation, and the schema is
         // where a model is told so.
@@ -473,8 +534,12 @@ class ReviewPipelineIntegrationTest extends PostgresTestBase {
                 .isNull();
     }
 
+    private static JsonNode findingItems(JsonNode schema) {
+        return schema.get("properties").get("findings").get("items");
+    }
+
     private static JsonNode findingProperties(JsonNode schema) {
-        return schema.get("properties").get("findings").get("items").get("properties");
+        return findingItems(schema).get("properties");
     }
 
     private static JsonNode categoryEnum(JsonNode schema) {
@@ -490,7 +555,9 @@ class ReviewPipelineIntegrationTest extends PostgresTestBase {
     private static String candidateAnswer(String path) {
         return """
                 {"findings": [{"type": "CODE_QUALITY", "category": "MAINTAINABILITY", "path": "%s",
-                   "line": 2, "evidence": "%s", "acId": null, "sourceIds": []}],
+                   "line": 2, "evidence": "%s", "explanation": "the total is recomputed on every call",
+                   "suggestion": "hoist it out of the loop", "confidence": "MEDIUM",
+                   "acId": null, "sourceIds": []}],
                  "acEvidence": []}
                 """.formatted(path, QUOTED_EVIDENCE);
     }

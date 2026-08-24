@@ -185,6 +185,8 @@ public class ReviewPipeline {
             Finding finding = new Finding(claim.projectId(), claim.reviewId(), claim.attempt(),
                     candidate.requirementId(), candidate.requirementRevisionId(), candidate.acId(),
                     candidate.findingType(), candidate.path(), candidate.line(), candidate.evidence(),
+                    candidate.category(), candidate.explanation(), candidate.suggestion(),
+                    candidate.confidence(),
                     candidate.findingKey(), candidate.evidenceHash(), candidate.basisHash(),
                     lineage.continuity(), lineage.carriedFromFindingId());
             if (lineage.initialStatus() == FindingStatus.REJECTED) {

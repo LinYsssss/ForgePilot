@@ -221,7 +221,10 @@ public class ReviewDecisionService {
 
     private static FindingView view(Finding finding, Map<Long, String> acKeys) {
         return new FindingView(finding.getId(), finding.getFindingType(), finding.getPath(),
-                finding.getLine(), finding.getEvidence(), finding.getStatus(), finding.getContinuity(),
+                finding.getLine(), finding.getEvidence(),
+                finding.getCategory(), finding.getExplanation(), finding.getSuggestion(),
+                finding.getConfidence(),
+                finding.getStatus(), finding.getContinuity(),
                 finding.getRequirementId(), finding.getRequirementRevisionId(), finding.getAcId(),
                 finding.getAcId() == null ? null : acKeys.get(finding.getAcId()),
                 finding.getAssigneeId(), finding.getCarriedFromFindingId(), finding.getFindingKey(),

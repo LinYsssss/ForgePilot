@@ -60,7 +60,7 @@ class FoundationDatabaseTest extends PostgresTestBase {
         assertThat(history).extracting(row -> row.get("version") + ":" + row.get("description"))
                 .containsExactly("1:foundation", "2:auth project", "3:requirement",
                         "4:knowledge ai", "5:scm", "6:review", "7:pull request title",
-                        "8:member roles and scm identities");
+                        "8:member roles and scm identities", "9:finding explanation");
         assertThat(history).allSatisfy(row -> assertThat(row.get("success")).isEqualTo(true));
     }
 

@@ -37,6 +37,14 @@ import tools.jackson.databind.ObjectMapper;
 @Component
 public class ReviewOutputValidator {
 
+    /**
+     * 散文字段的上限，沿用本代码库既有的散文上限约定
+     * （{@code FindingController.StatusRequest.comment} 与前端 textarea 同为 2000），
+     * 不另立一个数字。它同时写在两个 schema 的 {@code maxLength} 里；
+     * 这里是模型不遵守时的那道防线。
+     */
+    private static final int MAX_PROSE = 2000;
+
     private final ObjectMapper json;
 
     ReviewOutputValidator(ObjectMapper json) {
@@ -214,14 +222,20 @@ public class ReviewOutputValidator {
         }
 
         Integer line = verifiedLine(item, file);
-        String category = stringOrNull(item, "category");
+        // key 用的是模型给出的原始字符串（在 FindingKeys 里经 normalizeCategory
+        // 折叠），落库用的是映射到词表之后的值。两者刻意不同，见 FindingCategory。
+        String reportedCategory = stringOrNull(item, "category");
         return new FindingCandidate(type, path, line, evidence,
+                category(reportedCategory, warnings, path),
+                prose(item, "explanation", warnings, path),
+                prose(item, "suggestion", warnings, path),
+                confidence(item, warnings, path),
                 // 从 Review 复制而来，绝不从模型读取：约束触发器会把这两列与父行
                 // 比对，而由模型挑出来的值只可能与之矛盾。
                 context.requirementId(), context.requirementRevisionId(),
                 criterion == null ? null : criterion.id(),
                 criterion == null ? null : criterion.key(),
-                FindingKeys.findingKey(type, path, line, category,
+                FindingKeys.findingKey(type, path, line, reportedCategory,
                         criterion == null ? null : context.requirementId(),
                         criterion == null ? null : criterion.key()),
                 FindingKeys.evidenceHash(evidence),
@@ -231,6 +245,60 @@ public class ReviewOutputValidator {
                         criterion == null ? null : criterion.key(),
                         criterion == null ? null : criterion.text(),
                         excerptHashes));
+    }
+
+    /**
+     * 模型写的散文，缺席时为 {@code null}，超出 {@link #MAX_PROSE} 则截断。
+     * 两种情形都留下警告，且<strong>都不会丢弃这条 finding</strong>。
+     *
+     * <p>丢弃整条留给确定性部分不可用的情形——例如没有 evidence，那会让所有
+     * 无证据的 finding 共享同一个 {@code evidence_hash}。散文进不了任何哈希，
+     * 所以为它丢掉一条有证据的有效 finding 是纯粹的损失；而为啰嗦而拒绝
+     * 是同一种损失换了个理由，因此超限是截断而不是拒绝。
+     */
+    private static String prose(JsonNode item, String field, List<String> warnings, String path) {
+        String value = stringOrNull(item, field);
+        if (value == null || value.isBlank()) {
+            warnings.add("a finding for " + path + " carries no " + field);
+            return null;
+        }
+        String stripped = value.strip();
+        if (stripped.length() <= MAX_PROSE) {
+            return stripped;
+        }
+        warnings.add("truncated the " + field + " of a finding for " + path
+                + " at " + MAX_PROSE + " characters");
+        return stripped.substring(0, MAX_PROSE);
+    }
+
+    /**
+     * 落库用的类别，词表外或缺席时为 {@code null}。
+     *
+     * <p>越界值绝不能原样送到 {@code ck_finding_category}：走到约束那里的值
+     * 中止的是**整批**插入而不是这一行（同 {@code ck_finding_code_quality_has_no_ac}
+     * 的形态）。这里丢掉的只是落库的那一份，{@code finding_key} 仍由原始字符串
+     * 算出，因此不因本次丢弃而改变。
+     */
+    private static FindingCategory category(String reported, List<String> warnings, String path) {
+        FindingCategory category = FindingCategory.of(reported);
+        if (category == null) {
+            warnings.add("dropped the category of a finding for " + path
+                    + (reported == null ? ": the answer carried none"
+                            : ": it is outside the category vocabulary"));
+        }
+        return category;
+    }
+
+    /** 落库用的置信度档位，词表外或缺席时为 {@code null}（同样不丢弃这条 finding）。 */
+    private static FindingConfidence confidence(JsonNode item, List<String> warnings, String path) {
+        String reported = stringOrNull(item, "confidence");
+        FindingConfidence confidence = FindingConfidence.of(reported);
+        if (confidence == null) {
+            warnings.add("dropped the confidence of a finding for " + path
+                    + (reported == null ? ": the answer carried none"
+                            : ": it is outside the confidence vocabulary"));
+        }
+        return confidence;
     }
 
     private List<AcEvidence> readEvidence(JsonNode root, Context context, List<String> warnings) {

@@ -75,6 +75,36 @@ public class Finding {
     @Column(name = "evidence", updatable = false)
     private String evidence;
 
+    /**
+     * 封闭词表，且它一直是 {@link #findingKey} 的输入之一（3.6.1）。V9 起也落库——
+     * 在那之前，这个语义标签算完 key 就被丢掉了。
+     *
+     * <p>落库存的是归一化后的词表值，而进 key 的仍是模型给出的原始字符串。
+     * 这个分工必须保持：若落库匹配比 key 更严格，两条经归一化后同属一类、
+     * 因而共享同一个 {@code finding_key} 的 finding，就会带着不同的 category
+     * 存进去。
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "category", length = 32, updatable = false)
+    private FindingCategory category;
+
+    /**
+     * 模型自己写的问题说明（V9、D021）。它与 {@link #suggestion}、
+     * {@link #confidence} 是这张表里唯一允许随模型措辞变动的三列，
+     * 这正是它们一个都不得进入下面三个哈希的原因。
+     */
+    @Column(name = "explanation", updatable = false)
+    private String explanation;
+
+    /** 模型给的修复建议。只是建议：AI 不产出补丁、不自动改码（AGENTS.md）。 */
+    @Column(name = "suggestion", updatable = false)
+    private String suggestion;
+
+    /** 未经校准，故为分档而非数字；不参与任何自动门禁或状态流转（D021）。 */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "confidence", length = 16, updatable = false)
+    private FindingConfidence confidence;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 16)
     private FindingStatus status = FindingStatus.OPEN;
@@ -117,7 +147,8 @@ public class Finding {
 
     public Finding(Long projectId, Long reviewId, int reviewAttempt, Long requirementId,
             Long requirementRevisionId, Long acId, FindingType findingType, String path, Integer line,
-            String evidence, String findingKey, String evidenceHash, String basisHash,
+            String evidence, FindingCategory category, String explanation, String suggestion,
+            FindingConfidence confidence, String findingKey, String evidenceHash, String basisHash,
             FindingContinuity continuity, Long carriedFromFindingId) {
         this.projectId = projectId;
         this.reviewId = reviewId;
@@ -129,6 +160,10 @@ public class Finding {
         this.path = path;
         this.line = line;
         this.evidence = evidence;
+        this.category = category;
+        this.explanation = explanation;
+        this.suggestion = suggestion;
+        this.confidence = confidence;
         this.findingKey = findingKey;
         this.evidenceHash = evidenceHash;
         this.basisHash = basisHash;
@@ -178,6 +213,22 @@ public class Finding {
 
     public String getEvidence() {
         return evidence;
+    }
+
+    public FindingCategory getCategory() {
+        return category;
+    }
+
+    public String getExplanation() {
+        return explanation;
+    }
+
+    public String getSuggestion() {
+        return suggestion;
+    }
+
+    public FindingConfidence getConfidence() {
+        return confidence;
     }
 
     public FindingStatus getStatus() {

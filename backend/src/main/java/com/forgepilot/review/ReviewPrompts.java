@@ -17,7 +17,7 @@ import com.forgepilot.scm.ChangedFile;
  * ContextBuilder，而业务 Prompt 属于拥有其业务含义的那个功能模块——
  * 与 {@code requirement} 为质量检查和实现建议采用的形态一致。
  *
- * <p>schema 里有两条规则是承重的而非风格问题，二者都是为了让 D009 的
+ * <p>schema 里有三条规则是承重的而非风格问题，三者都是为了让 D009 的
  * 抑制机制保持诚实：
  *
  * <ul>
@@ -30,6 +30,13 @@ import com.forgepilot.scm.ChangedFile;
  * {@code finding_key}（3.6.1），因此在那里放自由文本会让 key 随模型的措辞漂移
  * ——这是同一个故障换了条路径发生，而且它还额外破坏了那些尚无人判断过的
  * finding 的跨轮次匹配。</li>
+ * <li><strong>{@code explanation}、{@code suggestion} 与 {@code confidence}
+ * 绝不进入三个哈希中的任何一个。</strong>它们是模型的散文与自报把握，
+ * 是本 schema 里仅有的、允许随措辞自由变动的输出。一旦其中任何一个被喂进
+ * {@code finding_key}、{@code evidence_hash} 或 {@code basis_hash}，同一个问题
+ * 就会在每一轮换个说法后变成「新问题」，跨轮次去重、抑制与血缘同时失效——
+ * 这正是上面两条规则费力避免的那个故障。{@code confidence} 另外还不得
+ * 参与任何自动门禁或状态流转：它未经校准。</li>
  * </ul>
  *
  * <p>两个 schema 重复了 finding 的结构，而不是共享一个片段。这次重复是刻意的：
@@ -46,7 +53,7 @@ final class ReviewPrompts {
      * 存进 {@code review.prompt_version}。只要任一条指令或任一个 schema 变了，
      * 它就必须跟着变：一份存下来的报告只有对着产生它的那个 Prompt 才可解读。
      */
-    static final String VERSION = "review-1";
+    static final String VERSION = "review-2";
 
     /** 存进 {@code review.engine}。Review Engine 恰好只有一个（AGENTS.md）。 */
     static final String ENGINE = "forgepilot-review";
@@ -67,7 +74,8 @@ final class ReviewPrompts {
                   "items": {
                     "type": "object",
                     "additionalProperties": false,
-                    "required": ["type", "category", "path", "line", "evidence", "acId", "sourceIds"],
+                    "required": ["type", "category", "path", "line", "evidence", "explanation",
+                      "suggestion", "confidence", "acId", "sourceIds"],
                     "properties": {
                       "type": {"type": "string", "enum": ["CODE_QUALITY", "REQUIREMENT"]},
                       "category": {"type": "string", "enum": ["CORRECTNESS", "SECURITY",
@@ -77,6 +85,13 @@ final class ReviewPrompts {
                       "line": {"type": ["integer", "null"]},
                       "evidence": {"type": "string", "description": "A verbatim quotation copied \
             character for character out of the patch shown for this path, never a paraphrase."},
+                      "explanation": {"type": "string", "maxLength": 2000, "description": "Your own \
+            plain-language account of what is wrong here and why it matters. Your wording, not a quotation."},
+                      "suggestion": {"type": "string", "maxLength": 2000, "description": "Your own \
+            concrete advice for fixing it. Advice only -- you never write the change yourself."},
+                      "confidence": {"type": "string", "enum": ["HIGH", "MEDIUM", "LOW"], \
+            "description": "How sure you are that this finding is real. A coarse band, never a \
+            calibrated probability."},
                       "acId": {"type": ["integer", "null"]},
                       "sourceIds": {"type": "array", "items": {"type": "integer"}}
                     }
@@ -124,7 +139,8 @@ final class ReviewPrompts {
                   "items": {
                     "type": "object",
                     "additionalProperties": false,
-                    "required": ["type", "category", "path", "line", "evidence", "acId", "sourceIds"],
+                    "required": ["type", "category", "path", "line", "evidence", "explanation",
+                      "suggestion", "confidence", "acId", "sourceIds"],
                     "properties": {
                       "type": {"type": "string", "enum": ["CODE_QUALITY", "REQUIREMENT"]},
                       "category": {"type": "string", "enum": ["CORRECTNESS", "SECURITY",
@@ -134,6 +150,13 @@ final class ReviewPrompts {
                       "line": {"type": ["integer", "null"]},
                       "evidence": {"type": "string", "description": "A verbatim quotation copied \
             character for character out of the patch shown for this path, never a paraphrase."},
+                      "explanation": {"type": "string", "maxLength": 2000, "description": "Your own \
+            plain-language account of what is wrong here and why it matters. Your wording, not a quotation."},
+                      "suggestion": {"type": "string", "maxLength": 2000, "description": "Your own \
+            concrete advice for fixing it. Advice only -- you never write the change yourself."},
+                      "confidence": {"type": "string", "enum": ["HIGH", "MEDIUM", "LOW"], \
+            "description": "How sure you are that this finding is real. A coarse band, never a \
+            calibrated probability."},
                       "acId": {"type": ["integer", "null"]},
                       "sourceIds": {"type": "array", "items": {"type": "integer"}}
                     }

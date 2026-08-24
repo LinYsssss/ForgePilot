@@ -201,15 +201,25 @@ class ReviewOutputValidatorTest {
 
     // ------------------------------------------------------------- the hashes
 
+    /**
+     * D009 的红线。{@code explanation}、{@code suggestion} 与 {@code confidence}
+     * 是回答里仅有的、允许随措辞自由变动的字段；一旦它们中的任何一个渗进三个
+     * 哈希，同一个问题就会在每一轮换个说法后变成「新问题」，而跨轮次去重、抑制
+     * 与血缘会同时失效——且要到下一轮审查才看得出来。
+     *
+     * <p>{@code category} 两次给的是同一个类别的不同写法：它经
+     * {@link FindingKeys#normalizeCategory} 折叠大小写与首尾空白后才进
+     * {@code finding_key}，因此两者必须得到同一个 key。
+     */
     @Test
     void rewordingTheModelsProseChangesNoKeyAndNoHash() {
         String terse = "{\"type\":\"REQUIREMENT\",\"acId\":11,\"path\":\"" + FILE + "\",\"line\":3,"
-                + "\"category\":\"missing-check\",\"evidence\":\"class A {}\","
-                + "\"title\":\"Missing check\",\"severity\":\"HIGH\","
-                + "\"description\":\"The class does not check its input.\"}";
-        String verbose = "{ \"description\" : \"This class, regrettably, omits the input check entirely.\",\n"
-                + "  \"severity\":\"CRITICAL\", \"title\":\"No validation whatsoever\",\n"
-                + "  \"evidence\":\"class A {}\", \"category\":\"Missing-Check \",\n"
+                + "\"category\":\"CORRECTNESS\",\"evidence\":\"class A {}\","
+                + "\"explanation\":\"The class does not check its input.\","
+                + "\"suggestion\":\"Reject blank input.\",\"confidence\":\"HIGH\"}";
+        String verbose = "{ \"explanation\" : \"This class, regrettably, omits the input check entirely.\",\n"
+                + "  \"suggestion\":\"Reject blank input before constructing anything, and cover it with a test.\",\n"
+                + "  \"confidence\":\"LOW\", \"evidence\":\"class A {}\", \"category\":\"Correctness \",\n"
                 + "  \"line\":3, \"path\":\"" + FILE + "\", \"acId\":11, \"type\":\"REQUIREMENT\" }";
 
         FindingCandidate first = valid("", terse).findings().getFirst();
@@ -303,8 +313,69 @@ class ReviewOutputValidatorTest {
         assertThat(output.warnings()).anyMatch(warning -> warning.contains("duplicate"));
     }
 
+    // ------------------------------------------------- the model's own narrative
+
+    @Test
+    void aFindingWithNoProseIsKeptAndTheGapIsRecorded() {
+        ReviewOutput output = valid("", finding("CODE_QUALITY", FILE, 3, "class A {}", ""));
+
+        FindingCandidate candidate = output.findings().getFirst();
+        // 散文进不了任何哈希，所以它缺席不构成丢弃整条的理由：一条有证据的有效
+        // finding 比一段说明值钱得多。丢弃留给确定性部分不可用的情形。
+        assertThat(candidate.explanation()).isNull();
+        assertThat(candidate.suggestion()).isNull();
+        assertThat(candidate.confidence()).isNull();
+        assertThat(output.warnings())
+                .as("dropping it silently would leave a report nobody can tell was shortened")
+                .anyMatch(warning -> warning.contains("no explanation"))
+                .anyMatch(warning -> warning.contains("no suggestion"));
+    }
+
+    @Test
+    void proseBeyondTheCapIsTruncatedRatherThanCostingTheFinding() {
+        ReviewOutput output = valid("", finding("CODE_QUALITY", FILE, 3, "class A {}",
+                "\"explanation\":\"" + "x".repeat(2100) + "\",\"suggestion\":\"fix it\","));
+
+        assertThat(output.findings().getFirst().explanation()).hasSize(2000);
+        assertThat(output.findings().getFirst().suggestion()).isEqualTo("fix it");
+        assertThat(output.warnings()).anyMatch(warning -> warning.contains("truncated"));
+    }
+
+    @Test
+    void aCategoryOutsideTheVocabularyIsNotStoredButStillDrivesTheKey() {
+        ReviewOutput invented = valid("", "{\"type\":\"CODE_QUALITY\",\"path\":\"" + FILE
+                + "\",\"line\":3,\"category\":\"vibes\",\"evidence\":\"class A {}\"}");
+        ReviewOutput other = valid("", "{\"type\":\"CODE_QUALITY\",\"path\":\"" + FILE
+                + "\",\"line\":3,\"category\":\"omens\",\"evidence\":\"class A {}\"}");
+
+        FindingCandidate first = invented.findings().getFirst();
+        // 越界值绝不能走到 ck_finding_category：到了那里，中止的是整批插入而不是
+        // 这一行。
+        assertThat(first.category()).isNull();
+        assertThat(invented.warnings()).anyMatch(warning -> warning.contains("category"));
+        // 但 key 仍由模型给出的原始字符串算出，所以两个不同的越界类别不会被折叠
+        // 成同一条 finding。
+        assertThat(other.findings().getFirst().findingKey()).isNotEqualTo(first.findingKey());
+    }
+
+    @Test
+    void aConfidenceOutsideTheBandsIsDroppedAndTheFindingSurvives() {
+        // 恰是 D021 拒绝的那种假精度。
+        ReviewOutput output = valid("", finding("CODE_QUALITY", FILE, 3, "class A {}",
+                "\"confidence\":\"0.87\","));
+
+        assertThat(output.findings()).hasSize(1);
+        assertThat(output.findings().getFirst().confidence()).isNull();
+        assertThat(output.warnings()).anyMatch(warning -> warning.contains("confidence"));
+    }
+
+    /**
+     * Carries no explanation, suggestion or confidence: a model that answers the
+     * structure but skips the prose is the tolerated case, not the rejected one, so
+     * it is what most of these tests should be built on.
+     */
     private static String finding(String type, String path, int line, String evidence, String extraFields) {
         return "{\"type\":\"" + type + "\"," + extraFields + "\"path\":\"" + path + "\",\"line\":" + line
-                + ",\"category\":\"missing-check\",\"evidence\":\"" + evidence + "\"}";
+                + ",\"category\":\"CORRECTNESS\",\"evidence\":\"" + evidence + "\"}";
     }
 }
