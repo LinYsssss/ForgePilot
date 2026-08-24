@@ -28,6 +28,13 @@ component change.
   Repository Integration, and Reviews. Desktop uses a top application bar with
   the lockup on the left, six links centered, and account actions on the right.
   At `64rem` it becomes two rows with a horizontally scrollable navigation.
+- `/account` is an authenticated contextual page reached from the account menu,
+  not a seventh top-level entry. It owns display-name editing and the current
+  user's labelled SCM identities.
+- Member management identifies people by display name, username, and platform
+  ID; LEADER selects existing accounts, may batch-add them, and edits role
+  sets. SCM identity choice is rendered only on the member's own card, while a
+  LEADER may approve or reject a pending binding without choosing it for them.
 - A surface displays one visible Logo: the signed-in Shell uses the lockup,
   Login uses the app icon, and the app icon remains the favicon.
 - Workspace is a read-only composition of real project APIs. It may summarize

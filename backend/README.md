@@ -1,7 +1,8 @@
 # Backend
 
 ForgePilot V2 的 Spring Boot 模块化单体，Phase 2–8 的业务实现已全部落地：8 个顶层业务包、
-16 张业务表、7 个 Flyway 迁移，`./mvnw -B -ntp verify` 316 个测试全绿。
+19 张业务表、8 个 Flyway 迁移。V8 增加显示名、成员多角色、用户 SCM 多身份和项目绑定历史。
+最近一次完整 `verify`（2026-08-24）为 317 个测试通过、零失败、零跳过。
 
 本地入口是 `./mvnw`；它使用仓库锁定的 Maven 3.9.16，不要求全局 Maven。分发包 URL 与
 sha256 校验值只在 `.mvn/wrapper/maven-wrapper.properties` 中定义。需要 Java 21
@@ -33,9 +34,9 @@ H2、跳过测试或 Docker 条件分支替代。
 ```text
 common       统一错误模型与异常处理
 auth         账号、会话、CSRF、鉴权入口
-project      项目、成员、角色与项目级 SCM 身份
+project      项目、成员目录、多角色与项目隔离
 requirement  需求、验收条件、不可变修订、质量检查与实现建议
-scm          GitHub/GitLab Provider、Webhook、PR 快照与需求关联
+scm          GitHub/GitLab Provider、用户身份与项目绑定、Webhook、PR 快照与需求关联
 knowledge    项目知识文档、分块与 pgvector 检索
 ai           统一 AI 网关、Prompt 净化与调用审计
 review       唯一 Review Engine、Finding 生命周期与人工决策

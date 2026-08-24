@@ -497,3 +497,20 @@ Project Knowledge 与 Requirement 附件补齐正式 HTTP 用户流程；附件�
 **后果**：`ChunkSearchRepository` 的查询保持 `c.embedding <=> ?::vector`，不引入 cast 表达式，也不引入第二段检索。`KnowledgeVectorIndexTest` 把上表的三条拒绝钉成断言：pgvector 一旦放宽上限，该测试就会失败，而那次失败正是「D019 的前提变了，回来重开」的信号——一份躺在 markdown 里的实测结论没有这个性质。
 
 **重新评估的触发条件**：单项目 chunk 数进入万级；或检索延迟成为可观测问题；或 Embedding Profile 换到 ≤2000 维。
+
+<a id="d020"></a>
+## D020 成员目录、多角色与用户自有 SCM 多身份
+
+**决定**：账户增加非空 `display_name`，成员选择时同时展示显示名、用户名和平台 ID；LEADER 通过分页搜索选择已有账户并一次最多原子添加 50 人。同一成员可同时拥有 `LEADER / DEVELOPER / REVIEWER` 多个角色，授权取角色能力并集。项目仍恰有一个 LEADER，授予或移除 LEADER 只能走独立转移动作。
+
+SCM 身份改由用户本人持有。用户用一次性 Token 调用 GitHub/GitLab 当前用户接口，平台只保存 Provider、规范化实例、稳定外部用户 ID、当前用户名、标签、用途和验证时间，不保存 Token。一个用户可有多个身份；同一个已验证远端身份只能归属一个本地账户。
+
+项目成员只能为自己选择与项目仓库 Provider/实例兼容的身份，并再次用一次性 Token 验证当前用户及仓库访问级别。项目默认自动激活绑定；LEADER 可为仓库开启严格模式，使新绑定进入 `PENDING_APPROVAL`，但 LEADER 只能批准或拒绝，不能替成员选择身份。每个成员在每个项目同时最多一个活动绑定，替换、撤销与审批结果保留历史。只有活动且已验证的绑定参与 `pull_request.author_user_id` 重算和“本人 PR”授权，用户名始终只显示。
+
+**数据实现**：V8 增加 `project_member_role`、`scm_identity`、`project_member_scm_binding` 三张表，并从 V1–V7 的单角色/Leader 手填身份原地迁移。旧手填身份保留为 `LEGACY_UNCONFIRMED` 证据，不获得授权；`project_member` 的旧角色和 SCM 列随后删除。表从 16 增至 19，Flyway 从 V7 增至 V8。
+
+**理由**：把角色数组或多组 SCM 字段继续塞在 `project_member` 会失去可验证的唯一性、所有权和绑定历史；三张关系表分别对应三个不可合并的业务事实。标签与用途解决“Leader 无法判断员工多个账号各自用途”的问题，稳定外部 ID 继续解决用户名可变/可复用的问题。一次性 Provider 验证消除 Leader 手填错误，又无需 OAuth 应用、Token 存储或通用凭据系统。
+
+**明确不做**：成员软删除/移除、延迟约束触发器、通用权限引擎、通用审批流、候选人 SCM readiness 预查询、Provider 原始权限 JSON、OAuth 应用和多仓库。前端只增加非一级 `/account` 页面，六个一级入口不变。
+
+**取代范围**：本决策只取代 [D010](#d010) 中“身份由 LEADER 配置”的成员身份部分；D010 的仓库稳定身份、Webhook 顺序和禁止用户名授权继续有效。历史文档中的“16 表”描述其当时基线，不代表当前 V8 形态。

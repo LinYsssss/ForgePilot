@@ -19,23 +19,21 @@ ForgePilot 是一个面向软件研发流程的轻量级 AI 研发协作与代�
 
 ## 当前状态
 
-**Phase 0–8 已于 2026-08-22 全部完成并通过退出闸门**；2026-08-23 又完成两次产品级补全：
-[D017](docs/v2/DECISIONS.md#d017) 的主链路补全与 [D018](docs/v2/DECISIONS.md#d018) 的顶部居中导航。
-随后又以独立 Trellis 任务补上 `.txt/.md` 需求文档阅读、下载与结构化需求 Markdown 导出，AI 继续复用现有一次性 Guidance。
-仓库进入**答辩准备期**：功能开发已收口，后续改动仍需按 Trellis 流程立任务。
+**Phase 0–8 已于 2026-08-22 全部完成并通过退出闸门**。D017–D019 的产品补全保持有效；
+2026-08-24 按 [D020](docs/v2/DECISIONS.md#d020) 增加显示名、成员目录、多角色、用户自有 SCM 多身份和项目身份绑定，未增加顶层包、一级导航、运行时依赖或第二 Review 流程。
 
 当前形态：
 
 | 维度 | 事实 |
 |---|---|
-| 后端 | Spring Boot 4.1 模块化单体，8 个顶层业务包，16 张业务表 / 7 个 Flyway 迁移，`./mvnw verify` 316 个测试全绿、零 skip |
-| 前端 | Vue 3 + TypeScript + Vite，6 个一级导航 / 10 条产品路由，11 个测试文件 / 35 个测试全绿 |
-| SCM | GitHub 与 GitLab 双 Provider，共用同一套 Provider contract |
+| 后端 | Spring Boot 4.1 模块化单体，8 个顶层业务包，19 张业务表 / 8 个 Flyway 迁移，317 个测试 |
+| 前端 | Vue 3 + TypeScript + Vite，6 个一级导航 / 11 条产品路由，11 个测试文件 / 35 个测试 |
+| SCM | GitHub 与 GitLab 双 Provider；用户多身份、标签/用途、项目绑定与可选 Leader 审批 |
 | AI | 单一 OpenAI-compatible 网关，服务需求质量检查、一次性实现建议与唯一 Review Engine |
 | 知识 | PostgreSQL 15 + pgvector，按 `project_id` 与当前 Requirement 双重硬过滤 |
 | 评测 | 三臂对照实验已正式运行，holdout 按约定只跑一次 |
 
-上表的后端与前端数字由 2026-08-23 的一次完整本地验证得出（后端 Testcontainers 真实 PostgreSQL 15 + pgvector，前端 lint / typecheck / test / build 四条命令）。
+验证使用 Testcontainers 真实 PostgreSQL 15 + pgvector；后端 317 个测试零跳过，前端 lint / typecheck / 35 个测试 / build 全绿。当前任务证据记录在对应 Trellis `result.md`。
 
 旧版完整源码与历史工程能力保存在 [RepoSage](https://github.com/LinYsssss/reposage)，只作为 Legacy Reference，不直接复制回本仓库。
 
@@ -48,14 +46,16 @@ AI 或开发者进入仓库后，按以下顺序阅读：
 3. [架构规范](docs/v2/ARCHITECTURE.md)
 4. [实施计划与阶段结论](docs/v2/IMPLEMENTATION-PLAN.md)
 5. [决策记录](docs/v2/DECISIONS.md)
-6. [答辩复现指南](docs/v2/DEFENSE-GUIDE.md)
-7. [Legacy 迁移矩阵](docs/v2/LEGACY-MIGRATION-MATRIX.md)
+6. [账户、成员与 SCM API](docs/v2/API.md)
+7. [网页全链路测试指南](docs/v2/FULL-CHAIN-UI-TEST.md)
+8. [答辩复现指南](docs/v2/DEFENSE-GUIDE.md)
+9. [Legacy 迁移矩阵](docs/v2/LEGACY-MIGRATION-MATRIX.md)
 
 ## 仓库结构
 
 ```text
-backend/       Spring Boot 模块化单体，8 个业务包 / 16 张表 / 7 个 Flyway 迁移
-frontend/      Vue 3 + TypeScript + Vite 前端，6 个一级导航 / 10 条产品路由
+backend/       Spring Boot 模块化单体，8 个业务包 / 19 张表 / 8 个 Flyway 迁移
+frontend/      Vue 3 + TypeScript + Vite 前端，6 个一级导航 / 11 条产品路由
 evaluation/    论文评测与可复现实验入口，含正式三臂实验工具链与冻结配置
 docs/v2/       产品与架构的唯一事实源
 scripts/       空卷冷启动冒烟脚本

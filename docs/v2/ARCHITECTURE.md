@@ -7,7 +7,7 @@
 - 实施顺序见 [IMPLEMENTATION-PLAN.md](./IMPLEMENTATION-PLAN.md)。
 - Legacy 资产取舍见 [LEGACY-MIGRATION-MATRIX.md](./LEGACY-MIGRATION-MATRIX.md)。
 
-> **单一事实源纪律**：16 表、依赖规则、状态机、运行边界只在本文定义。其他文档引用本文，不复述。
+> **单一事实源纪律**：19 表、依赖规则、状态机、运行边界只在本文定义。其他文档引用本文，不复述。
 
 ---
 
@@ -44,9 +44,9 @@ review/  ReviewController · ReviewService · ReviewRepository · Review · Find
 
 | 模块 | 只负责 | 明确不负责 |
 |---|---|---|
-| `project` | 成员、角色、项目隔离、仓库/知识入口 | Sprint、工时、看板、审批流 |
+| `project` | 成员目录、多角色、项目隔离、仓库/知识入口 | Sprint、工时、看板、通用审批流 |
 | `requirement` | 需求、AC、指派、质量检查、附件关系、一次性实现建议 | 通用任务管理、聊天平台、多轮会话 |
-| `scm` | 凭据、Webhook、PR 元数据与 patch、`REQ-N` 解析 | Review 结论、本地 Git 工作区 |
+| `scm` | 仓库凭据、用户 SCM 身份、项目身份绑定、Webhook、PR 元数据与 patch、`REQ-N` 解析 | Review 结论、本地 Git 工作区 |
 | `knowledge` | 文档、Chunk、Embedding、项目内检索 | Requirement 状态、Review 编排、代码索引 |
 | `ai` | OpenAI-compatible chat/embed 协议与调用记录 | 业务 Prompt、Agent 编排、自动决策 |
 | `review` | 组装上下文、运行唯一引擎、Finding、人工决策 | SCM 凭据管理、知识入库、自动修复 |
@@ -86,20 +86,23 @@ common, project, scm, knowledge, requirement, ai  ←  review
 
 ## 2. 数据模型
 
-### 2.1 16 张表（唯一定义处）
+### 2.1 19 张表（唯一定义处）
 
 | 表 | 核心职责 | 关键约束 |
 |---|---|---|
-| `user_account` | 本地演示账户 | `username` unique；password_hash、enabled、session_version |
+| `user_account` | 本地演示账户与成员目录身份 | `username` unique；非空 `display_name`、password_hash、enabled、session_version |
 | `project` | 项目边界 | name、created_by（→ `user_account`）、status |
-| `project_member` | 成员、角色与项目级 SCM 身份 | `(project_id,user_id)` unique；`UNIQUE(project_id) WHERE role='LEADER'`，Service 事务保证至少一个 LEADER（D004）；`scm_external_user_id`（权限依据）、`scm_username`（仅显示）、`scm_identity_verified_at`，`(project_id,scm_external_user_id)` unique（D010） |
+| `project_member` | 纯项目成员关系 | `(project_id,user_id)` unique；不再承载角色或 SCM 身份 |
+| `project_member_role` | 成员角色集合 | `(project_id,user_id,role)` primary key；角色限定为 LEADER/DEVELOPER/REVIEWER；`UNIQUE(project_id) WHERE role='LEADER'` 保证至多一个 Leader，Service 保证至少一个（D020） |
+| `scm_identity` | 用户全局 SCM 多身份 | 归属 `user_account`；Provider、规范化实例、稳定外部用户 ID、当前用户名、标签、用途、验证状态/方式/时间；一次性 Token 身份的 `(provider,instance_identity,external_user_id)` 全局 unique；Token 不设列、不落库（D020） |
+| `project_member_scm_binding` | 项目成员选择身份的状态与历史 | 复合 FK 同时约束项目成员、身份所有者和项目仓库；每成员每项目最多一个 ACTIVE、一个 PENDING_APPROVAL；记录仓库访问级别、核验时间与审批人/时间（D020） |
 | `requirement` | 需求稳定身份、指派、状态 | project_id、assignee_id（nullable，复合 FK 指向 project_member）、status、current_revision_id（可空，回填；复合 FK `(project_id,id,current_revision_id)` 指向自身 Revision）；`UNIQUE(project_id,id)` |
 | `requirement_revision` | 不可变需求正文版本与该版本的质量结果 | project_id、requirement_id、seq、title/background/description、created_by、change_reason、created_at、quality_json/quality_version/quality_checked_at；`(requirement_id,seq)` unique；`UNIQUE(project_id,id)`、`UNIQUE(project_id,requirement_id,id)`（D006/D011） |
 | `acceptance_criterion` | AC，归属具体 revision | project_id、requirement_revision_id、`ac_key`（稳定不可变业务身份）、`sort_order`（仅显示）、text；`(requirement_revision_id,ac_key)` unique；`UNIQUE(project_id,id)`、`UNIQUE(project_id,requirement_revision_id,id)`（D011） |
 | `knowledge_document` | 项目知识与需求附件共用内容 | project_id、source_type、source_requirement_id（D005）、text、status、model/version；附件类型与归属必须匹配；`UNIQUE(project_id,id)`、`UNIQUE(project_id,id,source_requirement_id)` |
 | `requirement_attachment` | Requirement↔Document 关系 | project_id；`(requirement_id,document_id)` unique、`(project_id,document_id)` unique（一个附件只有一个归属需求）；与 Document 的 source_requirement_id 双复合 FK（D006） |
 | `knowledge_chunk` | Chunk 与唯一向量 | project_id、document_id、seq、content、metadata、`embedding vector`（无维度，D001）、provider/model/version/dimension |
-| `scm_repository` | 项目的活动仓库与加密凭据 | `project_id` unique；provider、规范化 `instance_identity`、external_id、api_base、encrypted_token/secret；有 PR 后稳定身份三元组不可修改，api_base 更新须验证同一实例（D010）；`UNIQUE(project_id,id)` |
+| `scm_repository` | 项目的活动仓库与加密凭据 | `project_id` unique；provider、规范化 `instance_identity`、external_id、api_base、encrypted_token/secret、`identity_approval_required`；有 PR 后稳定身份三元组不可修改，api_base 更新须验证同一实例（D010/D020）；`UNIQUE(project_id,id)` |
 | `pull_request` | PR/MR 权威快照、作者与需求关联 | `(repository_id,external_number)` unique；当前 title、base_sha、head_sha、`review_input_fingerprint`（由规范化 base/head、changed-file manifest、patch 及可用的稳定 Diff version 确定性计算，title 不参与身份）；`changed_files` JSONB 保存 manifest 与每个 patch，使指纹输入可从数据库复现（D015.7）；source_revision/source_updated_at 仅用于乱序保护；requirement_id nullable + 普通索引（D004/D007）；author_external_user_id、author_username（不可变作者快照）、author_user_id（可重算映射，复合 FK 指向 project_member，列级 `ON DELETE SET NULL`，D010）；`UNIQUE(project_id,id)` |
 | `pull_request_requirement_event` | **仅**记录 PR↔需求关联变更审计 | project_id、pull_request_id、from_requirement_id、to_requirement_id、actor_type(`USER/SYSTEM`)、actor_user_id（可空，→ `user_account`）、reason、created_at；CHECK 保证 type 与 actor 组合合法；与关联修改同事务写入（D007） |
 | `review` | 一个 (head SHA、实际 Review 输入、需求版本) 的审查、上下文快照、摘要与 Decision | `UNIQUE NULLS NOT DISTINCT (pull_request_id,head_sha,review_input_fingerprint,requirement_revision_id)`（D003）；`UNIQUE(project_id,id)` 供 Finding 父 FK；`UNIQUE(project_id,id,execution_attempt)` 供 Finding 的 attempt 围栏；CHECK 保证 requirement_id 与 requirement_revision_id 同空或同非空、Decision 字段组合合法、终局 Decision 只能落在 COMPLETED 行、RUNNING 必带 token+lease；一次性 Decision 由 PR 行锁 + `WHERE decision='PENDING'` 条件更新保证；触发器冻结四元身份与 context_snapshot_json；project_id、status、decision、decision_by/at/comment、execution_attempt/token/lease、输入快照 `context_snapshot_json` 与输出摘要 `summary_json`（AC verdict、coverage、知识证据、warning）、engine/prompt_version/model 审计列 |
@@ -115,8 +118,13 @@ common, project, scm, knowledge, requirement, ai  ←  review
 ```mermaid
 erDiagram
     user_account ||--o{ project_member : ""
+    user_account ||--o{ scm_identity : "自有身份"
     project ||--o{ project_member : ""
+    project_member ||--|{ project_member_role : "角色集合"
+    project_member ||--o{ project_member_scm_binding : "身份绑定历史"
+    scm_identity ||--o{ project_member_scm_binding : "由本人选择"
     project ||--o| scm_repository : "一个活动仓库"
+    scm_repository ||--o{ project_member_scm_binding : "仓库访问核验"
     project ||--o{ requirement : ""
     project ||--o{ knowledge_document : ""
     requirement ||--o{ requirement_revision : "不可变版本 D011"
@@ -144,6 +152,14 @@ erDiagram
 ```text
 requirement.assignee
   (project_id, assignee_id) -> project_member(project_id, user_id)
+
+project_member_role
+  (project_id, user_id) -> project_member(project_id, user_id)
+
+project_member_scm_binding
+  (project_id, user_id) -> project_member(project_id, user_id)
+  (user_id, scm_identity_id) -> scm_identity(user_id, id)
+  (project_id, repository_id) -> scm_repository(project_id, id)
 
 requirement_revision
   (project_id, requirement_id) -> requirement(project_id, id)
@@ -238,7 +254,7 @@ WHERE project_id = :projectId
        OR source_requirement_id = :requirementId)
 ```
 
-SCM 仓库稳定身份由 `provider + instance_identity + external_id` 构成；`api_base` 可变但只能指向同一规范化实例。Webhook 只作触发，PR 当前值来自 Provider 权威快照，并以 Provider 可用的 source revision/time 单调规则拒绝旧快照回退。
+SCM 仓库稳定身份由 `provider + instance_identity + external_id` 构成；用户身份由 `provider + instance_identity + external_user_id` 构成。用户用一次性 Token 调用 Provider 当前用户接口完成身份验证；Token 只存在于本次请求内。项目绑定时再次用一次性 Token 验证当前用户与仓库访问级别：默认直接激活，开启 `identity_approval_required` 后先进入 `PENDING_APPROVAL`，由唯一 LEADER 批准或拒绝。只有活动、已验证且与仓库 Provider/实例一致的绑定参与 `pull_request.author_user_id` 重算和“本人 PR”授权。`api_base` 可变但只能指向同一规范化实例。Webhook 只作触发，PR 当前值来自 Provider 权威快照，并以 Provider 可用的 source revision/time 单调规则拒绝旧快照回退。
 
 固定集成测试包含：A 项目用户猜 B 项目 requirement/document/review/finding id；附件关系与投影不一致；Finding 无父 Review或父子上下文不一致；乱序 Webhook 回退；过期 Worker 持旧 token 写入。
 

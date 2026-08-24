@@ -1,7 +1,7 @@
 # Frontend
 
 ForgePilot V2 的 Vue 3 + TypeScript + Vite 前端，覆盖全部对外可用的后端工作流：
-登录与改密、项目与成员、需求与验收条件、需求质量检查与一次性实现建议、项目知识与需求附件、
+登录、显示名与改密、成员目录与多角色、用户 SCM 多身份、需求与验收条件、需求质量检查与一次性实现建议、项目知识与需求附件、
 GitHub/GitLab 仓库接入、审查发现与结构化证据、Finding 审计与人工决策。
 
 视觉方向为用户确认的 **Precision Review Console / 精密审查台**：单一深色分层界面、克制的玻璃面板、
@@ -19,8 +19,8 @@ npm run test -- --run
 npm run build
 ```
 
-最近一次完整验证（2026-08-23）：四条命令全部通过，测试为 **11 个文件 / 35 个测试**，
-产物 JS 211.92 kB、CSS 64.78 kB。
+最近一次完整验证（2026-08-24）：四条命令全部通过，测试为 **11 个文件 / 35 个测试**，
+产物 JS 225.54 kB、CSS 64.51 kB。
 
 ## 信息架构
 
@@ -35,8 +35,8 @@ npm run build
 - 仓库接入 `/repositories`
 - 代码审查 `/reviews`
 
-另有四条详情/兼容路径：`/projects/:id/members`、`/requirements/:id`、`/reviews/:id`，
-以及重定向到仓库接入的 `/projects/:id/settings`。加上 `/login` 共 11 条路由。
+另有非一级账户页 `/account`，以及四条详情/兼容路径：`/projects/:id/members`、`/requirements/:id`、`/reviews/:id`、
+重定向到仓库接入的 `/projects/:id/settings`。产品路由共 11 条；`/login` 是认证入口，不计入产品路由。
 
 品牌规则：同一页面只出现一种可见 Logo——已登录 Shell 用 `public/brand/logo-lockup.png`，
 登录页用 `public/brand/logo-app.png`，后者同时是 favicon。

@@ -32,14 +32,16 @@ web layer.
 - `V1__foundation.sql` contains only `CREATE EXTENSION IF NOT EXISTS vector`.
   Batches 1–3 append `V2__auth_project.sql`, `V3__requirement.sql`,
   `V4__knowledge_ai.sql`, `V5__scm.sql`, and `V6__review.sql`, producing the
-  complete fixed set of sixteen business tables. `V7__pull_request_title.sql`
+  Phase 0–8 baseline of sixteen business tables. `V7__pull_request_title.sql`
   is a column-only migration that persists the PR title frozen into Review
-  context; it does not add a seventeenth table.
+  context. D020 appends `V8__member_roles_and_scm_identities.sql`, which adds
+  the three irreducible role/identity/binding facts and brings the current
+  schema to nineteen business tables.
 - **No migration carries seed rows.** The first account is created through
   `POST /api/auth/register`, so no password ever lives in the repository.
 - Flyway derives the history `description` from the file name, and
-  `FoundationDatabaseTest` asserts all seven successful entries plus the exact
-  sixteen-table set in `public`. Renaming an applied migration breaks both that
+  `FoundationDatabaseTest` asserts all eight successful entries plus the exact
+  nineteen-table set in `public`. Renaming an applied migration breaks both that
   test and every existing database.
 - Migrations are append-only. Never edit or renumber an applied migration; add
   the next version instead.
@@ -50,6 +52,10 @@ web layer.
   The Testcontainers database and the Compose database both run as the image's
   bootstrap superuser; a deployment with a restricted application role has to
   solve extension creation before startup, not by weakening the migration.
+- `project_member` is now only the membership fact. Roles live in
+  `project_member_role`; user-owned Provider identities live in `scm_identity`;
+  project selection and approval history live in `project_member_scm_binding`.
+  Do not add role arrays/JSON or identity columns back to `project_member`.
 
 ## Entities over composite foreign keys
 
