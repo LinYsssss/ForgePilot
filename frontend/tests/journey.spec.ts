@@ -39,6 +39,10 @@ interface FindingRow {
   path: string | null;
   line: number | null;
   evidence: string | null;
+  category: string | null;
+  explanation: string | null;
+  suggestion: string | null;
+  confidence: "HIGH" | "MEDIUM" | "LOW" | null;
   status: string;
   continuity: "NEW" | "PERSISTING" | "SUPPRESSED";
   requirementId: number | null;
@@ -147,6 +151,10 @@ class FakeServer {
           path: "src/features/auth/LoginPage.vue",
           line: 42,
           evidence: "口令错误与用户不存在返回了不同的文案。",
+          category: "SECURITY",
+          explanation: "两条分支的返回文案不同，攻击者可以据此枚举出哪些账号真实存在。",
+          suggestion: "两种失败返回同一条文案与同一个状态码，并补一个断言覆盖它。",
+          confidence: "HIGH",
           status: "OPEN",
           continuity: "NEW",
           requirementId: this.requirementId,
@@ -165,6 +173,12 @@ class FakeServer {
           path: "src/lib/http.ts",
           line: null,
           evidence: "重试逻辑吞掉了 HTTP 错误。",
+          // 这一条刻意四项全空：它代表 V9 之前产生的 Finding，页面必须照样能读，
+          // 而不是显示空白或猜一个值。
+          category: null,
+          explanation: null,
+          suggestion: null,
+          confidence: null,
           status: "REJECTED",
           continuity: "SUPPRESSED",
           requirementId: null,
@@ -187,6 +201,10 @@ class FakeServer {
           path: "src/lib/datetime.ts",
           line: 7,
           evidence: "时区没有固定，跨时区渲染不一致。",
+          category: "CORRECTNESS",
+          explanation: "渲染时依赖运行环境的默认时区。",
+          suggestion: "固定到显式时区后再格式化。",
+          confidence: "MEDIUM",
           status: "CONFIRMED",
           continuity: "PERSISTING",
           requirementId: null,
@@ -205,6 +223,10 @@ class FakeServer {
           path: "src/app/router.ts",
           line: 16,
           evidence: "滚动行为在无窗口环境下没有兜底。",
+          category: "ERROR_HANDLING",
+          explanation: "无窗口环境下取不到滚动目标。",
+          suggestion: "补一个不依赖窗口的兜底分支。",
+          confidence: "LOW",
           status: "IN_PROGRESS",
           continuity: "PERSISTING",
           requirementId: null,
@@ -919,8 +941,33 @@ describe("three-role journey through the real App and router", () => {
 
     expect(firstFinding.find(".finding-status").text()).toBe("待确认");
     expect(firstFinding.find(".finding-continuity").text()).toBe("本轮新增");
-    expect(firstFinding.find(".finding-ai-confidence").text()).toBe("未记录");
+    expect(firstFinding.find(".finding-ai-confidence").text()).toBe("高");
     expect(firstFinding.find(".review-decision-mark").text()).toBe("尚无终局决定");
+
+    // 说明 → 证据 → 建议：读者先知道问题是什么，再看可核验的原文，最后才是怎么办。
+    const narratives = firstFinding.findAll(".narrative-body");
+    expect(narratives[0].text()).toContain("枚举出哪些账号真实存在");
+    expect(narratives[1].text()).toContain("同一条文案与同一个状态码");
+    // 模型的判断与逐字引用的证据必须可区分，否则建议会被读成已核实的结论。
+    expect(firstFinding.find(".finding-narrative .narrative-origin").text()).toBe("模型判断");
+    expect(firstFinding.find(".narrative-origin-verifiable").text()).toBe("逐字引用");
+    // 类别落库后作为徽章展示，与四个标记分开。
+    expect(firstFinding.find(".finding-category").text()).toBe("安全");
+
+    // 三个哈希不再是阅读内容，但仍可展开核验（AC8）。
+    const verifiability = firstFinding.find(".finding-verifiability");
+    expect(verifiability.attributes("open")).toBeUndefined();
+    expect(verifiability.text()).toContain("req-12-AC-1");
+
+    // V9 之前的 Finding 四项全空，页面照样可读，不显示空白也不猜值。901 是被继承
+    // 的抑制项，因此它渲染在 suppressed-findings 折叠区里而不在主列表中。
+    const historical = wrapper
+      .findAll(".finding")
+      .find((card) => card.text().includes("发现 901"));
+    expect(historical).toBeDefined();
+    expect(historical?.find(".finding-ai-confidence").text()).toBe("未记录");
+    expect(historical?.find(".finding-category").exists()).toBe(false);
+    expect(historical?.findAll(".narrative-body")[0].text()).toBe("模型没有给出问题说明。");
 
     await firstFinding.findAll("button").find((button) => button.text() === "在证据中定位")?.trigger("click");
     expect(wrapper.find(".snapshot-criterion-selected").text()).toContain("AC-1");

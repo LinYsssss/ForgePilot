@@ -24,6 +24,24 @@ export type FindingContinuity = "NEW" | "PERSISTING" | "SUPPRESSED";
 
 export type FindingType = "CODE_QUALITY" | "REQUIREMENT";
 
+/** `ReviewPrompts` 两个 schema 里的封闭词表；它同时是 `finding_key` 的输入之一。 */
+export type FindingCategory =
+  | "CORRECTNESS"
+  | "SECURITY"
+  | "ERROR_HANDLING"
+  | "CONCURRENCY"
+  | "PERFORMANCE"
+  | "API_CONTRACT"
+  | "TEST_COVERAGE"
+  | "MAINTAINABILITY"
+  | "REQUIREMENT_GAP";
+
+/**
+ * 模型自报的把握，分档而非数字：它没有经过校准，一个小数会让人以为它校准过。
+ * 它与 Finding 人工状态、Review Decision 是三个互不替代的维度，不合并展示。
+ */
+export type FindingConfidence = "HIGH" | "MEDIUM" | "LOW";
+
 export type AcVerdict = "COVERED" | "NOT_FOUND" | "AT_RISK";
 
 export type FindingAction =
@@ -63,6 +81,13 @@ export interface Finding {
   /** 当 patch 无法把该 finding 定位到一个可核实的行上时为 null。 */
   line: number | null;
   evidence: string | null;
+  /** V9 起落库。之前这个语义标签算完 `finding_key` 就被丢掉了。 */
+  category: FindingCategory | null;
+  /** 模型自己写的问题说明；V9 之前的 Finding 没有，故可空。 */
+  explanation: string | null;
+  /** 模型给的修复建议。只是建议：AI 不产出补丁、不自动改码。 */
+  suggestion: string | null;
+  confidence: FindingConfidence | null;
   status: FindingStatus;
   continuity: FindingContinuity;
   requirementId: number | null;

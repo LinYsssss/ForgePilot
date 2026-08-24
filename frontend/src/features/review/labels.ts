@@ -2,6 +2,8 @@ import type { ProjectRole } from "../project/api";
 import type {
   AcVerdict,
   FindingAction,
+  FindingCategory,
+  FindingConfidence,
   FindingContinuity,
   FindingStatus,
   FindingType,
@@ -112,6 +114,31 @@ export const FINDING_CONTINUITY_TONES: Record<FindingContinuity, string> = {
 export const FINDING_TYPE_LABELS: Record<FindingType, string> = {
   REQUIREMENT: "需求违规",
   CODE_QUALITY: "代码质量",
+};
+
+/**
+ * 类别与置信度**刻意没有** tone 映射，两者都用 `badge-neutral`。
+ *
+ * 它们都不是严重度：给 `SECURITY` 配红、给 `LOW` 配灰绿，等于凭空造出一套
+ * 后端并不存在的风险模型（迁移矩阵把按置信度自动 gate 的那套明确标为 DROP），
+ * 而颜色一旦带上价值判断，未经校准的置信度就会被读成质量结论。语义由文字承载。
+ */
+export const FINDING_CATEGORY_LABELS: Record<FindingCategory, string> = {
+  CORRECTNESS: "正确性",
+  SECURITY: "安全",
+  ERROR_HANDLING: "错误处理",
+  CONCURRENCY: "并发",
+  PERFORMANCE: "性能",
+  API_CONTRACT: "接口契约",
+  TEST_COVERAGE: "测试覆盖",
+  MAINTAINABILITY: "可维护性",
+  REQUIREMENT_GAP: "需求缺口",
+};
+
+export const FINDING_CONFIDENCE_LABELS: Record<FindingConfidence, string> = {
+  HIGH: "高",
+  MEDIUM: "中",
+  LOW: "低",
 };
 
 export const AC_VERDICT_LABELS: Record<AcVerdict, string> = {
