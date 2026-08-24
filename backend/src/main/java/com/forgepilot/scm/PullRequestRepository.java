@@ -8,6 +8,8 @@ import org.springframework.data.jpa.repository.Lock;
 
 interface PullRequestRepository extends JpaRepository<PullRequest, Long> {
 
+    java.util.List<PullRequest> findByProjectIdOrderByIdAsc(long projectId);
+
     Optional<PullRequest> findByProjectIdAndId(long projectId, long id);
 
     /**

@@ -172,6 +172,8 @@ class KnowledgeAndScmConstraintTest extends PostgresTestBase {
         long author = fixture.member();
         long pullRequest = fixture.pullRequest(repository, 1, author);
 
+        jdbc.update("delete from project_member_role where project_id = ? and user_id = ?",
+                fixture.project, author);
         jdbc.update("delete from project_member where project_id = ? and user_id = ?",
                 fixture.project, author);
 
@@ -303,22 +305,24 @@ class KnowledgeAndScmConstraintTest extends PostgresTestBase {
             this.project = requireId(jdbc.queryForObject(
                     "insert into project (name, created_by, status) values (?, ?, 'ACTIVE') returning id",
                     Long.class, "p-" + SEQUENCE.incrementAndGet(), owner));
-            jdbc.update("insert into project_member (project_id, user_id, role) values (?, ?, 'LEADER')",
+            jdbc.update("with member as (insert into project_member (project_id, user_id) values (?, ?) returning project_id, user_id) insert into project_member_role (project_id, user_id, role) select project_id, user_id, 'LEADER' from member",
                     project, owner);
             this.requirement = requirement();
         }
 
         private long account() {
             return requireId(jdbc.queryForObject(
-                    "insert into user_account (username, password_hash) values (?, 'x') returning id",
+                    "insert into user_account (username, display_name, password_hash) values (?, 'Test User', 'x') returning id",
                     Long.class, "u-" + SEQUENCE.incrementAndGet()));
         }
 
         private long member() {
             long user = account();
-            jdbc.update("insert into project_member (project_id, user_id, role, scm_external_user_id, "
-                    + "scm_username) values (?, ?, 'DEVELOPER', ?, ?)",
-                    project, user, "gh-" + user, "dev-" + user);
+            jdbc.update("with member as (insert into project_member (project_id, user_id) "
+                            + "values (?, ?) returning project_id, user_id) "
+                            + "insert into project_member_role (project_id, user_id, role) "
+                            + "select project_id, user_id, 'DEVELOPER' from member",
+                    project, user);
             return user;
         }
 

@@ -1,9 +1,9 @@
 package com.forgepilot.auth;
 
 /** 其他功能模块被允许看到的账号信息（D013.6）。绝不携带口令哈希。 */
-public record AccountView(long id, String username, boolean enabled) {
+public record AccountView(long id, String username, String displayName, boolean enabled) {
 
     static AccountView of(UserAccount account) {
-        return new AccountView(account.getId(), account.getUsername(), account.isEnabled());
+        return new AccountView(account.getId(), account.getUsername(), account.getDisplayName(), account.isEnabled());
     }
 }

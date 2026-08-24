@@ -29,7 +29,7 @@ public class ProjectAccessService {
 
     public ProjectMember requireRole(long projectId, long userId, ProjectRole... allowed) {
         ProjectMember member = requireMember(projectId, userId);
-        if (!Set.of(allowed).contains(member.getRole())) {
+        if (Set.of(allowed).stream().noneMatch(member::hasRole)) {
             throw ApiException.forbidden();
         }
         return member;

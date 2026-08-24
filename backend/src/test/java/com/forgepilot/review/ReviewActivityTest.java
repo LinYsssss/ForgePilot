@@ -509,12 +509,12 @@ class ReviewActivityTest extends PostgresTestBase {
             int sequence = SEQUENCE.incrementAndGet();
             this.username = "activity-user-" + sequence;
             this.owner = jdbc.queryForObject(
-                    "insert into user_account (username, password_hash) values (?, 'x') returning id",
+                    "insert into user_account (username, display_name, password_hash) values (?, 'Test User', 'x') returning id",
                     Long.class, username);
             this.project = jdbc.queryForObject(
                     "insert into project (name, created_by, status) values (?, ?, 'ACTIVE') returning id",
                     Long.class, "activity-project-" + sequence, owner);
-            jdbc.update("insert into project_member (project_id, user_id, role) values (?, ?, 'LEADER')",
+            jdbc.update("with member as (insert into project_member (project_id, user_id) values (?, ?) returning project_id, user_id) insert into project_member_role (project_id, user_id, role) select project_id, user_id, 'LEADER' from member",
                     project, owner);
             this.repository = jdbc.queryForObject("""
                     insert into scm_repository (project_id, provider, instance_identity, external_id,

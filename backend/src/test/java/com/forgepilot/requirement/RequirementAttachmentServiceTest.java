@@ -114,16 +114,16 @@ class RequirementAttachmentServiceTest extends PostgresTestBase {
         private final long secondRequirement;
 
         private Fixture() {
-            leader = jdbc.queryForObject("insert into user_account (username, password_hash) values (?, 'x') "
+            leader = jdbc.queryForObject("insert into user_account (username, display_name, password_hash) values (?, 'Test User', 'x') "
                     + "returning id", Long.class, "attachment-user-" + SEQUENCE.incrementAndGet());
             project = jdbc.queryForObject("insert into project (name, created_by, status) "
                     + "values (?, ?, 'ACTIVE') returning id", Long.class,
                     "attachment-project-" + SEQUENCE.incrementAndGet(), leader);
-            jdbc.update("insert into project_member (project_id, user_id, role) values (?, ?, 'LEADER')",
+            jdbc.update("with member as (insert into project_member (project_id, user_id) values (?, ?) returning project_id, user_id) insert into project_member_role (project_id, user_id, role) select project_id, user_id, 'LEADER' from member",
                     project, leader);
-            developer = jdbc.queryForObject("insert into user_account (username, password_hash) values (?, 'x') "
+            developer = jdbc.queryForObject("insert into user_account (username, display_name, password_hash) values (?, 'Test User', 'x') "
                     + "returning id", Long.class, "attachment-developer-" + SEQUENCE.incrementAndGet());
-            jdbc.update("insert into project_member (project_id, user_id, role) values (?, ?, 'DEVELOPER')",
+            jdbc.update("with member as (insert into project_member (project_id, user_id) values (?, ?) returning project_id, user_id) insert into project_member_role (project_id, user_id, role) select project_id, user_id, 'DEVELOPER' from member",
                     project, developer);
             firstRequirement = requirement();
             secondRequirement = requirement();

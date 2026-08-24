@@ -101,7 +101,7 @@ public class FindingLifecycleService {
         if (move == null) {
             throw ApiException.conflict("A finding cannot move from " + from + " to " + target + ".");
         }
-        if (!move.allowed().contains(member.getRole())) {
+        if (member.getRoles().stream().noneMatch(move.allowed()::contains)) {
             throw ApiException.forbidden();
         }
 

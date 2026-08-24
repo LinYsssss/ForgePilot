@@ -51,6 +51,9 @@ public class ScmRepository {
     @Column(name = "encrypted_secret", nullable = false)
     private String encryptedSecret;
 
+    @Column(name = "identity_approval_required", nullable = false)
+    private boolean identityApprovalRequired;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
@@ -71,6 +74,7 @@ public class ScmRepository {
         this.apiBase = apiBase;
         this.encryptedToken = encryptedToken;
         this.encryptedSecret = encryptedSecret;
+        this.identityApprovalRequired = false;
     }
 
     public Long getId() {
@@ -107,6 +111,10 @@ public class ScmRepository {
         return encryptedSecret;
     }
 
+    public boolean isIdentityApprovalRequired() {
+        return identityApprovalRequired;
+    }
+
     public Instant getCreatedAt() {
         return createdAt;
     }
@@ -133,5 +141,9 @@ public class ScmRepository {
     void rotateCredentials(String encryptedToken, String encryptedSecret) {
         this.encryptedToken = encryptedToken;
         this.encryptedSecret = encryptedSecret;
+    }
+
+    void changeIdentityApprovalRequired(boolean required) {
+        this.identityApprovalRequired = required;
     }
 }

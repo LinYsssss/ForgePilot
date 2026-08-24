@@ -25,11 +25,12 @@ public class PullRequestSyncService {
     private final ScmSecretCipher cipher;
     private final ApplicationEventPublisher publisher;
     private final ObjectMapper json;
+    private final PullRequestAuthorMapper authors;
 
     PullRequestSyncService(ScmRepositoryRepository repositories, PullRequestRepository pullRequests,
             PullRequestRequirementEventRepository events, RequirementReferenceParser references,
             WebhookSignatureVerifier verifier, ScmSecretCipher cipher,
-            ApplicationEventPublisher publisher, ObjectMapper json) {
+            ApplicationEventPublisher publisher, ObjectMapper json, PullRequestAuthorMapper authors) {
         this.repositories = repositories;
         this.pullRequests = pullRequests;
         this.events = events;
@@ -38,6 +39,7 @@ public class PullRequestSyncService {
         this.cipher = cipher;
         this.publisher = publisher;
         this.json = json;
+        this.authors = authors;
     }
 
     /**
@@ -109,6 +111,7 @@ public class PullRequestSyncService {
             }
             existing.applySnapshot(snapshot.baseSha(), snapshot.headSha(), snapshot.title(), fingerprint,
                     manifest, snapshot.sourceRevision(), snapshot.sourceUpdatedAt());
+            existing.mapAuthor(authors.userIdFor(projectId, snapshot.authorExternalUserId()));
             pullRequests.flush();
             publish(existing);
             return;
@@ -118,6 +121,7 @@ public class PullRequestSyncService {
                 snapshot.title(), snapshot.authorExternalUserId(), snapshot.authorUsername());
         created.applySnapshot(snapshot.baseSha(), snapshot.headSha(), snapshot.title(), fingerprint,
                 manifest, snapshot.sourceRevision(), snapshot.sourceUpdatedAt());
+        created.mapAuthor(authors.userIdFor(projectId, snapshot.authorExternalUserId()));
         // 只在创建该行时解析一次。后续投递绝不能覆盖人工纠正去重新解析，
         // D007 把关联的最终话语权交给了页面；解析不出来的引用只会让它保持 null，
         // 永远不会阻塞入库。

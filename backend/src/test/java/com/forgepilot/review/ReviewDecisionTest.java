@@ -537,8 +537,8 @@ class ReviewDecisionTest extends PostgresTestBase {
     }
 
     private long account(String role) {
-        return jdbc.queryForObject("insert into user_account (username, password_hash) "
-                + "values (?, 'bcrypt-placeholder') returning id", Long.class,
+        return jdbc.queryForObject("insert into user_account (username, display_name, password_hash) "
+                + "values (?, 'Test User', 'bcrypt-placeholder') returning id", Long.class,
                 "decision-" + role + "-" + SEQUENCE.incrementAndGet());
     }
 
@@ -582,7 +582,7 @@ class ReviewDecisionTest extends PostgresTestBase {
         }
 
         private void member(long userId, String role) {
-            jdbc.update("insert into project_member (project_id, user_id, role) values (?, ?, ?)",
+            jdbc.update("with member as (insert into project_member (project_id, user_id) values (?, ?) returning project_id, user_id) insert into project_member_role (project_id, user_id, role) select project_id, user_id, ? from member",
                     projectId, userId, role);
         }
 

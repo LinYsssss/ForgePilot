@@ -34,9 +34,14 @@ class AuthService {
      * 该约束本已封死的竞态窗口。
      */
     @Transactional
-    AccountResponse register(String username, String password) {
-        UserAccount account = this.accounts.save(new UserAccount(username, hash(password)));
-        return new AccountResponse(account.getId(), account.getUsername());
+    AccountResponse register(String username, String displayName, String password) {
+        UserAccount account = this.accounts.save(new UserAccount(username, displayName.trim(), hash(password)));
+        return response(account);
+    }
+
+    @Transactional(readOnly = true)
+    AccountResponse current(long userId) {
+        return response(this.accounts.findById(userId).orElseThrow(ApiException::notFound));
     }
 
     /**
@@ -51,6 +56,17 @@ class AuthService {
         }
         account.changePassword(hash(newPassword));
         return account.getSessionVersion();
+    }
+
+    @Transactional
+    AccountResponse changeDisplayName(long userId, String displayName) {
+        UserAccount account = this.accounts.findById(userId).orElseThrow(ApiException::notFound);
+        account.changeDisplayName(displayName.trim());
+        return response(account);
+    }
+
+    private static AccountResponse response(UserAccount account) {
+        return new AccountResponse(account.getId(), account.getUsername(), account.getDisplayName());
     }
 
     private String hash(String password) {

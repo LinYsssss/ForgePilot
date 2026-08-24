@@ -56,13 +56,9 @@ class BatchOneApiTest extends PostgresTestBase {
         long project = leader.post("/api/projects", """
                 {"name": "ForgePilot"}""").path("id").asLong();
 
-        leader.post("/api/projects/" + project + "/members", """
-                {"username": "%s", "role": "DEVELOPER"}""".formatted(developer.username));
-
-        // SCM 身份由 LEADER 配置，且只有「一个 key + 一个显示名」：
-        // 本批次里没有任何东西拿它做授权判断。
-        leader.patch("/api/projects/" + project + "/members/" + developer.userId, """
-                {"scmExternalUserId": "gh-2001", "scmUsername": "octodev"}""");
+        leader.post("/api/projects/" + project + "/members/batch", """
+                {"members": [{"userId": %d, "roles": ["DEVELOPER"]}]}"""
+                .formatted(developer.userId));
 
         long requirement = leader.post("/api/projects/" + project + "/requirements", """
                 {"title": "Log in with a local account",
@@ -201,7 +197,8 @@ class BatchOneApiTest extends PostgresTestBase {
         Client client = new Client("pilot-" + SEQUENCE.incrementAndGet());
         client.bootstrapCsrf();
         client.post("/api/auth/register", """
-                {"username": "%s", "password": "%s"}""".formatted(client.username, Client.PASSWORD));
+                {"username": "%s", "displayName": "Test User", "password": "%s"}"""
+                .formatted(client.username, Client.PASSWORD));
         client.login();
         return client;
     }

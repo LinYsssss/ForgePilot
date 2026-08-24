@@ -9,6 +9,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -28,13 +29,13 @@ class AuthController {
     @PostMapping("/register")
     @ResponseStatus(HttpStatus.CREATED)
     AccountResponse register(@Valid @RequestBody RegisterRequest request) {
-        return this.auth.register(request.username(), request.password());
+        return this.auth.register(request.username(), request.displayName(), request.password());
     }
 
     /** 同时也是 SPA 的冷启动入口：该响应会带上 XSRF-TOKEN cookie（api-contract.md 0）。 */
     @GetMapping("/me")
     AccountResponse me(@AuthenticationPrincipal AccountPrincipal principal) {
-        return new AccountResponse(principal.getUserId(), principal.getUsername());
+        return this.auth.current(principal.getUserId());
     }
 
     @PostMapping("/password")
@@ -48,9 +49,19 @@ class AuthController {
         session.setAttribute(SessionVersionFilter.SESSION_VERSION, sessionVersion);
     }
 
+    @PatchMapping("/profile")
+    AccountResponse changeProfile(@AuthenticationPrincipal AccountPrincipal principal,
+            @Valid @RequestBody ChangeProfileRequest request) {
+        return this.auth.changeDisplayName(principal.getUserId(), request.displayName());
+    }
+
     record RegisterRequest(
             @NotBlank @Size(max = 64) String username,
+            @NotBlank @Size(max = 120) String displayName,
             @NotNull @Size(min = 8) String password) {
+    }
+
+    record ChangeProfileRequest(@NotBlank @Size(max = 120) String displayName) {
     }
 
     record ChangePasswordRequest(

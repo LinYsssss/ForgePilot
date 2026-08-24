@@ -14,12 +14,14 @@ final class AccountPrincipal extends User {
 
     private final long userId;
     private final int sessionVersion;
+    private final String displayName;
 
     AccountPrincipal(UserAccount account) {
         super(account.getUsername(), account.getPasswordHash(), account.isEnabled(),
                 true, true, true, AuthorityUtils.NO_AUTHORITIES);
         this.userId = account.getId();
         this.sessionVersion = account.getSessionVersion();
+        this.displayName = account.getDisplayName();
     }
 
     long getUserId() {
@@ -28,5 +30,9 @@ final class AccountPrincipal extends User {
 
     int getSessionVersion() {
         return this.sessionVersion;
+    }
+
+    String getDisplayName() {
+        return this.displayName;
     }
 }

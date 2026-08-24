@@ -309,7 +309,7 @@ public class ReviewPipeline {
      */
     private long retrievalActor(Review review) {
         return jdbc.queryForObject(
-                "select user_id from project_member where project_id = ? and role = 'LEADER'",
+                "select user_id from project_member_role where project_id = ? and role = 'LEADER'",
                 Long.class, review.getProjectId());
     }
 

@@ -249,8 +249,6 @@ class PullRequestAssociationTest extends ScmTestBase {
         long pullRequest = fixture.pullRequest(linked);
 
         long impostor = fixture.member(ProjectRole.DEVELOPER, "gh-2");
-        jdbc.update("update project_member set scm_username = 'octocat' "
-                + "where project_id = ? and user_id = ?", fixture.project, impostor);
 
         assertThat(statusOf(() -> associations.correct(fixture.project, impostor, pullRequest, target,
                 "Same name."))).isEqualTo(HttpStatus.FORBIDDEN);
@@ -306,13 +304,14 @@ class PullRequestAssociationTest extends ScmTestBase {
             this.project = jdbc.queryForObject(
                     "insert into project (name, created_by, status) values (?, ?, 'ACTIVE') returning id",
                     Long.class, "assoc-" + SEQUENCE.incrementAndGet(), leader);
-            jdbc.update("insert into project_member (project_id, user_id, role) values (?, ?, 'LEADER')",
+            jdbc.update("with member as (insert into project_member (project_id, user_id) values (?, ?) returning project_id, user_id) insert into project_member_role (project_id, user_id, role) select project_id, user_id, 'LEADER' from member",
                     project, leader);
             this.repository = jdbc.queryForObject(
                     "insert into scm_repository (project_id, provider, instance_identity, external_id, "
                             + "api_base, encrypted_token, encrypted_secret) values (?, 'GITHUB', "
-                            + "'127.0.0.1:34567', ?, 'http://127.0.0.1:34567', 'x', 'y') returning id",
-                    Long.class, project, "assoc-repo-" + SEQUENCE.incrementAndGet());
+                            + "?, ?, 'http://127.0.0.1:34567', 'x', 'y') returning id",
+                    Long.class, project, "assoc-host-" + SEQUENCE.incrementAndGet(),
+                    "assoc-repo-" + SEQUENCE.incrementAndGet());
         }
 
         private long requirement() {
@@ -339,7 +338,7 @@ class PullRequestAssociationTest extends ScmTestBase {
 
         private long account() {
             return jdbc.queryForObject(
-                    "insert into user_account (username, password_hash) values (?, 'x') returning id",
+                    "insert into user_account (username, display_name, password_hash) values (?, 'Test User', 'x') returning id",
                     Long.class, "assoc-user-" + SEQUENCE.incrementAndGet());
         }
 
@@ -350,12 +349,24 @@ class PullRequestAssociationTest extends ScmTestBase {
          */
         private long member(ProjectRole role, String scmExternalUserId) {
             long user = account();
-            Timestamp verifiedAt = scmExternalUserId == null
-                    ? null
-                    : Timestamp.from(Instant.now());
-            jdbc.update("insert into project_member (project_id, user_id, role, scm_external_user_id, "
-                    + "scm_identity_verified_at) values (?, ?, ?, ?, ?)",
-                    project, user, role.name(), scmExternalUserId, verifiedAt);
+            jdbc.update("with member as (insert into project_member (project_id, user_id) "
+                            + "values (?, ?) returning project_id, user_id) "
+                            + "insert into project_member_role (project_id, user_id, role) "
+                            + "select project_id, user_id, ? from member",
+                    project, user, role.name());
+            if (scmExternalUserId != null) {
+                long identity = jdbc.queryForObject("insert into scm_identity (user_id, provider, "
+                                + "instance_identity, external_user_id, external_username, label, usage_type, "
+                                + "verification_status, verification_method, verified_at, last_synced_at) "
+                                + "select ?, provider, instance_identity, ?, 'octocat', 'Work', 'WORK', "
+                                + "'VERIFIED', 'ONE_TIME_TOKEN', now(), now() from scm_repository where id = ? "
+                                + "returning id",
+                        Long.class, user, scmExternalUserId, repository);
+                jdbc.update("insert into project_member_scm_binding (project_id, user_id, scm_identity_id, "
+                                + "repository_id, status, requested_by, approved_by, decided_at, activated_at) "
+                                + "values (?, ?, ?, ?, 'ACTIVE', ?, ?, now(), now())",
+                        project, user, identity, repository, user, user);
+            }
             return user;
         }
 

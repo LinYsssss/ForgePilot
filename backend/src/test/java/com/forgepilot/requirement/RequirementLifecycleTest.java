@@ -322,8 +322,9 @@ class RequirementLifecycleTest extends PostgresTestBase {
         long developer = account();
         long reviewer = account();
         long projectId = projects.create("Requirements " + SEQUENCE.incrementAndGet(), leader).id();
-        members.add(projectId, leader, usernameOf(developer), ProjectRole.DEVELOPER);
-        members.add(projectId, leader, usernameOf(reviewer), ProjectRole.REVIEWER);
+        members.addBatch(projectId, leader, List.of(
+                new ProjectMemberService.BatchMember(developer, java.util.Set.of(ProjectRole.DEVELOPER)),
+                new ProjectMemberService.BatchMember(reviewer, java.util.Set.of(ProjectRole.REVIEWER))));
         return new Team(projectId, leader, developer, reviewer);
     }
 
@@ -386,7 +387,7 @@ class RequirementLifecycleTest extends PostgresTestBase {
     private long account() {
         String username = "requirement-user-" + SEQUENCE.incrementAndGet();
         Long id = jdbc.queryForObject(
-                "insert into user_account (username, password_hash) values (?, 'bcrypt-placeholder') "
+                "insert into user_account (username, display_name, password_hash) values (?, 'Test User', 'bcrypt-placeholder') "
                         + "returning id", Long.class, username);
         assertThat(id).isNotNull();
         return id;

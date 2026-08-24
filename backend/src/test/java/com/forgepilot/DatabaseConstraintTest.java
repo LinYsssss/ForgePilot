@@ -111,25 +111,23 @@ class DatabaseConstraintTest extends PostgresTestBase {
     }
 
     @Test
-    void scmIdentityIsUniquePerProjectAndOptional() {
+    void verifiedScmIdentityBelongsToOneUserAndCanBeReusedAcrossTheirProjects() {
         long owner = insertUser();
         long developer = insertUser();
-        long elsewhere = insertUser();
         long project = insertProject(owner);
         long otherProject = insertProject(owner);
         insertMember(project, owner, "LEADER");
         insertMember(project, developer, "DEVELOPER");
-        insertMember(otherProject, elsewhere, "LEADER");
+        insertMember(otherProject, owner, "LEADER");
 
-        setScmIdentity(project, owner, "gh-1");
-        assertThat(sqlStateOf(() -> setScmIdentity(project, developer, "gh-1")))
+        long identity = insertScmIdentity(owner, "gh-1");
+        bindScmIdentity(project, owner, identity);
+        assertThat(sqlStateOf(() -> insertScmIdentity(developer, "gh-1")))
                 .isEqualTo(UNIQUE_VIOLATION);
 
-        // 同一个 SCM 账号可以出现在另一个项目里。
-        setScmIdentity(otherProject, elsewhere, "gh-1");
+        bindScmIdentity(otherProject, owner, identity);
 
-        // 未配置的身份保持为 NULL 且互不冲突：在普通 UNIQUE 约束里，
-        // PostgreSQL 把各个 NULL 视为互不相同。
+        // 没有活动绑定的成员仍然是合法项目成员。
         assertThat(unconfiguredIdentityCount(project)).isEqualTo(1);
     }
 
@@ -310,7 +308,7 @@ class DatabaseConstraintTest extends PostgresTestBase {
     private long insertUser() {
         String username = "user-" + SEQUENCE.incrementAndGet();
         return requireId(jdbc.queryForObject(
-                "insert into user_account (username, password_hash) values (?, 'bcrypt-placeholder') "
+                "insert into user_account (username, display_name, password_hash) values (?, 'Test User', 'bcrypt-placeholder') "
                         + "returning id", Long.class, username));
     }
 
@@ -322,7 +320,10 @@ class DatabaseConstraintTest extends PostgresTestBase {
 
     private long insertMember(long projectId, long userId, String role) {
         return requireId(jdbc.queryForObject(
-                "insert into project_member (project_id, user_id, role) values (?, ?, ?) returning id",
+                "with member as (insert into project_member (project_id, user_id) values (?, ?) "
+                        + "returning id, project_id, user_id), assigned as (insert into project_member_role "
+                        + "(project_id, user_id, role) select project_id, user_id, ? from member) "
+                        + "select id from member",
                 Long.class, projectId, userId, role));
     }
 
@@ -347,14 +348,24 @@ class DatabaseConstraintTest extends PostgresTestBase {
     }
 
     private void setRole(long projectId, long userId, String role) {
-        jdbc.update("update project_member set role = ? where project_id = ? and user_id = ?",
+        jdbc.update("update project_member_role set role = ? where project_id = ? and user_id = ?",
                 role, projectId, userId);
     }
 
-    private void setScmIdentity(long projectId, long userId, String externalUserId) {
-        jdbc.update("update project_member set scm_external_user_id = ?, scm_username = ?, "
-                        + "scm_identity_verified_at = now() where project_id = ? and user_id = ?",
-                externalUserId, externalUserId, projectId, userId);
+    private long insertScmIdentity(long userId, String externalUserId) {
+        return requireId(jdbc.queryForObject("insert into scm_identity (user_id, provider, "
+                        + "instance_identity, external_user_id, external_username, label, usage_type, "
+                        + "verification_status, verification_method, verified_at, last_synced_at) "
+                        + "values (?, 'GITHUB', 'github.com', ?, ?, 'Work', 'WORK', 'VERIFIED', "
+                        + "'ONE_TIME_TOKEN', now(), now()) returning id",
+                Long.class, userId, externalUserId, externalUserId));
+    }
+
+    private void bindScmIdentity(long projectId, long userId, long identityId) {
+        jdbc.update("insert into project_member_scm_binding (project_id, user_id, scm_identity_id, "
+                        + "status, requested_by, approved_by, decided_at, activated_at) "
+                        + "values (?, ?, ?, 'ACTIVE', ?, ?, now(), now())",
+                projectId, userId, identityId, userId, userId);
     }
 
     private void backfillCurrentRevision(long requirementId, long revisionId) {
@@ -366,16 +377,17 @@ class DatabaseConstraintTest extends PostgresTestBase {
     }
 
     private int leaderCount(long projectId) {
-        return count("select count(*) from project_member where project_id = ? and role = 'LEADER'", projectId);
+        return count("select count(*) from project_member_role where project_id = ? and role = 'LEADER'", projectId);
     }
 
     private int unconfiguredIdentityCount(long projectId) {
-        return count("select count(*) from project_member "
-                + "where project_id = ? and scm_external_user_id is null", projectId);
+        return count("select count(*) from project_member pm left join project_member_scm_binding b "
+                + "on b.project_id = pm.project_id and b.user_id = pm.user_id and b.status = 'ACTIVE' "
+                + "where pm.project_id = ? and b.id is null", projectId);
     }
 
     private String roleOf(long projectId, long userId) {
-        return jdbc.queryForObject("select role from project_member where project_id = ? and user_id = ?",
+        return jdbc.queryForObject("select role from project_member_role where project_id = ? and user_id = ?",
                 String.class, projectId, userId);
     }
 

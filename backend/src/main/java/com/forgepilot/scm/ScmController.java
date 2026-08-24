@@ -53,7 +53,8 @@ class ScmController {
     ScmRepositoryResponse update(@PathVariable long projectId, @PathVariable long repositoryId,
             @Valid @RequestBody UpdateRequest request, Principal principal) {
         return repositories.update(projectId, userIdOf(principal), repositoryId, request.provider(),
-                request.externalId(), request.apiBase(), request.token(), request.webhookSecret());
+                request.externalId(), request.apiBase(), request.token(), request.webhookSecret(),
+                request.identityApprovalRequired());
     }
 
     @GetMapping("/pull-requests/{pullRequestId}")
@@ -98,7 +99,8 @@ class ScmController {
             @Size(max = 128) String externalId,
             @Size(max = 512) String apiBase,
             String token,
-            String webhookSecret) {
+            String webhookSecret,
+            Boolean identityApprovalRequired) {
     }
 
     /**

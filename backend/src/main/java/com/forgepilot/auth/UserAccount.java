@@ -23,6 +23,9 @@ public class UserAccount {
     @Column(name = "username", nullable = false, length = 64)
     private String username;
 
+    @Column(name = "display_name", nullable = false, length = 120)
+    private String displayName;
+
     @Column(name = "password_hash", nullable = false, length = 255)
     private String passwordHash;
 
@@ -44,8 +47,9 @@ public class UserAccount {
     protected UserAccount() {
     }
 
-    public UserAccount(String username, String passwordHash) {
+    public UserAccount(String username, String displayName, String passwordHash) {
         this.username = username;
+        this.displayName = displayName;
         this.passwordHash = passwordHash;
         this.enabled = true;
         this.sessionVersion = 0;
@@ -61,6 +65,10 @@ public class UserAccount {
 
     public String getPasswordHash() {
         return passwordHash;
+    }
+
+    public String getDisplayName() {
+        return displayName;
     }
 
     public boolean isEnabled() {
@@ -83,5 +91,9 @@ public class UserAccount {
     public void changePassword(String newPasswordHash) {
         this.passwordHash = newPasswordHash;
         this.sessionVersion += 1;
+    }
+
+    public void changeDisplayName(String newDisplayName) {
+        this.displayName = newDisplayName;
     }
 }

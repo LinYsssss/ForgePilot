@@ -14,17 +14,15 @@ import org.springframework.jdbc.core.JdbcTemplate;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
 class FoundationDatabaseTest extends PostgresTestBase {
 
-    /** 十六张表中已有十三张；review、finding 与 finding_event 随批次 3 到位。 */
-    // 十六张，也就是上限。ARCHITECTURE.md 2.1 把数据模型固定为**恰好**这一组，
-    // 因此第十七张表是一次设计变更，而不是一次迁移。
+    /** V8 完成成员多角色与用户自有 SCM 身份后，共十九张业务表。 */
     // 刻意按**名字**而不是按数量比对：只按数量比，会在「少了一张计划内的表、
     // 又多出一张计划外的表顶替它」时照样通过。
     private static final List<String> EXPECTED_TABLES = List.of(
             "acceptance_criterion", "ai_call_log", "finding", "finding_event",
             "knowledge_chunk", "knowledge_document", "project", "project_member",
-            "pull_request", "pull_request_requirement_event", "requirement",
-            "requirement_attachment", "requirement_revision", "review", "scm_repository",
-            "user_account");
+            "project_member_role", "project_member_scm_binding", "pull_request",
+            "pull_request_requirement_event", "requirement", "requirement_attachment",
+            "requirement_revision", "review", "scm_identity", "scm_repository", "user_account");
 
     @Autowired
     private JdbcTemplate jdbc;
@@ -61,7 +59,8 @@ class FoundationDatabaseTest extends PostgresTestBase {
 
         assertThat(history).extracting(row -> row.get("version") + ":" + row.get("description"))
                 .containsExactly("1:foundation", "2:auth project", "3:requirement",
-                        "4:knowledge ai", "5:scm", "6:review", "7:pull request title");
+                        "4:knowledge ai", "5:scm", "6:review", "7:pull request title",
+                        "8:member roles and scm identities");
         assertThat(history).allSatisfy(row -> assertThat(row.get("success")).isEqualTo(true));
     }
 

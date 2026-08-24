@@ -84,8 +84,9 @@ class ScmRepositoryApiTest extends ScmTestBase {
         Client developer = register();
         long project = leader.post("/api/projects", """
                 {"name": "Repository list"}""").path("id").asLong();
-        leader.post("/api/projects/" + project + "/members", """
-                {"username": "%s", "role": "DEVELOPER"}""".formatted(developer.username));
+        leader.post("/api/projects/" + project + "/members/batch", """
+                {"members": [{"userId": %d, "roles": ["DEVELOPER"]}]}"""
+                .formatted(developer.userId));
 
         assertThat(developer.read("/api/projects/" + project + "/scm/repositories").isEmpty()).isTrue();
 
@@ -190,8 +191,9 @@ class ScmRepositoryApiTest extends ScmTestBase {
         Client developer = register();
         long project = leader.post("/api/projects", """
                 {"name": "Roles"}""").path("id").asLong();
-        leader.post("/api/projects/" + project + "/members", """
-                {"username": "%s", "role": "DEVELOPER"}""".formatted(developer.username));
+        leader.post("/api/projects/" + project + "/members/batch", """
+                {"members": [{"userId": %d, "roles": ["DEVELOPER"]}]}"""
+                .formatted(developer.userId));
         long repository = connect(leader, project, "roles-" + SEQUENCE.incrementAndGet(), INSTANCE);
 
         // A member without the role knows the project exists, so 403 tells them nothing new.
@@ -269,8 +271,9 @@ class ScmRepositoryApiTest extends ScmTestBase {
         Client developer = register();
         long project = leader.post("/api/projects", """
                 {"name": "Correctable"}""").path("id").asLong();
-        leader.post("/api/projects/" + project + "/members", """
-                {"username": "%s", "role": "DEVELOPER"}""".formatted(developer.username));
+        leader.post("/api/projects/" + project + "/members/batch", """
+                {"members": [{"userId": %d, "roles": ["DEVELOPER"]}]}"""
+                .formatted(developer.userId));
         long repository = connect(leader, project, "correct-" + SEQUENCE.incrementAndGet(), INSTANCE);
         long pullRequest = insertPullRequest(project, repository, 7);
         long requirement = leader.post("/api/projects/" + project + "/requirements", """
@@ -331,8 +334,9 @@ class ScmRepositoryApiTest extends ScmTestBase {
     private Client register() throws Exception {
         Client client = new Client("scm-api-" + SEQUENCE.incrementAndGet());
         client.bootstrapCsrf();
-        client.post("/api/auth/register", """
-                {"username": "%s", "password": "%s"}""".formatted(client.username, Client.PASSWORD));
+        client.userId = client.post("/api/auth/register", """
+                {"username": "%s", "displayName": "Test User", "password": "%s"}"""
+                .formatted(client.username, Client.PASSWORD)).path("id").asLong();
         client.login();
         return client;
     }
@@ -345,6 +349,7 @@ class ScmRepositoryApiTest extends ScmTestBase {
         private final MockHttpSession session = new MockHttpSession();
         private final String username;
         private Cookie csrf;
+        private long userId;
 
         private Client(String username) {
             this.username = username;

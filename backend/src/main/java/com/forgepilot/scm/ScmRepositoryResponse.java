@@ -10,12 +10,14 @@ record ScmRepositoryResponse(
         String instanceIdentity,
         String externalId,
         String apiBase,
+        boolean identityApprovalRequired,
         Instant createdAt,
         Instant updatedAt) {
 
     static ScmRepositoryResponse of(ScmRepository repository) {
         return new ScmRepositoryResponse(repository.getId(), repository.getProjectId(),
                 repository.getProvider(), repository.getInstanceIdentity(), repository.getExternalId(),
-                repository.getApiBase(), repository.getCreatedAt(), repository.getUpdatedAt());
+                repository.getApiBase(), repository.isIdentityApprovalRequired(),
+                repository.getCreatedAt(), repository.getUpdatedAt());
     }
 }

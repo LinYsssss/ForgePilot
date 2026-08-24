@@ -1,22 +1,28 @@
 package com.forgepilot.project;
 
 import java.time.Instant;
+import java.util.Collection;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
+import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
+import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
 import jakarta.persistence.Table;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 /**
- * 某个账号在某个项目中的成员关系，以及该成员在这个项目里的 SCM 身份。
- * {@code scmExternalUserId} 是授权键，{@code scmUsername} 仅供展示，
- * 绝不允许参与任何权限判断（D010）。
+ * 某个账号在某个项目中的成员关系。角色集合由独立关系表持久化；SCM 身份
+ * 归 {@code scm} 模块中的用户身份与项目绑定所有。
  */
 @Entity
 @Table(name = "project_member")
@@ -32,18 +38,14 @@ public class ProjectMember {
     @Column(name = "user_id", nullable = false)
     private Long userId;
 
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "project_member_role", joinColumns = {
+            @JoinColumn(name = "project_id", referencedColumnName = "project_id"),
+            @JoinColumn(name = "user_id", referencedColumnName = "user_id")
+    })
     @Enumerated(EnumType.STRING)
     @Column(name = "role", nullable = false, length = 32)
-    private ProjectRole role;
-
-    @Column(name = "scm_external_user_id", length = 128)
-    private String scmExternalUserId;
-
-    @Column(name = "scm_username", length = 128)
-    private String scmUsername;
-
-    @Column(name = "scm_identity_verified_at")
-    private Instant scmIdentityVerifiedAt;
+    private Set<ProjectRole> roles = new LinkedHashSet<>();
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
@@ -56,10 +58,10 @@ public class ProjectMember {
     protected ProjectMember() {
     }
 
-    public ProjectMember(Long projectId, Long userId, ProjectRole role) {
+    public ProjectMember(Long projectId, Long userId, Collection<ProjectRole> roles) {
         this.projectId = projectId;
         this.userId = userId;
-        this.role = role;
+        replaceRoles(roles);
     }
 
     public Long getId() {
@@ -74,20 +76,8 @@ public class ProjectMember {
         return userId;
     }
 
-    public ProjectRole getRole() {
-        return role;
-    }
-
-    public String getScmExternalUserId() {
-        return scmExternalUserId;
-    }
-
-    public String getScmUsername() {
-        return scmUsername;
-    }
-
-    public Instant getScmIdentityVerifiedAt() {
-        return scmIdentityVerifiedAt;
+    public Set<ProjectRole> getRoles() {
+        return Set.copyOf(roles);
     }
 
     public Instant getCreatedAt() {
@@ -98,14 +88,23 @@ public class ProjectMember {
         return updatedAt;
     }
 
-    public void changeRole(ProjectRole newRole) {
-        this.role = newRole;
+    public boolean hasRole(ProjectRole role) {
+        return roles.contains(role);
     }
 
-    /** 两个 SCM 列必须同进同退：只有身份没有显示名，这条记录就没有意义。 */
-    public void assignScmIdentity(String externalUserId, String username, Instant verifiedAt) {
-        this.scmExternalUserId = externalUserId;
-        this.scmUsername = username;
-        this.scmIdentityVerifiedAt = verifiedAt;
+    public void replaceRoles(Collection<ProjectRole> newRoles) {
+        if (newRoles == null || newRoles.isEmpty()) {
+            throw new IllegalArgumentException("A project member needs at least one role.");
+        }
+        this.roles.clear();
+        this.roles.addAll(newRoles);
+    }
+
+    public void addRole(ProjectRole role) {
+        this.roles.add(role);
+    }
+
+    public void removeRole(ProjectRole role) {
+        this.roles.remove(role);
     }
 }

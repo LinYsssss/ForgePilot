@@ -3,6 +3,7 @@ package com.forgepilot.auth;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 
 import java.util.ArrayList;
@@ -142,6 +143,20 @@ class AuthApiTest extends PostgresTestBase {
     }
 
     @Test
+    void changingTheDisplayNameSurvivesTheExistingSessionAndRefresh() throws Exception {
+        Browser browser = new Browser();
+        browser.bootstrap();
+        String username = register(browser);
+        browser.login(username, PASSWORD);
+        Long id = jdbc.queryForObject("select id from user_account where username = ?", Long.class, username);
+        String expected = "{\"id\":%d,\"username\":\"%s\",\"displayName\":\"New Name\"}"
+                .formatted(id, username);
+
+        assertThat(browser.changeDisplayName("New Name").getContentAsString()).isEqualTo(expected);
+        assertThat(browser.me().getContentAsString()).isEqualTo(expected);
+    }
+
+    @Test
     void aWriteIsRejectedUntilTheCookieDerivedCsrfHeaderIsSent() throws Exception {
         Browser browser = new Browser();
 
@@ -179,14 +194,16 @@ class AuthApiTest extends PostgresTestBase {
     private static MockHttpServletRequestBuilder registration(String username) {
         return post("/api/auth/register")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"username\":\"%s\",\"password\":\"%s\"}".formatted(username, PASSWORD));
+                .content("{\"username\":\"%s\",\"displayName\":\"Test User\",\"password\":\"%s\"}"
+                        .formatted(username, PASSWORD));
     }
 
     /** The exact body api-contract.md 1 promises for register, login and me. */
     private String accountJson(String username) {
         Long id = this.jdbc.queryForObject(
                 "select id from user_account where username = ?", Long.class, username);
-        return "{\"id\":%d,\"username\":\"%s\"}".formatted(id, username);
+        return "{\"id\":%d,\"username\":\"%s\",\"displayName\":\"Test User\"}"
+                .formatted(id, username);
     }
 
     private static String csrfCookieOf(MockHttpServletResponse response) {
@@ -235,6 +252,12 @@ class AuthApiTest extends PostgresTestBase {
                     .contentType(MediaType.APPLICATION_JSON)
                     .content("{\"currentPassword\":\"%s\",\"newPassword\":\"%s\"}"
                             .formatted(current, replacement)));
+        }
+
+        MockHttpServletResponse changeDisplayName(String displayName) throws Exception {
+            return send(patch("/api/auth/profile")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("{\"displayName\":\"%s\"}".formatted(displayName)));
         }
 
         /** A write the way the SPA sends it: the cookie value echoed in the header. */

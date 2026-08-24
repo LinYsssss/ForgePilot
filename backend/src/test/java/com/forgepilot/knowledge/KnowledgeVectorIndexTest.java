@@ -131,7 +131,7 @@ class KnowledgeVectorIndexTest extends PostgresTestBase {
 
         private Fixture() {
             Long owner = jdbc.queryForObject(
-                    "insert into user_account (username, password_hash) values (?, 'x') returning id",
+                    "insert into user_account (username, display_name, password_hash) values (?, 'Test User', 'x') returning id",
                     Long.class, "vi-" + SEQUENCE.incrementAndGet());
             this.project = jdbc.queryForObject(
                     "insert into project (name, created_by, status) values (?, ?, 'ACTIVE') returning id",

@@ -1,7 +1,5 @@
 package com.forgepilot.scm;
 
-import java.util.Objects;
-
 import com.forgepilot.common.ApiException;
 import com.forgepilot.project.ProjectAccessService;
 import com.forgepilot.project.ProjectMember;
@@ -39,15 +37,18 @@ class PullRequestAssociationService {
     private final ProjectAccessService access;
     private final RequirementDirectory requirements;
     private final PullRequestDecisionGate decisions;
+    private final ProjectScmIdentityAccess scmIdentities;
 
     PullRequestAssociationService(PullRequestRepository pullRequests,
             PullRequestRequirementEventRepository events, ProjectAccessService access,
-            RequirementDirectory requirements, PullRequestDecisionGate decisions) {
+            RequirementDirectory requirements, PullRequestDecisionGate decisions,
+            ProjectScmIdentityAccess scmIdentities) {
         this.pullRequests = pullRequests;
         this.events = events;
         this.access = access;
         this.requirements = requirements;
         this.decisions = decisions;
+        this.scmIdentities = scmIdentities;
     }
 
     /**
@@ -83,8 +84,8 @@ class PullRequestAssociationService {
     }
 
     boolean canCorrect(long projectId, ProjectMember member, PullRequest pullRequest) {
-        return member.getRole() == ProjectRole.LEADER
-                || isAuthor(member, pullRequest)
+        return member.hasRole(ProjectRole.LEADER)
+                || isAuthor(projectId, member, pullRequest)
                         && !decisions.hasFinalDecisionOnHead(
                                 projectId, pullRequest.getId(), pullRequest.getHeadSha());
     }
@@ -97,10 +98,10 @@ class PullRequestAssociationService {
      * 挡住他的是这个 head 上已经发生的一件事实，而那件事实推一个新 commit 就能改变。
      */
     private void authorize(long projectId, ProjectMember member, PullRequest pullRequest) {
-        if (member.getRole() == ProjectRole.LEADER) {
+        if (member.hasRole(ProjectRole.LEADER)) {
             return;
         }
-        if (!isAuthor(member, pullRequest)) {
+        if (!isAuthor(projectId, member, pullRequest)) {
             throw ApiException.forbidden();
         }
         if (decisions.hasFinalDecisionOnHead(projectId, pullRequest.getId(), pullRequest.getHeadSha())) {
@@ -109,9 +110,9 @@ class PullRequestAssociationService {
         }
     }
 
-    private static boolean isAuthor(ProjectMember member, PullRequest pullRequest) {
-        return member.getRole() == ProjectRole.DEVELOPER
-                && member.getScmExternalUserId() != null
-                && Objects.equals(pullRequest.getAuthorExternalUserId(), member.getScmExternalUserId());
+    private boolean isAuthor(long projectId, ProjectMember member, PullRequest pullRequest) {
+        return member.hasRole(ProjectRole.DEVELOPER)
+                && scmIdentities.isActiveAuthor(projectId, member.getUserId(),
+                        pullRequest.getAuthorExternalUserId());
     }
 }

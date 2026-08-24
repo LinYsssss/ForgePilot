@@ -2,12 +2,14 @@ package com.forgepilot.project;
 
 import java.security.Principal;
 import java.util.List;
+import java.util.Set;
 
 import com.forgepilot.auth.AccountView;
 import com.forgepilot.auth.UserDirectory;
 import com.forgepilot.common.ApiException;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.AssertTrue;
+import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import org.springframework.http.HttpStatus;
@@ -17,6 +19,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -37,18 +40,32 @@ class ProjectMemberController {
         return members.list(projectId, userIdOf(principal));
     }
 
-    @PostMapping
-    @ResponseStatus(HttpStatus.CREATED)
-    MemberResponse add(@PathVariable long projectId, @Valid @RequestBody AddMemberRequest request,
-            Principal principal) {
-        return members.add(projectId, userIdOf(principal), request.username(), request.role());
+    @GetMapping("/candidates")
+    List<MemberCandidateResponse> candidates(@PathVariable long projectId,
+            @RequestParam String q, @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size, Principal principal) {
+        return members.search(projectId, userIdOf(principal), q, page, size);
     }
 
-    @PatchMapping("/{userId}")
-    MemberResponse update(@PathVariable long projectId, @PathVariable long userId,
-            @Valid @RequestBody UpdateMemberRequest request, Principal principal) {
-        return members.update(projectId, userIdOf(principal), userId, request.role(),
-                request.scmExternalUserId(), request.scmUsername());
+    @PostMapping("/batch")
+    @ResponseStatus(HttpStatus.CREATED)
+    List<MemberResponse> addBatch(@PathVariable long projectId,
+            @Valid @RequestBody BatchRequest request, Principal principal) {
+        return members.addBatch(projectId, userIdOf(principal), request.members().stream()
+                .map(row -> new ProjectMemberService.BatchMember(row.userId(), row.roles())).toList());
+    }
+
+    @PatchMapping("/{userId}/roles")
+    MemberResponse updateRoles(@PathVariable long projectId, @PathVariable long userId,
+            @Valid @RequestBody RolesRequest request, Principal principal) {
+        return members.updateRoles(projectId, userIdOf(principal), userId, request.roles());
+    }
+
+    @PostMapping("/leader-transfer")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    void transferLeader(@PathVariable long projectId, @Valid @RequestBody LeaderTransferRequest request,
+            Principal principal) {
+        members.transferLeader(projectId, userIdOf(principal), request.targetUserId());
     }
 
     private long userIdOf(Principal principal) {
@@ -56,12 +73,15 @@ class ProjectMemberController {
                 .orElseThrow(ApiException::notFound);
     }
 
-    record AddMemberRequest(@NotBlank @Size(max = 64) String username, @NotNull ProjectRole role) {
+    record BatchRequest(@NotEmpty @Size(max = 50) List<@Valid BatchRow> members) {
     }
 
-    /** 所有字段都是可选的：这个端点同时承载角色变更与 SCM 身份变更。 */
-    record UpdateMemberRequest(ProjectRole role,
-            @Size(max = 128) String scmExternalUserId,
-            @Size(max = 128) String scmUsername) {
+    record BatchRow(long userId, @NotEmpty Set<@NotNull ProjectRole> roles) {
+    }
+
+    record RolesRequest(@NotEmpty Set<@NotNull ProjectRole> roles) {
+    }
+
+    record LeaderTransferRequest(long targetUserId, @AssertTrue boolean confirmed) {
     }
 }

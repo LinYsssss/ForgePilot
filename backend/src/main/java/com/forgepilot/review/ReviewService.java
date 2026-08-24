@@ -4,6 +4,7 @@ import com.forgepilot.common.ApiException;
 import com.forgepilot.project.ProjectAccessService;
 import com.forgepilot.project.ProjectMember;
 import com.forgepilot.project.ProjectRole;
+import com.forgepilot.scm.ProjectScmIdentityAccess;
 import com.forgepilot.review.ReviewClaimRepository.PullRequestIdentity;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -47,15 +48,18 @@ public class ReviewService {
     private final ApplicationEventPublisher publisher;
     private final JdbcTemplate jdbc;
     private final ObjectMapper json;
+    private final ProjectScmIdentityAccess scmIdentities;
 
     ReviewService(ReviewRepository reviews, ReviewClaimRepository claims, ProjectAccessService access,
-            ApplicationEventPublisher publisher, JdbcTemplate jdbc, ObjectMapper json) {
+            ApplicationEventPublisher publisher, JdbcTemplate jdbc, ObjectMapper json,
+            ProjectScmIdentityAccess scmIdentities) {
         this.reviews = reviews;
         this.claims = claims;
         this.access = access;
         this.publisher = publisher;
         this.jdbc = jdbc;
         this.json = json;
+        this.scmIdentities = scmIdentities;
     }
 
     /**
@@ -239,10 +243,12 @@ public class ReviewService {
      */
     private void authorize(long projectId, long actorId, PullRequestIdentity pullRequest) {
         ProjectMember member = access.requireMember(projectId, actorId);
-        if (member.getRole() != ProjectRole.DEVELOPER) {
+        if (member.hasRole(ProjectRole.LEADER) || member.hasRole(ProjectRole.REVIEWER)) {
             return;
         }
-        if (!pullRequest.getAuthorExternalUserId().equals(member.getScmExternalUserId())) {
+        if (!member.hasRole(ProjectRole.DEVELOPER)
+                || !scmIdentities.isActiveAuthor(projectId, actorId,
+                        pullRequest.getAuthorExternalUserId())) {
             throw ApiException.forbidden();
         }
     }

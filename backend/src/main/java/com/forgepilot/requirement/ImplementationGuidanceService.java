@@ -82,7 +82,7 @@ class ImplementationGuidanceService {
                 ProjectRole.LEADER, ProjectRole.DEVELOPER);
         Requirement requirement = requirements.findByProjectIdAndId(projectId, requirementId)
                 .orElseThrow(ApiException::notFound);
-        if (member.getRole() == ProjectRole.DEVELOPER
+        if (!member.hasRole(ProjectRole.LEADER) && member.hasRole(ProjectRole.DEVELOPER)
                 && !Objects.equals(requirement.getAssigneeId(), actorId)) {
             throw ApiException.forbidden();
         }

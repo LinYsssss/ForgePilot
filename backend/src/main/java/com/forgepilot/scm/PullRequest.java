@@ -76,14 +76,7 @@ public class PullRequest {
     @Column(name = "author_username", nullable = false, length = 128)
     private String authorUsername;
 
-    /**
-     * 可重算的「映射到某个项目成员」的结果。在批次 2 中它保持为 null：
-     * 计算它需要按 {@code scm_external_user_id} 做一次查找，而 {@code project}
-     * 没有为此暴露 facade，ArchUnit 规则 4 又禁止从这里伸进
-     * {@code ProjectMemberRepository}。目前也没有任何授权依赖它；
-     * “这是不是我的 PR”由外部 id 判定（D010），而上面那份不可变的作者快照
-     * 也已经存下来了。
-     */
+    /** 由当前活动项目 SCM 绑定重算的成员映射；远端作者快照本身保持不变。 */
     @Column(name = "author_user_id")
     private Long authorUserId;
 
@@ -186,5 +179,9 @@ public class PullRequest {
 
     void linkRequirement(Long requirementId) {
         this.requirementId = requirementId;
+    }
+
+    void mapAuthor(Long userId) {
+        this.authorUserId = userId;
     }
 }

@@ -5,6 +5,9 @@ repo_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 compose_file="$repo_root/compose.yaml"
 project="${1:-forgepilot-phase1-smoke-$(date -u +%Y%m%d%H%M%S)-$$}"
 export FORGEPILOT_SPRING_PROFILES_ACTIVE=""
+export FORGEPILOT_BIND_ADDRESS="127.0.0.1"
+export FORGEPILOT_BACKEND_PORT="0"
+export FORGEPILOT_FRONTEND_PORT="0"
 
 if [[ ! "$project" =~ ^forgepilot-phase1-[a-z0-9][a-z0-9_-]*$ ]]; then
   printf 'Refusing unsafe Compose project name: %s\n' "$project" >&2
@@ -126,14 +129,15 @@ query_postgres() {
 postgres_15_or_newer="$(query_postgres "select current_setting('server_version_num')::integer >= 150000;")"
 vector_version="$(query_postgres "select extversion from pg_extension where extname = 'vector';")"
 vector_distance="$(query_postgres "select '[1,2,3]'::vector <-> '[1,2,4]'::vector;")"
-flyway_v1="$(query_postgres "select success from flyway_schema_history where version = '1';")"
+flyway_v8="$(query_postgres "select success from flyway_schema_history where version = '8';")"
+migration_count="$(query_postgres "select count(*) from flyway_schema_history where version is not null;")"
 failed_migrations="$(query_postgres "select count(*) from flyway_schema_history where success is false;")"
 application_tables="$(query_postgres "select string_agg(table_name, ',' order by table_name collate \"C\") from information_schema.tables where table_schema = 'public' and table_type = 'BASE TABLE' and table_name <> 'flyway_schema_history';")"
 
-# All accepted migrations create exactly these sixteen business tables. An extra
+# All accepted migrations create exactly these nineteen business tables. An extra
 # table means something was added outside the frozen plan. Sorted with the C
 # collation so the comparison does not depend on the container's locale.
-expected_tables='acceptance_criterion,ai_call_log,finding,finding_event,knowledge_chunk,knowledge_document,project,project_member,pull_request,pull_request_requirement_event,requirement,requirement_attachment,requirement_revision,review,scm_repository,user_account'
+expected_tables='acceptance_criterion,ai_call_log,finding,finding_event,knowledge_chunk,knowledge_document,project,project_member,project_member_role,project_member_scm_binding,pull_request,pull_request_requirement_event,requirement,requirement_attachment,requirement_revision,review,scm_identity,scm_repository,user_account'
 
 [[ "$postgres_15_or_newer" == "t" ]] || {
   printf 'PostgreSQL server is older than 15.\n' >&2
@@ -143,8 +147,8 @@ expected_tables='acceptance_criterion,ai_call_log,finding,finding_event,knowledg
   printf 'pgvector extension contract failed.\n' >&2
   exit 1
 }
-[[ "$flyway_v1" == "t" ]] || {
-  printf 'Flyway foundation migration was not successful.\n' >&2
+[[ "$flyway_v8" == "t" && "$migration_count" == "8" ]] || {
+  printf 'Flyway did not apply exactly eight successful versioned migrations through V8.\n' >&2
   exit 1
 }
 [[ "$failed_migrations" == "0" ]] || {

@@ -438,7 +438,7 @@ class RequirementQualityTest extends PostgresTestBase {
             this.project = jdbc.queryForObject(
                     "insert into project (name, created_by, status) values (?, ?, 'ACTIVE') returning id",
                     Long.class, "quality-" + SEQUENCE.incrementAndGet(), leader);
-            jdbc.update("insert into project_member (project_id, user_id, role) values (?, ?, 'LEADER')",
+            jdbc.update("with member as (insert into project_member (project_id, user_id) values (?, ?) returning project_id, user_id) insert into project_member_role (project_id, user_id, role) select project_id, user_id, 'LEADER' from member",
                     project, leader);
         }
 
@@ -468,7 +468,7 @@ class RequirementQualityTest extends PostgresTestBase {
 
         private long account() {
             return jdbc.queryForObject(
-                    "insert into user_account (username, password_hash) values (?, 'x') returning id",
+                    "insert into user_account (username, display_name, password_hash) values (?, 'Test User', 'x') returning id",
                     Long.class, "quality-user-" + SEQUENCE.incrementAndGet());
         }
 
@@ -479,7 +479,7 @@ class RequirementQualityTest extends PostgresTestBase {
 
         private long member(ProjectRole role) {
             long user = account();
-            jdbc.update("insert into project_member (project_id, user_id, role) values (?, ?, ?)",
+            jdbc.update("with member as (insert into project_member (project_id, user_id) values (?, ?) returning project_id, user_id) insert into project_member_role (project_id, user_id, role) select project_id, user_id, ? from member",
                     project, user, role.name());
             return user;
         }

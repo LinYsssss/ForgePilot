@@ -6,6 +6,7 @@ import java.util.Optional;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.data.domain.PageRequest;
 
 /**
  * 其他功能模块读取账号数据的**唯一**途径（D013.6）。它是查询 facade 而非
@@ -33,5 +34,19 @@ public class UserDirectory {
     /** 供成员列表与需求列表批量读取，使它们不必循环调用 {@link #byId}。 */
     public List<AccountView> byIds(Collection<Long> userIds) {
         return accounts.findAllById(userIds).stream().map(AccountView::of).toList();
+    }
+
+    public List<AccountView> search(String query, int page, int size) {
+        Long exactId = query.chars().allMatch(Character::isDigit) ? parseId(query) : null;
+        return accounts.search(query, exactId, PageRequest.of(page, size)).stream()
+                .map(AccountView::of).toList();
+    }
+
+    private static Long parseId(String value) {
+        try {
+            return Long.valueOf(value);
+        } catch (NumberFormatException ignored) {
+            return null;
+        }
     }
 }

@@ -430,12 +430,12 @@ class GitHubWebhookIngestionTest extends ScmTestBase {
         private Fixture() {
             int sequence = SEQUENCE.incrementAndGet();
             this.owner = jdbc.queryForObject(
-                    "insert into user_account (username, password_hash) values (?, 'x') returning id",
+                    "insert into user_account (username, display_name, password_hash) values (?, 'Test User', 'x') returning id",
                     Long.class, "scm-user-" + sequence);
             this.project = jdbc.queryForObject(
                     "insert into project (name, created_by, status) values (?, ?, 'ACTIVE') returning id",
                     Long.class, "scm-project-" + sequence, owner);
-            jdbc.update("insert into project_member (project_id, user_id, role) values (?, ?, 'LEADER')",
+            jdbc.update("with member as (insert into project_member (project_id, user_id) values (?, ?) returning project_id, user_id) insert into project_member_role (project_id, user_id, role) select project_id, user_id, 'LEADER' from member",
                     project, owner);
             this.requirement = jdbc.queryForObject(
                     "insert into requirement (project_id, status) values (?, 'DRAFT') returning id",

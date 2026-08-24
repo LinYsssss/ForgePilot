@@ -92,7 +92,8 @@ class SecurityConfig {
                             request.getSession().setAttribute(
                                     SessionVersionFilter.SESSION_VERSION, principal.getSessionVersion());
                             write(response, json, HttpStatus.OK,
-                                    new AccountResponse(principal.getUserId(), principal.getUsername()));
+                                    new AccountResponse(principal.getUserId(), principal.getUsername(),
+                                            principal.getDisplayName()));
                         })
                         // 所有失败共用同一个响应体，使调用方无法区分
                         // 用户名不存在、口令错误和账号被禁用。

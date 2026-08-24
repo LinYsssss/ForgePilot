@@ -99,7 +99,7 @@ class ScmIdentityFreezeConcurrencyTest extends ScmTestBase {
 
             Future<HttpStatus> update = pool.submit(() -> statusOf(() -> service.update(fixture.project,
                     fixture.owner, fixture.repository, null, "moved-" + SEQUENCE.incrementAndGet(),
-                    null, null, null)));
+                    null, null, null, null)));
 
             awaitBlockedOnTheRepositoryRow();
             assertThatThrownBy(() -> update.get(2, TimeUnit.SECONDS))
@@ -145,7 +145,7 @@ class ScmIdentityFreezeConcurrencyTest extends ScmTestBase {
 
             Future<HttpStatus> update = pool.submit(() -> statusOf(() -> service.update(fixture.project,
                     fixture.owner, fixture.repository, null, moved, "http://127.0.0.1:34591",
-                    null, null)));
+                    null, null, null)));
             awaitBlockedOnTheRepositoryRow();
             assertThatThrownBy(() -> update.get(2, TimeUnit.SECONDS)).isInstanceOf(TimeoutException.class);
 
@@ -240,12 +240,12 @@ class ScmIdentityFreezeConcurrencyTest extends ScmTestBase {
         private Fixture() {
             int sequence = SEQUENCE.incrementAndGet();
             this.owner = jdbc.queryForObject(
-                    "insert into user_account (username, password_hash) values (?, 'x') returning id",
+                    "insert into user_account (username, display_name, password_hash) values (?, 'Test User', 'x') returning id",
                     Long.class, "freeze-user-" + sequence);
             this.project = jdbc.queryForObject(
                     "insert into project (name, created_by, status) values (?, ?, 'ACTIVE') returning id",
                     Long.class, "freeze-project-" + sequence, owner);
-            jdbc.update("insert into project_member (project_id, user_id, role) values (?, ?, 'LEADER')",
+            jdbc.update("with member as (insert into project_member (project_id, user_id) values (?, ?) returning project_id, user_id) insert into project_member_role (project_id, user_id, role) select project_id, user_id, 'LEADER' from member",
                     project, owner);
             this.repository = jdbc.queryForObject(
                     "insert into scm_repository (project_id, provider, instance_identity, external_id, "

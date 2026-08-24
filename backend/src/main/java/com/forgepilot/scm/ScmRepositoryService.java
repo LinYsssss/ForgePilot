@@ -72,7 +72,8 @@ class ScmRepositoryService {
      */
     @Transactional
     ScmRepositoryResponse update(long projectId, long actorId, long repositoryId, ScmProvider provider,
-            String externalId, String apiBase, String token, String webhookSecret) {
+            String externalId, String apiBase, String token, String webhookSecret,
+            Boolean identityApprovalRequired) {
         access.requireRole(projectId, actorId, ProjectRole.LEADER);
         ScmRepository repository = repositories.findWithLockByProjectIdAndId(projectId, repositoryId)
                 .orElseThrow(ApiException::notFound);
@@ -102,6 +103,9 @@ class ScmRepositoryService {
             repository.rotateCredentials(
                     token == null ? repository.getEncryptedToken() : cipher.encrypt(token),
                     webhookSecret == null ? repository.getEncryptedSecret() : cipher.encrypt(webhookSecret));
+        }
+        if (identityApprovalRequired != null) {
+            repository.changeIdentityApprovalRequired(identityApprovalRequired);
         }
         return ScmRepositoryResponse.of(repository);
     }

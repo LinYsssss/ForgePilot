@@ -602,6 +602,7 @@ class ReviewPipelineIntegrationTest extends PostgresTestBase {
         private final long revision;
         private final long acOne;
         private final long acTwo;
+        private final long repository;
         private final long pullRequest;
         private final long knowledgeChunk;
         private final String knowledgeText;
@@ -614,12 +615,12 @@ class ReviewPipelineIntegrationTest extends PostgresTestBase {
             this.fingerprint = "fingerprint-" + sequence;
             this.leaderName = "pipeline-leader-" + sequence;
             this.leader = jdbc.queryForObject(
-                    "insert into user_account (username, password_hash) values (?, 'x') returning id",
+                    "insert into user_account (username, display_name, password_hash) values (?, 'Test User', 'x') returning id",
                     Long.class, leaderName);
             this.project = jdbc.queryForObject(
                     "insert into project (name, created_by, status) values (?, ?, 'ACTIVE') returning id",
                     Long.class, "pipeline-project-" + sequence, leader);
-            jdbc.update("insert into project_member (project_id, user_id, role) values (?, ?, 'LEADER')",
+            jdbc.update("with member as (insert into project_member (project_id, user_id) values (?, ?) returning project_id, user_id) insert into project_member_role (project_id, user_id, role) select project_id, user_id, 'LEADER' from member",
                     project, leader);
 
             this.requirement = jdbc.queryForObject(
@@ -643,7 +644,7 @@ class ReviewPipelineIntegrationTest extends PostgresTestBase {
                     "select id from knowledge_chunk where document_id = ? order by seq limit 1",
                     Long.class, document);
 
-            long repository = jdbc.queryForObject("""
+            this.repository = jdbc.queryForObject("""
                     insert into scm_repository (project_id, provider, instance_identity, external_id,
                         api_base, encrypted_token, encrypted_secret)
                     values (?, 'GITHUB', ?, ?, 'http://127.0.0.1', 'x', 'y') returning id
@@ -669,13 +670,24 @@ class ReviewPipelineIntegrationTest extends PostgresTestBase {
         private String developer(String scmExternalUserId) {
             String username = "pipeline-developer-" + SEQUENCE.incrementAndGet();
             long user = jdbc.queryForObject(
-                    "insert into user_account (username, password_hash) values (?, 'x') returning id",
+                    "insert into user_account (username, display_name, password_hash) values (?, 'Test User', 'x') returning id",
                     Long.class, username);
-            jdbc.update("""
-                    insert into project_member (project_id, user_id, role, scm_external_user_id,
-                        scm_username, scm_identity_verified_at)
-                    values (?, ?, 'DEVELOPER', ?, 'octocat', now())
-                    """, project, user, scmExternalUserId);
+            jdbc.update("with member as (insert into project_member (project_id, user_id) "
+                            + "values (?, ?) returning project_id, user_id) "
+                            + "insert into project_member_role (project_id, user_id, role) "
+                            + "select project_id, user_id, 'DEVELOPER' from member",
+                    project, user);
+            long identity = jdbc.queryForObject("insert into scm_identity (user_id, provider, "
+                            + "instance_identity, external_user_id, external_username, label, usage_type, "
+                            + "verification_status, verification_method, verified_at, last_synced_at) "
+                            + "select ?, provider, instance_identity, ?, 'octocat', 'Work', 'WORK', "
+                            + "'VERIFIED', 'ONE_TIME_TOKEN', now(), now() from scm_repository where id = ? "
+                            + "returning id",
+                    Long.class, user, scmExternalUserId, repository);
+            jdbc.update("insert into project_member_scm_binding (project_id, user_id, scm_identity_id, "
+                            + "repository_id, status, requested_by, approved_by, decided_at, activated_at) "
+                            + "values (?, ?, ?, ?, 'ACTIVE', ?, ?, now(), now())",
+                    project, user, identity, repository, user, user);
             return username;
         }
 
