@@ -1,0 +1,9 @@
+{"file": ".trellis/spec/backend/index.md", "reason": "后端开发前检查清单，动 review 包与迁移前逐项过一遍"}
+{"file": ".trellis/spec/backend/database-guidelines.md", "reason": "V9 只追加四列与两个 CHECK；本文件定义 Flyway schema 权威归属与约束写法，且 CHECK 必须容忍 NULL 以保住既有 8 条历史 Finding"}
+{"file": ".trellis/spec/backend/error-handling.md", "reason": "校验器新增四种处置（散文缺失、超长截断、category/confidence 越界）全部走既有 warnings 通道，不得静默丢弃，也不得升级为整次 Review 失败"}
+{"file": ".trellis/spec/frontend/index.md", "reason": "前端开发前检查清单"}
+{"file": ".trellis/spec/frontend/type-safety.md", "reason": "Finding 接口新增四个可空字段与 FindingCategory / FindingConfidence 两个联合类型，须通过 strict 模式与 vue-tsc"}
+{"file": ".trellis/spec/frontend/component-guidelines.md", "reason": "FindingCard.vue 的 SFC 约定；本任务重排其阅读层次并把三个哈希收进折叠块"}
+{"file": ".trellis/spec/frontend/design-contract.md", "reason": "徽章词表与视觉方向；新增的类别/置信度徽章和说明/建议区块必须落在既有语汇内，不得另立一套"}
+{"file": ".trellis/spec/guides/code-reuse-thinking-guide.md", "reason": "最小改动的直接依据：长内容 containment 复用 FindingCard 既有 .evidence 那组属性，label map 复用 FINDING_STATUS_LABELS 形态，禁止另造原语"}
+{"file": ".trellis/spec/guides/cross-layer-thinking-guide.md", "reason": "本任务是三个 08-24 任务里唯一的全垂直改动：Prompt 契约 → 校验器 → 迁移 → 实体 → API → 前端，六层必须一致"}

@@ -36,13 +36,31 @@ web layer.
   is a column-only migration that persists the PR title frozen into Review
   context. D020 appends `V8__member_roles_and_scm_identities.sql`, which adds
   the three irreducible role/identity/binding facts and brings the current
-  schema to nineteen business tables.
+  schema to nineteen business tables. D021 appends
+  `V9__finding_explanation.sql`, a column-only migration that adds the model's
+  explanation, remediation suggestion, category and confidence band to
+  `finding`; the table count stays at nineteen.
 - **No migration carries seed rows.** The first account is created through
   `POST /api/auth/register`, so no password ever lives in the repository.
 - Flyway derives the history `description` from the file name, and
-  `FoundationDatabaseTest` asserts all eight successful entries plus the exact
+  `FoundationDatabaseTest` asserts all nine successful entries plus the exact
   nineteen-table set in `public`. Renaming an applied migration breaks both that
   test and every existing database.
+- **`ALTER TABLE ... ADD CONSTRAINT ... CHECK` validates the rows already in the
+  table**, so a CHECK that does not tolerate `NULL` passes every test against a
+  freshly migrated schema and then fails the migration outright on any
+  deployment that already holds data. `FoundationDatabaseTest` migrates an empty
+  schema and cannot see this. When a migration adds a constrained column,
+  prove the upgrade path against a non-empty table the way `V9MigrationTest`
+  does: migrate to the previous version, write a row, then migrate the rest.
+- **A CHECK vocabulary that disagrees with the application-side vocabulary is
+  worse than no CHECK.** `finding.category` is the worked example: a value that
+  reaches the constraint aborts the *whole* batch insert rather than its own row
+  (the same trap `ck_finding_matches_review_context` documents), so a legitimate
+  category the CHECK list forgot would take every other finding in that review
+  down with it. Map onto the closed vocabulary in application code *before* the
+  insert, keep the CHECK as the last line of defence, and assert the two lists
+  agree by walking the whole enum end to end.
 - Migrations are append-only. Never edit or renumber an applied migration; add
   the next version instead.
 - The only `ON DELETE` clause is `pull_request.author_user_id ON DELETE SET

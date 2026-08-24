@@ -1,0 +1,6 @@
+{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "后端质量复核基准；本任务须 ./mvnw -B -ntp verify 全绿零 skip"}
+{"file": ".trellis/spec/backend/database-guidelines.md", "reason": "复核 V9 确实只追加、未改 V1–V8、CHECK 容忍 NULL，且四列均未进入任何索引或 WHERE 条件"}
+{"file": ".trellis/spec/backend/index.md", "reason": "后端 Quality Check 段"}
+{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "前端质量复核基准；lint / typecheck / test / build 四项全绿零 skip"}
+{"file": ".trellis/spec/frontend/index.md", "reason": "前端 Quality Check 段"}
+{"file": ".trellis/spec/guides/cross-layer-thinking-guide.md", "reason": "跨层一致性复核：两处 schema 是否逐字同步、FindingView 与前端 Finding 接口是否仍逐字镜像、ReviewPrompts.VERSION 是否已升为 review-2 而 FindingKeys.RULE_VERSION 仍为 1"}
