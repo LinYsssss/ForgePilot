@@ -331,3 +331,24 @@ Completed repository-wide cleanup, repaired archived documentation references, r
 ### Status
 
 [OK] **Completed**
+
+
+## Session 11: Member directory and SCM identity management
+
+**Date**: 2026-08-24
+**Task**: Member directory and SCM identity management
+**Branch**: `feat/member-directory-scm-identities`
+
+### Summary
+
+Implemented and verified account display names, multi-role project membership, user-owned verified SCM identities, project bindings, V8 migration, frontend flows, clean deployment reset, and documentation. Backend 317 tests and frontend 35 tests passed; isolated Compose smoke and fp-demo redeployment are healthy with 19 empty business tables.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `9a0e52e` | (see git log) |
+
+### Status
+
+[OK] **Completed**
