@@ -10,6 +10,7 @@ const router = useRouter();
 
 const mode = ref<"login" | "register">("login");
 const username = ref("");
+const displayName = ref("");
 const password = ref("");
 const pending = ref(false);
 const error = ref<string | null>(null);
@@ -24,7 +25,7 @@ async function submit(): Promise<void> {
   error.value = null;
   try {
     if (mode.value === "register") {
-      await register(username.value, password.value);
+      await register(username.value, displayName.value, password.value);
     }
     await signIn(username.value, password.value);
     await router.push(HOME_ROUTE_PATH);
@@ -106,6 +107,18 @@ async function submit(): Promise<void> {
               placeholder="输入用户名"
               required
               maxlength="64"
+            />
+          </div>
+
+          <div v-if="mode === 'register'" class="field">
+            <label for="login-display-name">显示名</label>
+            <input
+              id="login-display-name"
+              v-model="displayName"
+              autocomplete="name"
+              placeholder="例如：林一帆"
+              required
+              maxlength="120"
             />
           </div>
 

@@ -23,7 +23,7 @@ async function mountSignedInShell() {
     vi.fn((path: string | URL | Request) =>
       Promise.resolve(
         String(path) === "/api/auth/me"
-          ? jsonResponse({ id: 1, username: "lead" })
+          ? jsonResponse({ id: 1, username: "lead", displayName: "负责人" })
           : jsonResponse([]),
       ),
     ),
@@ -45,6 +45,7 @@ describe("route and shell contract", () => {
   it("exposes the approved six-entry product surface and compatibility route", () => {
     expect(PRODUCT_ROUTE_PATHS).toEqual([
       "/workspace",
+      "/account",
       "/projects",
       "/projects/:id/members",
       "/projects/:id/settings",

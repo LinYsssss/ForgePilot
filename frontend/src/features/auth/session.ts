@@ -6,6 +6,7 @@ import { HttpError, requestJson } from "../../lib/http";
 export interface AccountView {
   id: number;
   username: string;
+  displayName: string;
 }
 
 const account = ref<AccountView | null>(null);
@@ -47,10 +48,21 @@ export async function signIn(username: string, password: string): Promise<void> 
   });
 }
 
-export async function register(username: string, password: string): Promise<void> {
+export async function register(
+  username: string,
+  displayName: string,
+  password: string,
+): Promise<void> {
   await requestJson<AccountView>("/api/auth/register", {
     method: "POST",
-    body: JSON.stringify({ username, password }),
+    body: JSON.stringify({ username, displayName, password }),
+  });
+}
+
+export async function changeDisplayName(displayName: string): Promise<void> {
+  account.value = await requestJson<AccountView>("/api/auth/profile", {
+    method: "PATCH",
+    body: JSON.stringify({ displayName }),
   });
 }
 

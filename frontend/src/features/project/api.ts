@@ -16,27 +16,34 @@ export const PROJECT_STATUS_LABELS: Record<ProjectStatus, string> = {
   ARCHIVED: "已归档",
 };
 
+export function hasProjectRole(
+  project: Pick<Project, "myRoles"> | null | undefined,
+  role: ProjectRole,
+): boolean {
+  return project?.myRoles.includes(role) === true;
+}
+
 export interface Project {
   id: number;
   name: string;
   status: ProjectStatus;
   createdAt: string;
-  myRole: ProjectRole;
+  myRoles: ProjectRole[];
 }
 
 export interface Member {
   userId: number;
   username: string;
-  role: ProjectRole;
-  scmExternalUserId: string | null;
-  scmUsername: string | null;
-  scmIdentityVerifiedAt: string | null;
+  displayName: string;
+  roles: ProjectRole[];
 }
 
-export interface MemberPatch {
-  role?: ProjectRole;
-  scmExternalUserId?: string;
-  scmUsername?: string;
+export interface MemberCandidate {
+  userId: number;
+  username: string;
+  displayName: string;
+  enabled: boolean;
+  alreadyMember: boolean;
 }
 
 export function listProjects(): Promise<Project[]> {
@@ -58,24 +65,40 @@ export function listMembers(projectId: number): Promise<Member[]> {
   return requestJson<Member[]>(`/api/projects/${projectId}/members`);
 }
 
-export function addMember(
+export function searchMemberCandidates(
   projectId: number,
-  username: string,
-  role: ProjectRole,
-): Promise<Member> {
-  return requestJson<Member>(`/api/projects/${projectId}/members`, {
+  query: string,
+  page = 0,
+): Promise<MemberCandidate[]> {
+  return requestJson<MemberCandidate[]>(
+    `/api/projects/${projectId}/members/candidates?q=${encodeURIComponent(query)}&page=${page}&size=20`,
+  );
+}
+
+export function addMembers(
+  projectId: number,
+  members: Array<{ userId: number; roles: ProjectRole[] }>,
+): Promise<Member[]> {
+  return requestJson<Member[]>(`/api/projects/${projectId}/members/batch`, {
     method: "POST",
-    body: JSON.stringify({ username, role }),
+    body: JSON.stringify({ members }),
   });
 }
 
-export function updateMember(
+export function updateMemberRoles(
   projectId: number,
   userId: number,
-  patch: MemberPatch,
+  roles: ProjectRole[],
 ): Promise<Member> {
-  return requestJson<Member>(`/api/projects/${projectId}/members/${userId}`, {
+  return requestJson<Member>(`/api/projects/${projectId}/members/${userId}/roles`, {
     method: "PATCH",
-    body: JSON.stringify(patch),
+    body: JSON.stringify({ roles }),
+  });
+}
+
+export function transferLeader(projectId: number, targetUserId: number): Promise<void> {
+  return requestJson<void>(`/api/projects/${projectId}/members/leader-transfer`, {
+    method: "POST",
+    body: JSON.stringify({ targetUserId, confirmed: true }),
   });
 }

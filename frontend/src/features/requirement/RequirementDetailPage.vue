@@ -6,7 +6,7 @@ import { parseId, requirementsRoute, PROJECT_QUERY_KEY } from "../../app/routes"
 import { formatDateTime } from "../../lib/datetime";
 import { apiErrorMessage } from "../../lib/http";
 import { useSession } from "../auth/session";
-import { getProject, listMembers, type Member, type Project } from "../project/api";
+import { getProject, hasProjectRole, listMembers, type Member, type Project } from "../project/api";
 import {
   getRequirementReviewActivity,
   type ActivityView,
@@ -89,7 +89,7 @@ const documentPending = ref(false);
 const documentError = ref<string | null>(null);
 let detailLoadToken = 0;
 
-const isLeader = computed(() => project.value?.myRole === "LEADER");
+const isLeader = computed(() => hasProjectRole(project.value, "LEADER"));
 const isDraft = computed(() => detail.value?.status === "DRAFT");
 const editable = computed(
   () => isLeader.value && detail.value !== null && !isTerminal(detail.value.status),
@@ -98,7 +98,7 @@ const canCheckQuality = computed(() => isLeader.value);
 const canGenerateGuidance = computed(
   () =>
     isLeader.value ||
-    (project.value?.myRole === "DEVELOPER" &&
+    (hasProjectRole(project.value, "DEVELOPER") &&
       detail.value?.assigneeId !== null &&
       detail.value?.assigneeId === account.value?.id),
 );

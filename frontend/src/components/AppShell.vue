@@ -10,6 +10,7 @@ import {
 
 import {
   HOME_ROUTE_PATH,
+  ACCOUNT_ROUTE_PATH,
   LOGIN_ROUTE_PATH,
   parseId,
   PROJECT_QUERY_KEY,
@@ -102,10 +103,12 @@ async function logout(): Promise<void> {
 
       <div class="session-area">
         <details class="account-menu" @toggle="accountMenuToggled">
-          <summary class="button button-inverse session-user">{{ account.username }}</summary>
+          <summary class="button button-inverse session-user">{{ account.displayName }}</summary>
           <div class="account-popover">
             <p class="eyebrow">Account security</p>
             <h2 class="panel-title">账户与安全</h2>
+            <p class="field-hint">{{ account.displayName }} · @{{ account.username }} · ID {{ account.id }}</p>
+            <RouterLink class="button button-quiet" :to="ACCOUNT_ROUTE_PATH">管理资料与 SCM 身份</RouterLink>
             <form class="account-password-form" @submit.prevent="updatePassword">
               <div class="field">
                 <label for="account-current-password">当前密码</label>

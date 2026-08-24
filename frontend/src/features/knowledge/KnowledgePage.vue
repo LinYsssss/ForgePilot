@@ -5,7 +5,7 @@ import { useRoute, useRouter } from "vue-router";
 import { parseId, PROJECT_QUERY_KEY } from "../../app/routes";
 import { formatDateTime } from "../../lib/datetime";
 import { apiErrorMessage } from "../../lib/http";
-import { listProjects, type Project } from "../project/api";
+import { hasProjectRole, listProjects, type Project } from "../project/api";
 import { listProjectKnowledge, uploadProjectKnowledge, type KnowledgeDocument } from "./api";
 
 const route = useRoute();
@@ -21,7 +21,7 @@ const uploadError = ref<string | null>(null);
 const selectedProject = computed(
   () => projects.value.find((project) => project.id === projectId.value) ?? null,
 );
-const isLeader = computed(() => selectedProject.value?.myRole === "LEADER");
+const isLeader = computed(() => hasProjectRole(selectedProject.value, "LEADER"));
 const summary = computed(() => ({
   ready: documents.value.filter((document) => document.status === "READY").length,
   chunks: documents.value.reduce((total, document) => total + document.chunkCount, 0),

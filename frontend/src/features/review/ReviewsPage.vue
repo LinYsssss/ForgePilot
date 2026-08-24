@@ -13,7 +13,7 @@ import {
 import { formatDateTime } from "../../lib/datetime";
 import { apiErrorMessage } from "../../lib/http";
 import { useSession } from "../auth/session";
-import { listProjects, type Project } from "../project/api";
+import { hasProjectRole, listProjects, type Project } from "../project/api";
 import { listRequirements, type RequirementSummary } from "../requirement/api";
 import { getPullRequest, type PullRequest } from "../scm/api";
 import {
@@ -115,11 +115,11 @@ const activityRows = computed(() =>
 );
 
 const canTriggerReview = computed(() => {
-  const role = selectedProject.value?.myRole;
   return (
-    role === "LEADER" ||
-    role === "REVIEWER" ||
-    (role === "DEVELOPER" && pullRequest.value?.authorUserId === account.value?.id)
+    hasProjectRole(selectedProject.value, "LEADER") ||
+    hasProjectRole(selectedProject.value, "REVIEWER") ||
+    (hasProjectRole(selectedProject.value, "DEVELOPER") &&
+      pullRequest.value?.authorUserId === account.value?.id)
   );
 });
 

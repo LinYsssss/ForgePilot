@@ -37,7 +37,7 @@ describe("SCM provider settings", () => {
       vi.fn((input: string | URL | Request) => {
         const path = String(input);
         if (path === "/api/auth/me") {
-          return Promise.resolve(response({ id: 1, username: "lead" }));
+          return Promise.resolve(response({ id: 1, username: "lead", displayName: "负责人" }));
         }
         if (path === "/api/projects") {
           return Promise.resolve(
@@ -46,7 +46,7 @@ describe("SCM provider settings", () => {
               name: "ForgePilot",
               status: "ACTIVE",
               createdAt: "2026-08-22T00:00:00Z",
-              myRole: "LEADER",
+              myRoles: ["LEADER"],
             }]),
           );
         }
@@ -89,7 +89,7 @@ describe("SCM provider settings", () => {
         const path = String(input);
         requests.push(`${init?.method ?? "GET"} ${path}`);
         if (path === "/api/auth/me") {
-          return Promise.resolve(response({ id: 1, username: "lead" }));
+          return Promise.resolve(response({ id: 1, username: "lead", displayName: "负责人" }));
         }
         if (path === "/api/projects") {
           return Promise.resolve(response([{
@@ -97,7 +97,7 @@ describe("SCM provider settings", () => {
             name: "ForgePilot",
             status: "ACTIVE",
             createdAt: "2026-08-22T00:00:00Z",
-            myRole: "LEADER",
+            myRoles: ["LEADER"],
           }]));
         }
         if (path === "/api/projects/1/scm/repositories") {

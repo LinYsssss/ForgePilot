@@ -10,7 +10,7 @@ import {
 } from "../../app/routes";
 import { formatDateTime } from "../../lib/datetime";
 import { apiErrorMessage } from "../../lib/http";
-import { getProject, listMembers, type Member, type Project } from "../project/api";
+import { getProject, hasProjectRole, listMembers, type Member, type Project } from "../project/api";
 import { listRequirements, type RequirementSummary } from "../requirement/api";
 import { getPullRequest, setPullRequestRequirement, type PullRequest } from "../scm/api";
 import {
@@ -73,9 +73,11 @@ const selectedPath = ref<string | null>(null);
 const findingComments = ref<Record<string, string>>({});
 let detailLoadToken = 0;
 
-const role = computed(() => project.value?.myRole ?? null);
-const isLeader = computed(() => role.value === "LEADER");
-const canDecide = computed(() => role.value === "LEADER" || role.value === "REVIEWER");
+const roles = computed(() => project.value?.myRoles ?? []);
+const isLeader = computed(() => hasProjectRole(project.value, "LEADER"));
+const canDecide = computed(
+  () => isLeader.value || hasProjectRole(project.value, "REVIEWER"),
+);
 
 const canEditAssociation = computed(
   () => pullRequest.value?.canEditRequirementAssociation ?? false,
@@ -700,7 +702,7 @@ function eventsErrorFor(findingId: number): string | null {
             :finding="finding"
             :review-decision="detail.decision"
             :assignee-name="memberName(finding.assigneeId)"
-            :role="role"
+            :roles="roles"
             :pending="findingPending === finding.id"
             :events="eventsByFinding[String(finding.id)] ?? null"
             :events-pending="eventsPendingFor === finding.id"
@@ -725,7 +727,7 @@ function eventsErrorFor(findingId: number): string | null {
               :finding="finding"
               :review-decision="detail.decision"
               :assignee-name="memberName(finding.assigneeId)"
-              :role="role"
+              :roles="roles"
               :pending="findingPending === finding.id"
               :events="eventsByFinding[String(finding.id)] ?? null"
               :events-pending="eventsPendingFor === finding.id"

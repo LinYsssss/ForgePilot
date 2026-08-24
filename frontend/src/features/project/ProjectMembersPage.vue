@@ -5,305 +5,350 @@ import { RouterLink, useRoute } from "vue-router";
 import { parseId, requirementsRoute } from "../../app/routes";
 import { formatDateTime } from "../../lib/datetime";
 import { apiErrorMessage } from "../../lib/http";
+import { useSession } from "../auth/session";
 import {
-  addMember,
+  bindScmIdentity,
+  decideScmBinding,
+  listBindingOptions,
+  listScmBindings,
+  type ScmBinding,
+  type ScmIdentity,
+} from "../scm/api";
+import {
+  addMembers,
   getProject,
+  hasProjectRole,
   listMembers,
-  updateMember,
-  PROJECT_ROLES,
   PROJECT_ROLE_LABELS,
+  searchMemberCandidates,
+  transferLeader,
+  updateMemberRoles,
   type Member,
-  type MemberPatch,
+  type MemberCandidate,
   type Project,
   type ProjectRole,
 } from "./api";
 
-interface MemberRow {
-  member: Member;
-  role: ProjectRole;
-  scmExternalUserId: string;
-  scmUsername: string;
-  error: string | null;
-  pending: boolean;
+interface SelectedCandidate {
+  candidate: MemberCandidate;
+  roles: ProjectRole[];
 }
 
 const route = useRoute();
+const { account } = useSession();
 const projectId = computed(() => parseId(route.params.id));
-
 const project = ref<Project | null>(null);
-const rows = ref<MemberRow[]>([]);
+const members = ref<Member[]>([]);
+const candidates = ref<MemberCandidate[]>([]);
+const selected = ref<SelectedCandidate[]>([]);
+const bindings = ref<ScmBinding[]>([]);
+const bindingOptions = ref<ScmIdentity[]>([]);
+const roleDrafts = ref<Record<string, ProjectRole[]>>({});
+const bindingIdentityId = ref<number | null>(null);
+const bindingToken = ref("");
+const query = ref("");
+const commonRoles = ref<ProjectRole[]>(["DEVELOPER"]);
 const loading = ref(true);
-const loadError = ref<string | null>(null);
+const pending = ref(false);
+const error = ref<string | null>(null);
 
-const newUsername = ref("");
-const newRole = ref<ProjectRole>("DEVELOPER");
-const adding = ref(false);
-const addError = ref<string | null>(null);
+const isLeader = computed(() => hasProjectRole(project.value, "LEADER"));
+const assignableRoles: ProjectRole[] = ["DEVELOPER", "REVIEWER"];
 
-const isLeader = computed(() => project.value?.myRole === "LEADER");
-
-function toRow(member: Member): MemberRow {
-  return {
-    member,
-    role: member.role,
-    scmExternalUserId: member.scmExternalUserId ?? "",
-    scmUsername: member.scmUsername ?? "",
-    error: null,
-    pending: false,
-  };
+function resetDrafts(): void {
+  roleDrafts.value = Object.fromEntries(
+    members.value.map((member) => [String(member.userId), [...member.roles]]),
+  );
 }
 
-onMounted(async () => {
+async function load(): Promise<void> {
   const id = projectId.value;
   if (id === null) {
     loading.value = false;
+    error.value = "路由缺少有效的项目 ID。";
     return;
   }
+  loading.value = true;
+  error.value = null;
   try {
-    const [loadedProject, members] = await Promise.all([getProject(id), listMembers(id)]);
+    const [loadedProject, loadedMembers, loadedBindings, options] = await Promise.all([
+      getProject(id),
+      listMembers(id),
+      listScmBindings(id),
+      listBindingOptions(id),
+    ]);
     project.value = loadedProject;
-    rows.value = members.map(toRow);
+    members.value = loadedMembers;
+    bindings.value = loadedBindings;
+    bindingOptions.value = options;
+    bindingIdentityId.value = options[0]?.id ?? null;
+    resetDrafts();
   } catch (failure: unknown) {
-    loadError.value = apiErrorMessage(failure);
+    error.value = apiErrorMessage(failure);
   } finally {
     loading.value = false;
   }
-});
+}
 
-async function add(): Promise<void> {
+async function search(): Promise<void> {
   const id = projectId.value;
-  if (id === null) {
-    return;
-  }
-  adding.value = true;
-  addError.value = null;
+  if (id === null || query.value.trim().length < 2) return;
+  pending.value = true;
+  error.value = null;
   try {
-    rows.value = [...rows.value, toRow(await addMember(id, newUsername.value, newRole.value))];
-    newUsername.value = "";
+    candidates.value = await searchMemberCandidates(id, query.value.trim());
   } catch (failure: unknown) {
-    addError.value = apiErrorMessage(failure);
+    error.value = apiErrorMessage(failure);
   } finally {
-    adding.value = false;
+    pending.value = false;
   }
 }
 
-async function patch(row: MemberRow, changes: MemberPatch): Promise<void> {
+function isSelected(userId: number): boolean {
+  return selected.value.some((row) => row.candidate.userId === userId);
+}
+
+function toggleCandidate(candidate: MemberCandidate): void {
+  if (candidate.alreadyMember || !candidate.enabled) return;
+  const existing = selected.value.findIndex((row) => row.candidate.userId === candidate.userId);
+  if (existing >= 0) {
+    selected.value.splice(existing, 1);
+  } else {
+    selected.value.push({ candidate, roles: [...commonRoles.value] });
+  }
+}
+
+function applyCommonRoles(): void {
+  selected.value.forEach((row) => { row.roles = [...commonRoles.value]; });
+}
+
+function toggleRole(roles: ProjectRole[], role: ProjectRole): void {
+  const index = roles.indexOf(role);
+  if (index >= 0) roles.splice(index, 1);
+  else roles.push(role);
+}
+
+async function addSelected(): Promise<void> {
   const id = projectId.value;
-  if (id === null) {
-    return;
-  }
-  row.pending = true;
-  row.error = null;
+  if (id === null || selected.value.length === 0) return;
+  pending.value = true;
+  error.value = null;
   try {
-    await updateMember(id, row.member.userId, changes);
-    // LEADER 转移会把原负责人降级，因此整份列表都要重新加载。
-    const [reloadedProject, members] = await Promise.all([getProject(id), listMembers(id)]);
-    project.value = reloadedProject;
-    rows.value = members.map(toRow);
+    await addMembers(id, selected.value.map((row) => ({
+      userId: row.candidate.userId,
+      roles: row.roles,
+    })));
+    selected.value = [];
+    candidates.value = [];
+    await load();
   } catch (failure: unknown) {
-    row.error = apiErrorMessage(failure);
+    error.value = apiErrorMessage(failure);
   } finally {
-    row.pending = false;
+    pending.value = false;
   }
 }
 
-function saveRole(row: MemberRow): Promise<void> {
-  return patch(row, { role: row.role });
+async function saveRoles(member: Member): Promise<void> {
+  const id = projectId.value;
+  const roles = roleDrafts.value[String(member.userId)] ?? [];
+  if (id === null) return;
+  try {
+    await updateMemberRoles(id, member.userId, roles);
+    await load();
+  } catch (failure: unknown) {
+    error.value = apiErrorMessage(failure);
+  }
 }
 
-function saveScmIdentity(row: MemberRow): Promise<void> {
-  return patch(row, {
-    scmExternalUserId: row.scmExternalUserId,
-    scmUsername: row.scmUsername,
-  });
+async function makeLeader(member: Member): Promise<void> {
+  const id = projectId.value;
+  if (id === null || !window.confirm(`确认把项目负责人转移给 ${member.displayName}？`)) return;
+  try {
+    await transferLeader(id, member.userId);
+    await load();
+  } catch (failure: unknown) {
+    error.value = apiErrorMessage(failure);
+  }
 }
+
+function currentBinding(userId: number): ScmBinding | null {
+  return [...bindings.value].reverse().find(
+    (binding) => binding.userId === userId &&
+      ["ACTIVE", "PENDING_APPROVAL", "LEGACY_UNCONFIRMED"].includes(binding.status),
+  ) ?? null;
+}
+
+const memberRows = computed(() => members.value.map((member) => ({
+  member,
+  binding: currentBinding(member.userId),
+})));
+
+async function bindMine(): Promise<void> {
+  const id = projectId.value;
+  if (id === null || bindingIdentityId.value === null) return;
+  pending.value = true;
+  error.value = null;
+  try {
+    await bindScmIdentity(id, bindingIdentityId.value, bindingToken.value);
+    bindingToken.value = "";
+    await load();
+  } catch (failure: unknown) {
+    bindingToken.value = "";
+    error.value = apiErrorMessage(failure);
+  } finally {
+    pending.value = false;
+  }
+}
+
+async function decide(binding: ScmBinding, decision: "approve" | "reject"): Promise<void> {
+  const id = projectId.value;
+  if (id === null) return;
+  await decideScmBinding(id, binding.id, decision);
+  await load();
+}
+
+onMounted(load);
 </script>
 
 <template>
-  <section class="members-page" aria-labelledby="members-title">
+  <section aria-labelledby="members-title">
     <div class="page-head">
-      <p class="eyebrow">Project · access boundary</p>
-      <h1 id="members-title">{{ project ? project.name : "项目成员" }}</h1>
-      <p v-if="project" class="muted">
-        我的角色：{{ PROJECT_ROLE_LABELS[project.myRole] }}
+      <p class="eyebrow">Project · people and identities</p>
+      <h1 id="members-title">{{ project?.name ?? "项目成员" }}</h1>
+      <p v-if="project" class="lede">
+        我的角色：{{ project.myRoles.map((role) => PROJECT_ROLE_LABELS[role]).join("、") }}
       </p>
-      <p class="lede">成员角色决定业务操作面；稳定的 SCM 外部身份用于判断“本人 PR”。</p>
     </div>
 
-    <p v-if="projectId === null" class="alert" role="alert">路由缺少有效的项目 id。</p>
-    <p v-else-if="loading" class="muted">正在加载成员…</p>
-    <p v-else-if="loadError" class="alert" role="alert">{{ loadError }}</p>
+    <p v-if="loading" class="muted">正在加载成员…</p>
+    <p v-if="error" class="alert" role="alert">{{ error }}</p>
 
-    <template v-else>
-      <form v-if="isLeader" class="panel inline-form member-add" @submit.prevent="add">
-        <div class="member-add-copy">
-          <h2 class="panel-title">添加项目成员</h2>
-          <p class="field-hint">账户必须已经注册；项目始终保持一个负责人。</p>
-        </div>
+    <section v-if="!loading && isLeader" class="panel batch-panel" aria-labelledby="batch-title">
+      <h2 id="batch-title" class="panel-title">搜索并批量添加成员</h2>
+      <form class="inline-form" @submit.prevent="search">
         <div class="field">
-          <label for="member-username">用户名</label>
-          <input id="member-username" v-model="newUsername" required maxlength="64" />
+          <label for="candidate-query">显示名、用户名或平台 ID</label>
+          <input id="candidate-query" v-model="query" required minlength="2" maxlength="120" />
         </div>
-        <div class="field">
-          <label for="member-role">角色</label>
-          <select id="member-role" v-model="newRole">
-            <option v-for="role in PROJECT_ROLES" :key="role" :value="role">
-              {{ PROJECT_ROLE_LABELS[role] }}
-            </option>
-          </select>
-        </div>
-        <button type="submit" class="button button-primary" :disabled="adding">添加成员</button>
-        <p v-if="addError" class="alert" role="alert">{{ addError }}</p>
+        <button class="button button-quiet" :disabled="pending">搜索</button>
       </form>
-      <p v-else class="empty-state">只有项目负责人可以管理成员。</p>
-
-      <ul class="record-list member-grid">
-        <li v-for="row in rows" :key="row.member.userId" class="record member-card">
-          <div class="record-head">
-            <span class="member-avatar" aria-hidden="true">{{ row.member.username.slice(0, 1).toUpperCase() }}</span>
-            <h2 class="record-title">{{ row.member.username }}</h2>
-            <span class="badge badge-info">{{ PROJECT_ROLE_LABELS[row.member.role] }}</span>
-          </div>
-
-          <dl class="meta-list">
-            <div>
-              <dt>SCM 外部 id</dt>
-              <dd>{{ row.member.scmExternalUserId ?? "未配置" }}</dd>
-            </div>
-            <div>
-              <dt>SCM 用户名</dt>
-              <dd>{{ row.member.scmUsername ?? "未配置" }}</dd>
-            </div>
-            <div>
-              <dt>身份核对时间</dt>
-              <dd>
-                {{
-                  row.member.scmIdentityVerifiedAt
-                    ? formatDateTime(row.member.scmIdentityVerifiedAt)
-                    : "未核对"
-                }}
-              </dd>
-            </div>
-          </dl>
-
-          <template v-if="isLeader">
-            <form class="inline-form member-form" @submit.prevent="saveRole(row)">
-              <div class="field">
-                <label :for="`role-${row.member.userId}`">角色</label>
-                <select :id="`role-${row.member.userId}`" v-model="row.role">
-                  <option v-for="role in PROJECT_ROLES" :key="role" :value="role">
-                    {{ PROJECT_ROLE_LABELS[role] }}
-                  </option>
-                </select>
-              </div>
-              <button type="submit" class="button button-quiet" :disabled="row.pending">
-                保存角色
-              </button>
-              <p class="field-hint">改为「负责人」即转移项目负责人，原负责人同时降级。</p>
-            </form>
-
-            <form class="inline-form member-form scm-identity-form" @submit.prevent="saveScmIdentity(row)">
-              <div class="field">
-                <label :for="`scm-id-${row.member.userId}`">SCM 外部 id</label>
-                <input
-                  :id="`scm-id-${row.member.userId}`"
-                  v-model="row.scmExternalUserId"
-                  required
-                  maxlength="128"
-                />
-              </div>
-              <div class="field">
-                <label :for="`scm-name-${row.member.userId}`">SCM 用户名</label>
-                <input
-                  :id="`scm-name-${row.member.userId}`"
-                  v-model="row.scmUsername"
-                  required
-                  maxlength="128"
-                />
-              </div>
-              <button type="submit" class="button button-quiet" :disabled="row.pending">
-                保存 SCM 身份
-              </button>
-            </form>
-          </template>
-
-          <p v-if="row.error" class="alert" role="alert">{{ row.error }}</p>
+      <ul v-if="candidates.length" class="record-list candidate-list">
+        <li v-for="candidate in candidates" :key="candidate.userId" class="record">
+          <label class="candidate-choice">
+            <input
+              type="checkbox"
+              :checked="isSelected(candidate.userId)"
+              :disabled="candidate.alreadyMember || !candidate.enabled"
+              @change="toggleCandidate(candidate)"
+            />
+            <span><strong>{{ candidate.displayName }}</strong> · @{{ candidate.username }} · ID {{ candidate.userId }}</span>
+          </label>
+          <span v-if="candidate.alreadyMember" class="badge badge-neutral">已是成员</span>
         </li>
       </ul>
 
-      <div v-if="projectId !== null" class="record-actions">
-        <RouterLink class="button button-quiet" :to="requirementsRoute(projectId)">
-          查看该项目需求
-        </RouterLink>
-      </div>
-    </template>
+      <template v-if="selected.length">
+        <div class="role-picker">
+          <strong>共同角色</strong>
+          <label v-for="role in assignableRoles" :key="role">
+            <input
+              type="checkbox"
+              :checked="commonRoles.includes(role)"
+              @change="toggleRole(commonRoles, role); applyCommonRoles()"
+            /> {{ PROJECT_ROLE_LABELS[role] }}
+          </label>
+        </div>
+        <ul class="record-list">
+          <li v-for="row in selected" :key="row.candidate.userId" class="record preview-row">
+            <span>{{ row.candidate.displayName }} · @{{ row.candidate.username }} · ID {{ row.candidate.userId }}</span>
+            <label v-for="role in assignableRoles" :key="role">
+              <input type="checkbox" :checked="row.roles.includes(role)" @change="toggleRole(row.roles, role)" />
+              {{ PROJECT_ROLE_LABELS[role] }}
+            </label>
+          </li>
+        </ul>
+        <button class="button button-primary" :disabled="pending" @click="addSelected">
+          一次添加 {{ selected.length }} 人
+        </button>
+      </template>
+    </section>
+
+    <ul v-if="!loading" class="record-list member-grid">
+      <li v-for="row in memberRows" :key="row.member.userId" class="record member-card">
+        <div class="record-head">
+          <div>
+            <h2 class="record-title">{{ row.member.displayName }}</h2>
+            <p class="field-hint">@{{ row.member.username }} · 平台 ID {{ row.member.userId }}</p>
+          </div>
+          <span v-for="role in row.member.roles" :key="role" class="badge badge-info">
+            {{ PROJECT_ROLE_LABELS[role] }}
+          </span>
+        </div>
+
+        <template v-if="row.binding">
+          <dl class="meta-list">
+            <div><dt>SCM 状态</dt><dd>{{ row.binding.status }}</dd></div>
+            <div><dt>所选身份</dt><dd>{{ row.binding.label }} · {{ row.binding.usageType }}</dd></div>
+            <div><dt>远程账号</dt><dd>{{ row.binding.externalUsername }} · ID {{ row.binding.externalUserId }}</dd></div>
+            <div><dt>仓库权限</dt><dd>{{ row.binding.accessLevel ?? "待验证" }}</dd></div>
+            <div><dt>核验时间</dt><dd>{{ row.binding.accessCheckedAt ? formatDateTime(row.binding.accessCheckedAt) : "待确认" }}</dd></div>
+          </dl>
+          <div v-if="isLeader && row.binding.status === 'PENDING_APPROVAL'" class="record-actions">
+            <button class="button button-primary" @click="decide(row.binding, 'approve')">批准</button>
+            <button class="button button-quiet" @click="decide(row.binding, 'reject')">拒绝</button>
+          </div>
+        </template>
+        <p v-else class="field-hint">
+          {{ row.member.roles.includes("DEVELOPER") ? "等待成员绑定 SCM 身份" : "当前角色无需绑定 SCM 身份" }}
+        </p>
+
+        <form v-if="isLeader" class="member-actions" @submit.prevent="saveRoles(row.member)">
+          <label v-for="role in assignableRoles" :key="role">
+            <input
+              type="checkbox"
+              :checked="roleDrafts[String(row.member.userId)]?.includes(role)"
+              @change="toggleRole(roleDrafts[String(row.member.userId)], role)"
+            /> {{ PROJECT_ROLE_LABELS[role] }}
+          </label>
+          <button class="button button-quiet">保存角色</button>
+          <button
+            v-if="!row.member.roles.includes('LEADER')"
+            type="button"
+            class="button button-quiet"
+            @click="makeLeader(row.member)"
+          >转移负责人</button>
+        </form>
+
+        <form v-if="account?.id === row.member.userId" class="member-actions" @submit.prevent="bindMine">
+          <h3 class="panel-title">选择本项目使用的 SCM 身份</h3>
+          <p v-if="bindingOptions.length === 0" class="field-hint">先到“账户与 SCM 身份”验证兼容身份。</p>
+          <template v-else>
+            <div class="field"><label :for="`identity-${row.member.userId}`">身份</label>
+              <select :id="`identity-${row.member.userId}`" v-model="bindingIdentityId">
+                <option v-for="identity in bindingOptions" :key="identity.id" :value="identity.id">
+                  {{ identity.label }} · {{ identity.externalUsername }} · ID {{ identity.externalUserId }}
+                </option>
+              </select>
+            </div>
+            <div class="field"><label :for="`token-${row.member.userId}`">一次性 Token</label>
+              <input :id="`token-${row.member.userId}`" v-model="bindingToken" type="password" required autocomplete="off" />
+            </div>
+            <button class="button button-primary" :disabled="pending">验证仓库权限并绑定</button>
+          </template>
+        </form>
+      </li>
+    </ul>
+
+    <div v-if="projectId !== null" class="record-actions">
+      <RouterLink class="button button-quiet" :to="requirementsRoute(projectId)">查看该项目需求</RouterLink>
+    </div>
   </section>
 </template>
 
 <style scoped>
-.member-add {
-  display: grid;
-  grid-template-columns: minmax(14rem, 1fr) minmax(12rem, 1fr) minmax(10rem, 0.7fr) auto;
-}
-
-.member-add .alert {
-  grid-column: 1 / -1;
-}
-
-.member-grid {
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 29rem), 1fr));
-}
-
-.member-card {
-  display: flex;
-  flex-direction: column;
-}
-
-.member-avatar {
-  display: grid;
-  width: 2.25rem;
-  height: 2.25rem;
-  place-items: center;
-  border: 0.0625rem solid var(--fp-color-border-accent);
-  border-radius: 50%;
-  background: var(--fp-color-accent-soft);
-  color: var(--fp-color-accent-inverse);
-  font: 800 0.75rem/1 var(--fp-font-mono);
-}
-
-.member-card .record-title {
-  margin-right: auto;
-}
-
-.member-form {
-  margin-top: var(--fp-space-5);
-  padding-top: var(--fp-space-5);
-  border-top: 0.0625rem solid var(--fp-color-border);
-}
-
-.scm-identity-form {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-.scm-identity-form button {
-  justify-self: start;
-}
-
-@media (max-width: 64rem) {
-  .member-add {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-@media (max-width: 42rem) {
-  .member-add,
-  .scm-identity-form {
-    grid-template-columns: 1fr;
-  }
-
-  .scm-identity-form button {
-    width: 100%;
-  }
-}
+.batch-panel, .member-actions { display: grid; gap: var(--fp-space-4); }
+.candidate-choice, .role-picker, .preview-row { display: flex; flex-wrap: wrap; gap: var(--fp-space-3); align-items: center; }
+.member-grid { grid-template-columns: repeat(auto-fit, minmax(min(100%, 29rem), 1fr)); }
+.member-card { display: flex; flex-direction: column; gap: var(--fp-space-4); }
+.member-actions { padding-top: var(--fp-space-4); border-top: 0.0625rem solid var(--fp-color-border); }
 </style>

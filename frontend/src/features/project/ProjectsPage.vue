@@ -95,7 +95,11 @@ async function create(): Promise<void> {
         <dl class="meta-list project-meta">
           <div>
             <dt>我的角色</dt>
-            <dd><span class="badge badge-info">{{ PROJECT_ROLE_LABELS[project.myRole] }}</span></dd>
+            <dd class="role-list">
+              <span v-for="role in project.myRoles" :key="role" class="badge badge-info">
+                {{ PROJECT_ROLE_LABELS[role] }}
+              </span>
+            </dd>
           </div>
           <div>
             <dt>创建时间</dt>

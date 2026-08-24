@@ -205,14 +205,14 @@ export const FINDING_MOVES: Record<FindingStatus, readonly FindingMove[]> = {
 export function availableMoves(
   status: FindingStatus,
   continuity: FindingContinuity,
-  role: ProjectRole | null,
+  roles: readonly ProjectRole[],
 ): readonly FindingMove[] {
-  if (role === null) {
+  if (roles.length === 0) {
     return [];
   }
   return FINDING_MOVES[status].filter(
     (move) =>
-      move.allowed.includes(role) &&
+      roles.some((role) => move.allowed.includes(role)) &&
       (move.onlySuppressed !== true || continuity === "SUPPRESSED"),
   );
 }

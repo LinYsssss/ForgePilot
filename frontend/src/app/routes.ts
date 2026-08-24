@@ -1,6 +1,7 @@
 import type { LocationQueryValue, RouteLocationRaw, RouteRecordRaw } from "vue-router";
 
 import LoginPage from "../features/auth/LoginPage.vue";
+import AccountSettingsPage from "../features/auth/AccountSettingsPage.vue";
 import KnowledgePage from "../features/knowledge/KnowledgePage.vue";
 import ProjectMembersPage from "../features/project/ProjectMembersPage.vue";
 import ProjectsPage from "../features/project/ProjectsPage.vue";
@@ -31,6 +32,7 @@ export const TOP_LEVEL_NAVIGATION = [
 export const HOME_ROUTE_PATH = TOP_LEVEL_NAVIGATION[0].to;
 
 export const LOGIN_ROUTE_PATH = "/login";
+export const ACCOUNT_ROUTE_PATH = "/account";
 
 /** 需求与审查界面通过这个查询参数限定到某个项目。 */
 export const PROJECT_QUERY_KEY = "project";
@@ -38,12 +40,13 @@ export const PROJECT_QUERY_KEY = "project";
 /**
  * 审查列表通过这个参数收窄到单个 PR。它是既有合法路径上的一个过滤条件，
  * 而不是又一条路由：本产品没有 PR 详情页，{@link PRODUCT_ROUTE_PATHS}
- * 里那十条路径就是全部产品面。
+ * 中的路径就是全部产品面。
  */
 export const PULL_REQUEST_QUERY_KEY = "pullRequest";
 
 export const PRODUCT_ROUTE_PATHS = [
   "/workspace",
+  "/account",
   "/projects",
   "/projects/:id/members",
   "/projects/:id/settings",
@@ -142,6 +145,12 @@ export const routes: RouteRecordRaw[] = [
     name: "login",
     component: LoginPage,
     meta: { title: "登录" },
+  },
+  {
+    path: ACCOUNT_ROUTE_PATH,
+    name: "account",
+    component: AccountSettingsPage,
+    meta: { title: "账户设置", requiresSession: true },
   },
   {
     path: "/projects",

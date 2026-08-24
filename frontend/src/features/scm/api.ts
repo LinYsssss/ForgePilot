@@ -1,6 +1,15 @@
 import { requestJson } from "../../lib/http";
 
 export type ScmProvider = "GITHUB" | "GITLAB";
+export type ScmIdentityUsage = "WORK" | "PERSONAL" | "CLIENT" | "OTHER";
+export type ScmIdentityStatus = "VERIFIED" | "LEGACY_UNCONFIRMED" | "REVOKED";
+export type ScmBindingStatus =
+  | "PENDING_APPROVAL"
+  | "ACTIVE"
+  | "REJECTED"
+  | "REVOKED"
+  | "SUPERSEDED"
+  | "LEGACY_UNCONFIRMED";
 
 export const SCM_PROVIDERS: readonly ScmProvider[] = ["GITHUB", "GITLAB"];
 
@@ -20,6 +29,7 @@ export interface ScmRepository {
   instanceIdentity: string;
   externalId: string;
   apiBase: string;
+  identityApprovalRequired: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -56,6 +66,37 @@ export interface ScmRepositoryPatch {
   apiBase?: string;
   token?: string;
   webhookSecret?: string;
+  identityApprovalRequired?: boolean;
+}
+
+export interface ScmIdentity {
+  id: number;
+  provider: ScmProvider | null;
+  instanceIdentity: string | null;
+  externalUserId: string;
+  externalUsername: string;
+  label: string;
+  usageType: ScmIdentityUsage;
+  verificationStatus: ScmIdentityStatus;
+  verifiedAt: string | null;
+  lastSyncedAt: string | null;
+}
+
+export interface ScmBinding {
+  id: number;
+  userId: number;
+  identityId: number;
+  label: string;
+  usageType: ScmIdentityUsage;
+  provider: ScmProvider;
+  instanceIdentity: string;
+  externalUserId: string;
+  externalUsername: string;
+  status: ScmBindingStatus;
+  accessLevel: "READ" | "WRITE" | "ADMIN" | null;
+  accessCheckedAt: string | null;
+  activatedAt: string | null;
+  endedAt: string | null;
 }
 
 function projectPath(projectId: number): string {
@@ -84,6 +125,68 @@ export function updateScmRepository(
   return requestJson<ScmRepository>(
     `${projectPath(projectId)}/scm/repositories/${repositoryId}`,
     { method: "PATCH", body: JSON.stringify(patch) },
+  );
+}
+
+export function listScmIdentities(): Promise<ScmIdentity[]> {
+  return requestJson<ScmIdentity[]>("/api/scm/identities");
+}
+
+export function verifyScmIdentity(input: {
+  provider: ScmProvider;
+  apiBase: string;
+  oneTimeToken: string;
+  label: string;
+  usageType: ScmIdentityUsage;
+}): Promise<ScmIdentity> {
+  return requestJson<ScmIdentity>("/api/scm/identities/verify", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export function updateScmIdentity(
+  identityId: number,
+  label: string,
+  usageType: ScmIdentityUsage,
+): Promise<ScmIdentity> {
+  return requestJson<ScmIdentity>(`/api/scm/identities/${identityId}`, {
+    method: "PATCH",
+    body: JSON.stringify({ label, usageType }),
+  });
+}
+
+export function revokeScmIdentity(identityId: number): Promise<void> {
+  return requestJson<void>(`/api/scm/identities/${identityId}`, { method: "DELETE" });
+}
+
+export function listBindingOptions(projectId: number): Promise<ScmIdentity[]> {
+  return requestJson<ScmIdentity[]>(`${projectPath(projectId)}/scm/binding-options`);
+}
+
+export function listScmBindings(projectId: number): Promise<ScmBinding[]> {
+  return requestJson<ScmBinding[]>(`${projectPath(projectId)}/scm/bindings`);
+}
+
+export function bindScmIdentity(
+  projectId: number,
+  identityId: number,
+  oneTimeToken: string,
+): Promise<ScmBinding> {
+  return requestJson<ScmBinding>(`${projectPath(projectId)}/scm/bindings`, {
+    method: "POST",
+    body: JSON.stringify({ identityId, oneTimeToken }),
+  });
+}
+
+export function decideScmBinding(
+  projectId: number,
+  bindingId: number,
+  decision: "approve" | "reject",
+): Promise<void> {
+  return requestJson<void>(
+    `${projectPath(projectId)}/scm/bindings/${bindingId}/${decision}`,
+    { method: "POST" },
   );
 }
 

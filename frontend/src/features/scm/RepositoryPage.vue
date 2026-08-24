@@ -4,7 +4,7 @@ import { useRoute, useRouter } from "vue-router";
 import { parseId, PROJECT_QUERY_KEY } from "../../app/routes";
 import { formatDateTime } from "../../lib/datetime";
 import { apiErrorMessage } from "../../lib/http";
-import { listProjects, type Project } from "../project/api";
+import { hasProjectRole, listProjects, type Project } from "../project/api";
 import {
   listScmRepositories,
   registerScmRepository,
@@ -29,10 +29,11 @@ const externalId = ref("");
 const apiBase = ref(SCM_PROVIDER_DEFAULTS.GITHUB);
 const token = ref("");
 const webhookSecret = ref("");
+const identityApprovalRequired = ref(false);
 const selected = computed(
   () => projects.value.find((project) => project.id === projectId.value) ?? null,
 );
-const isLeader = computed(() => selected.value?.myRole === "LEADER");
+const isLeader = computed(() => hasProjectRole(selected.value, "LEADER"));
 
 function choose(event: Event): void {
   const id = parseId((event.target as HTMLSelectElement).value);
@@ -52,6 +53,7 @@ async function load(): Promise<void> {
   apiBase.value = SCM_PROVIDER_DEFAULTS.GITHUB;
   token.value = "";
   webhookSecret.value = "";
+  identityApprovalRequired.value = false;
   error.value = null;
   if (id === null) return;
   loading.value = true;
@@ -61,6 +63,7 @@ async function load(): Promise<void> {
       provider.value = repository.value.provider;
       externalId.value = repository.value.externalId;
       apiBase.value = repository.value.apiBase;
+      identityApprovalRequired.value = repository.value.identityApprovalRequired;
     }
   } catch (failure: unknown) {
     error.value = apiErrorMessage(failure);
@@ -89,6 +92,7 @@ async function save(): Promise<void> {
       if (apiBase.value !== "") patch.apiBase = apiBase.value;
       if (token.value !== "") patch.token = token.value;
       if (webhookSecret.value !== "") patch.webhookSecret = webhookSecret.value;
+      patch.identityApprovalRequired = identityApprovalRequired.value;
       repository.value = await updateScmRepository(id, repository.value.id, patch);
     }
     token.value = "";
@@ -189,6 +193,10 @@ watch(projectId, load, { immediate: true });
               maxlength="128"
             />
           </div>
+          <label v-if="repository" class="field checkbox-field">
+            <input v-model="identityApprovalRequired" type="checkbox" />
+            成员 SCM 身份通过仓库验证后仍需负责人批准
+          </label>
           <div class="field repository-api-field">
             <label for="repository-api-base">
               API 基地址{{ repository ? "（留空不改）" : "" }}

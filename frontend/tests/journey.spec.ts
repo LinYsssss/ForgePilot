@@ -29,10 +29,8 @@ interface RecordedCall {
 interface MemberRow {
   userId: number;
   username: string;
-  role: "LEADER" | "DEVELOPER" | "REVIEWER";
-  scmExternalUserId: string | null;
-  scmUsername: string | null;
-  scmIdentityVerifiedAt: string | null;
+  displayName: string;
+  roles: ("LEADER" | "DEVELOPER" | "REVIEWER")[];
 }
 
 interface FindingRow {
@@ -81,9 +79,9 @@ interface EventRow {
 }
 
 const ACCOUNTS = [
-  { id: 1, username: "lead", role: "LEADER" as const },
-  { id: 2, username: "dev", role: "DEVELOPER" as const },
-  { id: 3, username: "rev", role: "REVIEWER" as const },
+  { id: 1, username: "lead", displayName: "负责人", role: "LEADER" as const },
+  { id: 2, username: "dev", displayName: "开发者", role: "DEVELOPER" as const },
+  { id: 3, username: "rev", displayName: "评审者", role: "REVIEWER" as const },
 ];
 
 const HEAD_ONE = "a1b2c3d4e5f60718293a4b5c6d7e8f9012345678";
@@ -91,7 +89,7 @@ const HEAD_TWO = "9988776655443322110099887766554433221100";
 
 /** The whole server, small enough to read and stateful enough to be a journey. */
 class FakeServer {
-  session: { id: number; username: string } | null = null;
+  session: { id: number; username: string; displayName: string } | null = null;
   projectId: number | null = null;
   projectName = "";
   members: MemberRow[] = [];
@@ -228,7 +226,7 @@ class FakeServer {
     if (current === null) {
       return null;
     }
-    return this.members.find((member) => member.userId === current.id)?.role ?? null;
+    return this.members.find((member) => member.userId === current.id)?.roles[0] ?? null;
   }
 
   findFinding(findingId: number): FindingRow | null {
@@ -419,7 +417,7 @@ function handleAuth(path: string, method: string, body: string | null): Response
     if (account === undefined) {
       return failure(401, "UNAUTHORIZED", "用户名或口令不正确");
     }
-    server.session = { id: account.id, username: account.username };
+    server.session = { id: account.id, username: account.username, displayName: account.displayName };
     return json(server.session);
   }
   if (path === "/api/auth/logout" && method === "POST") {
@@ -446,10 +444,8 @@ function handleProject(path: string, method: string, body: string | null): Respo
         {
           userId: account.id,
           username: account.username,
-          role: "LEADER",
-          scmExternalUserId: null,
-          scmUsername: null,
-          scmIdentityVerifiedAt: null,
+          displayName: account.displayName,
+          roles: ["LEADER"],
         },
       ];
     }
@@ -464,25 +460,44 @@ function handleProject(path: string, method: string, body: string | null): Respo
   if (path === "/api/projects/3/members" && method === "GET") {
     return json(server.members);
   }
-  if (path === "/api/projects/3/members" && method === "POST") {
-    const payload = JSON.parse(body ?? "{}") as {
-      username: string;
-      role: "LEADER" | "DEVELOPER" | "REVIEWER";
-    };
-    const account = ACCOUNTS.find((candidate) => candidate.username === payload.username);
-    if (account === undefined) {
-      return failure(404, "NOT_FOUND", "用户不存在");
-    }
-    const row: MemberRow = {
+  if (path.startsWith("/api/projects/3/members/candidates?") && method === "GET") {
+    const query = new URL(path, "http://forgepilot.test").searchParams.get("q") ?? "";
+    return json(ACCOUNTS.filter((account) =>
+      account.username.includes(query) || account.displayName.includes(query),
+    ).map((account) => ({
       userId: account.id,
       username: account.username,
-      role: payload.role,
-      scmExternalUserId: null,
-      scmUsername: null,
-      scmIdentityVerifiedAt: null,
+      displayName: account.displayName,
+      enabled: true,
+      alreadyMember: server.members.some((member) => member.userId === account.id),
+    })));
+  }
+  if (path === "/api/projects/3/members/batch" && method === "POST") {
+    const payload = JSON.parse(body ?? "{}") as {
+      members: Array<{
+        userId: number;
+        roles: ("LEADER" | "DEVELOPER" | "REVIEWER")[];
+      }>;
     };
-    server.members = [...server.members, row];
-    return json(row, 201);
+    const added: MemberRow[] = [];
+    for (const input of payload.members) {
+      const account = ACCOUNTS.find((candidate) => candidate.id === input.userId);
+      if (account === undefined) return failure(404, "NOT_FOUND", "用户不存在");
+      added.push({
+        userId: account.id,
+        username: account.username,
+        displayName: account.displayName,
+        roles: input.roles,
+      });
+    }
+    server.members = [...server.members, ...added];
+    return json(added, 201);
+  }
+  if (path === "/api/projects/3/scm/bindings" && method === "GET") {
+    return json([]);
+  }
+  if (path === "/api/projects/3/scm/binding-options" && method === "GET") {
+    return json([]);
   }
   return null;
 }
@@ -493,7 +508,7 @@ function projectView(): unknown {
     name: server.projectName,
     status: "ACTIVE",
     createdAt: "2026-08-21T02:00:00Z",
-    myRole: server.role() ?? "DEVELOPER",
+    myRoles: [server.role() ?? "DEVELOPER"],
   };
 }
 
@@ -811,19 +826,28 @@ describe("three-role journey through the real App and router", () => {
     expect(lastCall("POST", "/api/projects")?.body).toBe('{"name":"ForgePilot"}');
     expect(wrapper.text()).toContain("ForgePilot");
 
-    // 4. Adds the developer and the reviewer.
+    // 4. Searches the directory and adds the developer and reviewer with roles.
     await router.push("/projects/3/members");
     await flushPromises();
     for (const [username, role] of [
       ["dev", "DEVELOPER"],
       ["rev", "REVIEWER"],
     ]) {
-      await wrapper.find("#member-username").setValue(username);
-      await wrapper.find("#member-role").setValue(role);
+      await wrapper.find("#candidate-query").setValue(username);
       await wrapper.find("form.inline-form").trigger("submit");
       await flushPromises();
-      expect(lastCall("POST", "/api/projects/3/members")?.body).toBe(
-        JSON.stringify({ username, role }),
+      await wrapper.find(".candidate-choice input").setValue(true);
+      if (role === "REVIEWER") {
+        const roleInputs = wrapper.findAll(".role-picker input");
+        await roleInputs[0].setValue(false);
+        await roleInputs[1].setValue(true);
+      }
+      const addButton = wrapper.findAll("button")
+        .find((button) => button.text().startsWith("一次添加"));
+      await addButton?.trigger("click");
+      await flushPromises();
+      expect(lastCall("POST", "/api/projects/3/members/batch")?.body).toBe(
+        JSON.stringify({ members: [{ userId: role === "DEVELOPER" ? 2 : 3, roles: [role] }] }),
       );
     }
     expect(wrapper.text()).toContain("dev");
@@ -1056,15 +1080,13 @@ describe("three-role journey through the real App and router", () => {
       {
         userId: 1,
         username: "lead",
-        role: "LEADER",
-        scmExternalUserId: null,
-        scmUsername: null,
-        scmIdentityVerifiedAt: null,
+        displayName: "负责人",
+        roles: ["LEADER"],
       },
     ];
     server.requirementId = 12;
     server.requirementTitle = "登录闭环";
-    server.session = { id: 1, username: "lead" };
+    server.session = { id: 1, username: "lead", displayName: "负责人" };
     server.seedFirstReview();
     calls.length = 0;
     clearSession();
@@ -1132,15 +1154,13 @@ describe("three-role journey through the real App and router", () => {
       {
         userId: 1,
         username: "lead",
-        role: "LEADER",
-        scmExternalUserId: null,
-        scmUsername: null,
-        scmIdentityVerifiedAt: null,
+        displayName: "负责人",
+        roles: ["LEADER"],
       },
     ];
     server.requirementId = 12;
     server.requirementTitle = "登录闭环";
-    server.session = { id: 1, username: "lead" };
+    server.session = { id: 1, username: "lead", displayName: "负责人" };
     calls.length = 0;
     clearSession();
 

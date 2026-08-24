@@ -10,7 +10,7 @@ import {
 } from "../../app/routes";
 import { formatDateTime } from "../../lib/datetime";
 import { apiErrorMessage } from "../../lib/http";
-import { listProjects, type Project } from "../project/api";
+import { hasProjectRole, listProjects, type Project } from "../project/api";
 import { listReviewActivity, type ActivityView } from "../review/api";
 import {
   REVIEW_ACTIVITIES,
@@ -54,7 +54,7 @@ let requirementsLoadToken = 0;
 const selectedProject = computed(
   () => projects.value.find((project) => project.id === projectId.value) ?? null,
 );
-const isLeader = computed(() => selectedProject.value?.myRole === "LEADER");
+const isLeader = computed(() => hasProjectRole(selectedProject.value, "LEADER"));
 
 const filteredRequirements = computed(() => {
   const query = search.value.trim().toLocaleLowerCase();

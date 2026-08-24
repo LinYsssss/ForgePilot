@@ -11,24 +11,22 @@ interface RecordedCall {
   body: string | null;
 }
 
-const account = { id: 1, username: "lead" };
+const account = { id: 1, username: "lead", displayName: "负责人" };
 
 const project = {
   id: 3,
   name: "ForgePilot",
   status: "ACTIVE",
   createdAt: "2026-08-21T02:00:00Z",
-  myRole: "LEADER",
+  myRoles: ["LEADER"],
 };
 
 const members = [
   {
     userId: 1,
     username: "lead",
-    role: "LEADER",
-    scmExternalUserId: null,
-    scmUsername: null,
-    scmIdentityVerifiedAt: null,
+    displayName: "负责人",
+    roles: ["LEADER"],
   },
 ];
 

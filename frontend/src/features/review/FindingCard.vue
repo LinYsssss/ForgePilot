@@ -28,7 +28,7 @@ const props = defineProps<{
   reviewDecision: ReviewDecision;
   assigneeName: string | null;
   /** 项目尚未加载完成时为 null；在此之前不提供任何操作。 */
-  role: ProjectRole | null;
+  roles: ProjectRole[];
   pending: boolean;
   events: FindingEvent[] | null;
   eventsPending: boolean;
@@ -46,7 +46,7 @@ const emit = defineEmits<{
 }>();
 
 const moves = computed(() =>
-  availableMoves(props.finding.status, props.finding.continuity, props.role),
+  availableMoves(props.finding.status, props.finding.continuity, props.roles),
 );
 
 const locator = computed(() => {
