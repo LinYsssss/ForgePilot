@@ -2,7 +2,7 @@
 
 Read and follow `AGENTS.md` in full before doing any work. It is the shared ForgePilot instruction source for Claude Code, Codex, and Pi.
 
-**Phase 0 through Phase 8 are complete and gated as of 2026-08-22**, with two product completions on 2026-08-23 — D017 (six-entry product surface) and D018 (centered top navigation, single visible Logo per surface). Per-phase evidence is in `.trellis/tasks/archive/2026-08/<task>/result.md`. The delivered shape, re-verified on 2026-08-23, is 8 backend packages, 16 tables across 7 Flyway migrations, 316 green backend tests, a 6-entry / 10-route frontend with 35 green tests, both GitHub and GitLab providers, and a three-arm formal evaluation whose holdout was consumed exactly once. The repository is in the defense-preparation period: feature development is closed.
+**Phase 0 through Phase 8 are complete and gated as of 2026-08-22**, with two product completions on 2026-08-23 — D017 (six-entry product surface) and D018 (centered top navigation, single visible Logo per surface). Per-phase evidence is in `.trellis/tasks/archive/2026-08/<task>/result.md`. The delivered shape, re-verified on 2026-08-24, is 8 backend packages, 19 tables across 9 Flyway migrations, 323 green backend tests, a 6-entry / 11-route frontend with 35 green tests, both GitHub and GitLab providers, and a three-arm formal evaluation whose holdout was consumed exactly once. The repository is in the defense-preparation period: feature development is closed.
 
 The later `08-23-requirement-document-access` task added only `.txt/.md` Requirement document reading/download and structured Markdown export, reusing the existing scoped Guidance retrieval without a schema change, dependency, top-level frontend route, or second AI flow.
 

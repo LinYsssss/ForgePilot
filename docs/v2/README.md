@@ -2,7 +2,7 @@
 
 ForgePilot 是围绕需求驱动 Pull Request 审查建设的轻量级 AI 研发协作平台。
 
-状态：**成员目录、多角色与 SCM 多身份扩展（2026-08-24）**。Phase 0–8 及 R2.5 基线保持有效；D020 以 V8 迁移补充显示名、成员多角色、用户自有 SCM 多身份和项目身份绑定。正式评测证据仍不可重跑或覆盖。
+状态：**Finding 问题说明、修复建议与模型置信度（2026-08-24）**。Phase 0–8 及 R2.5 基线保持有效；D020 以 V8 迁移补充显示名、成员多角色、用户自有 SCM 多身份和项目身份绑定，D021 以 V9 追加 Finding 的说明、建议、类别与置信度四列。正式评测证据仍不可重跑或覆盖。
 
 ## 权威文档
 
@@ -25,14 +25,14 @@ ForgePilot 是围绕需求驱动 Pull Request 审查建设的轻量级 AI 研发
 
 Phase 0–8 全部完成，逐阶段验收证据在 `.trellis/tasks/archive/2026-08/` 下各任务的 `result.md`。
 
-交付形态：后端 8 个顶层包、19 张业务表、8 个 Flyway 迁移、317 个测试零跳过；前端保持 6 个一级导航、11 条产品路由和 35 个测试，并增加非一级账户页。已交付能力：
+交付形态：后端 8 个顶层包、19 张业务表、9 个 Flyway 迁移、323 个测试零跳过；前端保持 6 个一级导航、11 条产品路由和 35 个测试，并增加非一级账户页。已交付能力：
 
 - **auth**：本地账号、显示名、进程内会话、Cookie CSRF、会话版本失效、改密。
 - **project**：可按显示名/用户名/平台 ID 搜索的成员目录、原子批量添加、成员多角色、唯一 LEADER 与角色能力并集。
 - **requirement**：需求与验收条件、不可变修订、稳定 `ac_key`、`.txt/.md` 需求文档阅读/下载、结构化 Markdown 导出、需求质量检查与知识增强 Guidance。
 - **knowledge / ai**：pgvector 项目知识库、按项目与当前需求隔离的附件检索、可见的真实向量索引元数据、统一 AI 网关、Prompt 净化与调用审计。
 - **scm**：GitHub 与 GitLab 双 Provider、用户自有多 SCM 身份、项目身份绑定/可选 Leader 审批、Webhook 签名校验、PR 同步与需求关联、出站 URL 策略。
-- **review**：单一 Review Engine、分批审查与抢占围栏、Finding 生命周期与血缘、人工决策闭环、对账调度。
+- **review**：单一 Review Engine、分批审查与抢占围栏、Finding 生命周期与血缘、可读的问题说明/修复建议/分档置信度、人工决策闭环、对账调度。
 - **evaluation**：三臂对照实验工具链、确定性打分器、配置冻结与一次性 holdout 台账。
 
 后续改动仍受下列总边界约束，且必须走 Trellis 任务流程。
@@ -53,7 +53,7 @@ R2.5 复核时另有两条曾被列为「计划中未兑现」，现已各自收
 ## 不可违反的总边界
 
 - 后端是模块化单体，顶层包仅为 `common/auth/project/requirement/scm/knowledge/ai/review`。
-- 当前数据模型为 19 张表；V8 新增的三张表只表达角色集合、用户 SCM 身份与项目绑定历史。Finding 仍内聚于 `review`，只有一个 Review Engine。
+- 当前数据模型为 19 张表；V8 新增的三张表只表达角色集合、用户 SCM 身份与项目绑定历史，V9 只给 `finding` 加列、不加表。Finding 仍内聚于 `review`，只有一个 Review Engine。
 - `scm` 发布 `PullRequestChanged` 事件但不依赖 `review`；AI 不直接改变业务状态或代码。
 - 禁止 Agent、Patch、MQ/Outbox、第二 AI runtime、本地 clone/Git、第二 Review Pipeline、代码向量库和未经过产品决策的额外一级菜单；D017 批准、D018 重新布局的六个入口不属于额外扩张。
 - PostgreSQL 15+ 与 pgvector 是业务事实源；所有项目内引用和查询必须保持 `project_id` 隔离。

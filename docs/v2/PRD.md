@@ -141,7 +141,7 @@ READY 后正文与 AC 锁定；修改由 LEADER 创建新的不可变 Revision �
 
 ### Review Decision
 
-`PENDING | APPROVE | REQUEST_CHANGES`。**AI 置信度、Finding 状态、Review Decision 三者不互相替代**，UI 上必须分开呈现。
+`PENDING | APPROVE | REQUEST_CHANGES`。**AI 置信度、Finding 状态、Review Decision 三者不互相替代**，UI 上必须分开呈现。置信度自 [D021](./DECISIONS.md#d021) 起真实记录，但只分 `HIGH/MEDIUM/LOW` 三档而非数值，且不参与任何自动门禁或状态流转——它是未经校准的模型自报把握，不是质量保证。
 终局 Decision 只能从 `PENDING` **写入一次**，目标 Review 必须已完成，且 head、Diff fingerprint 与需求版本均等于 PR 当前值；同一 head 出现 REQUEST_CHANGES 后必须有新 head SHA 才能再次 APPROVE——**改 Base、需求关联、需求版本或重新同步 Diff 都不能解除该闸门**。并发 APPROVE/REQUEST_CHANGES 只有一个请求可以成功。
 
 ## 6. 关键产品规则
@@ -174,7 +174,7 @@ READY 后正文与 AC 锁定；修改由 LEADER 创建新的不可变 Revision �
 
 ### 产品 E2E（Phase 7 退出标准，R2.5 复核）
 
-自动化覆盖（后端 317 个测试、前端 35 个测试）证明的部分记 `[x]`；只有人工浏览器验收能证明的部分保持 `[ ]` 并注明，不因为“阶段已通过”就一律打勾。
+自动化覆盖（后端 323 个测试、前端 35 个测试）证明的部分记 `[x]`；只有人工浏览器验收能证明的部分保持 `[ ]` 并注明，不因为“阶段已通过”就一律打勾。
 
 - [x] LEADER 建项目、加成员、配仓库、传知识、写需求与 AC、指派开发。
 - [x] LEADER 可按显示名、用户名或平台 ID 搜索并批量添加成员；一个成员可有多个角色，权限按能力并集判定。

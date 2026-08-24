@@ -2,7 +2,7 @@
 
 规范依据：[ARCHITECTURE.md](./ARCHITECTURE.md)（技术规则）+ [PRD.md](./PRD.md)（产品规则）+ [DECISIONS.md](./DECISIONS.md)（决策理由）。本文只定义实施顺序、授权闸门、验证纪律和退出条件，不重复字段或业务规则。
 
-状态：**Phase 0–8 已于 2026-08-22 全部完成并通过退出闸门**。D017–D019 已归档；2026-08-24 用户批准 [D020](./DECISIONS.md#d020) 成员目录、多角色与 SCM 多身份任务。历史 Phase 小节继续作为存档，不按当前 V8 结构重写。
+状态：**Phase 0–8 已于 2026-08-22 全部完成并通过退出闸门**。D017–D019 已归档；2026-08-24 用户批准 [D020](./DECISIONS.md#d020) 成员目录、多角色与 SCM 多身份任务，随后批准 [D021](./DECISIONS.md#d021) Finding 说明/建议/置信度任务。历史 Phase 小节继续作为存档，不按当前 V9 结构重写。
 
 ## 不可违反的实施纪律
 
@@ -188,3 +188,19 @@ Phase 0–8 验收时形态：16 张业务表 / 7 个 Flyway 迁移、8 个后�
 35 个测试和生产构建全部通过。新增测试限于 Provider 路径、默认/严格绑定、Token 脱敏、角色能力并集和一条 V7→V8 转换，不建立组合矩阵。
 
 实现与验证记录归属 `.trellis/tasks/08-23-member-directory-multi-role-scm-identities/`；完成后按 Trellis Finish 归档。
+
+## D021 Finding 问题说明、修复建议与模型置信度（2026-08-24）
+
+来源为 `docs/v2/TEST-ISSUES.md` 的 T-010。按独立 Trellis 任务执行，保持 8 个后端顶层包、19 张业务表、6 个一级入口、单一 Review Engine 与正式评测证据不变。实施顺序固定为：
+
+1. 先改模型输出契约并把哈希红线测试就位：两处 schema 各加 `explanation`/`suggestion`/`confidence`，`ReviewPrompts.VERSION` 升为 `"review-2"`，`FindingKeys.RULE_VERSION` 保持 `"1"`。这一步排在最前，因为散文渗进哈希是本任务唯一「出错后不可见、要到下一轮审查才显现」的失败模式。
+2. V9 给 `finding` 追加 `category`/`explanation`/`suggestion`/`confidence` 四列与两个容忍 NULL 的 CHECK；业务表仍 19 张、Flyway 变为 9 个。
+3. 校验器实现四种处置：散文缺失接受为空、超长截断、类别与置信度越界存 NULL，全部记 warning 且**一律不丢弃整条 Finding**。词表映射必须发生在写库之前——走到 CHECK 的越界值中止的是整批插入而不是单行。
+4. `FindingView` 与前端 `Finding` 接口同步四个字段；`FindingCard` 改为「说明 → 证据 → 建议」层次，置信度徽章接真实数据，类别作徽章，三个哈希收进可核验性折叠区。
+5. 只补承重测试：哈希不变性、两处 schema 不漂移、校验器四种处置、全词表贯通落库、V9 在非空库上的升级路径、前端渲染与折叠。不建立类别×置信度×状态的组合矩阵。
+
+最终实测形态：8 个后端顶层包、19 张业务表 / 9 个 Flyway 迁移，后端 `verify` 为
+323 passed / 0 failed / 0 skipped；前端保持 6 个一级导航 / 11 条产品路由，lint、strict typecheck、
+35 个测试和生产构建全部通过。
+
+实现与验证记录归属 `.trellis/tasks/08-24-finding-explanation-and-remediation/`；完成后按 Trellis Finish 归档。
