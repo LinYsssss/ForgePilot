@@ -165,6 +165,59 @@ class BatchOneApiTest extends PostgresTestBase {
         assertThat(outsider.read("/api/projects").size()).isEqualTo(1);
     }
 
+    /**
+     * 三个 D022 的 DELETE 端点在**真实 HTTP** 之上的接线。Service 层测试证明了删除
+     * 语义，但证明不了路径映射、204 状态码，以及经过安全过滤器链后的答案——一个写错
+     * 的路径在 Service 测试里全绿，到了前端就是 404。
+     *
+     * <p>同时把 AC13 的跨项目隔离补到这一层：外项目的 id 与从未签发过的 id 必须答得
+     * 一模一样，否则状态码本身就泄露了「那个 id 存在」。
+     */
+    @Test
+    void theThreeDeleteEndpointsAreWiredAndInvisibleAcrossProjects() throws Exception {
+        Client owner = register();
+        Client outsider = register();
+
+        long project = owner.post("/api/projects", """
+                {"name": "Removals"}""").path("id").asLong();
+        long outsiderProject = outsider.post("/api/projects", """
+                {"name": "Elsewhere"}""").path("id").asLong();
+        long requirement = owner.post("/api/projects/" + project + "/requirements", """
+                {"title": "To be canceled", "acceptanceCriteria": [{"text": "anything"}]}""")
+                .path("id").asLong();
+
+        String requirementPath = "/api/projects/" + project + "/requirements/" + requirement;
+
+        // 非作废需求：端点确实存在（不是 404），但被状态门禁以 409 拒绝。
+        owner.deleteExpecting(requirementPath, status().isConflict());
+
+        owner.post(requirementPath + "/status", """
+                {"status": "CANCELED"}""");
+        owner.deleteExpecting(requirementPath, status().isNoContent());
+
+        // 软删之后它从产品面消失，重复删除与「从不存在」同答。
+        owner.readExpecting(requirementPath, status().isNotFound());
+        owner.deleteExpecting(requirementPath, status().isNotFound());
+        assertThat(owner.read("/api/projects/" + project + "/requirements").size()).isZero();
+
+        // 成员与知识文档端点：跨项目调用与未签发的 id 不可区分。
+        outsider.deleteExpecting("/api/projects/" + project + "/members/" + owner.userId,
+                status().isNotFound());
+        outsider.deleteExpecting("/api/projects/" + project + "/knowledge/documents/1",
+                status().isNotFound());
+        outsider.deleteExpecting("/api/projects/" + (project + 9_000) + "/members/" + owner.userId,
+                status().isNotFound());
+        // 也不能把一条外项目的需求经由自己拥有的项目删掉。
+        outsider.deleteExpecting(
+                "/api/projects/" + outsiderProject + "/requirements/" + requirement,
+                status().isNotFound());
+
+        // 唯一 LEADER 移除自己：端点在，但被 409 拒绝而不是让项目失去负责人。
+        owner.deleteExpecting("/api/projects/" + project + "/members/" + owner.userId,
+                status().isConflict());
+        assertThat(owner.read("/api/projects/" + project + "/members").size()).isEqualTo(1);
+    }
+
     @Test
     void writesWithoutTheCsrfHeaderAreRejected() throws Exception {
         Client leader = register();
@@ -266,6 +319,14 @@ class BatchOneApiTest extends PostgresTestBase {
 
         private void patchExpecting(String path, String payload, ResultMatcher expected) throws Exception {
             mockMvc.perform(write(MockMvcRequestBuilders.patch(path), payload)).andExpect(expected);
+        }
+
+        private void deleteExpecting(String path, ResultMatcher expected) throws Exception {
+            mockMvc.perform(MockMvcRequestBuilders.delete(path)
+                            .session(session)
+                            .cookie(csrf)
+                            .header("X-XSRF-TOKEN", csrf.getValue()))
+                    .andExpect(expected);
         }
 
         private MockHttpServletRequestBuilder write(MockHttpServletRequestBuilder request, String payload) {
