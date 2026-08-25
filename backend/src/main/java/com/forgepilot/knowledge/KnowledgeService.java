@@ -6,7 +6,9 @@ import java.util.List;
 import com.forgepilot.ai.AiCallContext;
 import com.forgepilot.ai.AiGateway;
 import com.forgepilot.common.ApiException;
+import com.forgepilot.project.DeletedResourceType;
 import com.forgepilot.project.ProjectAccessService;
+import com.forgepilot.project.ProjectDeletionLog;
 import com.forgepilot.project.ProjectRole;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -37,6 +39,7 @@ public class KnowledgeService {
     private final ChunkSearchRepository vectors;
     private final KnowledgeUploadValidator validator;
     private final ProjectAccessService access;
+    private final ProjectDeletionLog deletions;
     private final AiGateway ai;
 
     /**
@@ -51,7 +54,7 @@ public class KnowledgeService {
     KnowledgeService(KnowledgeDocumentRepository documents, KnowledgeReadRepository reads,
             KnowledgeChunkRepository chunks,
             ChunkSearchRepository vectors, KnowledgeUploadValidator validator,
-            ProjectAccessService access, AiGateway ai,
+            ProjectAccessService access, ProjectDeletionLog deletions, AiGateway ai,
             @Value("${forgepilot.knowledge.embedding.provider:}") String provider,
             @Value("${forgepilot.knowledge.embedding.model:}") String model,
             @Value("${forgepilot.knowledge.embedding.version:}") String version) {
@@ -61,6 +64,7 @@ public class KnowledgeService {
         this.vectors = vectors;
         this.validator = validator;
         this.access = access;
+        this.deletions = deletions;
         this.ai = ai;
         this.provider = provider;
         this.model = model;
@@ -128,6 +132,40 @@ public class KnowledgeService {
             throw ApiException.conflict("This document is already project knowledge.");
         }
         return ingest(original.copyAsProjectKnowledge());
+    }
+
+    /**
+     * 硬删一份项目知识文档。
+     *
+     * <p>级联是**应用层显式删除**，不是数据库 `ON DELETE`：全库只有
+     * {@code pull_request.author_user_id} 一条 `ON DELETE`（D010），加第二条会把
+     * 「删除语义由服务显式表达」这条纪律打开一个口子；而 chunk 是纯派生数据，
+     * 显式删掉就够。删掉 chunk 也就是 AC4——检索只读 {@code knowledge_chunk}，
+     * 因此 Guidance 与 Review 的附件检索此后都召不回它，不需要另加代码。
+     *
+     * <p>需求附件文档被**拒绝**（D022）：附件关系是需求侧的事实，删知识文档不该
+     * 顺手改变某条需求的附件构成。判定只看本表的 {@code source_type}，不查
+     * {@code requirement_attachment}——那张表归 {@code requirement} 所有，而
+     * {@code ck_knowledge_document_scope_matches_type} 加上附件侧 NOT NULL 的
+     * {@code requirement_id} 已经让「公共知识永远进不了附件表」成为结构事实，
+     * 于是 {@code source_type} 恰好就是「可能被附件引用」的那个集合。
+     */
+    @Transactional
+    public void deleteProjectKnowledge(long projectId, long actorId, long documentId) {
+        access.requireRole(projectId, actorId, ProjectRole.LEADER);
+        KnowledgeDocument document = documents.findByProjectIdAndId(projectId, documentId)
+                .orElseThrow(ApiException::notFound);
+        if (document.getSourceType() == KnowledgeSourceType.REQUIREMENT_ATTACHMENT) {
+            throw ApiException.conflict("This document is an attachment of requirement "
+                    + document.getSourceRequirementId() + "; detach it there first.");
+        }
+        int removed = chunks.findByProjectIdAndDocumentIdOrderBySeqAsc(projectId, documentId).size();
+        chunks.deleteByProjectIdAndDocumentId(projectId, documentId);
+        chunks.flush();
+        documents.delete(document);
+        documents.flush();
+        deletions.record(projectId, DeletedResourceType.KNOWLEDGE_DOCUMENT, documentId, actorId,
+                "chunks: " + removed);
     }
 
     @Transactional(readOnly = true)

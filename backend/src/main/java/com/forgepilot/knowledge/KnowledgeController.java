@@ -10,6 +10,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -52,6 +53,18 @@ class KnowledgeController {
         long actorId = userIdOf(principal);
         long promotedId = knowledge.promoteToProjectKnowledge(projectId, actorId, documentId);
         return knowledge.document(projectId, actorId, promotedId);
+    }
+
+    /**
+     * 批量上传不在这里：一次多文件上传就是前端对本控制器 {@code POST} 的 N 次调用，
+     * 每次自己一个事务，因此天然逐文件独立、逐文件有结果。做成一个批量端点要么变成
+     * 一个横跨 N 次 embedding 外部调用的长事务（一个文件失败会回滚已经成功的九个），
+     * 要么只是把前端的循环搬进服务端还得另发明一套逐行结果契约（D022）。
+     */
+    @DeleteMapping("/{documentId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    void delete(@PathVariable long projectId, @PathVariable long documentId, Principal principal) {
+        knowledge.deleteProjectKnowledge(projectId, userIdOf(principal), documentId);
     }
 
     private long userIdOf(Principal principal) {
