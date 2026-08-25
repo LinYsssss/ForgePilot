@@ -125,7 +125,7 @@ class RequirementQualityService {
      */
     QualityReport check(long projectId, long actorId, long requirementId) {
         access.requireRole(projectId, actorId, ProjectRole.LEADER);
-        Requirement requirement = requirements.findByProjectIdAndId(projectId, requirementId)
+        Requirement requirement = requirements.findByProjectIdAndIdAndDeletedAtIsNull(projectId, requirementId)
                 .orElseThrow(ApiException::notFound);
         RequirementRevision revision = requirement.getCurrentRevision();
         List<AcceptanceCriterion> acceptanceCriteria = criteria

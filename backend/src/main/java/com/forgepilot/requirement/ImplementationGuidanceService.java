@@ -80,7 +80,7 @@ class ImplementationGuidanceService {
     ImplementationGuidance generate(long projectId, long actorId, long requirementId) {
         ProjectMember member = access.requireRole(projectId, actorId,
                 ProjectRole.LEADER, ProjectRole.DEVELOPER);
-        Requirement requirement = requirements.findByProjectIdAndId(projectId, requirementId)
+        Requirement requirement = requirements.findByProjectIdAndIdAndDeletedAtIsNull(projectId, requirementId)
                 .orElseThrow(ApiException::notFound);
         if (!member.hasRole(ProjectRole.LEADER) && member.hasRole(ProjectRole.DEVELOPER)
                 && !Objects.equals(requirement.getAssigneeId(), actorId)) {

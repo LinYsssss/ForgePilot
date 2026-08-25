@@ -96,7 +96,7 @@ public class RequirementAttachmentService {
     }
 
     private void require(long projectId, long requirementId) {
-        if (requirements.findByProjectIdAndId(projectId, requirementId).isEmpty()) {
+        if (requirements.findByProjectIdAndIdAndDeletedAtIsNull(projectId, requirementId).isEmpty()) {
             throw ApiException.notFound();
         }
     }

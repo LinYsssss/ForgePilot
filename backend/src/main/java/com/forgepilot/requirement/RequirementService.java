@@ -1,5 +1,6 @@
 package com.forgepilot.requirement;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -14,7 +15,9 @@ import java.util.stream.Stream;
 import com.forgepilot.auth.AccountView;
 import com.forgepilot.auth.UserDirectory;
 import com.forgepilot.common.ApiException;
+import com.forgepilot.project.DeletedResourceType;
 import com.forgepilot.project.ProjectAccessService;
+import com.forgepilot.project.ProjectDeletionLog;
 import com.forgepilot.project.ProjectRole;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -50,20 +53,23 @@ public class RequirementService {
     private final AcceptanceCriterionRepository criteria;
     private final ProjectAccessService access;
     private final UserDirectory users;
+    private final ProjectDeletionLog deletions;
 
     RequirementService(RequirementRepository requirements, RequirementRevisionRepository revisions,
-            AcceptanceCriterionRepository criteria, ProjectAccessService access, UserDirectory users) {
+            AcceptanceCriterionRepository criteria, ProjectAccessService access, UserDirectory users,
+            ProjectDeletionLog deletions) {
         this.requirements = requirements;
         this.revisions = revisions;
         this.criteria = criteria;
         this.access = access;
         this.users = users;
+        this.deletions = deletions;
     }
 
     @Transactional(readOnly = true)
     public List<RequirementSummary> list(long projectId, long actorId) {
         access.requireMember(projectId, actorId);
-        List<Requirement> rows = requirements.findByProjectIdOrderByIdAsc(projectId);
+        List<Requirement> rows = requirements.findByProjectIdAndDeletedAtIsNullOrderByIdAsc(projectId);
         Map<Long, String> usernames = usernames(rows.stream().map(Requirement::getAssigneeId));
         return rows.stream()
                 .map(row -> RequirementSummary.of(row, usernames.get(row.getAssigneeId())))
@@ -191,8 +197,42 @@ public class RequirementService {
         return detail(requirement, requirement.getCurrentRevision());
     }
 
+    /**
+     * 软删一条**作废**需求。
+     *
+     * <p>软删而非硬删（D022）：{@code ai_call_log.requirement_id} 与
+     * {@code pull_request_requirement_event.from/to_requirement_id} 都挂在这一行上，
+     * 物理销毁它就是销毁调用审计、抹掉一件已经发生的 PR 关联事实——而 V5 的注释
+     * 当初正是为了让后者不可能发生才那样设计的。行留着，那些外键继续有效，需求
+     * 只是离开产品面。
+     *
+     * <p>前置条件只有「状态是 CANCELED」。不额外要求「无 PR 关联且无 Finding」：
+     * 软删之下不存在悬空引用，那个条件只会平白挡住正常使用。
+     *
+     * <p>这里刻意用未过滤的 {@code findByProjectIdAndId}——它必须能看见已经删掉的
+     * 行，才能把「重复删除」判定成 404 而不是把一条已删需求再删一次。
+     */
+    @Transactional
+    public void delete(long projectId, long actorId, long requirementId) {
+        access.requireRole(projectId, actorId, ProjectRole.LEADER);
+        Requirement requirement = requirements.findByProjectIdAndId(projectId, requirementId)
+                .orElseThrow(ApiException::notFound);
+        if (requirement.getDeletedAt() != null) {
+            // 已经离开产品面，答案与「不存在」一致——与项目隔离的 404 口径相同。
+            throw ApiException.notFound();
+        }
+        if (requirement.getStatus() != RequirementStatus.CANCELED) {
+            throw ApiException.conflict("Only a canceled requirement can be deleted; this one is "
+                    + requirement.getStatus() + ".");
+        }
+        requirement.markDeleted(Instant.now(), actorId);
+        requirements.flush();
+        deletions.record(projectId, DeletedResourceType.REQUIREMENT, requirementId, actorId,
+                "status: " + RequirementStatus.CANCELED);
+    }
+
     private Requirement require(long projectId, long requirementId) {
-        return requirements.findByProjectIdAndId(projectId, requirementId)
+        return requirements.findByProjectIdAndIdAndDeletedAtIsNull(projectId, requirementId)
                 .orElseThrow(ApiException::notFound);
     }
 

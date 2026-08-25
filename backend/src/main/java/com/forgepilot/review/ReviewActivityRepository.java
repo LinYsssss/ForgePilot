@@ -94,9 +94,16 @@ class ReviewActivityRepository {
      * 之所以需要它，是因为一条一个 PR 都没有的需求仍然有它的活动状态
      * ——{@code NO_PR}——而任何基于 {@code pull_request} 的连接都不可能
      * 为它产生出一行来。
+     *
+     * <p>软删的需求被排除：它已经离开产品面（D022），不该继续出现在活动概览里。
+     * 注意上面那条 {@code left join requirement} **不加**这个过滤——那次连接只是
+     * 为了取 {@code current_revision_id} 来匹配当前有效 Review，把它过滤掉会让
+     * 修订变成 NULL、从而改写「哪个 Review 是当前有效」的判定。PR 自身的活动状态
+     * 是 PR 的事实，与它的需求是否还在产品面上无关。
      */
     List<Long> requirementIds(long projectId) {
-        return jdbc.queryForList("select id from requirement where project_id = ? order by id",
+        return jdbc.queryForList(
+                "select id from requirement where project_id = ? and deleted_at is null order by id",
                 Long.class, projectId);
     }
 

@@ -53,6 +53,20 @@ public class Requirement {
     private Instant updatedAt;
 
     /**
+     * 软删标记。作废需求走软删而非硬删，因为 {@code ai_call_log} 与
+     * {@code pull_request_requirement_event} 挂在它上面——物理销毁这一行就是销毁
+     * 调用审计、抹掉一件已经发生的 PR 关联事实（D022）。
+     *
+     * <p>两列同空或同非空，由 {@code ck_requirement_deleted_shape} 保证：没有操作者
+     * 的软删无法追溯，没有时间的操作者不构成一次删除。
+     */
+    @Column(name = "deleted_at")
+    private Instant deletedAt;
+
+    @Column(name = "deleted_by")
+    private Long deletedBy;
+
+    /**
      * 供列表与详情查询使用的只读导航。每一列都是 insertable=false/updatable=false：
      * project_id 与 id 在上面已经映射过，而 Hibernate 拒绝一个混合了可写列与
      * 只读列的 @JoinColumns 集合（D013.1）。被引用的三元组是唯一键
@@ -108,6 +122,20 @@ public class Requirement {
 
     public Instant getUpdatedAt() {
         return updatedAt;
+    }
+
+    public Instant getDeletedAt() {
+        return deletedAt;
+    }
+
+    public Long getDeletedBy() {
+        return deletedBy;
+    }
+
+    /** 两列一起写，因为约束要求它们同空或同非空。 */
+    public void markDeleted(Instant at, Long actorUserId) {
+        this.deletedAt = at;
+        this.deletedBy = actorUserId;
     }
 
     public void setStatus(RequirementStatus status) {

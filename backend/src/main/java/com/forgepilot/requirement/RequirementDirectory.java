@@ -29,6 +29,6 @@ public class RequirementDirectory {
      * （D013.2）。
      */
     public boolean existsInProject(long projectId, long requirementId) {
-        return requirements.findByProjectIdAndId(projectId, requirementId).isPresent();
+        return requirements.findByProjectIdAndIdAndDeletedAtIsNull(projectId, requirementId).isPresent();
     }
 }

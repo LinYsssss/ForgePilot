@@ -18,6 +18,7 @@ import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -67,6 +68,13 @@ class RequirementController {
     RequirementDetail editDraft(@PathVariable long projectId, @PathVariable long requirementId,
             @Valid @RequestBody RequirementContent request, Principal principal) {
         return requirements.editDraft(projectId, userIdOf(principal), requirementId, request);
+    }
+
+    /** 只有作废需求可以删除，且是软删：审计与既成事实必须留下（D022）。 */
+    @DeleteMapping("/{requirementId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    void delete(@PathVariable long projectId, @PathVariable long requirementId, Principal principal) {
+        requirements.delete(projectId, userIdOf(principal), requirementId);
     }
 
     @GetMapping("/{requirementId}/revisions")
