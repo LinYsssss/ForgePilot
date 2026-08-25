@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 interface ProjectMemberScmBindingRepository extends JpaRepository<ProjectMemberScmBinding, Long> {
     List<ProjectMemberScmBinding> findByProjectIdOrderByIdAsc(long projectId);
+    List<ProjectMemberScmBinding> findByProjectIdAndUserIdOrderByIdAsc(long projectId, long userId);
     List<ProjectMemberScmBinding> findByProjectIdAndStatus(
             long projectId, ProjectMemberScmBinding.Status status);
     Optional<ProjectMemberScmBinding> findByProjectIdAndId(long projectId, long id);

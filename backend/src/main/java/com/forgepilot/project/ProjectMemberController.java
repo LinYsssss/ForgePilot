@@ -13,6 +13,7 @@ import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -59,6 +60,12 @@ class ProjectMemberController {
     MemberResponse updateRoles(@PathVariable long projectId, @PathVariable long userId,
             @Valid @RequestBody RolesRequest request, Principal principal) {
         return members.updateRoles(projectId, userIdOf(principal), userId, request.roles());
+    }
+
+    @DeleteMapping("/{userId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    void remove(@PathVariable long projectId, @PathVariable long userId, Principal principal) {
+        members.remove(projectId, userIdOf(principal), userId);
     }
 
     @PostMapping("/leader-transfer")
