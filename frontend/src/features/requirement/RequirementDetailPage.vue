@@ -535,7 +535,7 @@ function saveAssignee(): Promise<void> {
             <h3 class="subsection-title">AI 结构化评估</h3>
             <p v-if="qualityReport.ai === null" class="muted">本次没有返回 AI 评估。</p>
             <template v-else>
-              <p class="muted">{{ qualityReport.ai.summary ?? "AI 没有给出总结。" }}</p>
+              <p class="muted advice-prose">{{ qualityReport.ai.summary ?? "AI 没有给出总结。" }}</p>
               <p v-if="qualityReport.ai.issues.length === 0" class="muted">AI 没有发现问题。</p>
               <ul v-else class="advice-list">
                 <li v-for="(issue, index) in qualityReport.ai.issues" :key="index"><span v-if="issue.acKey" class="badge badge-neutral">{{ issue.acKey }}</span> {{ issue.message }}</li>
@@ -552,7 +552,7 @@ function saveAssignee(): Promise<void> {
           <p class="field-hint">对当前不可变版本生成一次性实现建议；没有对话历史，也不会自动修改需求状态或代码。</p>
           <p v-if="!canGenerateGuidance" class="empty-state">项目负责人或该需求已指派的开发可以生成实现建议。</p>
           <p v-if="guidanceError" class="alert" role="alert">{{ guidanceError }}</p>
-          <div v-if="guidance" class="guidance-result"><p class="muted">基于 v{{ guidance.revisionSeq }}（版本 {{ guidance.revisionId }}）与向量召回的项目知识。</p><h3 class="subsection-title">实现清单</h3><p v-if="guidance.checklist.length===0" class="muted">本次没有返回实现清单。</p><ul v-else class="advice-list"><li v-for="(item,index) in guidance.checklist" :key="index">{{item}}</li></ul><h3 class="subsection-title">相关规则</h3><p v-if="guidance.rules.length===0" class="muted">本次没有返回规则。</p><ul v-else class="advice-list"><li v-for="(item,index) in guidance.rules" :key="index">{{item}}</li></ul><h3 class="subsection-title">风险提示</h3><p v-if="guidance.risks.length===0" class="muted">本次没有返回风险提示。</p><ul v-else class="advice-list"><li v-for="(item,index) in guidance.risks" :key="index">{{item}}</li></ul><h3 class="subsection-title">实际召回的知识来源</h3><p v-if="guidance.knowledgeSources.length===0" class="muted">本次没有召回可展示的知识来源。</p><ol v-else class="advice-list"><li v-for="source in guidance.knowledgeSources" :key="`${source.documentId}-${source.chunkSeq}`"><strong>{{source.title}}</strong> <span class="badge badge-info">向量语义召回相似度 {{source.similarity.toFixed(3)}}</span><br /><span class="muted">{{source.excerpt}}</span></li></ol></div>
+          <div v-if="guidance" class="guidance-result"><p class="muted">基于 v{{ guidance.revisionSeq }}（版本 {{ guidance.revisionId }}）与向量召回的项目知识。</p><h3 class="subsection-title">实现清单</h3><p v-if="guidance.checklist.length===0" class="muted">本次没有返回实现清单。</p><ul v-else class="advice-list"><li v-for="(item,index) in guidance.checklist" :key="index">{{item}}</li></ul><h3 class="subsection-title">相关规则</h3><p v-if="guidance.rules.length===0" class="muted">本次没有返回规则。</p><ul v-else class="advice-list"><li v-for="(item,index) in guidance.rules" :key="index">{{item}}</li></ul><h3 class="subsection-title">风险提示</h3><p v-if="guidance.risks.length===0" class="muted">本次没有返回风险提示。</p><ul v-else class="advice-list"><li v-for="(item,index) in guidance.risks" :key="index">{{item}}</li></ul><h3 class="subsection-title">实际召回的知识来源</h3><p v-if="guidance.knowledgeSources.length===0" class="muted">本次没有召回可展示的知识来源。</p><ol v-else class="advice-list"><li v-for="source in guidance.knowledgeSources" :key="`${source.documentId}-${source.chunkSeq}`"><strong>{{source.title}}</strong> <span class="badge badge-info">向量语义召回相似度 {{source.similarity.toFixed(3)}}</span><br /><span class="muted advice-prose">{{source.excerpt}}</span></li></ol></div>
         </section>
       </div>
       </section>
@@ -711,9 +711,23 @@ function saveAssignee(): Promise<void> {
   margin-bottom: 0;
 }
 
+/*
+ * 长输出定高滚动：沿用 FindingCard 的 `.narrative-body` 那一组属性（定高 +
+ * overflow + break-word），不另造原语。落在结果区整体而不是逐块，避免
+ * 「清单滚动条套在结果滚动条里」的嵌套滚动。word-break 会继承，因此内部
+ * 列表项的超长 token 也一起受约束。
+ */
 .quality-report,
 .guidance-result {
+  max-height: 32rem;
   margin-top: var(--fp-space-5);
+  overflow: auto;
+  word-break: break-word;
+}
+
+/* 只加在真正承载模型多行散文的节点上；加到 <ul>/<ol> 会把模板缩进渲染成空行。 */
+.advice-prose {
+  white-space: pre-wrap;
 }
 
 .subsection-title {

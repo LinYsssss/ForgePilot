@@ -10,6 +10,7 @@ import {
   requirementsRoute,
   reviewDetailRoute,
   reviewsRoute,
+  workspaceRoute,
 } from "../../app/routes";
 import { formatDateTime } from "../../lib/datetime";
 import { apiErrorMessage } from "../../lib/http";
@@ -103,6 +104,13 @@ onMounted(async () => {
     projects.value = await listProjects();
   } catch (failure: unknown) {
     error.value = apiErrorMessage(failure);
+    return;
+  }
+  // 首次进入没有项目 query 时补上列表里的第一个，工作台因此永远有上下文。
+  // 用 replace 而不是 push：默认选择不是一次用户导航，不该在历史里留一格。
+  // 用户手动切换后 query 有值，这个条件不再成立，因此默认规则不会覆盖他的选择。
+  if (projectId.value === null && projects.value.length > 0) {
+    await router.replace(workspaceRoute(projects.value[0].id));
   }
 });
 watch(projectId, load, { immediate: true });
@@ -141,7 +149,19 @@ watch(projectId, load, { immediate: true });
       </div>
     </section>
 
-    <p v-if="projectId === null" class="empty-state">选择一个项目以查看研发上下文。</p>
+    <template v-if="projectId === null">
+      <p v-if="error" class="alert" role="alert">{{ error }}</p>
+      <section v-else-if="projects.length === 0" class="panel empty-guide">
+        <h2 class="panel-title">先建一个项目</h2>
+        <p class="field-hint">
+          工作台汇聚的是某个项目的需求、知识、仓库与审查；你还没有任何项目，所以这里没有可展示的上下文。
+        </p>
+        <RouterLink class="button button-primary" :to="{ name: 'projects' }">
+          去新建项目
+        </RouterLink>
+      </section>
+      <p v-else class="empty-state">正在进入默认项目…</p>
+    </template>
     <template v-else>
       <p v-if="error" class="alert" role="alert">{{ error }}</p>
       <p v-else-if="loading" class="muted">正在汇聚项目工作台…</p>
@@ -341,6 +361,12 @@ watch(projectId, load, { immediate: true });
 
 .ai-section {
   margin-bottom: var(--fp-space-6);
+}
+
+.empty-guide {
+  display: grid;
+  justify-items: start;
+  gap: var(--fp-space-3);
 }
 
 .section-heading {
