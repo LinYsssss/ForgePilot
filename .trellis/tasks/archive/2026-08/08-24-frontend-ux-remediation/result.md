@@ -50,6 +50,19 @@ npm run build      → 通过（build 先重跑一次 vue-tsc）
 
 AC7、AC8 记为「部分」是口径问题而非缺陷：这两条的验收方式 PRD 就写明是人工三档确认，而本会话没有浏览器。**不把静态改动记成人工验收通过。**
 
+## 真实部署验证（2026-08-25）
+
+只重建 `frontend` 一个服务；**postgres 与 backend 未重建，数据卷未触碰**，无迁移可言。
+
+| 项 | 结果 |
+|---|---|
+| `docker compose -p fp-demo build frontend` | 成功 |
+| `up --detach --wait frontend` | 三容器全部 healthy（frontend 重建，backend / postgres 沿用运行中的实例） |
+| `GET /` | 200 |
+| 已部署 bundle 内容核验 | `/assets/index-C8pgMde5.js` 中同时含「先建一个项目」「Token 创建页」「我在本项目使用的 SCM 身份」「管理资料、密码与 SCM 身份」四段新文案 |
+
+这证明部署上跑的确实是这批改动，而不是旧镜像。它**不**替代 AC7/AC8 的三档视觉与键盘确认——那仍需人在浏览器里做。
+
 ## 出站 URL 策略未被放宽
 
 `OutboundUrlPolicy` 约束的是**服务端**解引用调用方给的 URL（SSRF：`169.254.169.254`、内网跳板）。R6 生成的是浏览器可点链接，不构成任何服务端出站调用，白名单（生产为空）与拒绝逻辑一字未改。链接来源是当前用户此刻在同一表单里**自己**填的 API 基地址——`/account` 是本人输入，仓库页凭据表单 `v-if="isLeader"` 是 LEADER 本人输入——不存在他人投喂 URL 的路径。地址不可解析时不渲染链接，只给路径文本；外链一律 `rel="noreferrer"`。
