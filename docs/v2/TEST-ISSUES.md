@@ -28,7 +28,7 @@
 |---|---|
 | `08-24-finding-explanation-and-remediation` | **已实施**。V9 占用完毕，决策记录为 D021，后端 323 测试 / 前端 35 测试全绿零跳过 |
 | `08-24-frontend-ux-remediation` | **已实施**。无迁移、无后端改动，前端 lint/typecheck/test/build 全绿，测试 35 → 37 |
-| `08-24-resource-removal-semantics` | **已实施**。V10 占用完毕，决策记录为 D022，后端 331 测试 / 前端 37 测试全绿零跳过 |
+| `08-24-resource-removal-semantics` | **已实施**。V10 占用完毕，决策记录为 D022，后端 332 测试 / 前端 37 测试全绿零跳过 |
 
 ## 问题列表
 
