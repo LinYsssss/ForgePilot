@@ -61,6 +61,42 @@ Keep operational reading order in DOM order. Long evidence, paths, and diffs
 may scroll inside a bounded region, but a component must not create page-wide
 horizontal overflow.
 
+Bound a long region with the property group `FindingCard.vue`'s
+`.narrative-body` established — max-height, `overflow: auto`,
+`white-space: pre-wrap`, `word-break: break-word` — rather than inventing a
+second one. Two rules make it behave:
+
+- Bound the whole result region, not each block inside it. Nesting a list's
+  scrollbar inside a report's scrollbar is worse to use than a long page.
+- Never put `white-space: pre-wrap` on a `<ul>`/`<ol>`/`<table>`: template
+  indentation between child elements then renders as visible blank lines. Put
+  it only on the elements that actually carry multi-line prose.
+
+## Disclosure and popover behavior
+
+A native `<details>` does **not** close when the user clicks elsewhere; that is
+the element's own behavior, not a bug you can style away. A menu-like popover
+built on `<details>` (see `AppShell.vue`) must therefore add all three closes
+by setting `open = false`:
+
+- a `document` `pointerdown` whose target is outside the element,
+- `Escape`, which must also return focus to the `<summary>` so a keyboard user
+  does not lose their place,
+- a route watch, so navigating from inside the popover does not leave it open.
+
+Remove both `document` listeners in `onBeforeUnmount`. Do not reach for a
+second popover runtime or a focus trap to get this.
+
+## Mirroring backend constraints
+
+When a form feeds an endpoint with numeric or shape constraints, encode the
+**same** numbers in the view and block before the request — a silent early
+`return` or an unexplained 422 both read as "the button is broken". The member
+batch flow mirrors three: `@Size(max = 50)` on the batch, the two-character
+search minimum (digits exempt), and `@NotEmpty` roles per row. Copy the
+constraint, do not invent a stricter one, and do not drop the server-side check
+because the client now guards it.
+
 ## Accessibility contract
 
 - Use `header`, `nav`, `main`, `section`, headings, lists, and native controls

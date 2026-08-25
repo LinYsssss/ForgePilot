@@ -1,0 +1,5 @@
+{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "禁止/必需模式清单、五条验证命令与设计漂移检查表，是本任务的验收标准"}
+{"file": ".trellis/spec/frontend/design-contract.md", "reason": "复核导航/路由形态、断点与状态标签未被合并"}
+{"file": ".trellis/spec/frontend/component-guidelines.md", "reason": "复核可访问性契约：原生控件、可见焦点、状态不只靠颜色"}
+{"file": ".trellis/spec/frontend/motion.md", "reason": "复核账户菜单与表格改动未破坏减动效与生命周期规则"}
+{"file": ".trellis/spec/guides/cross-layer-thinking-guide.md", "reason": "复核前端守卫与后端既有约束（50 上限、非空角色、LEADER 不经批量）是否一致而非各说一套"}

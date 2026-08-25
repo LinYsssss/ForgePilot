@@ -1,0 +1,6 @@
+{"file": ".trellis/spec/frontend/index.md", "reason": "前端指南入口，列出本任务要遵守的全部活动约定"}
+{"file": ".trellis/spec/frontend/design-contract.md", "reason": "锁死 6 导航/单 Logo/断点与「状态不合并为综合徽章」，成员表与账户菜单改动不得越界"}
+{"file": ".trellis/spec/frontend/component-guidelines.md", "reason": "组件结构、props/事件、可访问性契约；表格化与 details 交互按此写"}
+{"file": ".trellis/spec/frontend/state-management.md", "reason": "R1 默认项目与 R3 筛选的状态归属依据：URL 承载项目上下文，筛选属 Local UI state，禁止引入 store 或客户端存储"}
+{"file": ".trellis/spec/frontend/type-safety.md", "reason": "strict 模式与边界类型规则；providerTokenPage 的 string | null 返回按此设计"}
+{"file": ".trellis/spec/guides/code-reuse-thinking-guide.md", "reason": "复用既有 data-table/table-scroll/narrative-body 形态而非新造原语"}
