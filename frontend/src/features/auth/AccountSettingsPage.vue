@@ -1,18 +1,21 @@
 <script setup lang="ts">
-import { onMounted, ref } from "vue";
+import { computed, onMounted, ref } from "vue";
 
 import { apiErrorMessage } from "../../lib/http";
 import {
   listScmIdentities,
+  providerTokenPage,
   revokeScmIdentity,
+  SCM_IDENTITY_TOKEN_SCOPES,
   SCM_PROVIDER_DEFAULTS,
+  SCM_TOKEN_PAGE_PATHS,
   updateScmIdentity,
   verifyScmIdentity,
   type ScmIdentity,
   type ScmIdentityUsage,
   type ScmProvider,
 } from "../scm/api";
-import { changeDisplayName, useSession } from "./session";
+import { changePassword, changeDisplayName, useSession } from "./session";
 
 const { account } = useSession();
 const displayName = ref("");
@@ -26,6 +29,36 @@ const oneTimeToken = ref("");
 const pending = ref(false);
 const message = ref<string | null>(null);
 const error = ref<string | null>(null);
+
+const identityTokenPage = computed(() => providerTokenPage(provider.value, apiBase.value));
+
+const currentPassword = ref("");
+const newPassword = ref("");
+const passwordConfirmation = ref("");
+const passwordPending = ref(false);
+const passwordError = ref<string | null>(null);
+const passwordMessage = ref<string | null>(null);
+
+async function updatePassword(): Promise<void> {
+  passwordError.value = null;
+  passwordMessage.value = null;
+  if (newPassword.value !== passwordConfirmation.value) {
+    passwordError.value = "两次输入的新密码不一致。";
+    return;
+  }
+  passwordPending.value = true;
+  try {
+    await changePassword(currentPassword.value, newPassword.value);
+    currentPassword.value = "";
+    newPassword.value = "";
+    passwordConfirmation.value = "";
+    passwordMessage.value = "密码已修改，其他已登录会话将失效。";
+  } catch (failure: unknown) {
+    passwordError.value = apiErrorMessage(failure);
+  } finally {
+    passwordPending.value = false;
+  }
+}
 
 function resetIdentityDrafts(): void {
   identityDrafts.value = Object.fromEntries(identities.value.map((identity) => [
@@ -116,6 +149,49 @@ async function saveIdentity(identity: ScmIdentity): Promise<void> {
       <button class="button button-primary" :disabled="pending">保存显示名</button>
     </form>
 
+    <form class="panel settings-form account-password-form" @submit.prevent="updatePassword">
+      <h2 class="panel-title">修改密码</h2>
+      <p class="field-hint">改密成功后当前会话保留，其他已登录会话立即失效。</p>
+      <div class="field">
+        <label for="account-current-password">当前密码</label>
+        <input
+          id="account-current-password"
+          v-model="currentPassword"
+          type="password"
+          autocomplete="current-password"
+          minlength="8"
+          required
+        />
+      </div>
+      <div class="field">
+        <label for="account-new-password">新密码</label>
+        <input
+          id="account-new-password"
+          v-model="newPassword"
+          type="password"
+          autocomplete="new-password"
+          minlength="8"
+          required
+        />
+      </div>
+      <div class="field">
+        <label for="account-password-confirmation">确认新密码</label>
+        <input
+          id="account-password-confirmation"
+          v-model="passwordConfirmation"
+          type="password"
+          autocomplete="new-password"
+          minlength="8"
+          required
+        />
+      </div>
+      <button type="submit" class="button button-primary" :disabled="passwordPending">
+        修改密码
+      </button>
+      <p v-if="passwordError" class="alert" role="alert">{{ passwordError }}</p>
+      <p v-if="passwordMessage" class="muted" role="status">{{ passwordMessage }}</p>
+    </form>
+
     <section class="panel" aria-labelledby="identity-list-title">
       <h2 id="identity-list-title" class="panel-title">我的 SCM 身份</h2>
       <p class="field-hint">标签和用途帮助团队理解账号；授权始终使用 Provider、实例和数字 ID。</p>
@@ -167,6 +243,18 @@ async function saveIdentity(identity: ScmIdentity): Promise<void> {
       <div class="field"><label for="identity-token">一次性个人 Token</label>
         <input id="identity-token" v-model="oneTimeToken" type="password" required autocomplete="off" />
         <p class="field-hint">仅用于本次 Provider 当前用户验证，提交后立即清空且不保存。</p>
+        <p class="field-hint token-source">
+          最小权限：<code>{{ SCM_IDENTITY_TOKEN_SCOPES[provider] }}</code> ·
+          <a
+            v-if="identityTokenPage"
+            :href="identityTokenPage"
+            target="_blank"
+            rel="noreferrer"
+          >{{ provider }} Token 创建页</a>
+          <span v-else>
+            在你的实例上打开 <code>{{ SCM_TOKEN_PAGE_PATHS[provider] }}</code> 创建 Token
+          </span>
+        </p>
       </div>
       <button class="button button-primary" :disabled="pending">验证并添加</button>
     </form>
@@ -177,4 +265,7 @@ async function saveIdentity(identity: ScmIdentity): Promise<void> {
 .settings-form, .identity-actions { display: grid; gap: var(--fp-space-4); margin-bottom: var(--fp-space-6); }
 .identity-actions { grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr)); align-items: end; }
 .settings-form .button { justify-self: start; }
+/* 自建实例分支渲染的 Token 路径是长不断词串，窄屏下不断词会撑出横向滚动。 */
+.token-source { word-break: break-word; }
+.account-password-form .alert, .account-password-form .muted { margin: 0; }
 </style>

@@ -449,6 +449,10 @@ function handleAuth(path: string, method: string, body: string | null): Response
   if (path === "/api/auth/password" && method === "POST") {
     return json({});
   }
+  // `/account` 与改密同页，挂载时会读自有 SCM 身份列表。
+  if (path === "/api/scm/identities" && method === "GET") {
+    return json([]);
+  }
   return null;
 }
 
@@ -1238,7 +1242,8 @@ describe("three-role journey through the real App and router", () => {
     }
     expect(wrapper.text()).toContain("页面和读取接口都不会显示 token 或 Webhook 密钥");
 
-    await wrapper.find(".account-menu summary").trigger("click");
+    await router.push("/account");
+    await flushPromises();
     await wrapper.find("#account-current-password").setValue("old-password");
     await wrapper.find("#account-new-password").setValue("new-password");
     await wrapper.find("#account-password-confirmation").setValue("new-password");
@@ -1248,5 +1253,10 @@ describe("three-role journey through the real App and router", () => {
       '{"currentPassword":"old-password","newPassword":"new-password"}',
     );
     expect(wrapper.find("form.account-password-form").text()).toContain("密码已修改");
+    // 改密已迁出账户弹层：弹层里不再有任何口令输入。
+    await router.push("/repositories?project=3");
+    await flushPromises();
+    await wrapper.find(".account-menu summary").trigger("click");
+    expect(wrapper.findAll(".account-popover input")).toHaveLength(0);
   });
 });

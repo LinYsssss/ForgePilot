@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import {
   RouterLink,
   RouterView,
@@ -16,8 +16,7 @@ import {
   PROJECT_QUERY_KEY,
   TOP_LEVEL_NAVIGATION,
 } from "../app/routes";
-import { changePassword, signOut, useSession } from "../features/auth/session";
-import { apiErrorMessage } from "../lib/http";
+import { signOut, useSession } from "../features/auth/session";
 
 const router = useRouter();
 const route = useRoute();
@@ -36,45 +35,47 @@ function navigationTarget(path: string): RouteLocationRaw {
     : path;
 }
 
-const currentPassword = ref("");
-const newPassword = ref("");
-const passwordConfirmation = ref("");
-const passwordPending = ref(false);
-const passwordError = ref<string | null>(null);
-const passwordMessage = ref<string | null>(null);
+/*
+ * 原生 <details> 不会因为点击外部而关闭，这正是 T-008 报的问题。这里补上外部
+ * 点击、Esc 和路由变化三条关闭路径，仍然只操作 details.open，不引入第二套
+ * 弹层运行时或焦点陷阱。
+ */
+const accountMenu = ref<HTMLDetailsElement | null>(null);
 
-function accountMenuToggled(event: Event): void {
-  const target = event.currentTarget;
-  if (!(target instanceof HTMLDetailsElement) || target.open) {
-    return;
+function closeAccountMenu(): void {
+  const menu = accountMenu.value;
+  if (menu !== null) {
+    menu.open = false;
   }
-  currentPassword.value = "";
-  newPassword.value = "";
-  passwordConfirmation.value = "";
-  passwordError.value = null;
-  passwordMessage.value = null;
 }
 
-async function updatePassword(): Promise<void> {
-  passwordError.value = null;
-  passwordMessage.value = null;
-  if (newPassword.value !== passwordConfirmation.value) {
-    passwordError.value = "两次输入的新密码不一致。";
-    return;
-  }
-  passwordPending.value = true;
-  try {
-    await changePassword(currentPassword.value, newPassword.value);
-    currentPassword.value = "";
-    newPassword.value = "";
-    passwordConfirmation.value = "";
-    passwordMessage.value = "密码已修改，其他已登录会话将失效。";
-  } catch (failure: unknown) {
-    passwordError.value = apiErrorMessage(failure);
-  } finally {
-    passwordPending.value = false;
+function closeOnOutsidePointer(event: PointerEvent): void {
+  const menu = accountMenu.value;
+  if (menu !== null && menu.open && !menu.contains(event.target as Node)) {
+    menu.open = false;
   }
 }
+
+function closeOnEscape(event: KeyboardEvent): void {
+  const menu = accountMenu.value;
+  if (event.key === "Escape" && menu !== null && menu.open) {
+    menu.open = false;
+    // 焦点不能留在刚消失的弹层里，否则键盘用户失去位置。
+    menu.querySelector("summary")?.focus();
+  }
+}
+
+onMounted(() => {
+  document.addEventListener("pointerdown", closeOnOutsidePointer);
+  document.addEventListener("keydown", closeOnEscape);
+});
+
+onBeforeUnmount(() => {
+  document.removeEventListener("pointerdown", closeOnOutsidePointer);
+  document.removeEventListener("keydown", closeOnEscape);
+});
+
+watch(() => route.fullPath, closeAccountMenu);
 
 async function logout(): Promise<void> {
   await signOut();
@@ -102,53 +103,15 @@ async function logout(): Promise<void> {
       </nav>
 
       <div class="session-area">
-        <details class="account-menu" @toggle="accountMenuToggled">
+        <details ref="accountMenu" class="account-menu">
           <summary class="button button-inverse session-user">{{ account.displayName }}</summary>
           <div class="account-popover">
-            <p class="eyebrow">Account security</p>
-            <h2 class="panel-title">账户与安全</h2>
+            <p class="eyebrow">Account</p>
+            <h2 class="panel-title">账户</h2>
             <p class="field-hint">{{ account.displayName }} · @{{ account.username }} · ID {{ account.id }}</p>
-            <RouterLink class="button button-quiet" :to="ACCOUNT_ROUTE_PATH">管理资料与 SCM 身份</RouterLink>
-            <form class="account-password-form" @submit.prevent="updatePassword">
-              <div class="field">
-                <label for="account-current-password">当前密码</label>
-                <input
-                  id="account-current-password"
-                  v-model="currentPassword"
-                  type="password"
-                  autocomplete="current-password"
-                  minlength="8"
-                  required
-                />
-              </div>
-              <div class="field">
-                <label for="account-new-password">新密码</label>
-                <input
-                  id="account-new-password"
-                  v-model="newPassword"
-                  type="password"
-                  autocomplete="new-password"
-                  minlength="8"
-                  required
-                />
-              </div>
-              <div class="field">
-                <label for="account-password-confirmation">确认新密码</label>
-                <input
-                  id="account-password-confirmation"
-                  v-model="passwordConfirmation"
-                  type="password"
-                  autocomplete="new-password"
-                  minlength="8"
-                  required
-                />
-              </div>
-              <button type="submit" class="button button-primary" :disabled="passwordPending">
-                修改密码
-              </button>
-              <p v-if="passwordError" class="alert" role="alert">{{ passwordError }}</p>
-              <p v-if="passwordMessage" class="muted" role="status">{{ passwordMessage }}</p>
-            </form>
+            <RouterLink class="button button-quiet" :to="ACCOUNT_ROUTE_PATH">
+              管理资料、密码与 SCM 身份
+            </RouterLink>
           </div>
         </details>
         <button type="button" class="button button-inverse" @click="logout">退出登录</button>
@@ -194,16 +157,6 @@ async function logout(): Promise<void> {
 
 .account-popover .eyebrow {
   margin-bottom: var(--fp-space-2);
-}
-
-.account-password-form {
-  display: grid;
-  gap: var(--fp-space-4);
-}
-
-.account-password-form .alert,
-.account-password-form .muted {
-  margin: 0;
 }
 
 @media (max-width: 42rem) {

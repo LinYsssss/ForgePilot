@@ -7,9 +7,12 @@ import { apiErrorMessage } from "../../lib/http";
 import { hasProjectRole, listProjects, type Project } from "../project/api";
 import {
   listScmRepositories,
+  providerTokenPage,
   registerScmRepository,
   SCM_PROVIDER_DEFAULTS,
   SCM_PROVIDERS,
+  SCM_REPOSITORY_TOKEN_SCOPES,
+  SCM_TOKEN_PAGE_PATHS,
   updateScmRepository,
   type ScmProvider,
   type ScmRepository,
@@ -34,6 +37,7 @@ const selected = computed(
   () => projects.value.find((project) => project.id === projectId.value) ?? null,
 );
 const isLeader = computed(() => hasProjectRole(selected.value, "LEADER"));
+const repositoryTokenPage = computed(() => providerTokenPage(provider.value, apiBase.value));
 
 function choose(event: Event): void {
   const id = parseId((event.target as HTMLSelectElement).value);
@@ -218,6 +222,18 @@ watch(projectId, load, { immediate: true });
               :required="!repository"
             />
             <p class="field-hint">只写，不回显。</p>
+            <p class="field-hint token-source">
+              最小权限：<code>{{ SCM_REPOSITORY_TOKEN_SCOPES[provider] }}</code> ·
+              <a
+                v-if="repositoryTokenPage"
+                :href="repositoryTokenPage"
+                target="_blank"
+                rel="noreferrer"
+              >{{ provider }} Token 创建页</a>
+              <span v-else>
+                在你的实例上打开 <code>{{ SCM_TOKEN_PAGE_PATHS[provider] }}</code> 创建 Token
+              </span>
+            </p>
           </div>
           <div class="field">
             <label for="repository-webhook">
@@ -270,6 +286,12 @@ watch(projectId, load, { immediate: true });
 .repository-api-field,
 .repository-actions {
   grid-column: 1 / -1;
+}
+
+/* 自建实例分支会渲染 /-/user_settings/personal_access_tokens 这种长路径，
+   390px 下不断词就会撑出页面级横向滚动。 */
+.token-source {
+  word-break: break-word;
 }
 
 @media (max-width: 64rem) {

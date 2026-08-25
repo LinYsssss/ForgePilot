@@ -18,6 +18,46 @@ export const SCM_PROVIDER_DEFAULTS: Readonly<Record<ScmProvider, string>> = {
   GITLAB: "https://gitlab.com/api/v4",
 };
 
+/** Provider 网页端创建个人 Token 的路径，自建实例同路径。 */
+export const SCM_TOKEN_PAGE_PATHS: Readonly<Record<ScmProvider, string>> = {
+  GITHUB: "/settings/tokens",
+  GITLAB: "/-/user_settings/personal_access_tokens",
+};
+
+/** 一次性个人 Token 只需覆盖 `GET user` 身份验证。 */
+export const SCM_IDENTITY_TOKEN_SCOPES: Readonly<Record<ScmProvider, string>> = {
+  GITHUB: "read:user",
+  GITLAB: "read_user",
+};
+
+/** 仓库接入 Token 需要读 PR/MR 与 diff、并校验成员仓库权限。 */
+export const SCM_REPOSITORY_TOKEN_SCOPES: Readonly<Record<ScmProvider, string>> = {
+  GITHUB: "repo（公开仓库用 public_repo）",
+  GITLAB: "read_api",
+};
+
+/**
+ * 由调用方此刻填写的 `apiBase` 推出该 Provider 的 Token 创建页。
+ *
+ * 这是给浏览器点的链接，不构成任何服务端出站调用，因此后端
+ * `OutboundUrlPolicy` 的白名单未被放宽。`apiBase` 不是合法 http(s) URL 时返回
+ * `null`，调用方改为给出路径文本——解析不出来的地址不渲染成链接。
+ */
+export function providerTokenPage(provider: ScmProvider, apiBase: string): string | null {
+  let base: URL;
+  try {
+    base = new URL(apiBase);
+  } catch {
+    return null;
+  }
+  if (base.protocol !== "https:" && base.protocol !== "http:") {
+    return null;
+  }
+  // api.github.com 的网页端是 github.com；路径里的 /api/v3、/api/v4 一并丢弃。
+  const host = base.host.startsWith("api.") ? base.host.slice("api.".length) : base.host;
+  return `${base.protocol}//${host}${SCM_TOKEN_PAGE_PATHS[provider]}`;
+}
+
 /**
  * LEADER 能看到的连接信息。token 与 webhook 密钥都不在这个结构里：
  * 它们是只写的，服务端从不回显，因此这里不存在任何可能意外把它们渲染出来的字段。
