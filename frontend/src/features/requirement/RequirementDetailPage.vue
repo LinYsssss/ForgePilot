@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
-import { RouterLink, useRoute } from "vue-router";
+import { RouterLink, useRoute, useRouter } from "vue-router";
 
 import { parseId, requirementsRoute, PROJECT_QUERY_KEY } from "../../app/routes";
 import { formatDateTime } from "../../lib/datetime";
@@ -23,6 +23,7 @@ import {
   assign,
   checkQuality,
   changeStatus,
+  deleteRequirement,
   editDraft,
   generateGuidance,
   getAttachmentContent,
@@ -51,6 +52,7 @@ import {
 } from "./status";
 
 const route = useRoute();
+const router = useRouter();
 const { account } = useSession();
 
 const projectId = computed(() => parseId(route.query[PROJECT_QUERY_KEY]));
@@ -298,6 +300,29 @@ function exportRequirement(): void {
   URL.revokeObjectURL(url);
 }
 
+/**
+ * 删除一条**作废**需求。后端做软删：需求离开产品面，而 `ai_call_log` 与
+ * `pull_request_requirement_event` 承载的调用审计与既成 PR 关联保持完整（D022）。
+ * 因此这里的文案说「从列表中移除」而不是「彻底删除」——后者不是实际发生的事。
+ */
+async function removeRequirement(): Promise<void> {
+  const ids = target();
+  if (ids === null) return;
+  if (!window.confirm("确认删除这条作废需求？它将从需求列表中消失，AI 调用审计与 PR 关联记录仍然保留。")) {
+    return;
+  }
+  actionPending.value = true;
+  actionError.value = null;
+  try {
+    await deleteRequirement(ids.projectId, ids.requirementId);
+    await router.push(requirementsRoute(ids.projectId));
+  } catch (failure: unknown) {
+    actionError.value = apiErrorMessage(failure);
+  } finally {
+    actionPending.value = false;
+  }
+}
+
 function saveContent(): Promise<void> {
   const content: RevisionContent = {
     title: draftTitle.value,
@@ -392,6 +417,17 @@ function saveAssignee(): Promise<void> {
             <dd>{{ formatDateTime(detail.updatedAt) }}</dd>
           </div>
         </dl>
+        <div v-if="isLeader && detail.status === 'CANCELED'" class="record-actions">
+          <button
+            type="button"
+            class="button button-quiet"
+            :disabled="actionPending"
+            @click="removeRequirement"
+          >删除该作废需求</button>
+        </div>
+        <p v-if="isLeader && detail.status === 'CANCELED'" class="field-hint">
+          删除后它从需求列表消失；AI 调用审计与已发生的 PR 关联记录仍然保留。
+        </p>
       </div>
 
       <section class="panel current-revision" aria-labelledby="current-revision-title">

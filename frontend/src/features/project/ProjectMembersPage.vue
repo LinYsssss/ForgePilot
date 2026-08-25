@@ -21,6 +21,7 @@ import {
   listMembers,
   PROJECT_ROLE_LABELS,
   PROJECT_ROLES,
+  removeMember,
   searchMemberCandidates,
   transferLeader,
   updateMemberRoles,
@@ -225,6 +226,29 @@ async function makeLeader(member: Member): Promise<void> {
     await load();
   } catch (failure: unknown) {
     error.value = apiErrorMessage(failure);
+  }
+}
+
+/**
+ * 移除成员。后端在同一事务里撤销需求指派、Finding 认领与项目 SCM 绑定，而 PR 的
+ * 两列不可变作者快照与全部审计保持不动（D022）。唯一 LEADER 会被后端以 409 拒绝，
+ * 前端因此不给 LEADER 那一行入口，但拒绝本身仍由后端强制。
+ */
+async function removeFromProject(member: Member): Promise<void> {
+  const id = projectId.value;
+  if (id === null) return;
+  if (!window.confirm(
+    `确认把 ${member.displayName} 从项目中移除？它的需求指派、Finding 认领与本项目 SCM 绑定都会失效。`,
+  )) return;
+  pending.value = true;
+  error.value = null;
+  try {
+    await removeMember(id, member.userId);
+    await load();
+  } catch (failure: unknown) {
+    error.value = apiErrorMessage(failure);
+  } finally {
+    pending.value = false;
   }
 }
 
@@ -521,7 +545,17 @@ onMounted(load);
                       class="button button-quiet"
                       @click="makeLeader(row.member)"
                     >转移负责人</button>
+                    <button
+                      v-if="!row.member.roles.includes('LEADER')"
+                      type="button"
+                      class="button button-quiet"
+                      :disabled="pending"
+                      @click="removeFromProject(row.member)"
+                    >移除成员</button>
                   </form>
+                  <p v-if="row.member.roles.includes('LEADER')" class="field-hint">
+                    负责人不可被移除，先完成负责人转移。
+                  </p>
                 </details>
                 <span v-else class="muted">—</span>
               </td>

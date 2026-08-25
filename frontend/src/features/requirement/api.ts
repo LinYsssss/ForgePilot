@@ -207,6 +207,14 @@ export function assign(
  * 针对需求的当前修订运行质量检查。用 POST，因为它会花掉一次 provider 调用
  * 并把结果写到那个修订上；结果归属于该修订，而一次 DRAFT 编辑会把它清空。
  */
+/**
+ * 删除一条**作废**需求。后端做软删：需求离开产品面，而 `ai_call_log` 与
+ * `pull_request_requirement_event` 承载的审计与既成事实保持完整（D022）。
+ */
+export function deleteRequirement(projectId: number, requirementId: number): Promise<void> {
+  return requestJson<void>(`${requirementsPath(projectId)}/${requirementId}`, { method: "DELETE" });
+}
+
 export function checkQuality(
   projectId: number,
   requirementId: number,

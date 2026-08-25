@@ -6,7 +6,12 @@ import { parseId, PROJECT_QUERY_KEY } from "../../app/routes";
 import { formatDateTime } from "../../lib/datetime";
 import { apiErrorMessage } from "../../lib/http";
 import { hasProjectRole, listProjects, type Project } from "../project/api";
-import { listProjectKnowledge, uploadProjectKnowledge, type KnowledgeDocument } from "./api";
+import {
+  deleteProjectKnowledge,
+  listProjectKnowledge,
+  uploadProjectKnowledge,
+  type KnowledgeDocument,
+} from "./api";
 
 const route = useRoute();
 const router = useRouter();
@@ -15,9 +20,12 @@ const projects = ref<Project[]>([]);
 const documents = ref<KnowledgeDocument[]>([]);
 const loading = ref(false);
 const error = ref<string | null>(null);
-const file = ref<File | null>(null);
+const files = ref<File[]>([]);
 const uploadPending = ref(false);
 const uploadError = ref<string | null>(null);
+/** 逐文件结果：批量上传是 N 次独立调用，因此每个文件各有自己的成败。 */
+const uploadResults = ref<Array<{ name: string; error: string | null }>>([]);
+const deletePending = ref(false);
 const selectedProject = computed(
   () => projects.value.find((project) => project.id === projectId.value) ?? null,
 );
@@ -57,25 +65,52 @@ async function load(): Promise<void> {
   }
 }
 
-function pickFile(event: Event): void {
-  file.value = (event.target as HTMLInputElement).files?.[0] ?? null;
+function pickFiles(event: Event): void {
+  files.value = [...((event.target as HTMLInputElement).files ?? [])];
+  uploadResults.value = [];
 }
 
+/**
+ * 逐文件独立上传，不是一个批量端点（D022）。每次调用都是后端自己的一个事务，
+ * 因此一个文件失败既不会回滚已经成功的那些，也不会阻断后面的；这也避免了一个
+ * 横跨 N 次 embedding 外部调用的长事务。
+ */
 async function upload(): Promise<void> {
   const id = projectId.value;
-  const selected = file.value;
-  if (id === null || selected === null) return;
+  if (id === null || files.value.length === 0) return;
   uploadPending.value = true;
   uploadError.value = null;
+  uploadResults.value = [];
+  for (const selected of files.value) {
+    try {
+      await uploadProjectKnowledge(id, { title: selected.name, text: await selected.text() });
+      uploadResults.value.push({ name: selected.name, error: null });
+    } catch (failure: unknown) {
+      uploadResults.value.push({ name: selected.name, error: apiErrorMessage(failure) });
+    }
+  }
+  files.value = [];
+  uploadPending.value = false;
+  await load();
+}
+
+/**
+ * 硬删：chunk 与它的向量是派生数据，随文档消亡，此后 Guidance 与 Review 的检索
+ * 都召不回它。需求附件来源的文档不给删除入口——附件关系是需求侧的事实，后端也会
+ * 拒绝（D022）。
+ */
+async function remove(document: KnowledgeDocument): Promise<void> {
+  const id = projectId.value;
+  if (id === null || !window.confirm(`确认删除「${document.title}」及其全部向量切片？`)) return;
+  deletePending.value = true;
+  error.value = null;
   try {
-    const text = await selected.text();
-    await uploadProjectKnowledge(id, { title: selected.name, text });
-    file.value = null;
+    await deleteProjectKnowledge(id, document.id);
     await load();
   } catch (failure: unknown) {
-    uploadError.value = apiErrorMessage(failure);
+    error.value = apiErrorMessage(failure);
   } finally {
-    uploadPending.value = false;
+    deletePending.value = false;
   }
 }
 
@@ -139,24 +174,39 @@ watch(projectId, load, { immediate: true });
         <div>
           <p class="eyebrow">Build retrieval context</p>
           <h2 id="knowledge-upload-title" class="panel-title">上传项目知识</h2>
-          <p class="field-hint">支持 .txt 与 .md；上传后自动切片并生成 Embedding。</p>
+          <p class="field-hint">
+            支持 .txt 与 .md，可一次选择多个文件。逐个文件独立处理并各自报告结果，
+            某个文件失败不影响其余文件。
+          </p>
         </div>
         <form class="inline-form" @submit.prevent="upload">
           <div class="field">
-            <label for="knowledge-file">文本或 Markdown 文件</label>
+            <label for="knowledge-file">文本或 Markdown 文件（可多选）</label>
             <input
               id="knowledge-file"
               type="file"
+              multiple
               accept=".txt,.md,text/plain,text/markdown"
-              @change="pickFile"
+              @change="pickFiles"
             />
-            <p v-if="file" class="field-hint">已选择：{{ file.name }}</p>
+            <p v-if="files.length" class="field-hint">
+              已选择 {{ files.length }} 个：{{ files.map((item) => item.name).join("、") }}
+            </p>
           </div>
-          <button class="button button-primary" :disabled="file === null || uploadPending">
-            {{ uploadPending ? "正在处理…" : "上传并处理" }}
+          <button class="button button-primary" :disabled="files.length === 0 || uploadPending">
+            {{ uploadPending ? "正在处理…" : `上传并处理 ${files.length || ""}` }}
           </button>
         </form>
         <p v-if="uploadError" class="alert" role="alert">{{ uploadError }}</p>
+        <ul v-if="uploadResults.length" class="record-list upload-results">
+          <li v-for="result in uploadResults" :key="result.name" class="record">
+            <span
+              :class="['badge', result.error === null ? 'badge-success' : 'badge-danger']"
+            >{{ result.error === null ? "成功" : "失败" }}</span>
+            <strong>{{ result.name }}</strong>
+            <span v-if="result.error" class="muted">{{ result.error }}</span>
+          </li>
+        </ul>
       </section>
       <p v-else-if="selectedProject" class="empty-state">你可查看项目知识及其检索状态；只有负责人可以上传。</p>
       <section class="panel knowledge-index" aria-labelledby="knowledge-list-title">
@@ -204,6 +254,18 @@ watch(projectId, load, { immediate: true });
             <p v-if="document.failureReason" class="alert" role="alert">
               {{ document.failureReason }}
             </p>
+            <div v-if="isLeader" class="record-actions">
+              <button
+                v-if="document.sourceType === 'PROJECT_KNOWLEDGE'"
+                type="button"
+                class="button button-quiet"
+                :disabled="deletePending"
+                @click="remove(document)"
+              >删除文档</button>
+              <span v-else class="field-hint">
+                需求 {{ document.sourceRequirementId }} 的附件，请在该需求下解除附件后再删。
+              </span>
+            </div>
           </li>
         </ol>
       </section>
@@ -223,6 +285,8 @@ watch(projectId, load, { immediate: true });
 .vector-metric { border-color: var(--fp-color-info); background: linear-gradient(145deg, var(--fp-color-info-soft), var(--fp-color-surface-glass)); }
 .upload-panel { display: grid; align-items: end; gap: var(--fp-space-6); grid-template-columns: minmax(15rem, 0.75fr) minmax(20rem, 1.25fr); }
 .upload-panel .inline-form { margin: 0; }
+.upload-results { grid-column: 1 / -1; }
+.upload-results .record { display: flex; flex-wrap: wrap; align-items: center; gap: var(--fp-space-3); }
 .knowledge-index { border-color: var(--fp-color-border-accent); }
 @media (max-width: 64rem) {
   .knowledge-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }

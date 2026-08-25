@@ -33,3 +33,9 @@ export function listProjectKnowledge(projectId: number): Promise<KnowledgeDocume
 export function uploadProjectKnowledge(projectId: number, input: KnowledgeDocumentInput): Promise<KnowledgeDocument> {
   return requestJson<KnowledgeDocument>(`${projectPath(projectId)}/knowledge/documents`, { method: "POST", body: JSON.stringify(input) });
 }
+
+export function deleteProjectKnowledge(projectId: number, documentId: number): Promise<void> {
+  return requestJson<void>(`${projectPath(projectId)}/knowledge/documents/${documentId}`, {
+    method: "DELETE",
+  });
+}
