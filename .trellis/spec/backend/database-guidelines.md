@@ -39,12 +39,15 @@ web layer.
   schema to nineteen business tables. D021 appends
   `V9__finding_explanation.sql`, a column-only migration that adds the model's
   explanation, remediation suggestion, category and confidence band to
-  `finding`; the table count stays at nineteen.
+  `finding`; the table count stays at nineteen. D022 appends
+  `V10__resource_removal.sql`, which adds `requirement.deleted_at`/`deleted_by`
+  with a shape CHECK and one deletion ledger, `project_deletion_record`, taking
+  the schema to twenty business tables.
 - **No migration carries seed rows.** The first account is created through
   `POST /api/auth/register`, so no password ever lives in the repository.
 - Flyway derives the history `description` from the file name, and
-  `FoundationDatabaseTest` asserts all nine successful entries plus the exact
-  nineteen-table set in `public`. Renaming an applied migration breaks both that
+  `FoundationDatabaseTest` asserts all ten successful entries plus the exact
+  twenty-table set in `public`. Renaming an applied migration breaks both that
   test and every existing database.
 - **`ALTER TABLE ... ADD CONSTRAINT ... CHECK` validates the rows already in the
   table**, so a CHECK that does not tolerate `NULL` passes every test against a
@@ -66,6 +69,18 @@ web layer.
 - The only `ON DELETE` clause is `pull_request.author_user_id ON DELETE SET
   NULL`, exactly as `ARCHITECTURE.md` §2.3 defines. Everywhere else a hard
   delete is refused by the foreign key until a decision defines its semantics.
+  D022 defines three such semantics without adding a second `ON DELETE`: the
+  cascade is written explicitly in the service, and the untouched foreign keys
+  become the proof that every reference really was revoked — a listener that
+  forgot its own table makes the delete fail with 23503 instead of passing
+  quietly.
+- **A deletion ledger's resource id deliberately carries no foreign key.**
+  `project_deletion_record.resource_id` points at rows that no longer exist,
+  which is the whole reason the table exists (R5 forbids writing the trace onto
+  the deleted object). Adding a key there would make it impossible to record the
+  very deletions it is for. This is the single documented exception to §2.1's ban
+  on a polymorphic `audit_event`, and it does not generalise: an audit table for
+  *live* entities still needs its composite key.
 - The role that runs Flyway must be allowed to create the `vector` extension.
   The Testcontainers database and the Compose database both run as the image's
   bootstrap superuser; a deployment with a restricted application role has to

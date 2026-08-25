@@ -1,1 +1,6 @@
-{"_example": "Fill with {\"file\": \"<path>\", \"reason\": \"<why>\"}. Put spec/research files only — no code paths. Run `python .trellis/scripts/get_context.py --mode packages` to list available specs. Delete this line once real entries are added."}
+{"file": ".trellis/spec/backend/index.md", "reason": "后端指南入口与开发前检查表"}
+{"file": ".trellis/spec/backend/database-guidelines.md", "reason": "V10 迁移的全部约束来源：Flyway 权威、ADD CONSTRAINT CHECK 会立即校验既有行、CHECK 词表必须与应用词表一致、全库只有一条 ON DELETE、真实 pgvector 测试形态"}
+{"file": ".trellis/spec/backend/error-handling.md", "reason": "三个 DELETE 的状态码选择依据：404 兼答不存在与非成员、409 需要读到行、422 只看请求体；以及禁止捕获 DataIntegrityViolationException"}
+{"file": ".trellis/spec/backend/directory-structure.md", "reason": "新类必须落在既有八个顶层包内、feature 内扁平，不新建子包或并行目录树"}
+{"file": ".trellis/spec/guides/cross-layer-thinking-guide.md", "reason": "成员移除跨三个模块，依赖方向与事件反转是本任务的核心难点"}
+{"file": ".trellis/spec/guides/code-reuse-thinking-guide.md", "reason": "复用既有 PullRequestChanged 事件形态、ProjectAccessService 授权入口与 findByIdForUpdate 行锁，而非新造编排原语"}

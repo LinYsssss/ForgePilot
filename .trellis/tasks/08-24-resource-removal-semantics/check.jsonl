@@ -1,1 +1,5 @@
-{"_example": "Fill with {\"file\": \"<path>\", \"reason\": \"<why>\"}. Put spec/research files only — no code paths. Run `python .trellis/scripts/get_context.py --mode packages` to list available specs. Delete this line once real entries are added."}
+{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "唯一构建入口、ArchUnit 六条规则、表数检查命令与代码评审清单，是本任务的验收标准"}
+{"file": ".trellis/spec/backend/database-guidelines.md", "reason": "复核迁移追加性、非空库升级路径、CHECK 词表一致性与禁止 H2/跳过的数据库测试纪律"}
+{"file": ".trellis/spec/backend/error-handling.md", "reason": "复核错误体形状、404/409 语义与「不区分缺失与无权限」在三个新端点上成立"}
+{"file": ".trellis/spec/backend/logging-guidelines.md", "reason": "复核未给 feature 包新增 logger，留痕走 project_deletion_record 表而非日志"}
+{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "前端删除入口的四条验证命令与禁止/必需模式"}

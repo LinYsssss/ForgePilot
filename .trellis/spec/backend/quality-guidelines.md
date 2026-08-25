@@ -138,7 +138,10 @@ find backend/src/main/java/com/forgepilot -mindepth 1 -maxdepth 1 -type d -print
 # No forbidden production package. Expect no match.
 grep -rEn '^package com\.forgepilot\.(agent|patch|mq|rag|repo|pullrequest|context|assistant|finding)\b' backend/src/main/java
 
-# Exactly sixteen business tables; later phases must not add a seventeenth.
+# Exactly twenty business tables. This number tracks ARCHITECTURE.md 2.1 and is
+# not a ceiling of its own: a new table needs a business fact plus a decision
+# record. It read "sixteen" until V8/V9/V10 raised it, so update both places
+# together or the check silently stops meaning anything.
 grep -rEhi '^create[[:space:]]+table' backend/src/main/resources/db/migration/*.sql | wc -l
 
 # Review remains a single package-owned engine; expect no second runtime.
