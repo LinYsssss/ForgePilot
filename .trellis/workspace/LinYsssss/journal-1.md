@@ -373,3 +373,24 @@ Implemented and verified account display names, multi-role project membership, u
 ### Status
 
 [OK] **Completed**
+
+
+## Session 13: 三类资源的删除语义 T-005/T-006/T-007（D022/V10）
+
+**Date**: 2026-08-25
+**Task**: 三类资源的删除语义 T-005/T-006/T-007（D022/V10）
+**Branch**: `feat/member-directory-scm-identities`
+
+### Summary
+
+知识文档硬删+显式删chunk、成员硬删+进程内事件反转依赖撤销三处活权限、作废需求软删保住审计；新增留痕表 project_deletion_record（19→20 表，V10）。正面处理三处冲突：audit_event 禁令边界、project 依赖方向、ReviewActivityRepository 两条 SQL 不可一视同仁过滤。后端 331 测试、前端 37 测试全绿零跳过；已备份并部署，Flyway 9→10 成功，既有数据完好。AC18 浏览器闭环待人工。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `df624c6` | (see git log) |
+
+### Status
+
+[OK] **Completed**
