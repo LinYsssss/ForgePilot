@@ -8,8 +8,8 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 11
-- **Last Active**: 2026-08-24
+- **Total Sessions**: 12
+- **Last Active**: 2026-08-25
 <!-- @@@/auto:current-status -->
 
 ---
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~354 | Active |
+| `journal-1.md` | ~375 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 12 | 2026-08-25 | 前端体验修复 T-001..T-004/T-008/T-009 | `44a4bc9` | `feat/member-directory-scm-identities` |
 | 11 | 2026-08-24 | Member directory and SCM identity management | `9a0e52e` | `feat/member-directory-scm-identities` |
 | 10 | 2026-08-23 | Repository cleanup and completion audit | `d198c59`, `7a3e967`, `b53cf26` | `chore/chinese-comments-and-docs` |
 | 9 | 2026-08-23 | Requirement document access | `850f83d5ebdf762bb0247191ada03ae8d5e2e814` | `chore/chinese-comments-and-docs` |

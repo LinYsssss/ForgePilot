@@ -352,3 +352,24 @@ Implemented and verified account display names, multi-role project membership, u
 ### Status
 
 [OK] **Completed**
+
+
+## Session 12: 前端体验修复 T-001..T-004/T-008/T-009
+
+**Date**: 2026-08-25
+**Task**: 前端体验修复 T-001..T-004/T-008/T-009
+**Branch**: `feat/member-directory-scm-identities`
+
+### Summary
+
+六项纯前端缺陷一次交付：工作台默认项目、成员紧凑表与批量守卫、长 AI 输出定高、改密迁入 /account 与账户菜单三条关闭路径、两处 Provider Token 入口。零后端改动零迁移，前端 lint/typecheck/test/build 全绿，测试 35→37，已重建 frontend 容器并核验部署 bundle。AC7/AC8 的三档浏览器确认待人工执行。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `44a4bc9` | (see git log) |
+
+### Status
+
+[OK] **Completed**
