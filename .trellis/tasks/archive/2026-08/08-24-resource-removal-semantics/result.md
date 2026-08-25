@@ -19,13 +19,13 @@
 ## 自动化证据
 
 ```
-后端 ./mvnw -B -ntp verify → 331 tests, 0 failures, 0 errors, 0 skipped, BUILD SUCCESS  （此前 323）
+后端 ./mvnw -B -ntp verify → 332 tests, 0 failures, 0 errors, 0 skipped, BUILD SUCCESS  （此前 323）
 前端 lint / typecheck / test --run / build → 全部通过，37 tests 零跳过
 ```
 
 本机无 JDK，后端全程走 `DEFENSE-GUIDE.md:27` 的固定容器路径（`eclipse-temurin:21-jdk`）。
 
-新增 8 条测试，每条锁一个不变量：
+新增 9 条测试，每条锁一个不变量：
 
 | 测试 | 锁住的不变量 |
 |---|---|
@@ -37,6 +37,7 @@
 | `ResourceRemovalTest` 词表贯通 | `ck_project_deletion_record_resource_type` 与 `DeletedResourceType` 不得分叉（走完整个 enum） |
 | `KnowledgeServiceTest` 删除 + 检索 | chunk 随文档消亡，**且删除后检索不再召回**——AC4 在实现侧一行代码都没写，正确性完全依赖这一条 |
 | `KnowledgeServiceTest` 附件拒绝 / 授权 | 附件文档 409 而不是数据库报错；非 LEADER 403、跨项目 404 |
+| `BatchOneApiTest` 三个 DELETE 的 HTTP 接线 | 路径映射、204、以及经过安全过滤器链后的答案。**这一条是复盘时补的**：`implement.md` 第 6 步原本要求用 `BatchOneApiTest` 的形态在 HTTP 层覆盖 AC13，首次交付却只做到 Service 层——于是三个新端点的路径接线与状态码当时没有任何测试证明，写错一个路径会在 Service 测试里全绿而在前端 404 |
 
 **刻意未写**：三个端点的 getter/序列化、`detail` 字符串措辞、留痕表各列可空性单测、逐端点重复的幂等与 403 矩阵（授权走同一个 `ProjectAccessService`）。
 
