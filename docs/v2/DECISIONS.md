@@ -540,3 +540,43 @@ SCM 身份改由用户本人持有。用户用一次性 Token 调用 GitHub/GitL
 **明确不做**：向量索引（[D019](#d019) 已决策为非目标）；让 AI 产出补丁、自动改码或自动流转 Finding 状态；置信度参与任何自动门禁、排序权重或质量结论；置信度记为数值或声称已校准；修改 `RULE_VERSION` 或任何哈希的输入构成；新增表、顶层包、一级导航、AI runtime、第二 Review 流程或运行时依赖；重跑、修改或扩充正式评测实验。前端不新增路由，`finding_key` 与两个哈希收进折叠区而非移除——答辩时仍要能当场展开证明抑制确实按哈希工作。
 
 **对评测证据的影响**：无。`evaluation/tools/*.py` 对后端零引用，不导入 `ReviewPrompts`、不调用 `/api/`，因此改动 Prompt 契约不会使已冻结的三臂结论失效。答辩表述仍须精确：冻结实验证明的是「知识进上下文有用」，而不是「ForgePilot 检索管线有效」。
+
+---
+
+## D022 三类资源的删除语义
+
+**决定**：知识文档、项目成员与已作废需求各自获得删除能力，且**三者用三种策略**——知识文档硬删、项目成员硬删、已作废需求软删。这个不一致是结论而不是妥协：三种资源撞上的是语义不同的外键，统一成一种才是错的。
+
+| 资源 | 策略 | 决定它的外键事实 |
+|---|---|---|
+| 知识文档 | 硬删（连带显式删 chunk） | `knowledge_chunk` 是派生数据，随文档消亡；唯一真实引用是 `requirement_attachment` |
+| 项目成员 | 硬删 `project_member` 行 | 库结构本来就是为这条路径设计的：`pull_request.author_user_id` 是全库唯一一条 `ON DELETE SET NULL`（[D010](#d010)） |
+| 已作废需求 | 软删（`deleted_at` + `deleted_by`） | `ai_call_log` 与 `pull_request_requirement_event` 承载审计与既成事实，物理销毁即销毁审计 |
+
+三类删除的授权主体都是项目 `LEADER`，都在后端强制，前端隐藏入口不构成授权。重复删除一律返回 404——被删对象已经离开产品面，答案与「不存在」一致，这与项目隔离的 404 口径是同一条规则。
+
+**数据实现**：V10 追加 `requirement.deleted_at` / `deleted_by`（可空，`ck_requirement_deleted_shape` 强制二者同空或同非空）与一张留痕表 `project_deletion_record`。业务表 19 → **20**，Flyway 从 V9 增至 V10。不加第二条 `ON DELETE`：级联由服务显式表达。
+
+**一张留痕表，与 §2.1「不建通用 `audit_event`」的边界**：`ARCHITECTURE.md` §2.1 的不建清单以「多态 entity_id 无法被 [D006](#d006) 复合外键约束」为由排除通用审计表。该理由在**删除**台账上不适用：被引对象按定义已经不存在（两类是硬删），R5 又明令留痕不得写在被删对象自身，所以这不是「没加外键」，而是没有可加外键的目标。能约束的两列都约束了——`project_id` → `project`（项目隔离靠它）、`actor_user_id` → `user_account`（操作者仍在）；`resource_type` 是三个值的封闭 CHECK 词表，不是开放的多态注册表。拆成三张窄表并不会多出任何一个外键（三份资源 id 一样悬空），只会把同一个问题抄三遍，而三类删除要记的东西本来同构：谁、何时、对什么、连带撤销了什么。`resource_id` 上**故意不加**外键，这是本表得以存在的前提，后续会话不得「顺手补上」。
+
+**成员移除靠进程内事件反转依赖方向**：移除必须撤销 `requirement.assignee_id`、`finding.assignee_id` 与 `project_member_scm_binding`，而 §1.3 规定 `project` 只能依赖 `common`，§1.4 第 4 条还禁止跨 feature 注入对方 `*Repository`。因此 `project` 定义 `ProjectMemberRemoving`，由 `requirement` / `review` / `scm` 各自监听并撤销自己那部分——与 `scm` 发布 `PullRequestChanged`、`review` 监听是同一形状，方向合法且无环。必须是同步 `@EventListener`；`@TransactionalEventListener` 在这里是错的工具，它的默认阶段在提交之后运行，那时成员行已经删了。
+
+顺序是承重的：**先**发事件撤销，**再**删成员行。而漏掉一个监听器不会静默通过——那三处引用的外键都没有 `ON DELETE`，未撤销的引用会让删除被数据库以 23503 拒绝。**外键本身就是「每一处引用都真的撤销了」的证明**，应用层不必再数一遍。
+
+**移除时保住什么、放掉什么**：放掉的是活权限——角色集合、需求指派、Finding 认领、项目 SCM 绑定。保住的是既成事实与审计——`pull_request` 的两列不可变作者快照（均 NOT NULL，移除后完整可读）、`pull_request_requirement_event`、Finding 血缘、`finding_event`、`ai_call_log`，以及用户自有的 `scm_identity` 与平台账号（身份归用户本人，不是项目财产）。`author_user_id` 被置空不算破坏事实：它是按活动绑定重算出来的映射（[D020](#d020)），成员没了映射本就该消失。
+
+唯一 `LEADER` 不可移除，且这条由**服务端**拒绝而非约束：`UNIQUE(project_id) WHERE role='LEADER'` 保证的是至多一个，「至少一个」历来是服务端职责（[D013.9](#d013)）。删掉唯一 LEADER 不违反任何约束，只会让项目失去负责人。
+
+**知识文档被引为需求附件时拒绝删除**，而不是连带撤销附件关系：附件关系是需求侧的事实，删知识文档不该顺手改变某条需求的附件构成。判定只看 `knowledge_document.source_type`，不查 `requirement_attachment`——`ck_knowledge_document_scope_matches_type` 加上附件侧 NOT NULL 的 `requirement_id` 已经让「公共知识永远进不了附件表」成为结构事实，于是 `source_type` 恰好就是「可能被附件引用」的集合。这同时避开了 §1.4 第 4 条禁止的跨 feature 仓库注入。
+
+**作废需求的删除前置条件只有「状态是 CANCELED」**，不额外要求「无 PR 关联且无 Finding」：软删之下所有既有引用继续有效，不存在悬空风险，那个条件只会平白挡住正常使用。
+
+**批量上传是纯前端，后端零改动**：「一次选择多个文件、逐个报告成败、单个失败不阻断整批」正是 N 次调用现有 `POST /knowledge/documents` 的语义，每次调用自己一个事务。新建批量端点反而更差——要么是一个横跨 N 次 embedding 外部调用的长事务（一个文件失败会回滚已经成功的九个），要么只是把前端循环搬进服务端还得另发明一套逐行结果契约。这与成员批量添加是整批事务的相反选择是有意的：半套成员关系比一次失败更难解释，而知识文件彼此独立有意义。
+
+**理由**：T-005 / T-006 / T-007 的难点从来不是缺一个 `DELETE` 动词，而是每一项都撞在语义不同的外键上。有的引用是活权限（应随离开而失效），有的是既成事实与审计（永不可销毁）。V5 的注释当初专门为 `pull_request_requirement_event` 写明「不得抹掉一件已经发生的事」，V6 的注释也写明 `finding.assignee_id` 与 `finding_event.actor_id` 指向相反方向且理由相反。用一种删除方式套三种资源，必然要么销毁审计，要么留下一个已离职者仍能被指派的项目。
+
+成员移除是 `08-23-member-directory-multi-role-scm-identities` 明确列入 Out of Scope 的延期项，不是遗漏；本决策是接续它。
+
+**明确不做**：向量索引（[D019](#d019) 已决策为非目标）；需求状态转换留痕（[D013.3](#d013) 明确接受的缺口，软删自己的两列打标不等于补上它）；`resource_id` 加外键；第二条 `ON DELETE`；down 迁移（项目从无 down 迁移，且删表会销毁已经产生的留痕）；离职归档、成员重新激活、删除项目本身/用户平台账号/PR/Review；新增表以外的顶层包、一级导航、AI 流程或运行时依赖；修改或重跑正式评测资产。
+
+**对评测证据的影响**：无。`evaluation/tools/*.py` 对后端零引用，本决策既不改 Prompt 契约也不改任何哈希输入，冻结的三臂结论不受影响。

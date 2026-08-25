@@ -7,7 +7,7 @@
 - 实施顺序见 [IMPLEMENTATION-PLAN.md](./IMPLEMENTATION-PLAN.md)。
 - Legacy 资产取舍见 [LEGACY-MIGRATION-MATRIX.md](./LEGACY-MIGRATION-MATRIX.md)。
 
-> **单一事实源纪律**：19 表、依赖规则、状态机、运行边界只在本文定义。其他文档引用本文，不复述。
+> **单一事实源纪律**：20 表、依赖规则、状态机、运行边界只在本文定义。其他文档引用本文，不复述。
 
 ---
 
@@ -86,7 +86,7 @@ common, project, scm, knowledge, requirement, ai  ←  review
 
 ## 2. 数据模型
 
-### 2.1 19 张表（唯一定义处）
+### 2.1 20 张表（唯一定义处）
 
 | 表 | 核心职责 | 关键约束 |
 |---|---|---|
@@ -109,8 +109,9 @@ common, project, scm, knowledge, requirement, ai  ←  review
 | `finding` | Review 问题当前态与跨轮血缘 | project_id、review_id、`review_attempt`、requirement_id、requirement_revision_id、ac_id、finding_type、path、line、evidence、`category`、`explanation`、`suggestion`、`confidence`（后四列由 V9 追加，全部可空；`category` 一直是 `finding_key` 的输入，V9 只是不再算完即丢，其余三列一律不得进入任何 hash——见 3.6 与 D021）、status、assignee_id（nullable，→ project_member）、fingerprint(`finding_key`)、evidence_hash、`basis_hash`、continuity、carried_from_finding_id；永久父 FK `(project_id,review_id,review_attempt) → review(project_id,id,execution_attempt)`——父子关系与 attempt 围栏合一，过期 Worker 的插入由数据库而非应用检查拒绝；血缘 FK `(project_id,carried_from_finding_id)`；`UNIQUE(project_id,id)`、`UNIQUE(review_id,finding_key)`；`category` 与 `confidence` 各有容忍 NULL 的 CHECK 封闭词表，但越界值必须在写库前被映射掉——走到 CHECK 的值中止的是整批插入而不是单行；CHECK 与约束触发器保证父子上下文 NULL-safe 一致（D006/D009/D021） |
 | `finding_event` | Finding 人工状态与指派审计 | project_id、finding_id（复合 FK）、actor_id（→ `user_account`）、action、from/to、comment、created_at |
 | `ai_call_log` | 评测与故障定位 | project_id、review_id、requirement_id、requirement_revision_id（三者均可空且使用含 project_id 的复合 FK）、use_case、model、token、latency、status、error |
+| `project_deletion_record` | 三类删除的可追溯留痕 | project_id、resource_type（`KNOWLEDGE_DOCUMENT/PROJECT_MEMBER/REQUIREMENT` 封闭 CHECK 词表）、resource_id（**故意无外键**：硬删之后没有可指向的目标，见 D022）、actor_user_id（→ `user_account`）、detail、created_at；`project_id` 与 `actor_user_id` 均有外键，项目隔离靠前者 |
 
-**不建**：`scm_connection`（并入 `scm_repository`）、`review_task/report/issue`、`review_decision`（Decision 在 `review` 行上且只写一次）、`webhook_delivery`、通用 `audit_event`（多态 entity_id 无法被 D006 复合外键约束）、任何 vector 影子表。执行恢复不另建任务表，使用 Review 上的 attempt/token/lease fencing 元数据。
+**不建**：`scm_connection`（并入 `scm_repository`）、`review_task/report/issue`、`review_decision`（Decision 在 `review` 行上且只写一次）、`webhook_delivery`、通用 `audit_event`（多态 entity_id 无法被 D006 复合外键约束）、任何 vector 影子表。`audit_event` 这一条有且仅有一个例外：`project_deletion_record`（[D022](./DECISIONS.md#d022)）。它记录的是**删除**，被引对象按定义已经不存在，因此那条理由不适用——不是没加外键，是没有可加外键的目标；能约束的 `project_id` 与 `actor_user_id` 都约束了，`resource_type` 是三值封闭词表。这不放宽禁令：任何针对**存活**实体的多态审计表仍然不建。执行恢复不另建任务表，使用 Review 上的 attempt/token/lease fencing 元数据。
 新增表必须有已发生的业务事实 + 新决策记录证明现有模型无法表达。表数量是复杂度提醒，不是为守数字而把两个领域事实塞进一张表的理由。
 
 ### 2.2 关系图
@@ -241,6 +242,18 @@ CHECK (
 ```
 
 审计表的 `actor_id` 指向 `user_account`，因为退出项目不能抹掉既成事实；`pull_request.author_user_id` 与 Finding assignee 指向 `project_member`，因为成员退出后活权限必须失效。
+
+删除语义按资源分三种，且这个不一致是三组外键各自的正确答案（[D022](./DECISIONS.md#d022)）：
+
+| 资源 | 策略 | 连带处理 |
+|---|---|---|
+| 知识文档 | 硬删 | 同事务显式删 `knowledge_chunk`（含 embedding）。**应用层级联，不加第二条 `ON DELETE`**；被引为需求附件（`source_type='REQUIREMENT_ATTACHMENT'`）时拒绝，附件关系是需求侧的事实 |
+| 项目成员 | 硬删 `project_member` | 先由 `ProjectMemberRemoving` 事件让 `requirement` / `review` / `scm` 各自置空指派、认领并删除项目绑定，再删成员行；`project_member_role` 随 `@ElementCollection` 消失，`pull_request.author_user_id` 由那条唯一的 `ON DELETE SET NULL` 置空。唯一 `LEADER` 由服务端拒绝 |
+| 已作废需求 | 软删（`deleted_at` + `deleted_by`） | 只有 `CANCELED` 可进入；行保留，因此 `ai_call_log` 与 `pull_request_requirement_event` 的审计与既成事实完好。产品面的每一处读取都过滤 `deleted_at IS NULL` |
+
+三类删除的留痕统一写 `project_deletion_record`，而**不写在被删对象自身**——两类是硬删，写进去会随之消失。重复删除一律 404：被删对象已离开产品面，答案与「不存在」一致。
+
+漏掉一个撤销不会静默通过：那三处引用的外键都没有 `ON DELETE`，未撤销的引用会让删除被数据库以 23503 拒绝。外键本身就是「每一处引用都真的撤销了」的证明。
 
 附件的唯一事实源是 `requirement_attachment`，`knowledge_document.source_requirement_id` 只是受约束检索投影。附件 Document 必须满足 `source_type='REQUIREMENT_ATTACHMENT'` 且 scope 非空，公共知识必须 scope 为空；关系表通过 `(project_id,document_id,requirement_id) → knowledge_document(project_id,id,source_requirement_id)` 锁定二者相等，并以 `UNIQUE(project_id,document_id)` 保证一个 Document 最多属于一个 Requirement。Document 与关系同事务写入；提升为公共知识时复制为新 Document，不就地改写原附件。
 

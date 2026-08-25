@@ -11,7 +11,7 @@ ForgePilot 是围绕需求驱动 Pull Request 审查建设的轻量级 AI 研发
 | 文档 | 权威内容 | 使用时机 |
 |---|---|---|
 | [PRD.md](./PRD.md) | 产品定位、角色权限、范围、状态与产品验收 | 判断做什么、谁能做 |
-| [ARCHITECTURE.md](./ARCHITECTURE.md) | 模块边界、19 张表、数据库约束、流程与运行边界 | 判断怎么实现、不能越过什么边界 |
+| [ARCHITECTURE.md](./ARCHITECTURE.md) | 模块边界、20 张表、数据库约束、流程与运行边界 | 判断怎么实现、不能越过什么边界 |
 | [API.md](./API.md) | 当前账户、成员目录与 SCM 身份接口契约 | 联调身份与成员管理 |
 | [IMPLEMENTATION-PLAN.md](./IMPLEMENTATION-PLAN.md) | Phase 顺序、授权闸门、任务级规划要求、测试与退出条件 | 安排开发和验收 |
 | [DECISIONS.md](./DECISIONS.md) | D001 起各条决策的理由与不可逆后果 | 需要理解为何这样定或要提出变更 |
@@ -25,7 +25,7 @@ ForgePilot 是围绕需求驱动 Pull Request 审查建设的轻量级 AI 研发
 
 Phase 0–8 全部完成，逐阶段验收证据在 `.trellis/tasks/archive/2026-08/` 下各任务的 `result.md`。
 
-交付形态：后端 8 个顶层包、19 张业务表、9 个 Flyway 迁移、323 个测试零跳过；前端保持 6 个一级导航、11 条产品路由和 35 个测试，并增加非一级账户页。已交付能力：
+交付形态：后端 8 个顶层包、20 张业务表、10 个 Flyway 迁移、331 个测试零跳过；前端保持 6 个一级导航、11 条产品路由和 37 个测试，并增加非一级账户页。已交付能力：
 
 - **auth**：本地账号、显示名、进程内会话、Cookie CSRF、会话版本失效、改密。
 - **project**：可按显示名/用户名/平台 ID 搜索的成员目录、原子批量添加、成员多角色、唯一 LEADER 与角色能力并集。
@@ -53,7 +53,7 @@ R2.5 复核时另有两条曾被列为「计划中未兑现」，现已各自收
 ## 不可违反的总边界
 
 - 后端是模块化单体，顶层包仅为 `common/auth/project/requirement/scm/knowledge/ai/review`。
-- 当前数据模型为 19 张表；V8 新增的三张表只表达角色集合、用户 SCM 身份与项目绑定历史，V9 只给 `finding` 加列、不加表。Finding 仍内聚于 `review`，只有一个 Review Engine。
+- 当前数据模型为 **20 张表**；V8 新增的三张表只表达角色集合、用户 SCM 身份与项目绑定历史，V9 只给 `finding` 加列、不加表，V10 给 `requirement` 加两列软删标记并新增留痕表 `project_deletion_record`（[D022](./DECISIONS.md#d022)）。Finding 仍内聚于 `review`，只有一个 Review Engine。
 - `scm` 发布 `PullRequestChanged` 事件但不依赖 `review`；AI 不直接改变业务状态或代码。
 - 禁止 Agent、Patch、MQ/Outbox、第二 AI runtime、本地 clone/Git、第二 Review Pipeline、代码向量库和未经过产品决策的额外一级菜单；D017 批准、D018 重新布局的六个入口不属于额外扩张。
 - PostgreSQL 15+ 与 pgvector 是业务事实源；所有项目内引用和查询必须保持 `project_id` 隔离。

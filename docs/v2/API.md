@@ -37,6 +37,10 @@
   - 不能用此接口授予或移除 LEADER。
 - `POST /api/projects/{projectId}/members/leader-transfer`
   - 请求：`{"targetUserId":12,"confirmed":true}`；成功 204。
+- `DELETE /api/projects/{projectId}/members/{userId}`
+  - 仅 LEADER；成功 204。硬删成员关系，并在同一事务里撤销角色集合、需求指派、Finding 认领与本项目 SCM 绑定。
+  - 唯一 LEADER 返回 409（先做负责人转移）；重复移除返回 404；跨项目与不存在同答 404。
+  - `pull_request` 的两列不可变作者快照、`pull_request_requirement_event`、Finding 血缘与审计不受影响；`author_user_id` 按预设置空。用户自有 `scm_identity` 与平台账号不受影响（D022）。
 
 ## 用户 SCM 身份
 
@@ -82,3 +86,17 @@ GitHub 默认 `apiBase=https://api.github.com`；GitLab 默认 `https://gitlab.c
 ## PR 作者映射
 
 远端 PR 保存的 `authorExternalUserId/authorUsername` 是不可变快照。`authorUserId` 是可重算投影：只有 Provider、实例、稳定外部用户 ID 与当前活动绑定一致时才有值。撤销、替换或审批绑定会重算项目内既有 PR；任何“本人 PR”授权均按稳定 ID 判断，不按用户名。
+
+## 资源删除（D022）
+
+三类资源三种策略；授权主体均为项目 LEADER，重复删除一律 404。
+
+- `DELETE /api/projects/{projectId}/knowledge/documents/{documentId}`
+  - 硬删。成功 204，同事务删除该文档的全部 `knowledge_chunk`（含向量），此后 Guidance 与 Review 的检索都不再召回它。
+  - 文档是需求附件时返回 409，并指出是哪条需求在引用；请先在该需求下解除附件。
+  - 批量上传**没有**批量端点：一次多文件上传就是对 `POST .../knowledge/documents` 的 N 次独立调用，逐文件成败互不影响。
+- `DELETE /api/projects/{projectId}/members/{userId}`
+  - 见上「项目与成员」。
+- `DELETE /api/projects/{projectId}/requirements/{requirementId}`
+  - **软删**。成功 204；需求从列表与详情消失，但行保留，因此 `ai_call_log` 与 `pull_request_requirement_event` 的审计与既成事实完好。
+  - 仅 `CANCELED` 可删，其他状态返回 409；不额外要求「无 PR 关联且无 Finding」。
