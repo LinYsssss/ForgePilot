@@ -58,8 +58,9 @@ web layer.
   the next version instead.
 - The only `ON DELETE` clause is `pull_request.author_user_id ON DELETE SET
   NULL`, exactly as `ARCHITECTURE.md` §2.3 defines. Everywhere else a hard
-  delete is refused by the foreign key until a decision defines its semantics.
-  defines three such semantics without adding a second `ON DELETE`: the
+  delete is refused by the foreign key until something defines its semantics.
+  Three resources define theirs without adding a second `ON DELETE` — knowledge
+  documents and members delete hard, a voided requirement deletes soft: the
   cascade is written explicitly in the service, and the untouched foreign keys
   become the proof that every reference really was revoked — a listener that
   forgot its own table makes the delete fail with 23503 instead of passing
