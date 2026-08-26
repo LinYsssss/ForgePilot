@@ -79,7 +79,7 @@ the real failure it would have caught, and the JDK server covers every case.
 
 **This only works while no client hardcodes a host.** The provider base URI comes
 from configuration, and the SCM base URI from `scm_repository.api_base`. That is
-the same property D010 needs for self-hosted instances, so production
+the same property self-hosted instances need, so production
 requirement and test seam are one thing — hardcode a host and both break at once.
 
 A stub on `127.0.0.1` and an SSRF policy that blocks loopback are in direct

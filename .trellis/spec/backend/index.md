@@ -14,7 +14,7 @@ database, test, and configuration conventions this repository enforces, and
 name the file or command that enforces each one.
 
 The implementation covers the Phase 1 foundation, batches 1–3, Phase 8, and
-D017's product-flow completion: local accounts, projects, requirements,
+the product flow: local accounts, projects, requirements,
 knowledge/attachments, SCM, the AI gateway, the single Review Engine and its
 human decision loop. These guides describe the resulting runtime conventions.
 
@@ -34,8 +34,6 @@ human decision loop. These guides describe the resulting runtime conventions.
 
 ## Pre-development checklist
 
-- [ ] Confirm the change is inside the currently authorized phase in
-      [IMPLEMENTATION-PLAN.md](../../../docs/v2/IMPLEMENTATION-PLAN.md).
 - [ ] Pick the owning top-level package and the allowed dependency direction
       from `ARCHITECTURE.md` §1 before creating any class.
 - [ ] Read [directory-structure.md](./directory-structure.md) so the new files

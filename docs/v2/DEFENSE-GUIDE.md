@@ -4,7 +4,7 @@ This guide reproduces the final application and recomputes the formal reports wi
 
 ## 1. Clean deployment
 
-Start from a clean checkout of the recorded Phase 8 commit. Do not copy a previous PostgreSQL volume into the checkout.
+Start from a clean checkout. Do not copy a previous PostgreSQL volume into the checkout.
 
 ```bash
 cp .env.example .env
@@ -24,7 +24,7 @@ Choose two unused loopback ports if those are occupied. For an interactive demon
 
 ## 2. Build and test gates
 
-The backend requires Java 21. On a host without a JDK, the same pinned test path used for Phase 8 is:
+The backend requires Java 21. On a host without a JDK, use the pinned container path:
 
 ```bash
 docker run --rm --network host \

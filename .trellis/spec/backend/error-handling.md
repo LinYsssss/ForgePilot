@@ -48,7 +48,7 @@ Then 409.
 
 ## Constraint violations
 
-A database constraint conflict is **never caught and continued** ([D013.11]).
+A database constraint conflict is **never caught and continued** (see below).
 It rolls its transaction back and arrives at `ApiExceptionHandler` as
 `DataIntegrityViolationException`, which maps to 409. The measured reason is in
 `research/pg15-hibernate-constraints.md`: a constraint-trigger error puts the
@@ -59,7 +59,7 @@ So services do not pre-check what a constraint already enforces. Adding a
 second LEADER, reusing an SCM identity, or parenting a row across projects are
 all left to the database, and the 409 comes back for free. Service-side checks
 exist only where no constraint can express the rule — "at least one LEADER"
-(D013.9) and "this revision is frozen".
+"this revision is frozen".
 
 ## traceId
 

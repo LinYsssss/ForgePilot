@@ -29,20 +29,10 @@ web layer.
 
 - Migration files live in `backend/src/main/resources/db/migration` and follow
   the naming rule in `ARCHITECTURE.md` §2.4.
-- `V1__foundation.sql` contains only `CREATE EXTENSION IF NOT EXISTS vector`.
-  Batches 1–3 append `V2__auth_project.sql`, `V3__requirement.sql`,
-  `V4__knowledge_ai.sql`, `V5__scm.sql`, and `V6__review.sql`, producing the
-  Phase 0–8 baseline of sixteen business tables. `V7__pull_request_title.sql`
-  is a column-only migration that persists the PR title frozen into Review
-  context. D020 appends `V8__member_roles_and_scm_identities.sql`, which adds
-  the three irreducible role/identity/binding facts and brings the current
-  schema to nineteen business tables. D021 appends
-  `V9__finding_explanation.sql`, a column-only migration that adds the model's
-  explanation, remediation suggestion, category and confidence band to
-  `finding`; the table count stays at nineteen. D022 appends
-  `V10__resource_removal.sql`, which adds `requirement.deleted_at`/`deleted_by`
-  with a shape CHECK and one deletion ledger, `project_deletion_record`, taking
-  the schema to twenty business tables.
+- Ten migrations, `V1`–`V10`, produce the current twenty business tables.
+  `V1__foundation.sql` contains only `CREATE EXTENSION IF NOT EXISTS vector`;
+  `V2`–`V6` create the core model; `V7`, `V9` and `V10` add columns, and `V8`
+  and `V10` add the role/identity/binding and deletion-ledger tables.
 - **No migration carries seed rows.** The first account is created through
   `POST /api/auth/register`, so no password ever lives in the repository.
 - Flyway derives the history `description` from the file name, and
@@ -69,7 +59,7 @@ web layer.
 - The only `ON DELETE` clause is `pull_request.author_user_id ON DELETE SET
   NULL`, exactly as `ARCHITECTURE.md` §2.3 defines. Everywhere else a hard
   delete is refused by the foreign key until a decision defines its semantics.
-  D022 defines three such semantics without adding a second `ON DELETE`: the
+  defines three such semantics without adding a second `ON DELETE`: the
   cascade is written explicitly in the service, and the untouched foreign keys
   become the proof that every reference really was revoked — a listener that
   forgot its own table makes the delete fail with 23503 instead of passing
@@ -98,8 +88,7 @@ start** on the natural spelling, with `AnnotationException: ... mix insertable
 with 'insertable=false'` or `MappingException: Column 'project_id' is
 duplicated in mapping`.
 
-The project-wide answer is [D013.1](../../../docs/v2/DECISIONS.md#d013)
-variant A, and it is not optional: **write through a scalar `Long xxxId`, and
+The project-wide answer is not optional: **write through a scalar `Long xxxId`, and
 mark every `@JoinColumn` of the association `insertable = false, updatable =
 false`.** `Requirement.currentRevision` is the worked example — a three-column
 self-referencing key that proves same project, correct parent and existence in
@@ -121,8 +110,7 @@ Two consequences follow from the same decision:
 
 ## Vectors
 
-`knowledge_chunk.embedding` is `vector` with **no dimension**. D001 makes the
-model's dimension deployment configuration, so binding it in the schema would
+`knowledge_chunk.embedding` is `vector` with **no dimension**. The model's dimension is deployment configuration, so binding it in the schema would
 let one Flyway version produce different structures in different environments.
 
 Three consequences, all measured rather than assumed:

@@ -6,8 +6,7 @@ The official application uses **Precision Review Console / 精密审查台** as 
 information and interaction direction. On 2026-08-22 its visual expression was
 rebuilt from the user-provided `ForgePilot-Frontend/` study: deep layered
 surfaces, restrained glass panels, cyan/blue emphasis, compact metadata, and a
-denser evidence workspace. D017 later added the approved product routes, and
-D018 places them in one centered top application bar without creating a second
+denser evidence workspace. The product routes are placed in one centered top application bar without creating a second
 business-state or navigation runtime.
 
 ### Lightness scheme
@@ -99,5 +98,5 @@ through a finding. The layout is dense and operational, not KPI-first.
   named token and an intentional contract update.
 - At 1440, 768, and 390 CSS px, check long titles/paths, empty/error/disabled/
   focus states, reduced motion, and console/network errors.
-- No top-level entries beyond the six approved by D017; no general Assistant,
+- No top-level entries beyond the six; no general Assistant,
   Agent, Patch, Metrics, AI Logs, or repository-browser page.

@@ -1,6 +1,8 @@
 # 账户、成员目录与 SCM 身份 API
 
-本文记录 D020 新增或替换的当前 HTTP 契约。所有写请求继续使用 Session Cookie + `X-XSRF-TOKEN`；错误体统一为 `{code,message,traceId}`。项目内资源对非成员返回 404，对已知项目但角色不足返回 403。
+本文是账户、成员目录与 SCM 身份三块的 HTTP 契约。所有写请求使用 Session Cookie + `X-XSRF-TOKEN`；错误体统一为 `{code,message,traceId}`。项目内资源对非成员返回 404，对已知项目但角色不足返回 403。
+
+需求、知识、仓库与审查的接口未在本文逐条列出——它们的行为由 [ARCHITECTURE.md](./ARCHITECTURE.md) 的流程契约与状态机定义，接口形状可直接读对应 `*Controller`。
 
 ## 账户
 
@@ -40,7 +42,7 @@
 - `DELETE /api/projects/{projectId}/members/{userId}`
   - 仅 LEADER；成功 204。硬删成员关系，并在同一事务里撤销角色集合、需求指派、Finding 认领与本项目 SCM 绑定。
   - 唯一 LEADER 返回 409（先做负责人转移）；重复移除返回 404；跨项目与不存在同答 404。
-  - `pull_request` 的两列不可变作者快照、`pull_request_requirement_event`、Finding 血缘与审计不受影响；`author_user_id` 按预设置空。用户自有 `scm_identity` 与平台账号不受影响（D022）。
+  - `pull_request` 的两列不可变作者快照、`pull_request_requirement_event`、Finding 血缘与审计不受影响；`author_user_id` 按预设置空。用户自有 `scm_identity` 与平台账号不受影响。
 
 ## 用户 SCM 身份
 
@@ -87,7 +89,7 @@ GitHub 默认 `apiBase=https://api.github.com`；GitLab 默认 `https://gitlab.c
 
 远端 PR 保存的 `authorExternalUserId/authorUsername` 是不可变快照。`authorUserId` 是可重算投影：只有 Provider、实例、稳定外部用户 ID 与当前活动绑定一致时才有值。撤销、替换或审批绑定会重算项目内既有 PR；任何“本人 PR”授权均按稳定 ID 判断，不按用户名。
 
-## 资源删除（D022）
+## 资源删除
 
 三类资源三种策略；授权主体均为项目 LEADER，重复删除一律 404。
 

@@ -115,7 +115,7 @@ because the client now guards it.
 ## Common mistakes to avoid
 
 - Adding a seventh top-level navigation item or a general Assistant/Agent/Patch/
-  Metrics/AI Logs page beyond D017's six approved product entries.
+  Metrics/AI Logs page beyond the six product entries.
 - Putting placeholder business data, forms, buttons, or review conclusions in
   a Phase 1 view.
 - Hiding important content behind animation, hover-only affordances, or a
