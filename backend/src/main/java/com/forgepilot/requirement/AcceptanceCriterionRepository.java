@@ -17,7 +17,7 @@ public interface AcceptanceCriterionRepository extends JpaRepository<AcceptanceC
 
     /**
      * 这条需求在其**全部**修订中用过的每一个 {@code acKey}。退役的编号绝不复用，
-     * 因此下一个 key 是从这个集合推出来的，而不是只看当前修订（api-contract 3）。
+     * 因此下一个 key 是从这个集合推出来的，而不是只看当前修订（API.md）。
      */
     @Query("select criterion.acKey from AcceptanceCriterion criterion, RequirementRevision revision "
             + "where criterion.projectId = :projectId "

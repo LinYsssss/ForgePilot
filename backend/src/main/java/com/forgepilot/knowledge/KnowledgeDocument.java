@@ -16,7 +16,7 @@ import org.hibernate.annotations.UpdateTimestamp;
 /**
  * 项目知识与需求附件共用的内容载体。到底属于哪一种，取决于
  * {@code sourceRequirementId}：为 null 表示公共项目知识，非 null 表示
- * 它恰好属于那一条需求（D005）。
+ * 它恰好属于那一条需求。
  *
  * <p>类型与作用域的配对由数据库 CHECK 强制，附件关系的三列外键又进一步
  * 把它钉死，因此本类不重复这两条规则中的任何一条。
@@ -83,7 +83,7 @@ public class KnowledgeDocument {
     }
 
     /**
-     * 提升为公共知识采用**复制**而非改写（D005）：原附件保留自己的归属与历史，
+     * 提升为公共知识采用**复制**而非改写：原附件保留自己的归属与历史，
      * 副本则开始它自己的入库流程。
      */
     public KnowledgeDocument copyAsProjectKnowledge() {

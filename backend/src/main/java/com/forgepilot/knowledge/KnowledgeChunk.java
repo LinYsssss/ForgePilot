@@ -15,7 +15,7 @@ import org.hibernate.type.SqlTypes;
 /**
  * 文档的一个可检索切片，外加「哪一套 embedding 档案产生了它的向量」这份审计信息。
  *
- * <p>{@code embedding} 列**刻意不做映射**（D015.4）。实测：把它映射成 String
+ * <p>{@code embedding} 列**刻意不做映射**。实测：把它映射成 String
  * 能通过 {@code ddl-auto=validate}，却会让运行时的每一次写入都以 42804 失败，
  * 这是四个选项里最糟的一个；正经映射它则要引入新依赖；而 TopK 检索无论如何
  * 都要用原生 SQL。{@code validate} 只检查实体映射到的列，因此不映射它在启动

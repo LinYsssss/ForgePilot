@@ -45,7 +45,7 @@ import org.springframework.web.context.WebApplicationContext;
  *
  * <p>Every assertion here is about authorization correctness, so the concurrent
  * cases are real threads on real connections. A single-threaded green run proves
- * nothing about this endpoint: the measurements behind design.md 6.3 showed the
+ * nothing about this endpoint: the measurements behind that rule showed the
  * unsafe implementation behaving perfectly until two transactions interleaved.
  */
 // This class leaves the shared context in a state the next one cannot rely on:
@@ -119,7 +119,7 @@ class ReviewDecisionTest extends PostgresTestBase {
     }
 
     /**
-     * The measurement behind design.md 6.3, turned into a test.
+     * The measurement behind that rule, turned into a test.
      *
      * <p>While the SCM holds the pull request row and is moving it from
      * {@code head-1} to {@code head-2}, the same gate written <em>without</em> the

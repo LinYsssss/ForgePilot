@@ -8,7 +8,7 @@ import org.springframework.security.core.userdetails.User;
  * 使二者此后都不必再按用户名去查一次。
  *
  * <p>不授予任何 authority：项目角色是项目内的概念，不进入全局 authority 体系——
- * 后者只区分「已认证」与「匿名」（design.md 5）。
+ * 后者只区分「已认证」与「匿名」。
  */
 final class AccountPrincipal extends User {
 

@@ -19,8 +19,8 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
  * 都会在这种配置下通过。{@code ReviewEngineTest} 正是为此直接断言底层执行器的
  * core size。
  *
- * <p>默认上限被冻结为 2，依据是 ARCHITECTURE.md 7.2 与 D012 要求的、
- * 在 4.10 GB 主机上做的 Phase 6 最大预算实测。两个并发的 300 文件 Review、
+ * <p>默认上限被冻结为 2，依据是 ARCHITECTURE.md 7.2 与
+ * 在 4.10 GB 主机上做的最大预算实测。两个并发的 300 文件 Review、
  * 各自带着 3,989,101 字符的规范清单，在生产 JVM 与 PostgreSQL 上限下
  * 完成，且没有出现截断、重启、OOM 或 Hikari 等待。Hikari 的五个连接
  * 仍是硬天花板，为 Web 层留出了余量；更紧张的部署可以把上限覆盖为 1。
@@ -31,7 +31,7 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
  * ——没有 {@code Callable}、没有 {@code DeferredResult}、没有 SSE——
  * 因此这在今天不花任何代价。但等到有人加上 SSE、却发现异步请求跑在一个
  * 没人为它们配置过的池子上时，它就要花代价了。写一段注释比那个意外便宜；
- * 而为一个本批次明确不做的功能提前写变通方案，则不便宜。
+ * 而为一个明确不做的功能提前写变通方案，则不便宜。
  *
  * <p>{@code @EnableScheduling} 放在这里，是因为否则整个上下文里没有调度器
  * ——实测在加上它之前 {@code TaskScheduler} bean 的数量为零。它来自

@@ -13,7 +13,7 @@ import jakarta.persistence.Table;
 import org.hibernate.annotations.CreationTimestamp;
 
 /**
- * PR 与需求关联变更的审计记录，与变更本身写在同一个事务里（D007）。
+ * PR 与需求关联变更的审计记录，与变更本身写在同一个事务里。
  *
  * <p>本表只记录**变化**，因此两侧都为空、或两侧相等的行会被 CHECK 拒绝。
  * 有两个生产者通过同一张表写入：入库时的自动 {@code REQ-<n>} 关联写
@@ -75,7 +75,7 @@ public class PullRequestRequirementEvent {
     }
 
     /**
-     * 有人纠正了关联（PRD P1、D007）。{@code actorUserId} 的必填是由实践而非
+     * 有人纠正了关联（PRD P1）。{@code actorUserId} 的必填是由实践而非
      * 本方法签名保证的：表上的 CHECK 会拒绝没有 actor 的 USER 行，
      * 因此匿名的人工纠正根本存不进去。任意一侧都可以为 null——清除关联和其他
      * 纠正一样是纠正——但不能两侧都为 null，也不能两侧相等。

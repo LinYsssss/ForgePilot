@@ -78,7 +78,7 @@ class ScmController {
     /**
      * 登录身份在这里——控制器层——通过只读账号 facade 解析为 user id。
      * 业务服务永远看不到 Spring Security
-     * （ARCHITECTURE.md 1.3，并按 D013.6 收窄）。
+     * （ARCHITECTURE.md 1.3）。
      */
     private long userIdOf(Principal principal) {
         return users.byUsername(principal.getName()).map(AccountView::id)

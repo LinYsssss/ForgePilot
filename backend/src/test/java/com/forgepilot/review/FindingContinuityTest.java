@@ -187,7 +187,7 @@ class FindingContinuityTest extends PostgresTestBase {
     private Lineage lineage(Fixture fixture, long reviewId, String key, String evidenceHash, String basisHash) {
         return continuity.lineageOf(fixture.project, fixture.pullRequest, reviewId,
                 // Lineage reads the three keys and nothing else: the category, the prose
-                // and the confidence band are invisible to it, which is D009's whole point.
+                // and the confidence band are invisible to it, which is the whole point of the lineage keys.
                 List.of(new FindingCandidate(FindingType.CODE_QUALITY, "src/A.java", 3, "class A {}",
                         null, null, null, null,
                         null, null, null, null, key, evidenceHash, basisHash)))

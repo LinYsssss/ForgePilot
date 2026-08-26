@@ -13,7 +13,7 @@ import org.springframework.stereotype.Component;
  * {@code TaskRejectedException}——会被 Spring 捕获并记录日志，永远不会到达调用方：
  * webhook 照样答 202，而那条 PENDING 行也已经提交了。如果没有东西去捡起这些行，
  * PENDING 就是一个只有入边、没有出边的状态。所以这不是「出问题了再恢复」，
- * 它是那个状态的**唯一归属者**。ARCHITECTURE.md 3.1、3.2 与 D008 都点了它的名。
+ * 它是那个状态的**唯一归属者**。ARCHITECTURE.md 3.1、3.2 都点了它的名。
  *
  * <p><strong>让它保持诚实的是一条结构性规则：恢复查询的 FROM 子句里
  * 只有 {@code review}，别无他物</strong>

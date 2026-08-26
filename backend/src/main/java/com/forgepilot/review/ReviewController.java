@@ -22,7 +22,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
-/** 发起 Review、读取 Review，以及对它作出决策（api-contract.md 2.1、2.2、2.3、2.4）。 */
+/** 发起 Review、读取 Review，以及对它作出决策（API.md、2.2、2.3、2.4）。 */
 @RestController
 @RequestMapping("/api/projects/{projectId}")
 class ReviewController {
@@ -38,7 +38,7 @@ class ReviewController {
     }
 
     /**
-     * api-contract.md 2.1。首次触发、新需求修订后的重新触发、失败后的重试，
+     * API.md。首次触发、新需求修订后的重新触发、失败后的重试，
      * 共用一个端点、一条服务路径，因为它们本就是同一件事：
      * 最终落到哪一种，只取决于该 PR 当前身份之下已经存在什么
      * （ARCHITECTURE.md 3.1）。
@@ -89,14 +89,14 @@ class ReviewController {
                 request.comment());
     }
 
-    /** 在这里——控制器层——完成解析：业务服务永远看不到 Spring Security（D013.6）。 */
+    /** 在这里——控制器层——完成解析：业务服务永远看不到 Spring Security。 */
     private long userIdOf(Principal principal) {
         return users.byUsername(principal.getName()).map(AccountView::id)
                 .orElseThrow(ApiException::notFound);
     }
 
     /**
-     * api-contract.md 2.1 的响应体。之所以返回 {@code executionAttempt}，
+     * API.md 的响应体。之所以返回 {@code executionAttempt}，
      * 是因为它是调用方区分「一次重试」与「一次幂等答复」的唯一手段：
      * 两者都会在同一个行 id 上返回 202。
      */

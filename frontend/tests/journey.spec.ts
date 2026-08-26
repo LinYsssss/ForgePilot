@@ -1001,7 +1001,7 @@ describe("three-role journey through the real App and router", () => {
     expect(firstFinding.find(".finding-continuity").text()).not.toContain("待确认");
     expect(firstFinding.find(".review-decision-mark").text()).not.toContain("待确认");
 
-    // D002: the unreviewed file is named on the page, not silently dropped.
+    // The unreviewed file is named on the page, not silently dropped.
     expect(wrapper.find(".coverage-not-reviewed").text()).toContain(
       "src/generated/huge-bundle.ts",
     );

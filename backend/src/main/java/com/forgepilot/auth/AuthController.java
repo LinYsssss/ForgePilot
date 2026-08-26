@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
-/** api-contract.md 1 中不由安全过滤器链直接处理的那部分认证端点。 */
+/** API.md 中不由安全过滤器链直接处理的那部分认证端点。 */
 @RestController
 @RequestMapping("/api/auth")
 class AuthController {
@@ -32,7 +32,7 @@ class AuthController {
         return this.auth.register(request.username(), request.displayName(), request.password());
     }
 
-    /** 同时也是 SPA 的冷启动入口：该响应会带上 XSRF-TOKEN cookie（api-contract.md 0）。 */
+    /** 同时也是 SPA 的冷启动入口：该响应会带上 XSRF-TOKEN cookie（API.md）。 */
     @GetMapping("/me")
     AccountResponse me(@AuthenticationPrincipal AccountPrincipal principal) {
         return this.auth.current(principal.getUserId());

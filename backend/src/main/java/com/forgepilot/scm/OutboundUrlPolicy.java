@@ -15,7 +15,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 /**
- * 判定本部署是否允许向调用方提供的 URL 发起出站 HTTP 调用（design.md 3.5）。
+ * 判定本部署是否允许向调用方提供的 URL 发起出站 HTTP 调用。
  *
  * <p>{@code scm_repository.api_base} 由项目 LEADER 配置，随后由服务端解引用，
  * 这使它成为一个 SSRF 入口：指向 {@code 169.254.169.254} 就能读云元数据，

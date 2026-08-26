@@ -25,9 +25,9 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
 /**
- * 批次 1 在真实 HTTP 之上的完整闭环：注册、登录、创建项目、添加成员、
+ * 核心 API 在真实 HTTP 之上的完整闭环：注册、登录、创建项目、添加成员、
  * 写一条带验收条件的需求、冻结它、指派它，再把修订历史读回来。
- * 本批次其余测试都只针对单个切片；只有这里真正证明了它们之间的接线——
+ * 其余测试都只针对单个切片；只有这里真正证明了它们之间的接线——
  * 安全过滤器链、CSRF、错误映射、JSON 结构。
  */
 @SpringBootTest
@@ -73,7 +73,7 @@ class BatchOneApiTest extends PostgresTestBase {
         JsonNode created = leader.read(base);
         assertThat(created.path("status").asString()).isEqualTo("DRAFT");
         assertThat(created.path("currentRevision").path("seq").asInt()).isEqualTo(1);
-        // 批次 3 已经把审查活动状态整个移出了这个响应。它由 pull_request 与 review
+        // 审查活动状态整个不在这个响应里。它由 pull_request 与 review
         // 共同推导，而依赖箭头的方向是 review -> requirement，
         // 因此 requirement 要算它就必然让功能依赖图成环。
         // 在这里断言它**不存在**就是那道边界检查：一旦它又回来了，
@@ -94,7 +94,7 @@ class BatchOneApiTest extends PostgresTestBase {
                 {"status": "READY"}""");
 
         // 已冻结：需求一旦进入 READY，DRAFT 编辑通道就关闭了。
-        // 作出这个判断需要看当前状态，因此返回 409（api-contract 0）。
+        // 作出这个判断需要看当前状态，因此返回 409（API.md）。
         leader.patchExpecting(base, """
                 {"title": "Sneak an edit in", "acceptanceCriteria": [{"acKey": "%s", "text": "changed"}]}"""
                 .formatted(firstKey), status().isConflict());
@@ -166,7 +166,7 @@ class BatchOneApiTest extends PostgresTestBase {
     }
 
     /**
-     * 三个 D022 的 DELETE 端点在**真实 HTTP** 之上的接线。Service 层测试证明了删除
+     * 三个 DELETE 端点在**真实 HTTP** 之上的接线。Service 层测试证明了删除
      * 语义，但证明不了路径映射、204 状态码，以及经过安全过滤器链后的答案——一个写错
      * 的路径在 Service 测试里全绿，到了前端就是 404。
      *

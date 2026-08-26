@@ -15,7 +15,7 @@ import org.hibernate.annotations.UpdateTimestamp;
 
 /**
  * 一个项目边界。{@code createdBy} 记录创建者且永不变更；
- * LEADER 角色是另一回事，可以转移（D013.5）。
+ * LEADER 角色是另一回事，可以转移。
  */
 @Entity
 @Table(name = "project")

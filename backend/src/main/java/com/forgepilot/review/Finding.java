@@ -89,7 +89,7 @@ public class Finding {
     private FindingCategory category;
 
     /**
-     * 模型自己写的问题说明（V9、D021）。它与 {@link #suggestion}、
+     * 模型自己写的问题说明（V9）。它与 {@link #suggestion}、
      * {@link #confidence} 是这张表里唯一允许随模型措辞变动的三列，
      * 这正是它们一个都不得进入下面三个哈希的原因。
      */
@@ -100,7 +100,7 @@ public class Finding {
     @Column(name = "suggestion", updatable = false)
     private String suggestion;
 
-    /** 未经校准，故为分档而非数字；不参与任何自动门禁或状态流转（D021）。 */
+    /** 未经校准，故为分档而非数字；不参与任何自动门禁或状态流转。 */
     @Enumerated(EnumType.STRING)
     @Column(name = "confidence", length = 16, updatable = false)
     private FindingConfidence confidence;

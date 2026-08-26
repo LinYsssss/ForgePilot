@@ -154,9 +154,9 @@ class RequirementQualityTest extends PostgresTestBase {
     }
 
     /**
-     * Every AC gets its own verdict (api-contract 2.2) and its own
+     * Every AC gets its own verdict (API.md) and its own
      * {@code finding_key} (ARCHITECTURE.md 3.4), so identical texts mean the same
-     * problem is reported twice under two keys, and D009 suppression — which
+     * problem is reported twice under two keys, and suppression — which
      * matches per {@code finding_key} — can only ever silence one of them.
      */
     @Test
@@ -179,7 +179,7 @@ class RequirementQualityTest extends PostgresTestBase {
     /**
      * {@code PromptSanitizer} cuts to budget without saying so. A requirement that
      * is analysed from its first 60 000 characters and still answers successfully
-     * is exactly the silent truncation D002 forbids, so it is reported.
+     * is exactly the silent truncation the contract forbids, so it is reported.
      */
     @Test
     void aRequirementTooLongForThePromptBudgetIsReportedRatherThanSilentlyCut() {
@@ -208,8 +208,7 @@ class RequirementQualityTest extends PostgresTestBase {
 
     /**
      * One call, with the quality use case, the structured schema, and the revision
-     * it is about — "规则 + <em>一次</em> 结构化 AI Quality" (IMPLEMENTATION-PLAN
-     * Phase 6). No conversation, no second pass, no repair round.
+     * it is about — "规则 + <em>一次</em> 结构化 AI Quality". No conversation, no second pass, no repair round.
      */
     @Test
     void theProviderIsCalledExactlyOnceWithTheSchemaAndTheRevision() {
@@ -277,7 +276,7 @@ class RequirementQualityTest extends PostgresTestBase {
     // ------------------------------------------------------------------ result
 
     /**
-     * The result belongs to the revision it was computed from (D011), which is
+     * The result belongs to the revision it was computed from , which is
      * asserted both ways: the current revision carries it and the previous one is
      * left exactly as it was.
      */
@@ -332,8 +331,8 @@ class RequirementQualityTest extends PostgresTestBase {
     }
 
     /**
-     * Batch 1 clears the three columns in the same transaction as an in-place
-     * DRAFT edit. This does not re-implement that; it proves the existing clearing
+     * An in-place DRAFT edit clears the three columns in the same transaction.
+     * This does not re-implement that; it proves the existing clearing
      * still applies to a result this check wrote, because a report about prose
      * that has since changed is worse than no report.
      */

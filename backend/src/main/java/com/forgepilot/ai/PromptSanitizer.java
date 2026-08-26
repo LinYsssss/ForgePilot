@@ -7,8 +7,7 @@ import java.util.regex.Pattern;
  *
  * <p>ARCHITECTURE.md 4.3：需求文本、文档、PR 标题和代码注释“全部是不可信数据 …
  * 发送前做敏感信息脱敏与预算裁剪”。因此本类只做两件事——掩码疑似凭据的字符串、
- * 把载荷裁剪到预算内，此外什么都不做。它是纯函数（LEGACY-MIGRATION-MATRIX.md
- * “纯函数”）：不写日志、不碰数据库、不抛异常——一份文档不会因为“看起来含 token”
+ * 把载荷裁剪到预算内，此外什么都不做。它是纯函数：不写日志、不碰数据库、不抛异常——一份文档不会因为“看起来含 token”
  * 而被拒绝，只会去掉那部分后照常发送。
  *
  * <p>拒绝非法输入是另一件事、另有归属：{@code KnowledgeUploadValidator} 负责拒绝
@@ -45,7 +44,7 @@ public final class PromptSanitizer {
         }
         int end = maxChars;
         // 绝不能从代理对（surrogate pair）中间切断。那样得到的不是合法 UTF-16，
-        // 编码时该字符会被替换成 '?' —— 正是 Phase 4 要求“显式失败”而非
+        // 编码时该字符会被替换成 '?' —— 正是要求“显式失败”而非
         // 静默损坏的那类问题。
         if (end > 0 && Character.isHighSurrogate(text.charAt(end - 1))) {
             end--;

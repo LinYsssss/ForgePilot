@@ -58,7 +58,7 @@ public class ReviewDecisionService {
     }
 
     /**
-     * 记录最终的人工裁定（api-contract.md 2.4）。
+     * 记录最终的人工裁定（API.md）。
      *
      * <p>仅限 LEADER 与 REVIEWER。DEVELOPER 可以触发审查、也可以修复它发现的问题，
      * 但 PRD.md 3 不允许他们把它关掉——即便是在自己的 PR 上也不行。
@@ -133,7 +133,7 @@ public class ReviewDecisionService {
         }
     }
 
-    /** api-contract.md 2.2。项目内的任何成员都可以读取一次审查。 */
+    /** 项目内的任何成员都可以读取一次审查。 */
     @Transactional(readOnly = true)
     public ReviewDetail detail(long projectId, long actorId, long reviewId) {
         access.requireMember(projectId, actorId);
@@ -158,7 +158,7 @@ public class ReviewDecisionService {
     }
 
     /**
-     * api-contract.md 2.3。本 PR 的全部审查，按 {@code (created_at, id)}
+     * 本 PR 的全部审查，按 {@code (created_at, id)}
      * 从旧到新排列，使每次运行得到的顺序都相同。
      */
     @Transactional(readOnly = true)
@@ -269,7 +269,7 @@ public class ReviewDecisionService {
     /**
      * 该 PR 当下的输入，以及据此推导 {@code isCurrent} 的过程。
      * 需求 <em>id</em> 刻意不在其中：决定一次审查是否仍然适用的，
-     * 只有 head、diff 指纹与需求修订三者（design.md 2.5）。
+     * 只有 head、diff 指纹与需求修订三者。
      */
     private record PullRequestInputs(String headSha, String fingerprint, Long requirementRevisionId) {
 

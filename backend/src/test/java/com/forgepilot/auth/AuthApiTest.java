@@ -29,7 +29,7 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.context.WebApplicationContext;
 
 /**
- * The auth contract of api-contract.md 1 against a real PostgreSQL and the real
+ * The auth contract of API.md against a real PostgreSQL and the real
  * security filter chain. Every request goes through {@link Browser}, which behaves
  * like a JS client: it keeps its session, keeps the {@code XSRF-TOKEN} cookie and
  * echoes it in the header.
@@ -198,7 +198,7 @@ class AuthApiTest extends PostgresTestBase {
                         .formatted(username, PASSWORD));
     }
 
-    /** The exact body api-contract.md 1 promises for register, login and me. */
+    /** The exact body API.md promises for register, login and me. */
     private String accountJson(String username) {
         Long id = this.jdbc.queryForObject(
                 "select id from user_account where username = ?", Long.class, username);

@@ -29,7 +29,7 @@ public class KnowledgeService {
     /**
      * 分块刻意做得又笨又确定：固定的字符预算，在放得下的最后一个换行处切开，
      * 以便尽可能保住段落完整。任何更聪明的做法都属于检索质量决策，
-     * 而那要到 Phase 6 用实测来定，不能靠猜。
+     * 而那要用实测来定，不能靠猜。
      */
     static final int MAX_CHUNK_CHARS = 1_200;
 
@@ -44,8 +44,8 @@ public class KnowledgeService {
 
     /**
      * embedding 档案住在这里而不是 {@code ai}：记录它的那些列属于
-     * {@code knowledge_chunk}，且 D015.3 把维度检查——本项目唯一的防线——
-     * 的责任交给了本模块。
+     * {@code knowledge_chunk}，且维度检查——本项目唯一的防线——
+     * 的责任也在本模块。
      */
     private final String provider;
     private final String model;
@@ -119,7 +119,7 @@ public class KnowledgeService {
     }
 
     /**
-     * 提升为公共知识采用**复制**而非改写（D005）。原附件保留自己的归属与历史；
+     * 提升为公共知识采用**复制**而非改写。原附件保留自己的归属与历史；
      * 副本是一份新的公共文档，会开始它自己的入库流程，因此任何原本引用了
      * 原文档的东西都不会在脚下被改变含义。
      */
@@ -138,12 +138,12 @@ public class KnowledgeService {
      * 硬删一份项目知识文档。
      *
      * <p>级联是**应用层显式删除**，不是数据库 `ON DELETE`：全库只有
-     * {@code pull_request.author_user_id} 一条 `ON DELETE`（D010），加第二条会把
+     * {@code pull_request.author_user_id} 一条 `ON DELETE`，加第二条会把
      * 「删除语义由服务显式表达」这条纪律打开一个口子；而 chunk 是纯派生数据，
      * 显式删掉就够。删掉 chunk 也就是 AC4——检索只读 {@code knowledge_chunk}，
      * 因此 Guidance 与 Review 的附件检索此后都召不回它，不需要另加代码。
      *
-     * <p>需求附件文档被**拒绝**（D022）：附件关系是需求侧的事实，删知识文档不该
+     * <p>需求附件文档被**拒绝**：附件关系是需求侧的事实，删知识文档不该
      * 顺手改变某条需求的附件构成。判定只看本表的 {@code source_type}，不查
      * {@code requirement_attachment}——那张表归 {@code requirement} 所有，而
      * {@code ck_knowledge_document_scope_matches_type} 加上附件侧 NOT NULL 的
@@ -201,7 +201,7 @@ public class KnowledgeService {
             KnowledgeChunk row = rows.get(index);
             row.recordEmbeddingProfile(provider, model, version);
             // 同时写入 embedding 与 dimension，并拒绝与该项目其余部分
-            // 不一致的维度（D015.3）。
+            // 不一致的维度。
             vectors.writeEmbedding(saved.getProjectId(), row.getId(), embeddings.get(index));
         }
 

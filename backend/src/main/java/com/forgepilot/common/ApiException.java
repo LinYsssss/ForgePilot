@@ -16,7 +16,7 @@ public class ApiException extends RuntimeException {
 
     /**
      * 同时用于「资源不存在」<em>和</em>「资源存在但调用方无权看见」两种情况。
-     * 二者必须不可区分，否则状态码会泄露别的项目是否存在该资源（design.md 5）。
+     * 二者必须不可区分，否则状态码会泄露别的项目是否存在该资源。
      */
     public static ApiException notFound() {
         return new ApiException(HttpStatus.NOT_FOUND, "not_found", "Resource not found.");

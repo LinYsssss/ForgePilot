@@ -105,7 +105,7 @@ export function transferLeader(projectId: number, targetUserId: number): Promise
 
 /**
  * 移除项目成员。后端在同一事务里撤销它的需求指派、Finding 认领与项目 SCM 绑定，
- * 而不可变的 PR 作者快照与全部审计保持不动（D022）。
+ * 而不可变的 PR 作者快照与全部审计保持不动。
  */
 export function removeMember(projectId: number, userId: number): Promise<void> {
   return requestJson<void>(`/api/projects/${projectId}/members/${userId}`, { method: "DELETE" });

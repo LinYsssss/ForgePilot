@@ -11,8 +11,8 @@ import org.junit.jupiter.api.Test;
 /**
  * The fingerprint rule is frozen. If it ever changes, every stored fingerprint and
  * therefore every Review identity derived from one becomes wrong, so the expected
- * digest below is pinned as a literal: it was computed from the byte layout
- * design.md 3.2 describes, independently of this implementation, and any change to
+ * digest below is pinned as a literal: it was computed from the documented byte
+ * layout, independently of this implementation, and any change to
  * the normalization has to fail here loudly.
  */
 class ReviewInputFingerprintTest {

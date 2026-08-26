@@ -173,7 +173,7 @@ interface DecisionRepository extends Repository<Review, Long> {
     /**
      * 认领就是把自己指派上去：PRD.md 3 授予 DEVELOPER “Finding 认领”，
      * 却没有授予任何人“指派给别人”，因此指派就发生在这里，
-     * 也不存在另一个可能授予更多权限的独立端点（design.md 3.3）。
+     * 也不存在另一个可能授予更多权限的独立端点。
      */
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query(value = """
@@ -188,7 +188,7 @@ interface DecisionRepository extends Repository<Review, Long> {
      * PRD.md 5 <strong>只</strong>在 {@code continuity = SUPPRESSED} 时允许它；
      * 普通的驳回对任何角色都是不可逆的。
      *
-     * <p>CHECK 表达不了这一点——那需要一个子查询——而 design.md 6.8 拒绝再加
+     * <p>CHECK 表达不了这一点——那需要一个子查询——而不宜再加
      * 第二个约束触发器，因为 ARCHITECTURE.md 2.1 是逐个授权约束触发器的，
      * 而不是按类别授权。于是这条规则住在这里，而且是住在**条件**里，
      * 而不是住在一次会留下窗口的前置读取里。

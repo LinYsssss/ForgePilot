@@ -202,7 +202,7 @@ class ReviewOutputValidatorTest {
     // ------------------------------------------------------------- the hashes
 
     /**
-     * D009 的红线。{@code explanation}、{@code suggestion} 与 {@code confidence}
+     * 三个血缘哈希的红线。{@code explanation}、{@code suggestion} 与 {@code confidence}
      * 是回答里仅有的、允许随措辞自由变动的字段；一旦它们中的任何一个渗进三个
      * 哈希，同一个问题就会在每一轮换个说法后变成「新问题」，而跨轮次去重、抑制
      * 与血缘会同时失效——且要到下一轮审查才看得出来。
@@ -360,7 +360,7 @@ class ReviewOutputValidatorTest {
 
     @Test
     void aConfidenceOutsideTheBandsIsDroppedAndTheFindingSurvives() {
-        // 恰是 D021 拒绝的那种假精度。
+        // 恰是被拒绝的那种假精度。
         ReviewOutput output = valid("", finding("CODE_QUALITY", FILE, 3, "class A {}",
                 "\"confidence\":\"0.87\","));
 

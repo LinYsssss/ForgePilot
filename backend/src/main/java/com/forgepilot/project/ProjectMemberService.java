@@ -141,12 +141,12 @@ public class ProjectMemberService {
      * <p>{@code project_member_role} 不必显式删除：它是
      * {@code @ElementCollection} + {@code @CollectionTable}，随实体一起消失。
      * {@code pull_request.author_user_id} 也不必：全库唯一那条列级
-     * {@code ON DELETE SET NULL}（D010）当初正是为这个场景设计的，而作为事实的
+     * {@code ON DELETE SET NULL}当初正是为这个场景设计的，而作为事实的
      * 作者身份由两列不可变快照承载，移除后完整可读。
      *
      * <p>唯一 LEADER 由服务端拒绝，而不是交给约束：
      * {@code UNIQUE(project_id) WHERE role='LEADER'} 保证的是**至多**一个，
-     * 「至少一个」历来是服务端职责（D013.9 / D020）。删掉唯一 LEADER 不违反任何
+     * 「至少一个」历来是服务端职责。删掉唯一 LEADER 不违反任何
      * 约束，只会让项目失去负责人。
      */
     @Transactional

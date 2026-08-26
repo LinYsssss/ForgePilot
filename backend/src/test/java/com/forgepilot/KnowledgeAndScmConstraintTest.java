@@ -14,7 +14,7 @@ import org.springframework.core.NestedExceptionUtils;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 /**
- * Proves the batch 2 constraints are enforced by PostgreSQL itself. Every write
+ * Proves the knowledge and SCM constraints are enforced by PostgreSQL itself. Every write
  * goes straight through JdbcTemplate, below any application code, so a rule that
  * only a service enforces cannot pass as enforced here.
  */
@@ -58,7 +58,7 @@ class KnowledgeAndScmConstraintTest extends PostgresTestBase {
     }
 
     /**
-     * The counter-proof for D015.2. On a copy of the table whose requirement_id is
+     * The counter-proof for the MATCH SIMPLE trap. On a copy of the table whose requirement_id is
      * nullable, MATCH SIMPLE skips the whole three-column check and a document id
      * that exists nowhere is accepted. This is why the real column is NOT NULL,
      * and it fails loudly if anyone ever relaxes it.
@@ -120,7 +120,7 @@ class KnowledgeAndScmConstraintTest extends PostgresTestBase {
 
     /**
      * Records the measured behaviour that makes application-side validation the
-     * only real defence (D015.3): the column takes any dimension, and one
+     * only real defence : the column takes any dimension, and one
      * mismatched row breaks every similarity query in that project.
      */
     @Test
@@ -214,14 +214,13 @@ class KnowledgeAndScmConstraintTest extends PostgresTestBase {
     }
 
     /**
-     * D015.1, now closed. Batch 2 created {@code review_id} without a foreign key
-     * because {@code review} did not exist, and asserted the column held only
-     * NULLs so that adding the key later could not collide with history. Batch 3
-     * created the table and added the key, so this test is now the other half of
-     * that promise: the key is present, and it points where D015.1 said it would.
+     * {@code ai_call_log.review_id} carries a real foreign key into
+     * {@code review}. The column predates that table, so the key was added by a
+     * later migration; this asserts the end state rather than the order it
+     * arrived in — the key is present, and it points where it should.
      */
     @Test
-    void aiCallLogsReviewForeignKeyLandedInBatchThree() {
+    void aiCallLogsReviewForeignKeyPointsAtTheReviewTable() {
         // Asserted against the column the key has to include rather than against a
         // constraint name, so renaming the constraint cannot make this pass or fail
         // for the wrong reason.
@@ -241,7 +240,7 @@ class KnowledgeAndScmConstraintTest extends PostgresTestBase {
                         + "and a.attname = 'review_id'", String.class))
                 .isEqualTo("review");
 
-        // The composite keys batch 2 already had must still be there: a count that
+        // The composite keys must still be there: a count that
         // only went up proves nothing if something else quietly went away.
         assertThat(jdbc.queryForList(
                 "select conname from pg_constraint where conrelid = 'ai_call_log'::regclass "

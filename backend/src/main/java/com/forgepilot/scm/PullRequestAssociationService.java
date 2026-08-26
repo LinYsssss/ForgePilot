@@ -11,19 +11,17 @@ import org.springframework.transaction.annotation.Transactional;
 /**
  * 对 PR 与需求关联关系的人工纠正（PRD P1）。
  *
- * <p>自动的 {@code REQ-<n>} 关联只是入库时做的一次猜测，D007 把最终话语权
- * 交给了页面。因此每次纠正都会<em>在同一个事务里</em>写下一行
+ * <p>自动的 {@code REQ-<n>} 关联只是入库时做的一次猜测，最终话语权
+ * 在页面。因此每次纠正都会<em>在同一个事务里</em>写下一行
  * {@code pull_request_requirement_event}：关联变了却没有审计行，
  * 或有审计行却描述了一次并未提交的变更，两者都比完全没有审计更糟。
  *
  * <p>LEADER 始终可改。PR 作者在「当前 head 尚无任何人工终局 Decision」时也可改
- * （PRD P1、D007、D016.2）：这一半在批次 2 被刻意推迟，因为当时 {@code review}
- * 还不存在，「没有终局裁定」无从判定，而一个恒答「不存在」的检查会静默地多授权。
- * 批次 3 建出 {@code review} 之后，判据由 {@link PullRequestDecisionGate} 回答——
+ * （PRD P1）：判据由 {@link PullRequestDecisionGate} 回答——
  * 接口在本包、实现在 {@code review}，因此编译期依赖方向仍是 {@code review → scm}，
  * ArchUnit 规则 3 不被触碰。
  *
- * <p>「本人 PR」按项目级稳定外部 user id 判定，**绝不按用户名**（D010）：
+ * <p>「本人 PR」按项目级稳定外部 user id 判定，**绝不按用户名**：
  * 用户名可以被重新分配，按名字匹配会把别人的 PR 交给一个改过名的账号。
  * 没有已核验 SCM 身份的成员匹配不到任何东西——这是 fail-closed 的方向。
  * 注意闸门问的是「非 PENDING 的 Decision」而不是「有没有 Review」：
@@ -58,7 +56,7 @@ class PullRequestAssociationService {
      * <p>把关联设成它已有的值，会由 {@code ck_pr_requirement_event_is_a_change}
      * 拒绝，而不是在这里预先检查：审计表只记录**变化**，一个产生不了审计行的
      * 请求就不是一次纠正。那次冲突会让整个事务回滚——这正是要点：
-     * 无论如何都不会有任何东西被写入（D013.11）。
+     * 无论如何都不会有任何东西被写入。
      */
     @Transactional
     PullRequestResponse correct(long projectId, long actorId, long pullRequestId, Long requirementId,
@@ -67,8 +65,8 @@ class PullRequestAssociationService {
         PullRequest pullRequest = pullRequests.findWithLockByProjectIdAndId(projectId, pullRequestId)
                 .orElseThrow(ApiException::notFound);
         authorize(projectId, member, pullRequest);
-        // 经 requirement 的只读 facade 解析，并按本 PR 自己的项目过滤
-        // （D015.6、D013.2）。复合外键同样会拒绝外项目的 id，但只会以
+        // 经 requirement 的只读 facade 解析，并按本 PR 自己的项目过滤。
+        // 复合外键同样会拒绝外项目的 id，但只会以
         // 「插入失败 + 一条点名约束的报错」的形式；先问一句，就把它变成了
         // 调用方能据以行动的答案。在这里，来自别的项目的 id 与从未签发过的 id
         // 不可区分，因此都不会泄露另一个项目的内容。

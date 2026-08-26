@@ -20,7 +20,7 @@ import org.hibernate.annotations.CreationTimestamp;
  *
  * <p>{@link #resourceId} 刻意没有外键。两类资源是硬删，行已经不存在，根本没有
  * 可指向的目标；R5 又明令留痕不得写在被删对象自身。这不是漏加约束，而是这张表
- * 得以存在的前提——详见 V10 迁移注释与 D022。
+ * 得以存在的前提——详见 V10 迁移注释。
  */
 @Entity
 @Table(name = "project_deletion_record")

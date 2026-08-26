@@ -5,7 +5,7 @@ import java.net.URI;
 import java.util.Locale;
 
 /**
- * 把 {@code api_base} 归一化成仓库稳定身份中的「实例」那一半（design.md 3.1）：
+ * 把 {@code api_base} 归一化成仓库稳定身份中的「实例」那一半：
  * host 小写、IDN 转 punycode、丢掉该 scheme 的默认端口、丢掉 path 与末尾斜杠，
  * 并把 {@code api.github.com} 折叠到 {@code github.com}。
  *

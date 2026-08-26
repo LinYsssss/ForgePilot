@@ -146,7 +146,7 @@ public class ReviewPipeline {
 
         heartbeat.run();
         // 一次调用，一次性覆盖所有批次的候选项与证据。
-        // AC 裁定只在这里决定，别处一律不行（D002）。
+        // AC 裁定只在这里决定，别处一律不行。
         Outcome outcome = validator.validate(
                 ai.chat(ReviewPrompts.synthesis(context, recalled, phase.candidates(), phase.evidence(),
                         plan.coverage()), ReviewPrompts.SYNTHESIS_SCHEMA, AiUseCase.REVIEW, callContext),
@@ -240,7 +240,7 @@ public class ReviewPipeline {
                 .collect(Collectors.joining("\n\n"));
     }
 
-    /** 按 {@code sort_order} 排序以供展示；身份始终是 {@code ac_key}，绝不是行 id（D011）。 */
+    /** 按 {@code sort_order} 排序以供展示；身份始终是 {@code ac_key}，绝不是行 id。 */
     private static List<Context.Ac> acceptanceCriteriaOf(JsonNode snapshot) {
         List<Context.Ac> criteria = new ArrayList<>();
         for (JsonNode criterion : snapshot.path("acceptanceCriteria")) {
@@ -259,7 +259,7 @@ public class ReviewPipeline {
         List<ChangedFile> files = new ArrayList<>();
         for (JsonNode file : snapshot.path("changedFiles")) {
             JsonNode patch = file.path("patch");
-            // 对一个文件而言，「缺席」与「空」是两个不同的事实（D015.7），
+            // 对一个文件而言，「缺席」与「空」是两个不同的事实，
             // 因此缺失的 patch 保持为 null，由分批器把它报告为未审查。
             files.add(new ChangedFile(file.path("path").stringValue(),
                     file.path("changeType").stringValue(),
@@ -304,10 +304,10 @@ public class ReviewPipeline {
      *
      * <p>自动触发的 Review 没有人类操作者，而 {@code KnowledgeService.search}
      * 需要一个——因为它的鉴权是照着 API 调用方写的。这里由项目的 LEADER 顶上：
-     * D004 保证它恰好只有一个，而检索本身就是项目内限定的，
+     * 每个项目恰好只有一个 LEADER，而检索本身就是项目内限定的，
      * 因此这个 actor 不改变结果的任何部分——它只是满足了一次引擎本来就轻松通过的
      * 成员校验。诚实的修法是在 {@code knowledge} 上开一个不需要 actor 的检索入口，
-     * 而那要改的文件不在本切片可以触碰的范围内。
+     * 而那要改的文件超出了当前的改动范围。
      */
     private long retrievalActor(Review review) {
         return jdbc.queryForObject(
@@ -368,7 +368,7 @@ public class ReviewPipeline {
 
     /**
      * 把分批阶段的警告带进最终落库的报告里。丢掉它们，只会留下一份更短的报告，
-     * 却没有任何被缩短过的痕迹——这正是 D002 对「未审查文件」立下的规则，
+     * 却没有任何被缩短过的痕迹——这正是对「未审查文件」立下的规则，
      * 应用到了「无法使用的断言」上。
      */
     private static ReviewOutput withBatchWarnings(ReviewOutput output, List<String> batchWarnings) {
@@ -395,7 +395,7 @@ public class ReviewPipeline {
      *
      * <p>{@code coverage} 放在这里而不是快照里，是因为
      * {@code ReviewDecisionService} 正是从这里读它的；
-     * 而 D002 要求「空的 {@code notReviewed}」与「缺失的 {@code notReviewed}」
+     * 而契约要求「空的 {@code notReviewed}」与「缺失的 {@code notReviewed}」
      * 必须保持可区分——因此这个字段**总是**写入，哪怕什么都没被裁掉。
      */
     private record Summary(List<AcResult> acVerdicts, Coverage coverage,

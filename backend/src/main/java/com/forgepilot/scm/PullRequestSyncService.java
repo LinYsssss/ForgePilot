@@ -48,7 +48,7 @@ public class PullRequestSyncService {
      *
      * <p>查找必须先于验签，因为用来验签的密钥正是被查那一行的一个列。
      * 两种失败都以同一个响应体答 401：把「无此仓库」和「签名错误」区分开，
-     * 会让任何人都能枚举本部署接入了哪些仓库——与批次 1 的
+     * 会让任何人都能枚举本部署接入了哪些仓库——与
      * “不存在与无权限不可区分”是同一条规则。
      */
     @Transactional(readOnly = true)
@@ -85,7 +85,7 @@ public class PullRequestSyncService {
         // 三元组冻结只在「已经存在 PR」时才拒绝变更，因此一次先于本次插入
         // 发生的更新是合法的——于是这次投递会把 PR 挂到一个身份刚刚迁移过的
         // 仓库上，并存下一个用**旧**三元组算出来的指纹，
-        // 而这正是 design.md 3.7 所要防止的那种不可复现。
+        // 而这正是稳定身份冻结所要防止的那种不可复现。
         //
         // 是「加锁」而不仅仅是「重读」。不加锁的重读只能缩小窗口而无法关闭它：
         // 实测表明，身份更新仍可能在这次读取与下面的插入之间提交——因为插入
@@ -123,7 +123,7 @@ public class PullRequestSyncService {
                 manifest, snapshot.sourceRevision(), snapshot.sourceUpdatedAt());
         created.mapAuthor(authors.userIdFor(projectId, snapshot.authorExternalUserId()));
         // 只在创建该行时解析一次。后续投递绝不能覆盖人工纠正去重新解析，
-        // D007 把关联的最终话语权交给了页面；解析不出来的引用只会让它保持 null，
+        // 关联的最终话语权在页面；解析不出来的引用只会让它保持 null，
         // 永远不会阻塞入库。
         RequirementReference reference = references
                 .resolve(projectId, snapshot.headRef(), snapshot.title()).orElse(null);
@@ -165,7 +165,7 @@ public class PullRequestSyncService {
     }
 
     /**
-     * 清单连同每个 patch，作为**一个** JSONB 值（D015.7）。超限时入库显式失败，
+     * 清单连同每个 patch，作为**一个** JSONB 值。超限时入库显式失败，
      * 而不是存下一份被悄悄缩短的 diff，再告诉 Review 说它是完整的。
      * {@code pull_request} 上没有任何列可以标记这样一次投递，
      * 所以干脆什么都不写。

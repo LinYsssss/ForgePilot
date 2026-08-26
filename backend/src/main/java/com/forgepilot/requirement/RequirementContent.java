@@ -9,7 +9,7 @@ import jakarta.validation.constraints.Size;
 
 /**
  * 调用方提交的某次修订的文本与验收条件。创建需求以及此后每次内容变更都用它；
- * {@code sortOrder} 由数组下标推导，绝不接受客户端传入（api-contract 3）。
+ * {@code sortOrder} 由数组下标推导，绝不接受客户端传入（API.md）。
  */
 public record RequirementContent(
         @NotBlank @Size(max = 200) String title,

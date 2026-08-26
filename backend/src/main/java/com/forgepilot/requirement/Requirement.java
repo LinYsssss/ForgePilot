@@ -18,7 +18,7 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 /**
- * 需求的稳定身份。文本住在不可变的 {@link RequirementRevision} 行里（D011）；
+ * 需求的稳定身份。文本住在不可变的 {@link RequirementRevision} 行里；
  * 本行只承载身份、指派、状态，以及一个指向当前修订的指针。
  */
 @Entity
@@ -40,7 +40,7 @@ public class Requirement {
     @Column(name = "status", nullable = false, length = 32)
     private RequirementStatus status;
 
-    /** 写入走这个标量字段；下面那个关联是只读的（D013.1 方案 A）。 */
+    /** 写入走这个标量字段；下面那个关联是只读的。 */
     @Column(name = "current_revision_id")
     private Long currentRevisionId;
 
@@ -55,7 +55,7 @@ public class Requirement {
     /**
      * 软删标记。作废需求走软删而非硬删，因为 {@code ai_call_log} 与
      * {@code pull_request_requirement_event} 挂在它上面——物理销毁这一行就是销毁
-     * 调用审计、抹掉一件已经发生的 PR 关联事实（D022）。
+     * 调用审计、抹掉一件已经发生的 PR 关联事实。
      *
      * <p>两列同空或同非空，由 {@code ck_requirement_deleted_shape} 保证：没有操作者
      * 的软删无法追溯，没有时间的操作者不构成一次删除。
@@ -69,7 +69,7 @@ public class Requirement {
     /**
      * 供列表与详情查询使用的只读导航。每一列都是 insertable=false/updatable=false：
      * project_id 与 id 在上面已经映射过，而 Hibernate 拒绝一个混合了可写列与
-     * 只读列的 @JoinColumns 集合（D013.1）。被引用的三元组是唯一键
+     * 只读列的 @JoinColumns 集合。被引用的三元组是唯一键
      * requirement_revision(project_id, requirement_id, id)，因此这一个外键
      * 同时证明了「同项目」「父级正确」「确实存在」三件事。
      */

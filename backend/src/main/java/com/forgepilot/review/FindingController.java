@@ -19,11 +19,11 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Finding 的人工生命周期（api-contract.md 3.2、3.4）。
+ * Finding 的人工生命周期（API.md、3.4）。
  *
  * <p>这里没有「指派」端点。PRD.md 3 只授予了“Finding 认领”这一项，
  * 因此认领会把认领者设为处理人，而没有人能被别人指派——
- * 少一个端点，也少一个授权面（design.md 3.3）。
+ * 少一个端点，也少一个授权面。
  */
 @RestController
 @RequestMapping("/api/projects/{projectId}/findings/{findingId}")

@@ -18,7 +18,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 /**
- * 成员移除与作废需求软删（T-006 / T-007，D022）。
+ * 成员移除与作废需求软删（T-006 / T-007）。
  *
  * <p>放在根测试包而不是某个 feature 下，是因为它证明的正是跨模块那一段：成员移除
  * 靠 {@code ProjectMemberRemoving} 反转依赖方向，由 {@code requirement} /
@@ -99,7 +99,7 @@ class ResourceRemovalTest extends PostgresTestBase {
 
     /**
      * {@code UNIQUE(project_id) WHERE role='LEADER'} 保证的是**至多**一个；
-     * 「至少一个」历来是服务端职责（D013.9 / D020）。删掉唯一 LEADER 不违反任何约束，
+     * 「至少一个」历来是服务端职责。删掉唯一 LEADER 不违反任何约束，
      * 只会让项目失去负责人，所以没有测试就没有任何东西挡着它。
      */
     @Test

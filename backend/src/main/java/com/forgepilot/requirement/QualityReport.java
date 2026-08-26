@@ -4,10 +4,10 @@ import java.time.Instant;
 import java.util.List;
 
 /**
- * 对某一次修订做一次需求质量检查的结果（api-contract 4）：
+ * 对某一次修订做一次需求质量检查的结果（API.md）：
  * 先跑确定性规则，再做一次结构化 AI 评估。
  *
- * <p>结果中点名了具体修订，因为这个结果就属于那次修订（D011）。质量结果是
+ * <p>结果中点名了具体修订，因为这个结果就属于那次修订。质量结果是
  * <em>建议</em>：这里没有任何东西会改动 {@code requirement.status}，
  * 也刻意没有总评或评分字段——因为一个数字恰恰会被当成闸门来读
  * （PRD 5，“质量检查是建议，不是工作流状态”）。
@@ -37,10 +37,10 @@ public record QualityReport(long requirementId, long revisionId, int revisionSeq
 
         /**
          * 本次修订中有两条验收条件文本完全相同。每条 AC 都会得到自己的裁定
-         * （api-contract 2.2）和自己的 {@code finding_key}，而 REQUIREMENT 类
+         * （API.md）和自己的 {@code finding_key}，而 REQUIREMENT 类
          * Finding 的 key 是 {@code requirement_id + ac_key}（ARCHITECTURE.md 3.4）。
-         * 于是同一个缺陷会以两个 key 被报告两次；又因为 D009 是按
-         * {@code finding_key} 抑制的，驳回其中一份并不会在下次审查时抑制另一份
+         * 于是同一个缺陷会以两个 key 被报告两次；又因为抑制是按
+         * {@code finding_key} 做的，驳回其中一份并不会在下次审查时抑制另一份
          * ——而且是永久如此。
          */
         DUPLICATE_CRITERION,
@@ -49,7 +49,7 @@ public record QualityReport(long requirementId, long revisionId, int revisionSeq
          * 这条需求产生的 Prompt 超过了网关的字符预算（ARCHITECTURE.md 7.2），
          * 于是 {@code PromptSanitizer} 会在任何模型看到它之前把尾巴切掉。
          * 把这件事报出来正是要点所在：被截断却仍然“成功作答”，
-         * 就是 D002 明令禁止的静默截断。
+         * 就是那种绝不允许的静默截断。
          */
         PROMPT_BUDGET_EXCEEDED
     }

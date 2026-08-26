@@ -10,10 +10,9 @@ import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 
 /**
  * "A deployment without {@code forgepilot.scm.secret-key} fails at startup" —
- * asserted, at last. Batch 2's {@code result.md} 7.4 filed this as "a property that
- * was declared and never measured": {@link ScmSecretCipher}'s javadoc claims it,
- * {@code application.yml} was believed to carry no default, and nothing checked
- * either half.
+ * asserted, at last. This was long "a property that was declared and never
+ * measured": {@link ScmSecretCipher}'s javadoc claims it, {@code application.yml}
+ * was believed to carry no default, and nothing checked either half.
  *
  * <p>The context is built with {@link ConfigDataApplicationContextInitializer}, so
  * the real {@code application.yml} is loaded exactly as a running deployment loads
@@ -62,9 +61,8 @@ class ScmSecretKeyStartupTest {
     /**
      * The control, without which every assertion above would also hold for a
      * cipher that could never be built at all. It doubles as the direct round-trip
-     * assertion batch 2's {@code result.md} 5 admitted it only had indirectly:
-     * until now, {@code decrypt(encrypt(x)) == x} was proven by the webhook tests
-     * failing if it broke, never stated.
+     * assertion that was previously only indirect: {@code decrypt(encrypt(x)) == x}
+     * used to be proven by the webhook tests failing if it broke, never stated.
      */
     @Test
     void withAKeyTheContextStartsAndTheCipherRoundTrips() {

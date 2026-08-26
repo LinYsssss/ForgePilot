@@ -70,7 +70,7 @@ class RequirementController {
         return requirements.editDraft(projectId, userIdOf(principal), requirementId, request);
     }
 
-    /** 只有作废需求可以删除，且是软删：审计与既成事实必须留下（D022）。 */
+    /** 只有作废需求可以删除，且是软删：审计与既成事实必须留下。 */
     @DeleteMapping("/{requirementId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     void delete(@PathVariable long projectId, @PathVariable long requirementId, Principal principal) {
@@ -155,7 +155,7 @@ class RequirementController {
     }
 
     /**
-     * 需求质量检查：确定性规则加一次结构化 AI 调用（api-contract 4）。
+     * 需求质量检查：确定性规则加一次结构化 AI 调用（API.md）。
      * 用 POST，因为它会花掉一次 provider 调用并把结果写到当前修订上。
      * 这个答案是建议——本端点从不改动需求状态（PRD 5）。
      */
@@ -168,14 +168,14 @@ class RequirementController {
     /**
      * 登录身份在这里——控制器层——通过只读账号 facade 解析为 user id。
      * 业务服务永远看不到 Spring Security，本功能模块也不依赖会话是如何建立的
-     * （ARCHITECTURE.md 1.3，并按 D013.6 收窄）。
+     * （ARCHITECTURE.md 1.3）。
      */
     private long userIdOf(Principal principal) {
         return users.byUsername(principal.getName()).map(AccountView::id)
                 .orElseThrow(ApiException::notFound);
     }
 
-    /** api-contract 3 的线上形态：{@code EditDraft} 再加上必填的变更原因。 */
+    /** API.md 的线上形态：{@code EditDraft} 再加上必填的变更原因。 */
     record PublishRevisionRequest(
             @NotBlank @Size(max = 200) String title,
             String background,

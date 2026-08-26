@@ -26,7 +26,7 @@ public enum FindingStatus {
 
     /**
      * 把流转表写成数据，使测试可以逐对断言，而不必用散文再复述一遍
-     * （沿用批次 1 为 {@code RequirementStatus} 确立的形态）。
+     * （与 {@code RequirementStatus} 同一形态）。
      *
      * <p>{@code REJECTED -> OPEN} 在表里，但仅有一次合法流转还到不了它：
      * PRD.md 5 <strong>只</strong>允许重开被继承的抑制项，

@@ -21,8 +21,8 @@ import tools.jackson.databind.JsonNode;
 /**
  * 从 GitHub 读取权威的 PR 快照。
  *
- * <p>base URI 来自 {@code scm_repository.api_base}，代码中绝不硬编码任何 host
- * （D015.8）。这不是为测试让步：D010 要求自建实例必须可用，而同一个列也正是
+ * <p>base URI 来自 {@code scm_repository.api_base}，代码中绝不硬编码任何 host。
+ * 这不是为测试让步：自建实例必须可用，而同一个列也正是
  * 集成测试得以在无凭据、无生产改动的前提下把仓库指向回环桩服务的原因。
  * 每次调用都会用 {@link OutboundUrlPolicy} 重新校验地址，因为该列可由 LEADER
  * 配置，而策略可能在此期间收紧过。
@@ -73,8 +73,8 @@ class GitHubClient {
     private RestClient clientFor(ScmRepository repository) {
         URI base = outbound.requireAllowed(repository.getApiBase());
         // 按仓库逐个构建，而不是用注入的共享 builder：api_base 是**按仓库**
-        // 存在的数据（D010 的自建实例），因此不存在一个共享 builder 能携带的
-        // 统一 base URI；而携带固定 host 的那种，正是 D015.8 禁止的硬编码。
+        // 存在的数据（自建实例），因此不存在一个共享 builder 能携带的
+        // 统一 base URI；而携带固定 host 的那种，正是被禁止的硬编码。
         return RestClient.builder()
                 .baseUrl(base.toString())
                 .requestFactory(requestFactory)
@@ -127,7 +127,7 @@ class GitHubClient {
      * {@code JsonNode.asString()} 对缺失或 null 的节点会返回 ""，于是就会写下
      * base_sha='' 或 author_external_user_id=''——两者都满足 NOT NULL，
      * 数据库因此抓不住，而指纹随后会基于空 SHA 计算出来。
-     * author_external_user_id 更糟：D010 把它当作授权键，
+     * author_external_user_id 更糟：它是授权键，
      * 于是所有「幽灵作者」的 PR 都会共享同一个身份。
      * R3 要求畸形输入必须显式失败，而不是存下坏数据。
      */

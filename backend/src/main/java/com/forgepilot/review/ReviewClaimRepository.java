@@ -15,14 +15,14 @@ import org.springframework.data.repository.query.Param;
  * 而 Hibernate 的脏检查也报告不了「你匹配到了零行」这件事。
  *
  * <p>其中两条会读 {@code pull_request} 与 {@code requirement}。这不是越界：
- * design.md 2.1 裁定，凡是同时需要自己的表与 PR 的推导，都归 {@code review} 所有，
+ * ARCHITECTURE.md 1.3 裁定，凡是同时需要自己的表与 PR 的推导，都归 {@code review} 所有，
  * 因为依赖图只允许 {@code review -> scm}，反过来会在 ArchUnit 最重要的那条规则
  * 面前摆上一个环。任何地方都没有注入 {@code scm} 的仓库。
  *
  * <p>所有时间都来自 {@code now()}，而 PostgreSQL 会在事务开始时把它冻结。
  * 实测表明这个方向是安全的那一侧——偏旧的参照时间只会找出<em>更少</em>的
- * 过期租约，因此绝不会抢占一个还活着的 worker——而 design.md 6.6 否决了
- * {@code clock_timestamp()}，换来的是让这里每一条语句都待在自己的短事务里。
+ * 过期租约，因此绝不会抢占一个还活着的 worker——而 {@code clock_timestamp()} 已被否决，
+ * 换来的是让这里每一条语句都待在自己的短事务里。
  */
 public interface ReviewClaimRepository extends Repository<Review, Long> {
 
@@ -104,7 +104,7 @@ public interface ReviewClaimRepository extends Repository<Review, Long> {
     /**
      * 续租，是 ARCHITECTURE.md 3.2 要求必须匹配 token 的三次写入之一。
      * 它同时也是心跳：租约过期就是停滞信号，
-     * 因此这里没有第二套存活检测机制，也没有第十七张表。
+     * 因此这里没有第二套存活检测机制，也不需要一张独立的心跳表。
      */
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query(value = """
@@ -204,7 +204,7 @@ public interface ReviewClaimRepository extends Repository<Review, Long> {
     List<StalledReview> findStalled(@Param("pendingStallSeconds") int pendingStallSeconds,
             @Param("limit") int limit);
 
-    /** 该 PR 当前的四元组输入，外加它是谁开的（D010）。 */
+    /** 该 PR 当前的四元组输入，外加它是谁开的。 */
     interface PullRequestIdentity {
 
         Long getProjectId();

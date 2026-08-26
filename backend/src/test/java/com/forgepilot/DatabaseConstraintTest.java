@@ -20,7 +20,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
- * 证明批次 1 的那些约束是由 PostgreSQL 自己强制的，而不是由某个未来调用方
+ * 证明核心表的那些约束是由 PostgreSQL 自己强制的，而不是由某个未来调用方
  * 可以绕开的服务层检查强制的。这里的每一次拒绝，都是直接通过 JdbcTemplate
  * 写入、绕到所有应用代码之下产生的。
  */
@@ -79,7 +79,7 @@ class DatabaseConstraintTest extends PostgresTestBase {
         insertMember(project, owner, "LEADER");
         insertMember(project, successor, "DEVELOPER");
 
-        // 先升级会与仍然在位的 LEADER 撞车：这正是 D013.8 禁止用单条 CASE 语句、
+        // 先升级会与仍然在位的 LEADER 撞车：这正是不允许用单条 CASE 语句、
         // 并要求「降级 -> flush -> 升级」的原因。
         assertThat(sqlStateOf(() -> setRole(project, successor, "LEADER")))
                 .isEqualTo(UNIQUE_VIOLATION);
@@ -275,7 +275,7 @@ class DatabaseConstraintTest extends PostgresTestBase {
             return requirement.getId();
         });
 
-        // 那个只读关联（D013.1 方案 A）解析了三列外键，
+        // 那个只读关联解析了三列外键，
         // 却从不通过它写入 project_id 或 id。
         String title = transactions.execute(status ->
                 entityManager.find(Requirement.class, requirementId).getCurrentRevision().getTitle());

@@ -199,7 +199,7 @@ class ReviewActivityTest extends PostgresTestBase {
                 ReviewStatus.COMPLETED, ReviewDecision.APPROVE);
         assertThat(activityOf(fixture, requirement)).isEqualTo(RequirementActivity.APPROVED);
 
-        // The base, the changed files or a patch moved. D003 is explicit that this
+        // The base, the changed files or a patch moved. The fingerprint contract is explicit that this
         // mints a new identity even though the head SHA did not change; comparing
         // only the head would leave this pull request showing APPROVED.
         jdbc.update("update pull_request set review_input_fingerprint = ? where id = ?",
@@ -219,7 +219,7 @@ class ReviewActivityTest extends PostgresTestBase {
 
         fixture.publishRevision(requirement);
 
-        // A requirement change never re-reviews by itself (D007); it just stops the
+        // A requirement change never re-reviews by itself ; it just stops the
         // old conclusion from applying, and a person triggers the new one.
         assertThat(activityOf(fixture, requirement)).isEqualTo(RequirementActivity.REVIEW_REQUIRED);
     }

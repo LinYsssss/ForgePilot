@@ -12,16 +12,16 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 /**
- * 为什么这个部署没有向量索引（D019），以及为什么没有索引也是正确的。
+ * 为什么这个部署没有向量索引，以及为什么没有索引也是正确的。
  *
- * <p>D001 曾承诺：Embedding Profile 冻结之后，用一条独立 migration 建出与检索
- * cast 完全一致的 HNSW 表达式索引。冻结下来的 Profile 是
+ * <p>索引的形态本该是：Embedding Profile 冻结之后，用一条独立 migration 建出与
+ * 检索 cast 完全一致的 HNSW 表达式索引。冻结下来的 Profile 是
  * {@code Qwen/Qwen3-Embedding-8B}，**4096 维**——而 pgvector 0.8.6 建不出来。
  * 下面第一个测试就是那条论据本身：它把三种索引形态各试一次，
  * 逐条钉住数据库给出的拒绝理由。
  *
  * <p>把它写成测试而不是写成一份研究笔记，是因为这条论据会过期：pgvector
- * 一旦放宽维度上限，本测试就会失败，而那次失败正是「D019 的前提变了，
+ * 一旦放宽维度上限，本测试就会失败，而那次失败正是「前提变了，
  * 回去重新决策」的信号。一份躺在 markdown 里的实测结论没有这个性质。
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
@@ -68,7 +68,7 @@ class KnowledgeVectorIndexTest extends PostgresTestBase {
 
     /**
      * 唯一能建出来的两种形态各是什么代价：它们都建得成，但都不是精确检索。
-     * 保留这条测试是为了让 D019 的「可选项」不必靠记忆——下一个人想加索引时，
+     * 保留这条测试是为了让「可选项」不必靠记忆——下一个人想加索引时，
      * 这里直接告诉他能加的是什么，以及为什么加了就必须再补一个 rerank 阶段。
      */
     @Test
@@ -91,7 +91,7 @@ class KnowledgeVectorIndexTest extends PostgresTestBase {
 
     /**
      * 没有索引不等于不正确。顺序扫描在冻结维度上给出的就是精确余弦序，
-     * 而这正是 D019 判断「MVP 语料规模下不需要索引」时所依赖的另一半事实。
+     * 而这正是「MVP 语料规模下不需要索引」所依赖的另一半事实。
      */
     @Test
     void sequentialScanReturnsExactCosineOrderAtTheFrozenDimension() {

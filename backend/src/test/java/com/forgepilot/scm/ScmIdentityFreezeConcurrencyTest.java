@@ -25,8 +25,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 /**
- * The concurrent half of the stable-identity freeze (AC15 / design.md 3.7), which
- * batch 2's {@code result.md} 7.5 recorded as untested: its only coverage was
+ * The concurrent half of the stable-identity freeze (AC15). Single-threaded
+ * coverage lives in
  * {@code ScmRepositoryApiTest.oncePullRequestsExistTheIdentityIsFrozenButTheApiBaseStillMoves},
  * and that runs on one thread, where the row lock can do nothing because nobody is
  * contending for it.
@@ -79,13 +79,13 @@ class ScmIdentityFreezeConcurrencyTest extends ScmTestBase {
      * pass if the pool had never started the task, which is why
      * {@link #awaitBlockedOnTheRepositoryRow()} asks PostgreSQL rather than the
      * clock: the interleaving has to be observed, not assumed, or this degenerates
-     * into the single-threaded case batch 2 already had. The load-bearing
+     * into the single-threaded case that already exists. The load-bearing
      * assertions are the two at the end: the update comes back <strong>409</strong>
      * and the identity columns are untouched. Reaching those requires the emptiness
      * check to run after the lock was granted, which is the only way it can observe
      * a pull request that did not exist when the request arrived. Drop the lock and
      * the same interleaving ends with the identity moved and a pull request sitting
-     * under it — the state design.md 3.7 exists to make unreachable.
+     * under it — the state the freeze exists to make unreachable.
      */
     @Test
     void theUpdateWaitsForTheRowAndThenSeesThePullRequestThatCommittedWhileItWaited() throws Exception {

@@ -265,7 +265,7 @@ class ReviewEngineTest extends PostgresTestBase {
     /**
      * The role matrix for triggering (PRD 3): LEADER and REVIEWER anything, a
      * DEVELOPER only their own pull request. "Their own" is the provider's external
-     * user id against the member's verified SCM identity, never the username (D010)
+     * user id against the member's verified SCM identity, never the username 
      * — the username the pull request carries here is {@code octocat} for all
      * three, so matching on it would let every one of them through.
      */
@@ -517,7 +517,7 @@ class ReviewEngineTest extends PostgresTestBase {
                     Long.class, project, pullRequest, headSha, fingerprint, requirement, revision, status);
         }
 
-        /** Another member, optionally carrying the verified SCM identity D010 authorizes on. */
+        /** Another member, optionally carrying the verified SCM identity authorization uses. */
         private long member(String role, String scmExternalUserId) {
             long user = jdbc.queryForObject(
                     "insert into user_account (username, display_name, password_hash) values (?, 'Test User', 'x') returning id",

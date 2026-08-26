@@ -14,7 +14,7 @@ import org.springframework.stereotype.Component;
  *
  * <p>{@code pull_request} 的两列不可变作者快照同样不动。只有可重算映射
  * {@code author_user_id} 会被置空，而那件事由全库唯一那条列级
- * {@code ON DELETE SET NULL} 自己完成（D010），不需要本监听器插手。
+ * {@code ON DELETE SET NULL} 自己完成，不需要本监听器插手。
  *
  * <p>同步监听，加入发布方的事务；见 {@link ProjectMemberRemoving} 的说明。
  */

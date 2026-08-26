@@ -1,6 +1,6 @@
 package com.forgepilot.knowledge;
 
-/** 一份文档究竟属于某一条需求，还是属于整个项目（D005）。 */
+/** 一份文档究竟属于某一条需求，还是属于整个项目。 */
 public enum KnowledgeSourceType {
     /** 作用域恰好是一条需求；只对该需求的 AI 场景可见。 */
     REQUIREMENT_ATTACHMENT,

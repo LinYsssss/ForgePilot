@@ -41,10 +41,10 @@ import org.springframework.web.context.WebApplicationContext;
 import tools.jackson.databind.ObjectMapper;
 
 /**
- * {@link ChangedFile#MAX_TOTAL_CHARS} and the two guards that read it. D016.1
- * records that an over-limit pull request "does not exist in the system at all",
- * and that the whole path had <strong>zero</strong> test coverage: the constant was
- * referenced nowhere in test code, so neither guard had ever executed.
+ * {@link ChangedFile#MAX_TOTAL_CHARS} and the two guards that read it. An
+ * over-limit pull request "does not exist in the system at all", and the whole
+ * path is easy to leave untested: the constant is referenced nowhere else in
+ * test code, so without this class neither guard would ever execute.
  *
  * <p>The two guards are not the same guard. {@code GitHubClient.changedFiles}
  * counts raw characters while it pages, so an outsized pull request fails before
@@ -108,7 +108,7 @@ class ChangedFileLimitTest extends ScmTestBase {
     }
 
     /**
-     * One character over, and D016.1's "completely absent" has to be literal: not a
+     * One character over, and "completely absent" has to be literal: not a
      * row with a truncated manifest, not a row marked as failed — no row.
      */
     @Test

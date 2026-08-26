@@ -23,13 +23,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * 需求、它们不可变的修订，以及支配二者的状态机（design.md 6.4）。授权走
+ * 需求、它们不可变的修订，以及支配二者的状态机。授权走
  * {@link ProjectAccessService}，用户名走 {@link UserDirectory}：本功能模块
  * 既不注入 {@code ProjectMemberRepository} 也不注入
- * {@code UserAccountRepository}（D013.6）。
+ * {@code UserAccountRepository}。
  *
  * <p>约束冲突——跨项目的父级、非成员的被指派人、重复的修订 seq——一律交给
- * 数据库处理并让其事务回滚（D013.11）；这里不捕获、也不绕过其中任何一种。
+ * 数据库处理并让其事务回滚；这里不捕获、也不绕过其中任何一种。
  */
 @Service
 public class RequirementService {
@@ -37,7 +37,7 @@ public class RequirementService {
     private static final String AC_KEY_PREFIX = "AC-";
 
     /**
-     * 把 api-contract 3 的流转表写成数据。{@code IN_DEVELOPMENT} 刻意不出现在
+     * 把 API.md 的流转表写成数据。{@code IN_DEVELOPMENT} 刻意不出现在
      * 任何取值里：进入它的唯一入口是首次指派，因此 {@link #changeStatus}
      * 永远到不了那个状态。
      */
@@ -101,7 +101,7 @@ public class RequirementService {
     }
 
     /**
-     * 一个事务里的三步（D013.10）：先插入指针为 null 的需求行，再插入修订 1
+     * 一个事务里的三步：先插入指针为 null 的需求行，再插入修订 1
      * 及其验收条件，最后回填指针。那个复合外键是 MATCH SIMPLE，
      * 因此指针为 null 期间它被跳过，回填时才被完整检查。
      */
@@ -118,7 +118,7 @@ public class RequirementService {
 
     /**
      * 对修订 1 的原地编辑，只有在需求仍为 DRAFT 时才合法。质量结果描述的是
-     * 旧文本，因此在同一个事务里被清空（design.md 6.4）。
+     * 旧文本，因此在同一个事务里被清空。
      */
     @Transactional
     public RequirementDetail editDraft(long projectId, long actorId, long requirementId,
@@ -177,7 +177,7 @@ public class RequirementService {
     }
 
     /**
-     * 进入 IN_DEVELOPMENT 的唯一入口（api-contract 3）。指派被限制在「确有工作
+     * 进入 IN_DEVELOPMENT 的唯一入口（API.md）。指派被限制在「确有工作
      * 存在」的那两个状态里，因此 READY 的需求必定还没有被指派人，
      * 这里也就恰好是首次指派；此后的重新指派会看到 IN_DEVELOPMENT 并不动状态。
      * 「被指派人是本项目成员」由复合外键证明，而不是在这里检查。
@@ -200,7 +200,7 @@ public class RequirementService {
     /**
      * 软删一条**作废**需求。
      *
-     * <p>软删而非硬删（D022）：{@code ai_call_log.requirement_id} 与
+     * <p>软删而非硬删：{@code ai_call_log.requirement_id} 与
      * {@code pull_request_requirement_event.from/to_requirement_id} 都挂在这一行上，
      * 物理销毁它就是销毁调用审计、抹掉一件已经发生的 PR 关联事实——而 V5 的注释
      * 当初正是为了让后者不可能发生才那样设计的。行留着，那些外键继续有效，需求

@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 /**
  * 把各类失败统一转换成唯一的 {@link ApiError} 结构。数据库约束冲突到达这里时，
- * 其事务必定已经回滚：按 D013.11，任何代码都不得捕获约束冲突后在同一事务里继续执行。
+ * 其事务必定已经回滚：任何代码都不得捕获约束冲突后在同一事务里继续执行。
  */
 @RestControllerAdvice
 class ApiExceptionHandler {

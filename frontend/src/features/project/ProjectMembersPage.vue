@@ -231,7 +231,7 @@ async function makeLeader(member: Member): Promise<void> {
 
 /**
  * 移除成员。后端在同一事务里撤销需求指派、Finding 认领与项目 SCM 绑定，而 PR 的
- * 两列不可变作者快照与全部审计保持不动（D022）。唯一 LEADER 会被后端以 409 拒绝，
+ * 两列不可变作者快照与全部审计保持不动。唯一 LEADER 会被后端以 409 拒绝，
  * 前端因此不给 LEADER 那一行入口，但拒绝本身仍由后端强制。
  */
 async function removeFromProject(member: Member): Promise<void> {

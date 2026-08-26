@@ -87,7 +87,7 @@ public class UserAccount {
         return updatedAt;
     }
 
-    /** 改密会使其余所有会话失效（design.md 7）。 */
+    /** 改密会使其余所有会话失效。 */
     public void changePassword(String newPasswordHash) {
         this.passwordHash = newPasswordHash;
         this.sessionVersion += 1;

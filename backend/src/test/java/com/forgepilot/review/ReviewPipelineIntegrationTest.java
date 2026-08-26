@@ -43,9 +43,9 @@ import tools.jackson.databind.ObjectMapper;
  * out of {@code review} and {@code finding}.
  *
  * <p>This class exists because of a specific failure mode this project has
- * already had once. In batch 2 every acceptance condition was green while
- * {@code AiGateway.chat} had no production caller at all, and in the first round
- * of batch 3 every part of the engine was tested on its own while
+ * already hit twice. Once every acceptance condition was green while
+ * {@code AiGateway.chat} had no production caller at all; later every part of the
+ * engine was tested on its own while
  * {@code ReviewExecutor.run} claimed a Review and stopped. Component tests cannot
  * see that, by construction: each one passes exactly as well when nothing calls
  * it. So the first test below starts from the event {@code scm} publishes and
@@ -166,7 +166,7 @@ class ReviewPipelineIntegrationTest extends PostgresTestBase {
                 String.class, review)).containsExactly("CODE_QUALITY", "REQUIREMENT");
 
         // The REQUIREMENT finding survived only because the source it cited was in
-        // this Review's own recall whitelist, and it carries the two hashes D009's
+        // this Review's own recall whitelist, and it carries the two hashes
         // suppression is decided on.
         assertThat(jdbc.queryForObject("""
                 select count(*) from finding
@@ -267,7 +267,7 @@ class ReviewPipelineIntegrationTest extends PostgresTestBase {
     }
 
     /**
-     * The same chain through api-contract.md 2.1, so the endpoint is not a second
+     * The same chain through API.md's trigger endpoint, so it is not a second
      * way in that happens to look similar.
      */
     @Test
@@ -293,7 +293,7 @@ class ReviewPipelineIntegrationTest extends PostgresTestBase {
     /**
      * PRD 3's row for triggering, through the endpoint. A DEVELOPER may only ask
      * for their own pull request, and "their own" is the provider's external user
-     * id against the member's verified SCM identity (D010) — never the username,
+     * id against the member's verified SCM identity  — never the username,
      * which is why the fixture gives this developer the same {@code author_username}
      * as the pull request and a different external id.
      */
@@ -364,7 +364,7 @@ class ReviewPipelineIntegrationTest extends PostgresTestBase {
     // ----------------------------------------------------------------- large input
 
     /**
-     * D002: more than one call, still one report. The two candidates below are
+     * More than one call, still one report. The two candidates below are
      * produced by two different batch calls, and the assertion that matters is that
      * both of them reach the single synthesis prompt — which is what makes this a
      * test of the merge rather than of the split.
@@ -405,7 +405,7 @@ class ReviewPipelineIntegrationTest extends PostgresTestBase {
     }
 
     /**
-     * D002's other half: a file nobody reviewed is named in the manifest, and a
+     * The other half: a file nobody reviewed is named in the manifest, and a
      * finding about it cannot be stored. Silence about an unread file is the
      * failure this rule exists to prevent, so both halves are asserted.
      */
@@ -415,7 +415,7 @@ class ReviewPipelineIntegrationTest extends PostgresTestBase {
         Fixture fixture = new Fixture(List.of(
                 new ChangedFile(REVIEWED_PATH, "modified", REVIEWED_PATCH),
                 // No patch at all: a binary file, or one past the provider's own
-                // diff limit. Absent is not empty (D015.7).
+                // diff limit. Absent is not empty .
                 new ChangedFile(binary, "modified", null)));
         provider.onBatch(prompt -> emptyBatchAnswer());
         provider.onSynthesis(prompt -> """
@@ -530,7 +530,7 @@ class ReviewPipelineIntegrationTest extends PostgresTestBase {
                 .contains("verbatim");
         assertThat(synthesis.get("properties").get("acVerdicts")).isNotNull();
         assertThat(batch.get("properties").get("acVerdicts"))
-                .as("D002: a batch never produces a verdict, so it cannot be asked for one")
+                .as("a batch never produces a verdict, so it cannot be asked for one")
                 .isNull();
     }
 

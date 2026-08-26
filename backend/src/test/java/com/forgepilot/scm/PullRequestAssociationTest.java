@@ -21,7 +21,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * Human correction of the pull request to requirement association (PRD P1) and
- * the audit D007 requires of it.
+ * the audit required of it.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
 class PullRequestAssociationTest extends ScmTestBase {
@@ -63,7 +63,7 @@ class PullRequestAssociationTest extends ScmTestBase {
     }
 
     /**
-     * D007 asks for the audit row and the change to be one transaction, so this
+     * The audit row and the change must be one transaction, so this
      * rolls the surrounding transaction back and requires <em>both</em> to be
      * gone. A change committed on its own — in its own transaction, or flushed
      * before the audit row — would survive this and leave an unexplained
@@ -174,14 +174,13 @@ class PullRequestAssociationTest extends ScmTestBase {
     }
 
     /**
-     * PRD P1 / D007 / D016.2, the half that batch 2 deferred and batch 3 owed:
-     * the author may correct their own pull request until this head carries a
-     * final human decision.
+     * PRD P1: the author may correct their own pull request until this head
+     * carries a final human decision.
      *
      * <p>The PENDING review is load-bearing. Webhook delivery creates one inside
      * the same transaction that updates the pull request, so a gate written as
      * "no review exists" would close the author's window before they could ever
-     * reach it — which is exactly why D007 spells out "即使自动 PENDING 已存在".
+     * reach it — which is exactly why the rule says "即使自动 PENDING 已存在".
      */
     @Test
     void theAuthorMayCorrectTheirOwnPullRequestWhileNoFinalDecisionExistsOnThisHead() {
@@ -237,7 +236,7 @@ class PullRequestAssociationTest extends ScmTestBase {
     }
 
     /**
-     * D010: "this is my pull request" is decided by the stable external user id.
+     * "this is my pull request" is decided by the stable external user id.
      * A member whose SCM username matches the author's while their external id
      * does not is a different person — usernames are reassignable.
      */
@@ -277,7 +276,7 @@ class PullRequestAssociationTest extends ScmTestBase {
         } catch (ApiException expected) {
             return expected.getStatus();
         } catch (DataIntegrityViolationException refusedByTheDatabase) {
-            // ApiExceptionHandler maps this to 409 (D013.11: never caught in a service).
+            // ApiExceptionHandler maps this to 409 (never caught in a service).
             return HttpStatus.CONFLICT;
         }
     }
@@ -344,7 +343,7 @@ class PullRequestAssociationTest extends ScmTestBase {
 
         /**
          * A verified SCM identity is what "this is my pull request" is decided by
-         * (D010). Passing null leaves the member unverified, which must match
+         * . Passing null leaves the member unverified, which must match
          * nothing rather than everything.
          */
         private long member(ProjectRole role, String scmExternalUserId) {

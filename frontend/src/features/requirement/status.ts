@@ -1,4 +1,4 @@
-/** 取自 api-contract.md §3 的需求生命周期。 */
+/** 取自 API.md 的需求生命周期。 */
 export type RequirementStatus =
   | "DRAFT"
   | "READY"
@@ -33,7 +33,7 @@ export const REQUIREMENT_STATUS_TONES: Record<RequirementStatus, string> = {
 
 /**
  * 可以通过 `POST /status` 抵达的目标状态。`IN_DEVELOPMENT` 刻意缺席：
- * 进入它的唯一入口是首次指派（api-contract.md §3）。
+ * 进入它的唯一入口是首次指派（API.md）。
  */
 export const STATUS_TRANSITIONS: Record<RequirementStatus, readonly RequirementStatus[]> = {
   DRAFT: ["READY", "CANCELED"],

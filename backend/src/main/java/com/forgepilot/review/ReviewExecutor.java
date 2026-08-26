@@ -57,7 +57,7 @@ public class ReviewExecutor {
         this.ownTransaction = new TransactionTemplate(transactions);
         this.ownTransaction.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
         // 完成与置失败则加入调用方的事务。一次 Review 的 finding 与它的终态
-        // 必须一起提交（design.md 4.4）——这里另开事务，会允许出现
+        // 必须一起提交——这里另开事务，会允许出现
         // 「有报告却没有那个说它已完成的状态」，或者反过来的情形。
         this.finishingTransaction = new TransactionTemplate(transactions);
         this.leaseSeconds = leaseSeconds;

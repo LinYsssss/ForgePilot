@@ -1,4 +1,4 @@
-/** 所有 ForgePilot 端点共用的错误体结构（api-contract.md §0）。 */
+/** 所有 ForgePilot 端点共用的错误体结构（API.md）。 */
 export interface ApiError {
   code: string;
   message: string;

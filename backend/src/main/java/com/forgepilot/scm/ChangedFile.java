@@ -18,9 +18,9 @@ import java.util.List;
 public record ChangedFile(String path, String changeType, String patch) {
 
     /**
-     * 整份清单作为**一个** JSONB 值存在 pull request 行上（D015.7），
+     * 整份清单作为**一个** JSONB 值存在 pull request 行上，
      * 因此它必须始终装得下一行。超过这个字符数时，入库会显式失败，
-     * 而不是静默截断——否则日后 Review 会被告知它“看过”一份其实不完整的清单（D002）。
+     * 而不是静默截断——否则日后 Review 会被告知它“看过”一份其实不完整的清单。
      */
     public static final int MAX_TOTAL_CHARS = 4_000_000;
 

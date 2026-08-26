@@ -46,7 +46,7 @@ public class KnowledgeUploadValidator {
     /**
      * 数据库唯一抓不住的那一种。实测：孤立的 UTF-16 代理项会被 JDBC 驱动
      * 静默替换成 '?'，于是 PostgreSQL 收到的是合法 UTF-8，永远不会抛 22021——
-     * 文本被损坏了，却哪里都没有报错（D015.5）。
+     * 文本被损坏了，却哪里都没有报错。
      * {@link CharsetEncoder#canEncode} 正是让这件事变得可见的地方。
      */
     private void rejectUnencodableText(String text) {

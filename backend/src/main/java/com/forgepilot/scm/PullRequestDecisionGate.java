@@ -21,7 +21,7 @@ public interface PullRequestDecisionGate {
      *
      * <p>按 head 而不是按 PR 提问，与 ARCHITECTURE.md 3.1 的 Decision Gate 同口径：
      * 推一个新 commit 会开启一个新的 head，作者在新 head 上重新获得纠正权。
-     * 自动投递建出的 PENDING Review **不**算终局裁定——D007 明确要求
+     * 自动投递建出的 PENDING Review **不**算终局裁定——契约明确要求
      * 「即使自动 PENDING 已存在」作者仍可纠正。
      */
     boolean hasFinalDecisionOnHead(long projectId, long pullRequestId, String headSha);

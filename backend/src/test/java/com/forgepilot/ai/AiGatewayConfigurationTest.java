@@ -17,9 +17,9 @@ import org.springframework.jdbc.core.JdbcTemplate;
  * 当没有任何人配置过 provider 时会发生什么。
  *
  * <p>代码里任何地方都没有默认 base URI、也没有默认密钥
- * （D015.8，以及 {@code quality-guidelines.md} 关于兜底凭据的规定），
+ * （以及 {@code quality-guidelines.md} 关于兜底凭据的规定），
  * 因此未配置的部署必须**拒绝**，而不是去随手抓一个什么来用。
- * 这次拒绝发生在调用时而非启动时，因为批次 2 不应该为了一个运维尚未启用的功能
+ * 这次拒绝发生在调用时而非启动时，因为不应该为了一个运维尚未启用的功能
  * 而阻止应用启动。
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE,

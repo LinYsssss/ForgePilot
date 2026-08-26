@@ -20,8 +20,8 @@ import org.hibernate.annotations.CreationTimestamp;
  * **有意**不在这里：{@code error} 只放分类信息（例如 {@code HTTP 429}），
  * 绝不放响应体（.trellis/spec/backend/logging-guidelines.md）。
  *
- * <p>表里存在 {@code review_id} 列但故意不做映射：批次 3 要加它的外键，
- * 前提是此前写入的每一行该列都为 NULL（D015.1）。Hibernate 会忽略没有字段
+ * <p>表里存在 {@code review_id} 列但故意不做映射：它的外键由后来的迁移补上，
+ * 前提是此前写入的每一行该列都为 NULL。Hibernate 会忽略没有字段
  * 认领的列，因此这道保证不花任何代价。
  */
 @Entity
@@ -45,7 +45,7 @@ public class AiCallLog {
     @Column(name = "use_case", nullable = false, length = 32)
     private AiUseCase useCase;
 
-    /** 实际使用的模型，使 Phase 8 的评测得以复现。 */
+    /** 实际使用的模型，使评测得以复现。 */
     @Column(name = "model", nullable = false, length = 128)
     private String model;
 

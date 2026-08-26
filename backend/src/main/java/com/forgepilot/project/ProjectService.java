@@ -24,9 +24,9 @@ public class ProjectService {
     }
 
     /**
-     * 创建项目与把创建者设为该项目 LEADER 是**同一个**事务（D013.5）：
-     * 在这次提交之前创建者在项目中没有任何角色，因此 D004 的
-     * “至少有一个 LEADER”不变式将无从起步。
+     * 创建项目与把创建者设为该项目 LEADER 是**同一个**事务：
+     * 在这次提交之前创建者在项目中没有任何角色，
+     * 因此“至少有一个 LEADER”这条不变式将无从起步。
      */
     @Transactional
     public ProjectResponse create(String name, long creatorId) {

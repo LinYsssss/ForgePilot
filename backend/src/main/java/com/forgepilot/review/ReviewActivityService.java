@@ -23,7 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
  * <p>它住在 {@code review} 而非 {@code requirement}，因为它同时需要
  * {@code pull_request} 与 {@code review}，而 ARCHITECTURE.md 1.1 的依赖箭头是
  * {@code review -> requirement}。让 {@code requirement} 反过来问 {@code review}，
- * 会在功能依赖图里闭合出一个环（design.md 2.1）。
+ * 会在功能依赖图里闭合出一个环。
  */
 @Service
 @Transactional(readOnly = true)
@@ -135,8 +135,8 @@ public class ReviewActivityService {
     /**
      * 一条需求的聚合活动状态，连同各状态的计数。
      *
-     * <p>计数永远存在，且永远携带全部六个单 PR 取值，包括为零的项
-     * （design.md 2.8）。PRD.md 5 只在聚合结果为 {@code MIXED} 时才要求它们；
+     * <p>计数永远存在，且永远携带全部六个单 PR 取值，包括为零的项。
+     * PRD.md 5 只在聚合结果为 {@code MIXED} 时才要求它们；
      * 而始终发送它们只多花几个字节，却从客户端消除了一整类
      * “键不存在”的分支处理。
      */

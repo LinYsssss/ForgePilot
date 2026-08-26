@@ -9,13 +9,13 @@ import org.springframework.stereotype.Component;
 
 /**
  * 解析 PR 分支名或标题中出现的第一个 {@code REQ-<n>}，其中 {@code <n>} 是全局的
- * {@code requirement.id}（D013.2）。
+ * {@code requirement.id}。
  *
  * <p>解析结果会按该 PR 自己的项目过滤，因此属于其他项目的 id 会被解析成
  * 「没有关联需求」，与压根没写过这个 token 完全一样——既不是错误，
- * 也永远不会阻塞入库（D007）。复合外键做不到这种过滤：它只会让整条插入失败，
- * 而捕获它后继续执行是被禁止的（D013.11）。因此这个问题在写行之前就通过
- * {@code requirement} 的只读 facade 问清楚（D015.6）；本类绝不能看到任何仓库。
+ * 也永远不会阻塞入库。复合外键做不到这种过滤：它只会让整条插入失败，
+ * 而捕获它后继续执行是被禁止的。因此这个问题在写行之前就通过
+ * {@code requirement} 的只读 facade 问清楚；本类绝不能看到任何仓库。
  */
 @Component
 class RequirementReferenceParser {

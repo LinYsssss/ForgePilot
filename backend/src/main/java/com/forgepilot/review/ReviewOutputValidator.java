@@ -32,7 +32,7 @@ import tools.jackson.databind.ObjectMapper;
  * 并记入 {@link ReviewOutput#warnings()}，而不是让整次 Review 失败。
  * 这同时也是批量插入得以保持完整的原因——一条上下文与父行矛盾的 Finding
  * 会在约束触发器处中止整批插入，因此校验发生在写入**之前**，
- * 而触发器始终是最后一道防线，不是第一道（design.md 4.4）。
+ * 而触发器始终是最后一道防线，不是第一道。
  */
 @Component
 public class ReviewOutputValidator {
@@ -71,8 +71,8 @@ public class ReviewOutputValidator {
     }
 
     /**
-     * 校验单个批次的回答。批次只报告候选项与证据，<strong>绝不</strong>给出裁定
-     * （D002）：它只看到了 diff 的一部分，因此它对某条验收条件下的结论
+     * 校验单个批次的回答。批次只报告候选项与证据，<strong>绝不</strong>给出裁定：
+     * 它只看到了 diff 的一部分，因此它对某条验收条件下的结论
      * 会与另一个批次矛盾。所以任何 {@code acVerdicts} 字段这里连读都不读。
      *
      * <p>它抛异常而不是返回一个 outcome，因为修复预算归 {@link ChangedFileBatcher}
@@ -527,7 +527,7 @@ public class ReviewOutputValidator {
         }
     }
 
-    /** 单个批次的贡献：候选项与 AC 证据，不含任何裁定（D002）。 */
+    /** 单个批次的贡献：候选项与 AC 证据，不含任何裁定。 */
     record BatchAnswer(List<FindingCandidate> candidates, List<AcEvidence> evidence, List<String> warnings) {
     }
 

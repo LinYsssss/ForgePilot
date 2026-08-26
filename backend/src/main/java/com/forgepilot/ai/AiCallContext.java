@@ -6,10 +6,10 @@ package com.forgepilot.ai;
  * <p>ARCHITECTURE.md 1.3 只允许 {@code ai} 依赖 {@code common}，4.1 明确网关
  * “不认识 Requirement/Finding/Review”。但 4.1 给出的两个方法签名无法提供
  * {@code ai_call_log} 所需的 id，于是由本记录补上——用 {@code Long}，正是 1.3
- * 已经为 knowledge 认可的形态（“只收不透明 scope id”）。D013.1 方案 A 本来
- * 就把这些列当标量写入，因此并无信息损失。
+ * 已经为 knowledge 认可的形态（“只收不透明 scope id”）。这些列本来
+ * 就以标量写入，因此并无信息损失。
  *
- * <p>{@code review_id} 是**故意缺席**的。它的外键随批次 3 才到位（D015.1），
+ * <p>{@code review_id} 是**故意缺席**的。它的外键由后来的迁移补上，
  * 而那次迁移的前提是既有行必须全为 NULL；让这一列在 Java 侧根本不可达，
  * 才是真正的保证，光靠“约定没人会写”是靠不住的。
  */

@@ -2,7 +2,7 @@ import { computed, ref, type ComputedRef } from "vue";
 
 import { HttpError, requestJson } from "../../lib/http";
 
-/** 每个认证端点都返回的 `{id, username}`（api-contract.md §1）。 */
+/** 每个认证端点都返回的 `{id, username}`（API.md）。 */
 export interface AccountView {
   id: number;
   username: string;
@@ -26,7 +26,7 @@ export function clearSession(): void {
 
 /**
  * 冷启动探测。`GET /api/auth/me` 同时会下发 `XSRF-TOKEN` cookie，
- * 后续写操作的请求层需要它（api-contract.md §0）。
+ * 后续写操作的请求层需要它（API.md）。
  */
 export async function bootstrapSession(): Promise<void> {
   try {

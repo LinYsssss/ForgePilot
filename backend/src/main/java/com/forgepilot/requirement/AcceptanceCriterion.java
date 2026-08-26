@@ -13,7 +13,7 @@ import org.hibernate.annotations.CreationTimestamp;
 /**
  * 属于某一次修订的验收条件。{@code acKey} 是跨修订稳定的业务身份，
  * 会原样复制进后续修订；{@code sortOrder} 仅供展示，
- * 绝不允许当作身份使用（D011）。
+ * 绝不允许当作身份使用。
  */
 @Entity
 @Table(name = "acceptance_criterion")

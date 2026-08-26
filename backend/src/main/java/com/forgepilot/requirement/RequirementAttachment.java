@@ -17,7 +17,7 @@ import org.hibernate.annotations.CreationTimestamp;
  *
  * <p>这里不重复校验归属。本行的三列外键把文档自身的作用域钉死在这条需求上，
  * 因此一份公共知识文档根本无法被挂为附件；两个 id 列都是 NOT NULL，
- * 因为只要有一个为 NULL，PostgreSQL 就会整体跳过那次检查（D015.2）。
+ * 因为只要有一个为 NULL，PostgreSQL 就会整体跳过那次检查。
  */
 @Entity
 @Table(name = "requirement_attachment")

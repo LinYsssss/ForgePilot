@@ -15,7 +15,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 /**
- * 对 provider token 与 webhook 密钥做静态加密（design.md 3.3）。
+ * 对 provider token 与 webhook 密钥做静态加密。
  *
  * <p>使用单个对称密钥下的 AES-256-GCM，密钥取自
  * {@code forgepilot.scm.secret-key}——宽松绑定会从 {@code FORGEPILOT_SCM_SECRET_KEY}
@@ -29,7 +29,7 @@ import org.springframework.stereotype.Component;
  * 短语，就会得到一个容易猜到的密钥。Compose 与 CI 里带的都是刻意伪造的、
  * 仅限本地使用的值，原因正在于此。
  *
- * <p>批次 2 不做密钥轮换。轮换需要一个密钥版本列加一次重加密扫描，那是新的结构；
+ * <p>不做密钥轮换。轮换需要一个密钥版本列加一次重加密扫描，那是新的结构；
  * 这个缺口被如实记录下来，而不是用「失败时再静默试第二把密钥」来遮掩过去。
  */
 @Component

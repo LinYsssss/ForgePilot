@@ -13,7 +13,7 @@ public record RequirementDetail(long id, RequirementStatus status, Long assignee
      * 伸进 {@code review}，那会让功能依赖图成环，ArchUnit 会直接拒绝。
      *
      * <p>它改由 {@code review} 通过自己的只读端点提供，客户端单独去取。
-     * 批次 1 曾在这里放过一个常量 {@code "NO_PR"} 作占位；批次 3 替换掉的是
+     * 这里曾放过一个常量 {@code "NO_PR"} 作占位；替换掉的是
      * 那个占位符，而不是这条边界。
      */
     static RequirementDetail of(Requirement requirement, String assigneeUsername, RevisionView currentRevision) {

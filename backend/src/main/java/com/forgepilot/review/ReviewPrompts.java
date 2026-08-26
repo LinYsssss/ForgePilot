@@ -17,7 +17,7 @@ import com.forgepilot.scm.ChangedFile;
  * ContextBuilder，而业务 Prompt 属于拥有其业务含义的那个功能模块——
  * 与 {@code requirement} 为质量检查和实现建议采用的形态一致。
  *
- * <p>schema 里有三条规则是承重的而非风格问题，三者都是为了让 D009 的
+ * <p>schema 里有三条规则是承重的而非风格问题，三者都是为了让跨轮
  * 抑制机制保持诚实：
  *
  * <ul>
@@ -59,7 +59,7 @@ final class ReviewPrompts {
     static final String ENGINE = "forgepilot-review";
 
     /**
-     * 一个批次的回答只包含候选项与 AC 证据，<strong>不含任何裁定</strong>（D002）：
+     * 一个批次的回答只包含候选项与 AC 证据，<strong>不含任何裁定</strong>：
      * 它只看到了 diff 的一部分，因此它对某条验收条件下的结论会与其他批次矛盾。
      * 这里没有 {@code acVerdicts} 这个属性，校验器也不会去读它。
      */
@@ -184,7 +184,7 @@ final class ReviewPrompts {
 
     /**
      * 分批阶段的指令。它明确指出批次唯一不得做的那件事，
-     * 因为「会下结论的批次」正是 D002 所描述的故障形态：
+     * 因为「会下结论的批次」正是那种故障形态：
      * 两个批次从同一处改动的两半出发，对同一条验收条件得出相反的裁定。
      */
     private static final String BATCH_INSTRUCTION = """
@@ -242,7 +242,7 @@ final class ReviewPrompts {
     /**
      * 最终综合阶段：同一份上下文、各批次报告的全部内容，以及覆盖清单。
      *
-     * <p>清单是**随附**而非扣留的，因为 D002 的规则就是「未被审查的文件要被展示」；
+     * <p>清单是**随附**而非扣留的，因为规则就是「未被审查的文件要被展示」；
      * 而那个要对覆盖情况下结论的读者，恰恰是最不能把「没有审查」
      * 误当成「不存在」的那一个。
      */

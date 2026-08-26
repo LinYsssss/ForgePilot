@@ -35,10 +35,10 @@ import tools.jackson.databind.node.ObjectNode;
  *
  * <p>chat 的 URI 来自 {@code forgepilot.ai.base-url}；embedding 可以有自己的
  * {@code embedding-base-url} 与凭据，未配置时回落到 chat 的路由。代码中不硬编码
- * 任何 host（D015.8）。这使得**一个**技术网关就能接到两个 OpenAI 兼容 provider，
+ * 任何 host。这使得**一个**技术网关就能接到两个 OpenAI 兼容 provider，
  * 而不必新建第二个 AI runtime，也不会把 provider 路由逻辑泄漏进业务服务。
  *
- * <p>未配置的部署在**调用时**失败，而不是在启动时失败：批次 2 不应该因为某些
+ * <p>未配置的部署在**调用时**失败，而不是在启动时失败：本应用不应该因为某些
  * 还没人配置的功能而阻止应用启动；而给一个默认 host 或默认密钥，恰恰就是
  * {@code quality-guidelines.md} 明令禁止的“兜底凭据”。
  */

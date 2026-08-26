@@ -10,7 +10,7 @@ package com.forgepilot.scm;
  *
  * <p>类型定义在 {@code scm}，由 {@code review} 去 import。这让依赖方向保持在
  * ARCHITECTURE.md 1.3 允许的那一侧，同时使 {@code scm} 对 {@code review}
- * 没有任何编译期依赖。批次 2 里根本没有监听器，因此这次发布只有测试作用域的
+ * 没有任何编译期依赖。曾经根本没有监听器，因此这次发布只有测试作用域的
  * 监听器能看到。
  */
 public record PullRequestChanged(Long pullRequestId, String headSha, String reviewInputFingerprint) {

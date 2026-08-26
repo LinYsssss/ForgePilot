@@ -21,7 +21,7 @@ import tools.jackson.databind.json.JsonMapper;
 /**
  * The batch phase, with the bounds given explicitly rather than taken from
  * configuration — a test that ran against the deployed budget would change
- * meaning the moment Phase 6's measurement changes that budget.
+ * meaning the moment a new measurement changes that budget.
  */
 class ChangedFileBatcherTest {
 
@@ -198,7 +198,7 @@ class ChangedFileBatcherTest {
 
         assertThat(phase.evidence()).singleElement()
                 .satisfies(evidence -> assertThat(evidence.acKey()).isEqualTo("AC-1"));
-        // D002: only the final synthesis concludes. The batch said COVERED and the
+        // Only the final synthesis concludes. The batch said COVERED and the
         // Review still says NOT_FOUND, because the batch's claim never left the batch.
         assertThat(validator.validate("{\"acVerdicts\":[],\"findings\":[]}",
                         answer -> answer, context()).output().acVerdicts())

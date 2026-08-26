@@ -5,7 +5,7 @@ package com.forgepilot.ai;
  *
  * <p>ARCHITECTURE.md 7.2 把两半都定死了：“LLM 重试次数 | 1 | 仅瞬时错误
  * (429/5xx/网络)”。本代码库其他任何地方都没有重试，也必须保持没有：这条例外
- * 只授权给网关（IMPLEMENTATION-PLAN.md Phase 4、ARCHITECTURE.md 4.1 与 7.1）。
+ * 只授权给网关（ARCHITECTURE.md 4.1 与 7.1）。
  * 知识入库、数据库周边以及 4xx 一律不得复用它。
  *
  * <p>这个区分不是偏好问题。429 或 5xx 说明 provider 这一次没能作答；400 说明

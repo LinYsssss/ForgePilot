@@ -40,16 +40,16 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
 /**
- * The refusal branch of {@code GitHubClient.required(...)}, which batch 2's
- * {@code result.md} 7.5 recorded as never asserted.
+ * The refusal branch of {@code GitHubClient.required(...)}, which went
+ * unasserted for a while.
  *
  * <p>Thirteen ingestion tests proved the guard <em>runs</em> and accepts a
- * well-formed payload. That is not the same property. Batch 2 shipped, briefly, a
+ * well-formed payload. That is not the same property. This project shipped, briefly, a
  * version that looked up a field literally named {@code "base.sha"} inside
  * {@code base}: the guard ran, refused everything, and the happy path caught it.
  * The reverse mistake — a guard that runs and refuses nothing — no happy-path test
  * can catch, and {@code author_external_user_id} is where it would hurt, because
- * D010 makes it the authorization key and {@code JsonNode.asString()} answers ""
+ * It is the authorization key, and {@code JsonNode.asString()} answers ""
  * for a node that is not there. Every ghost author would then share one identity
  * that passes NOT NULL.
  *
@@ -218,7 +218,7 @@ class GitHubClientGuardTest extends ScmTestBase {
 
     /**
      * The control. Without it every assertion above would still hold for a client
-     * that refused everything — which is precisely the bug batch 2 actually shipped
+     * that refused everything — which is precisely the bug that actually shipped
      * and the happy path caught.
      */
     @Test

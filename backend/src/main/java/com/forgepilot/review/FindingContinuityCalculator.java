@@ -12,7 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * 判定本轮每一条 finding 是从哪来的（ARCHITECTURE.md 3.6、D009）。
+ * 判定本轮每一条 finding 是从哪来的（ARCHITECTURE.md 3.6）。
  *
  * <p>三条规则，按此顺序，且顺序固定为
  * {@code SUPPRESSED > PERSISTING > NEW}：

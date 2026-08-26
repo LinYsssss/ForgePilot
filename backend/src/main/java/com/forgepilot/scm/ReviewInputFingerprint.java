@@ -7,7 +7,7 @@ import java.security.NoSuchAlgorithmException;
 import java.util.HexFormat;
 
 /**
- * 归一化后的审查输入的确定性哈希（design.md 3.2、D003）。
+ * 归一化后的审查输入的确定性哈希。
  *
  * <p>输入包括：仓库身份、base 与 head，以及带全部 patch 的变更文件清单。
  * 明确<em>不</em>包括 {@code source_revision} 与 {@code source_updated_at}——

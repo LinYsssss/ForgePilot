@@ -15,7 +15,7 @@ public enum AiUseCase {
     IMPLEMENTATION_GUIDANCE,
     EMBEDDING,
     /**
-     * 由 CHECK 为批次 3 的审查引擎预留。批次 2 中没有任何代码会产生它，
+     * 由 CHECK 为审查引擎预留。曾有一段时间没有任何代码会产生它，
      * 正如 V2 预留了 {@code ProjectStatus.ARCHIVED} 却没有任何流转指向它。
      */
     REVIEW

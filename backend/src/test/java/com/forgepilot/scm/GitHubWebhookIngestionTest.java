@@ -48,7 +48,7 @@ import tools.jackson.databind.ObjectMapper;
 /**
  * The webhook path end to end, against a real socket and a real PostgreSQL, with
  * no credential anywhere: the provider is {@code com.sun.net.httpserver.HttpServer}
- * on loopback (D015.8) and the repository's {@code api_base} column points at it,
+ * on loopback  and the repository's {@code api_base} column points at it,
  * which is the same column a self-hosted instance would use.
  */
 @SpringBootTest
@@ -336,7 +336,7 @@ class GitHubWebhookIngestionTest extends ScmTestBase {
     }
 
     /**
-     * The reason the event is synchronous and in-transaction: batch 3's listener
+     * The reason the event is synchronous and in-transaction: the listener
      * creates the PENDING Review, and there must be no committed state where the
      * pull request moved but that Review is missing.
      */
@@ -547,10 +547,9 @@ class GitHubWebhookIngestionTest extends ScmTestBase {
     // ----------------------------------------------------------------- listener
 
     /**
-     * Batch 2 has no {@code review} module, so the event has no production listener
-     * and its publication would otherwise be invisible. This one is test-scoped and
-     * therefore cannot weaken the ArchUnit rule, which imports production classes
-     * only.
+     * A test-scoped listener, so the publication itself is observable rather than
+     * only its downstream effect. Being test-scoped, it cannot weaken the ArchUnit
+     * rule, which imports production classes only.
      */
     @TestConfiguration
     static class ListenerConfiguration {

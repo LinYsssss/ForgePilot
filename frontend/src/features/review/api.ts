@@ -1,12 +1,12 @@
 import { requestJson } from "../../lib/http";
 
-/** 一次 Review 的执行状态（api-contract.md §2.2）。与 `decision` 正交。 */
+/** 一次 Review 的执行状态（API.md）。与 `decision` 正交。 */
 export type ReviewStatus = "PENDING" | "RUNNING" | "COMPLETED" | "FAILED";
 
 /** 一次性的人工裁定。`PENDING` 表示「尚未作出裁定」，而不是第三种裁定。 */
 export type ReviewDecision = "PENDING" | "APPROVE" | "REQUEST_CHANGES";
 
-/** 一条 Finding 的人工处理生命周期（api-contract.md §3.1）。 */
+/** 一条 Finding 的人工处理生命周期（API.md）。 */
 export type FindingStatus =
   | "OPEN"
   | "CONFIRMED"
@@ -114,7 +114,7 @@ export interface FileCoverage {
 
 /**
  * 覆盖清单。「`notReviewed` 是空数组」与「整份清单缺席」是两个不同的答案，
- * D002 禁止把它们混为一谈，因此整个对象是可空的，而它内部的数组永远不为空缺。
+ * 契约禁止把它们混为一谈，因此整个对象是可空的，而它内部的数组永远不为空缺。
  */
 export interface Coverage {
   truncated: boolean;

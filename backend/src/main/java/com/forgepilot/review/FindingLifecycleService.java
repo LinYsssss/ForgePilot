@@ -27,7 +27,7 @@ import org.springframework.transaction.annotation.Transactional;
  * <p>有两行是**裁定**而非抄录，因为 PRD.md 3 的矩阵没有点到它们。
  * {@code VERIFIED -> CLOSED} 作为复核的第二步归 LEADER 与 REVIEWER；
  * {@code REJECTED -> OPEN} 与确认、驳回一样归同一对角色
- * （design.md 3.1、3.2）。这两条裁定都没有给任何人一个他本来在旁边
+ * （3.2）。这两条裁定都没有给任何人一个他本来在旁边
  * 还没有的步骤。
  *
  * <p>每一次变动都是条件更新，其 {@code from} 由数据库匹配，
@@ -83,7 +83,7 @@ public class FindingLifecycleService {
 
     /**
      * 把一条 finding 移动到 {@code target}，并在同一个事务里审计这次移动
-     * （api-contract.md 3.2）。
+     * （API.md）。
      *
      * <p>角色是对照「调用方读到的、他自称正在执行的那次流转」来检查的，
      * 而更新只有在那次流转**仍然可用**时才会真正发生。因此并发的移动
@@ -124,7 +124,7 @@ public class FindingLifecycleService {
         return new FindingStatusResult(target);
     }
 
-    /** api-contract.md 3.4。项目内的任何成员都可以读取这条审计轨迹。 */
+    /** 项目内的任何成员都可以读取这条审计轨迹。 */
     @Transactional(readOnly = true)
     public List<FindingEventView> history(long projectId, long actorId, long findingId) {
         access.requireMember(projectId, actorId);

@@ -8,11 +8,11 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
 /**
- * 全代码库中**唯一**允许出现 {@code ::vector} 与 {@code <=>} 运算符的地方
- * （D015.4）。向量列没有被 {@link KnowledgeChunk} 映射，因此对它的每一次
+ * 全代码库中**唯一**允许出现 {@code ::vector} 与 {@code <=>} 运算符的地方。
+ * 向量列没有被 {@link KnowledgeChunk} 映射，因此对它的每一次
  * 读写都必须经过这里。
  *
- * <p>选定的距离度量是余弦距离（design.md 2.1）。将来一旦要加表达式索引，
+ * <p>选定的距离度量是余弦距离。将来一旦要加表达式索引，
  * 它必须使用 {@code vector_cosine_ops}，且查询的左侧表达式必须与索引定义
  * 完全一致，否则这个索引就是死重量。
  */
@@ -31,7 +31,7 @@ public class ChunkSearchRepository {
      * <p>这道检查是本项目**唯一真正的防线**，不是锦上添花。实测：无维度约束的
      * 列会静默接受任何维度，而只要有一行维度不匹配，该项目里的<em>每一个</em>
      * 相似度查询都会以 22000 失败——一次坏写入就毒死全部检索，直到有索引来
-     * 强制维度为止，而 D015.3 在本批次禁止建那个索引。数据库的 CHECK 只能证明
+     * 强制维度为止——而无维度的列根本建不出索引。数据库的 CHECK 只能证明
      * 单行自洽，它看不见其他行。
      */
     public void writeEmbedding(long projectId, long chunkId, float[] vector) {

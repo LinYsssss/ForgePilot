@@ -10,7 +10,7 @@ import org.springframework.stereotype.Service;
  *
  * <p>下面那句消息永远不会传到调用方：{@code DaoAuthenticationProvider} 会把
  * {@link UsernameNotFoundException} 藏在 {@code BadCredentialsException} 之后，
- * 这正是「用户名不存在」与「口令错误」不可区分的原因（design.md 7）。
+ * 这正是「用户名不存在」与「口令错误」不可区分的原因。
  */
 @Service
 class AccountDetailsService implements UserDetailsService {

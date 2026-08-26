@@ -59,7 +59,7 @@ class KnowledgeController {
      * 批量上传不在这里：一次多文件上传就是前端对本控制器 {@code POST} 的 N 次调用，
      * 每次自己一个事务，因此天然逐文件独立、逐文件有结果。做成一个批量端点要么变成
      * 一个横跨 N 次 embedding 外部调用的长事务（一个文件失败会回滚已经成功的九个），
-     * 要么只是把前端的循环搬进服务端还得另发明一套逐行结果契约（D022）。
+     * 要么只是把前端的循环搬进服务端还得另发明一套逐行结果契约。
      */
     @DeleteMapping("/{documentId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)

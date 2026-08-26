@@ -71,7 +71,7 @@ function pickFiles(event: Event): void {
 }
 
 /**
- * 逐文件独立上传，不是一个批量端点（D022）。每次调用都是后端自己的一个事务，
+ * 逐文件独立上传，不是一个批量端点。每次调用都是后端自己的一个事务，
  * 因此一个文件失败既不会回滚已经成功的那些，也不会阻断后面的；这也避免了一个
  * 横跨 N 次 embedding 外部调用的长事务。
  */
@@ -97,7 +97,7 @@ async function upload(): Promise<void> {
 /**
  * 硬删：chunk 与它的向量是派生数据，随文档消亡，此后 Guidance 与 Review 的检索
  * 都召不回它。需求附件来源的文档不给删除入口——附件关系是需求侧的事实，后端也会
- * 拒绝（D022）。
+ * 拒绝。
  */
 async function remove(document: KnowledgeDocument): Promise<void> {
   const id = projectId.value;

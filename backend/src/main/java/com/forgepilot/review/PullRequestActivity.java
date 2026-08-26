@@ -4,8 +4,8 @@ package com.forgepilot.review;
  * <strong>单个 pull request</strong> 的派生审查活动状态（PRD.md 5）。
  *
  * <p>是六个取值，不是八个。{@code NO_PR} 与 {@code MIXED} 属于需求层面的聚合，
- * 在这里毫无意义——DECISIONS.md D011 明确划定了这个值域，而
- * IMPLEMENTATION-PLAN.md 里的八值清单是两个层面的并集，并非某一层的值域。
+ * 在这里毫无意义——需求修订的不可变身份规则划定了这个值域；
+ * 把两个层面并起来数才会得到八个，而那不是任何一层的值域。
  * 这正是它与 {@link RequirementActivity} 分成两个枚举而不是共用一个的原因：
  * 单一的八值类型会允许给一个 PR 返回 {@code NO_PR}，而那不可能有任何含义。
  *

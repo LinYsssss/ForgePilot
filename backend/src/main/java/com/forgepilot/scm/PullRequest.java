@@ -59,7 +59,7 @@ public class PullRequest {
     private Instant sourceUpdatedAt;
 
     /**
-     * 带全部 patch 的变更文件清单，以 JSONB 存储（D015.7）。是**存下来**而不是
+     * 带全部 patch 的变更文件清单，以 JSONB 存储。是**存下来**而不是
      * 审查时再取，因为指纹的输入必须能从数据库里可复现地还原——否则这一行
      * 根本算不上一个快照。
      */

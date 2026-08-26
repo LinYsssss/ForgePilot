@@ -6,7 +6,7 @@ import java.util.List;
 import tools.jackson.databind.JsonNode;
 
 /**
- * api-contract.md 2.2、2.3、2.4、3.1、3.2 与 3.4 的响应体。
+ * API.md 中审查与 Finding 相关端点的响应体。
  *
  * <p>它们放在同一个文件里，是因为它们本就是同一份契约；每一个都是没有行为的
  * 朴素 record，因此这里不决定任何事情。
@@ -27,7 +27,7 @@ final class ReviewViews {
     private ReviewViews() {
     }
 
-    /** api-contract.md 2.4。一次性决策所产生的三个事实。 */
+    /** 一次性决策所产生的三个事实。 */
     record DecisionResult(ReviewDecision decision, Long decisionBy, Instant decisionAt) {
     }
 
@@ -47,7 +47,7 @@ final class ReviewViews {
             Instant createdAt) {
     }
 
-    /** api-contract.md 2.3。某个 PR 审查历史中的一行；旧行全部保留。 */
+    /** 某个 PR 审查历史中的一行；旧行全部保留。 */
     record ReviewSummary(
             long id,
             String headSha,
@@ -59,13 +59,13 @@ final class ReviewViews {
     }
 
     /**
-     * api-contract.md 2.2。
+     * 一次审查的详情。
      *
      * <p>{@code coverage} 与 {@code acVerdicts} 是从 Review 自己的
      * {@code summary_json} 里原样透传的，而不是在这里重新塑形：那个结构归引擎
      * 切片所有，另造一个只会让页面描述出 Review 从未说过的东西。
      * 因此「字段为 null」与「空数组」是两个不同的答案，
-     * 这正是 D002 对 {@code notReviewed} 的要求——
+     * 这正是对 {@code notReviewed} 的要求——
      * 未被审查的文件绝不能被静默丢弃。
      */
     record ReviewDetail(
@@ -92,7 +92,7 @@ final class ReviewViews {
     }
 
     /**
-     * api-contract.md 3.1。之所以带 {@code acKey} 而不只是 {@code acId}，
+     * 一条 Finding 的视图。之所以带 {@code acKey} 而不只是 {@code acId}，
      * 是因为 ARCHITECTURE.md 3.6 把 {@code ac_key} 定为跨修订稳定的业务身份，
      * 而行 id 绝不能拿来顶替它。
      */
@@ -119,11 +119,11 @@ final class ReviewViews {
             String basisHash) {
     }
 
-    /** api-contract.md 3.2。 */
+    /** 一次 Finding 状态流转的结果。 */
     record FindingStatusResult(FindingStatus status) {
     }
 
-    /** api-contract.md 3.4。 */
+    /** Finding 审计轨迹中的一行。 */
     record FindingEventView(
             long id,
             long actorId,

@@ -22,7 +22,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
-/** Ingestion, D005's copy-on-promote rule, and the role and project boundaries. */
+/** Ingestion, the copy-on-promote rule, and the role and project boundaries. */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
 class KnowledgeServiceTest extends PostgresTestBase {
 
@@ -94,7 +94,7 @@ class KnowledgeServiceTest extends PostgresTestBase {
         KnowledgeDocument original = documents.findByProjectIdAndId(fixture.project, attachment).orElseThrow();
         KnowledgeDocument copy = documents.findByProjectIdAndId(fixture.project, promoted).orElseThrow();
 
-        // D005: the attachment keeps its ownership, so nothing that already
+        // The attachment keeps its ownership, so nothing that already
         // referenced it changes meaning underneath.
         assertThat(original.getSourceType()).isEqualTo(KnowledgeSourceType.REQUIREMENT_ATTACHMENT);
         assertThat(original.getSourceRequirementId()).isEqualTo(fixture.requirement);
@@ -143,7 +143,7 @@ class KnowledgeServiceTest extends PostgresTestBase {
 
     /**
      * 删除是硬删，且级联是应用层显式做的，不是数据库 {@code ON DELETE}——全库只有
-     * {@code pull_request.author_user_id} 一条（D010）。这里同时钉住 AC4：检索只读
+     * {@code pull_request.author_user_id} 一条。这里同时钉住 AC4：检索只读
      * {@code knowledge_chunk}，所以 chunk 被删掉就等于该文档此后不可能被召回。
      * 那一条是本任务里唯一「实现不写代码、正确性完全依赖别处」的验收点，必须直接证明。
      */
@@ -176,7 +176,7 @@ class KnowledgeServiceTest extends PostgresTestBase {
     }
 
     /**
-     * 附件文档被拒绝（D022）：附件关系是需求侧的事实。判定只看本表的
+     * 附件文档被拒绝：附件关系是需求侧的事实。判定只看本表的
      * {@code source_type}，因为 {@code ck_knowledge_document_scope_matches_type} 加上
      * 附件侧 NOT NULL 的 {@code requirement_id} 已经让「公共知识永远进不了附件表」
      * 成为结构事实——这条测试同时证明那个等价关系没有被绕过。

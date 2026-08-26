@@ -39,13 +39,13 @@ import org.springframework.transaction.support.TransactionTemplate;
  * The gateway against a real socket, with no credential in existence.
  *
  * <p>The provider is {@code com.sun.net.httpserver.HttpServer} from the JDK
- * (D015.8): it is a real HTTP/1.1 server, so a timeout can actually fire, a
+ * : it is a real HTTP/1.1 server, so a timeout can actually fire, a
  * malformed body can actually arrive, and — the point of this class — every
  * attempt can be <em>counted</em>. "Exactly one retry" is proved by the number
  * of requests the provider received, never by reading the loop that sends them.
  *
  * <p>It binds port 0 and is injected through {@code forgepilot.ai.base-url},
- * which is only possible because no provider host is hardcoded (D015.8): here
+ * which is only possible because no provider host is hardcoded : here
  * the production requirement and the test seam are the same thing.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)

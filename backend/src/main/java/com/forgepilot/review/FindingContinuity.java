@@ -1,7 +1,7 @@
 package com.forgepilot.review;
 
 /**
- * 相对于同一个 PR 上的上一轮，这条 Finding 是从哪来的（D009、ARCHITECTURE.md 3.6）。
+ * 相对于同一个 PR 上的上一轮，这条 Finding 是从哪来的（ARCHITECTURE.md 3.6）。
  *
  * <p>与 {@link FindingStatus} 正交。被重开的抑制项在这里仍然保持
  * {@code SUPPRESSED}——血缘是关于历史的事实，不会因为有人改了当前状态

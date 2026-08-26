@@ -302,7 +302,7 @@ function exportRequirement(): void {
 
 /**
  * 删除一条**作废**需求。后端做软删：需求离开产品面，而 `ai_call_log` 与
- * `pull_request_requirement_event` 承载的调用审计与既成 PR 关联保持完整（D022）。
+ * `pull_request_requirement_event` 承载的调用审计与既成 PR 关联保持完整。
  * 因此这里的文案说「从列表中移除」而不是「彻底删除」——后者不是实际发生的事。
  */
 async function removeRequirement(): Promise<void> {

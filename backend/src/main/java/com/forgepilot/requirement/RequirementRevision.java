@@ -14,8 +14,7 @@ import org.hibernate.type.SqlTypes;
 
 /**
  * 需求文本的某一个版本，以及该版本对应的质量检查结果。一旦需求离开 DRAFT
- * 它就被冻结：此后任何变更都是发布 {@code seq + 1}，而不是原地编辑
- * （D011、design.md 6.4）。
+ * 它就被冻结：此后任何变更都是发布 {@code seq + 1}，而不是原地编辑。
  */
 @Entity
 @Table(name = "requirement_revision")
@@ -134,7 +133,7 @@ public class RequirementRevision {
 
     /**
      * 原地编辑，只有在需求仍为 DRAFT 时才合法。质量结果描述的是旧文本，
-     * 因此在同一个事务里被清空（design.md 6.4）。
+     * 因此在同一个事务里被清空。
      */
     public void editProse(String title, String background, String description) {
         this.title = title;

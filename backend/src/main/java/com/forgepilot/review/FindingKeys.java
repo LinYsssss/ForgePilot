@@ -10,7 +10,7 @@ import java.util.Locale;
 import java.util.regex.Pattern;
 
 /**
- * 一条 Finding 跨轮次携带的三个确定性 key（D009、ARCHITECTURE.md 3.6.1 与 3.6.2），
+ * 一条 Finding 跨轮次携带的三个确定性 key（ARCHITECTURE.md 3.6.1 与 3.6.2），
  * 计算方式与 {@code ReviewInputFingerprint} 生成摘要的方式一致：
  * 每个字段都用 NUL 字节框起来，而 NUL 不可能出现在路径、证据片段或已存 patch 中，
  * 因此编码是单射的，两份不同的输入不可能碰撞成同一个摘要。
@@ -64,7 +64,7 @@ final class FindingKeys {
      * 把它们折叠会让对其中一个的驳回抑制掉另一个里的 finding。
      * {@code REQUIREMENT} 类 finding 还额外携带 {@code requirementId} 与
      * {@code acKey}；用 {@code acKey} 而不是验收条件的行 id，
-     * 是因为行 id 会随每次修订发布而变，而它所指代的业务身份不会（D011）。
+     * 是因为行 id 会随每次修订发布而变，而它所指代的业务身份不会。
      *
      * <p>结果是一个摘要而不是可读的拼接串，因为那个列是 {@code VARCHAR(255)}：
      * 一个合法的深层路径加上类别就会超长，PostgreSQL 会以 22001 拒绝插入——

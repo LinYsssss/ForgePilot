@@ -24,7 +24,7 @@ import org.springframework.security.web.access.intercept.AuthorizationFilter;
 import tools.jackson.databind.ObjectMapper;
 
 /**
- * 基于服务端进程内 {@code HttpSession} 的表单登录，配合 Cookie 形式的 CSRF（D013.7）。
+ * 基于服务端进程内 {@code HttpSession} 的表单登录，配合 Cookie 形式的 CSRF。
  * 安全过滤器链要回答的一切都写在这里：它的 401 与 403 是在 Spring MVC 运行之前
  * 产生的，因此永远不会到达 {@code ApiExceptionHandler}——若不在此统一处理，
  * 它们就会逃出 ARCHITECTURE.md 2.4 规定的唯一错误体结构。
@@ -36,24 +36,24 @@ class SecurityConfig {
      * 这些响应体的 {@code traceId} 为空，因为这里不写任何日志：
      * {@code ApiExceptionHandler} 只在它同时记录原因的地方才生成 traceId；
      * 而逐响应生成一个值还会让两种登录失败在字节层面变得可区分，
-     * 这是 api-contract.md 1 明令禁止的。
+     * 这是 API.md 明令禁止的。
      */
     private static final ApiError UNAUTHENTICATED =
             new ApiError("unauthorized", "Authentication is required.", "");
     private static final ApiError BAD_CREDENTIALS =
             new ApiError("unauthorized", "Invalid username or password.", "");
-    /** 批次 1 中，访问被拒的唯一来源就是缺失或错误的 CSRF token。 */
+    /** 访问被拒的唯一来源就是缺失或错误的 CSRF token。 */
     private static final ApiError FORBIDDEN =
             new ApiError("forbidden", "The request was rejected.", "");
 
-    /** D013.7：口令哈希使用 Spring Security 默认的 BCrypt。 */
+    /** 口令哈希使用 Spring Security 默认的 BCrypt。 */
     @Bean
     PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
 
     /**
-     * 只有 servlet 应用才有过滤器链，而批次 1 的数据库测试跑在共享同一份
+     * 只有 servlet 应用才有过滤器链，而数据库测试跑在共享同一份
      * 组件扫描的非 Web 上下文里。
      */
     @Bean

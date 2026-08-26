@@ -25,14 +25,14 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
 /**
- * PRD 4 所定义的需求质量检查（IMPLEMENTATION-PLAN Phase 6）：确定性规则，
- * 加上<em>一次</em>结构化 AI 调用，并归属到本次检查所针对的那个修订（D011）。
+ * PRD 4 所定义的需求质量检查：确定性规则，
+ * 加上<em>一次</em>结构化 AI 调用，并归属到本次检查所针对的那个修订。
  *
  * <p>结果是建议。这里既不读也不写 {@code requirement.status}——PRD 5 排除了
  * NEEDS_IMPROVEMENT 这种状态，也排除了自动提升为 READY，因此一个会改动状态的
  * 质量检查等于凭空发明了产品明确决定不要的那个工作流状态。
  *
- * <p>DRAFT 失效逻辑<em>不</em>在这里实现。批次 1 已经让 DRAFT 的原地编辑
+ * <p>DRAFT 失效逻辑<em>不</em>在这里实现。DRAFT 的原地编辑本来就
  * 在同一个事务里清空这三列（{@link RequirementRevision#editProse}）；
  * 本类只负责填充它们，而 {@code RequirementQualityTest} 证明了既有的清空逻辑
  * 依然对本类写入的内容生效。
@@ -46,7 +46,7 @@ class RequirementQualityService {
 
     /**
      * 存进 {@code quality_version}。只要规则集或 Prompt 变了，它就必须跟着变：
-     * 一份存下来的报告只有对着产生它的那个版本才可解读——这与 D009 把确定性
+     * 一份存下来的报告只有对着产生它的那个版本才可解读——这与把确定性
      * 规则版本放进 {@code basis_hash} 是同一个道理。
      */
     static final String QUALITY_VERSION = "quality-1";
@@ -267,14 +267,14 @@ class RequirementQualityService {
      * 一条语句，并像本代码库里每一次写入那样以 {@code project_id} 限定作用域。
      * 它**有意**不走实体：{@link RequirementRevision} 对这三列没有暴露任何 setter
      * ——它唯一的修改方法 {@code editProse} 是用来<em>清空</em>它们的——
-     * 而这种不对称正是批次 1 的保证：DRAFT 编辑之后绝不可能再被一个过期结果
+     * 而这种不对称正是那条保证：DRAFT 编辑之后绝不可能再被一个过期结果
      * flush 回去。这里用自动提交就够了，因为只有一行一条语句；
      * 套一个事务对原子性没有任何增益。
      *
      * <p>已知竞态：如果 provider 调用在途期间有一次 DRAFT 原地编辑提交了，
      * 它会被本次写入覆盖，留下一份描述**旧文本**的结果。另一条路——跨一个
      * 可能长达 120 秒的调用持有事务——正是本代码库已经明确拒绝的做法。
-     * 两个操作都要求 LEADER，而一个项目恰好只有一个 LEADER（D004），
+     * 两个操作都要求 LEADER，而一个项目恰好只有一个 LEADER，
      * 因此这需要同一个人开着第二个标签页同时编辑才会发生。
      */
     private void store(long projectId, QualityReport report) {

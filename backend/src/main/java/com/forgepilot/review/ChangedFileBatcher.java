@@ -12,7 +12,7 @@ import org.springframework.stereotype.Component;
 
 /**
  * 把一个 PR 的变更文件切成若干批次，并运行一次 Review 的分批阶段
- * （D002、ARCHITECTURE.md 3.4）。
+ * （ARCHITECTURE.md 3.4）。
  *
  * <p>“一次 Review”不等于“一次 LLM 调用”，但它仍然是**一条**流水线。
  * 小 PR 只产生一个批次，走的是与大 PR 完全相同的路径；这里没有捷径分支，
@@ -42,7 +42,7 @@ public class ChangedFileBatcher {
 
     /**
      * 这三个上界是配置项，而不是写死在代码里的常量。ARCHITECTURE.md 7.2
-     * 依据 4 GB 目标机上的 Phase 6 最大预算实测冻结了它们的默认值。
+     * 依据 4 GB 目标机上的最大预算实测冻结了它们的默认值。
      * 保持可配置，使得部署方可以显式覆盖它们，
      * 而不必因此另开一条分批路径。
      */
@@ -64,7 +64,7 @@ public class ChangedFileBatcher {
      * <p>一个文件会被放进 {@code notReviewed}，当它超出变更文件数上界、
      * 当 provider 压根没提供 patch（二进制文件，或超出 provider 自身的 diff 上限），
      * 或者当它连完整的一行都塞不进一个批次时。过长的 patch 会在行边界处裁剪
-     * 并加以标注——这既是 7.2 的规则，也是 D002 的精神：可以裁，
+     * 并加以标注——这既是 7.2 的规则，也是分批契约的精神：可以裁，
      * 但绝不能悄悄地裁。
      */
     public Plan plan(List<ChangedFile> changedFiles) {

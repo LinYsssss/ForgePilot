@@ -9,7 +9,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.data.domain.PageRequest;
 
 /**
- * 其他功能模块读取账号数据的**唯一**途径（D013.6）。它是查询 facade 而非
+ * 其他功能模块读取账号数据的**唯一**途径。它是查询 facade 而非
  * 仓库：各功能模块因此既接触不到 {@code UserAccountRepository}，也接触不到
  * 会话如何建立的任何细节。
  */

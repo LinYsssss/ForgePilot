@@ -13,7 +13,7 @@ import org.springframework.data.jpa.repository.Query;
  * 裸 id 查询（ARCHITECTURE.md 2.3）。
  *
  * <p>抓取图里带上了当前修订，因为每个调用方都需要它的标题与 seq：
- * {@code requirement} 行本身不携带任何文本（D011）。
+ * {@code requirement} 行本身不携带任何文本。
  */
 public interface RequirementRepository extends JpaRepository<Requirement, Long> {
 

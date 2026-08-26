@@ -67,7 +67,7 @@ class ScmRepositoryService {
      * <p>这是一条跨行规则——本行的列能否改动，取决于另一张表里有没有行——
      * 因此任何即时约束都无法表达它，而 ARCHITECTURE.md 2.1 只为 {@code finding}
      * 授权了约束触发器。于是它成为一条与「至少有一个 LEADER」同类的
-     * 逐次提交服务层不变式（D013.9），在先取得的行锁下于此处强制执行，
+     * 逐次提交服务层不变式，在先取得的行锁下于此处强制执行，
      * 并且<strong>不由数据库强制</strong>。
      */
     @Transactional
