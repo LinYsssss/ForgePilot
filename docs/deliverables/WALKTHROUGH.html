@@ -1,0 +1,1055 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>跟着一次 PR 走完 ForgePilot</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=Noto+Serif+SC:wght@600;700&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+  :root {
+    --paper: #fbfbfc; --surface: #f4f5f8; --surface-2: #eceef3;
+    --ink: #16191f; --ink-2: #3b414d; --muted: #5c6472; --subtle: #8891a0;
+    --rule: #e2e5ea; --rule-strong: #cbd1da;
+    --accent: #2c5fd6; --accent-soft: #e8eefb;
+    --danger: #b4232e; --danger-soft: #fbeaec;
+    --warn: #8a5a00; --warn-soft: #fdf3e0;
+    --ok: #1d6b47; --ok-soft: #e6f3ec;
+    --sans: "Noto Sans SC", system-ui, -apple-system, sans-serif;
+    --serif: "Noto Serif SC", Georgia, "Songti SC", serif;
+    --mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+    --measure: 68ch;
+    --s1: .25rem; --s2: .5rem; --s3: .75rem; --s4: 1rem;
+    --s5: 1.5rem; --s6: 2rem; --s7: 3rem; --s8: 4.5rem;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #12141a; --surface: #191c23; --surface-2: #22262f;
+      --ink: #e6e8ec; --ink-2: #c3c8d2; --muted: #99a1b0; --subtle: #737c8c;
+      --rule: #2a2f3a; --rule-strong: #3a4150;
+      --accent: #7ba3f5; --accent-soft: #1a2440;
+      --danger: #f0808c; --danger-soft: #331a1e;
+      --warn: #e0aa55; --warn-soft: #2e2415;
+      --ok: #6cc59a; --ok-soft: #16291f;
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #12141a; --surface: #191c23; --surface-2: #22262f;
+    --ink: #e6e8ec; --ink-2: #c3c8d2; --muted: #99a1b0; --subtle: #737c8c;
+    --rule: #2a2f3a; --rule-strong: #3a4150;
+    --accent: #7ba3f5; --accent-soft: #1a2440;
+    --danger: #f0808c; --danger-soft: #331a1e;
+    --warn: #e0aa55; --warn-soft: #2e2415;
+    --ok: #6cc59a; --ok-soft: #16291f;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0; background: var(--paper); color: var(--ink);
+    font: 400 16px/1.75 var(--sans); -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 60rem; margin: 0 auto; padding: var(--s6) var(--s5) var(--s8); }
+
+  header.top { padding-bottom: var(--s5); border-bottom: 3px solid var(--ink); margin-bottom: var(--s6); }
+  .eyebrow {
+    font: 700 .6875rem/1.4 var(--mono); letter-spacing: .14em;
+    text-transform: uppercase; color: var(--accent); margin: 0 0 var(--s3);
+  }
+  h1 { font: 700 clamp(1.875rem, 4.5vw, 2.75rem)/1.15 var(--serif); margin: 0 0 var(--s4); letter-spacing: -.01em; text-wrap: balance; }
+  .standfirst { max-width: var(--measure); margin: 0; color: var(--ink-2); font-size: 1.0625rem; line-height: 1.8; }
+
+  h2 { font: 700 clamp(1.25rem, 2.6vw, 1.625rem)/1.3 var(--serif); margin: 0 0 var(--s4); padding-bottom: var(--s3); border-bottom: 1px solid var(--rule-strong); text-wrap: balance; }
+  h3 { font: 700 1.0625rem/1.4 var(--sans); margin: var(--s5) 0 var(--s3); }
+  h4 { font: 700 .875rem/1.5 var(--sans); margin: var(--s4) 0 var(--s2); color: var(--ink-2); }
+  p, ul, ol { max-width: var(--measure); }
+  p { margin: 0 0 var(--s4); }
+  ul, ol { margin: 0 0 var(--s4); padding-left: 1.35rem; }
+  li { margin-bottom: var(--s2); }
+  a { color: var(--accent); text-underline-offset: 2px; }
+  a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+  strong { font-weight: 700; }
+
+  code { font: 400 .875em/1.5 var(--mono); background: var(--surface-2); padding: .1em .35em; border-radius: 3px; word-break: break-word; }
+  pre { margin: 0 0 var(--s3); padding: var(--s4); overflow-x: auto; background: var(--surface); border: 1px solid var(--rule); border-left: 3px solid var(--accent); font: 400 .8125rem/1.7 var(--mono); }
+  pre code { background: none; padding: 0; font-size: inherit; }
+  pre .c { color: var(--subtle); }
+  pre .k { color: var(--accent); font-weight: 500; }
+  pre .s { color: var(--ok); }
+  .srcpath { margin: 0 0 var(--s2); font: 500 .6875rem/1.6 var(--mono); color: var(--muted); letter-spacing: .02em; }
+
+  /* 站点 —— 编号是真实执行顺序，不是装饰 */
+  .stop { margin-bottom: var(--s8); scroll-margin-top: var(--s4); }
+  .stop-head { display: flex; align-items: flex-start; gap: var(--s4); margin-bottom: var(--s4); }
+  .stop-no {
+    flex: 0 0 auto; width: 2.75rem; height: 2.75rem; display: grid; place-items: center;
+    border: 2px solid var(--accent); border-radius: 50%;
+    font: 700 1rem/1 var(--mono); color: var(--accent); font-variant-numeric: tabular-nums;
+  }
+  .stop-title { flex: 1; min-width: 0; }
+  .stop-title h2 { border: 0; padding: 0; margin: 0 0 var(--s1); }
+  .stop-file { font: 500 .75rem/1.6 var(--mono); color: var(--muted); word-break: break-all; }
+
+  .plain {
+    max-width: var(--measure); margin: 0 0 var(--s4); padding: var(--s4) var(--s5);
+    background: var(--accent-soft); border-left: 3px solid var(--accent);
+  }
+  .plain > :last-child { margin-bottom: 0; }
+  .plain .label { display: block; font: 700 .6875rem/1.5 var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--accent); margin-bottom: var(--s2); }
+
+  .trap { max-width: var(--measure); margin: 0 0 var(--s4); padding: var(--s4) var(--s5); background: var(--danger-soft); border-left: 3px solid var(--danger); }
+  .trap > :last-child { margin-bottom: 0; }
+  .trap .label { display: block; font: 700 .6875rem/1.5 var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--danger); margin-bottom: var(--s2); }
+
+  .aside { max-width: var(--measure); margin: 0 0 var(--s4); padding: var(--s4) var(--s5); background: var(--surface); border-left: 3px solid var(--rule-strong); font-size: .9375rem; }
+  .aside > :last-child { margin-bottom: 0; }
+  .aside .label { display: block; font: 700 .6875rem/1.5 var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin-bottom: var(--s2); }
+
+  .lines { max-width: var(--measure); margin: 0 0 var(--s4); padding: 0; list-style: none; }
+  .lines > li { display: grid; grid-template-columns: auto 1fr; gap: var(--s3); margin-bottom: var(--s2); align-items: baseline; }
+  .lines code { white-space: nowrap; }
+
+  .tw { overflow-x: auto; margin: 0 0 var(--s4); border: 1px solid var(--rule); }
+  table { width: 100%; border-collapse: collapse; font-size: .8125rem; }
+  th, td { padding: .45rem var(--s4); text-align: left; vertical-align: top; border-bottom: 1px solid var(--rule); }
+  thead th { background: var(--surface); font: 700 .6875rem/1.6 var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); white-space: nowrap; }
+  tbody tr:last-child td { border-bottom: 0; }
+  td.f { font: 500 .78125rem/1.6 var(--mono); }
+
+  .route { display: grid; gap: 1px; margin: 0 0 var(--s6); background: var(--rule); border: 1px solid var(--rule); }
+  .route a { display: grid; grid-template-columns: 2.2rem 1fr; gap: var(--s3); padding: .45rem var(--s4); background: var(--paper); color: var(--ink); text-decoration: none; font-size: .875rem; }
+  .route a:hover { background: var(--surface); }
+  .route .n { font: 700 .75rem/1.7 var(--mono); color: var(--accent); font-variant-numeric: tabular-nums; }
+  .route .w { color: var(--muted); font-size: .8125rem; }
+
+  footer.end { margin-top: var(--s8); padding-top: var(--s5); border-top: 3px solid var(--ink); max-width: var(--measure); color: var(--muted); font-size: .875rem; }
+
+  @media (prefers-reduced-motion: reduce) { * { animation-duration: .01ms !important; transition-duration: .01ms !important; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="top">
+  <p class="eyebrow">ForgePilot 代码走查 · 面向会编程但不熟这套技术栈的读者</p>
+  <h1>跟着一次 PR 走完 ForgePilot</h1>
+  <p class="standfirst">
+    ForgePilot 后端有 175 个类。想读懂它，从「第一个类」开始读是没用的——因为你不知道谁调用谁。
+    这份文档换一个办法：<strong>拿一次真实的 pull request，从它敲开服务器的那一瞬间，一路跟到审查结果落进数据库</strong>。
+    途中经过哪个类就讲那个类，贴的是仓库里的真实代码。走完这 12 站，你就摸清了这个系统的主干。
+  </p>
+</header>
+
+<div class="aside">
+  <span class="label">读之前需要什么</span>
+  <p>
+    会写代码（任何语言都行），知道 HTTP 请求和 JSON 长什么样。<strong>不需要</strong>用过 Spring Boot、Vue 或 PostgreSQL——
+    途中每个框架概念第一次出现时都会解释。遇到不认识的词，<a href="#glossary">末尾有术语速查</a>。
+  </p>
+</div>
+
+<h3>全程路线</h3>
+<div class="route">
+  <a href="#s1"><span class="n">01</span><span>请求到达：一个公开、未认证的端点 <span class="w">GitHubWebhookController</span></span></a>
+  <a href="#s2"><span class="n">02</span><span>先验明身份：对原始字节算签名 <span class="w">WebhookSignatureVerifier</span></span></a>
+  <a href="#s3"><span class="n">03</span><span>不信载荷，回头再问一次 <span class="w">GitHubClient</span></span></a>
+  <a href="#s4"><span class="n">04</span><span>写进数据库，并发出一个事件 <span class="w">PullRequestSyncService</span></span></a>
+  <a href="#s5"><span class="n">05</span><span>事件被同步接住 <span class="w">PullRequestChangedListener</span></span></a>
+  <a href="#s6"><span class="n">06</span><span>创建一次 Review：冻结上下文 <span class="w">ReviewService</span></span></a>
+  <a href="#s7"><span class="n">07</span><span>后台线程「抢」这个任务 <span class="w">ReviewClaimRepository</span></span></a>
+  <a href="#s8"><span class="n">08</span><span>worker 主流程与三道围栏 <span class="w">ReviewExecutor</span></span></a>
+  <a href="#s9"><span class="n">09</span><span>组装上下文、切成批次 <span class="w">ChangedFileBatcher</span></span></a>
+  <a href="#s10"><span class="n">10</span><span>调模型：唯一的出口 <span class="w">AiGateway</span></span></a>
+  <a href="#s11"><span class="n">11</span><span>校验回答：让空报告无法表达 <span class="w">ReviewOutputValidator</span></span></a>
+  <a href="#s12"><span class="n">12</span><span>落库：三个哈希与那把外键锁 <span class="w">ReviewPipeline</span></span></a>
+</div>
+
+<!-- ══════════ 01 ══════════ -->
+<div class="stop" id="s1">
+  <div class="stop-head">
+    <div class="stop-no">01</div>
+    <div class="stop-title">
+      <h2>请求到达</h2>
+      <div class="stop-file">backend/src/main/java/com/forgepilot/scm/github/GitHubWebhookController.java</div>
+    </div>
+  </div>
+
+  <div class="plain">
+    <span class="label">这一站在做什么</span>
+    <p>
+      有人在 GitHub 上开了一个 pull request。GitHub 会主动往我们服务器上一个约定好的地址发一个 HTTP POST——
+      这叫 <strong>webhook</strong>（「回调钩子」：你事先告诉 GitHub「有事就打这个电话」，它就在事情发生时打过来）。
+      这个类就是接电话的人。
+    </p>
+  </div>
+
+  <p class="srcpath">真实代码</p>
+  <pre><code><span class="k">@PostMapping</span>(PATH)                              <span class="c">// PATH = "/api/scm/github/webhook"</span>
+<span class="k">@ResponseStatus</span>(HttpStatus.ACCEPTED)             <span class="c">// 成功就回 202</span>
+<span class="k">void</span> receive(<span class="k">@RequestBody</span> <span class="k">byte</span>[] body,
+        <span class="k">@RequestHeader</span>(name = <span class="s">"X-Hub-Signature-256"</span>, required = <span class="k">false</span>) String signature,
+        <span class="k">@RequestHeader</span>(name = <span class="s">"X-GitHub-Event"</span>, required = <span class="k">false</span>) String event) {</code></pre>
+
+  <ul class="lines">
+    <li><code>@PostMapping</code><span>Spring Boot 的注解，意思是「HTTP POST 打到这个路径时，执行下面这个方法」。你不用自己写路由表，框架扫到这个注解就接好线了。</span></li>
+    <li><code>byte[] body</code><span><strong>这里是关键</strong>。请求体没有被解析成对象，而是拿的<strong>原始字节</strong>。原因见下一站。</span></li>
+    <li><code>required = false</code><span>这两个 header 允许缺失。缺了不是框架报错，而是走我们自己的拒绝逻辑——错误信息要由我们控制。</span></li>
+  </ul>
+
+  <p class="srcpath">紧接着的保护块</p>
+  <pre><code>ScmRepository repository;
+JsonNode payload;
+<span class="k">try</span> {
+    payload = parse(body);
+    JsonNode repositoryNode = payload.path(<span class="s">"repository"</span>);
+    repository = sync.authenticate(ScmProvider.GITHUB,
+            instanceIdentityOf(required(repositoryNode.path(<span class="s">"html_url"</span>))),
+            required(repositoryNode.path(<span class="s">"id"</span>)), body, signature);
+} <span class="k">catch</span> (ApiException rejected) {
+    <span class="k">throw</span> rejected;
+} <span class="k">catch</span> (RuntimeException malformed) {
+    <span class="k">throw</span> unverifiable();                        <span class="c">// 一律答成「无法验证」</span>
+}</code></pre>
+
+  <div class="trap">
+    <span class="label">为什么要套这个 try</span>
+    <p>
+      <strong>这个端点是公开的、任何人都能打。</strong>如果一个恶意载荷能让代码抛出一个意料之外的异常，
+      Spring 默认会返回一个带堆栈信息的错误页——那既泄露内部结构，又不符合我们统一的错误格式。
+    </p>
+    <p>
+      代码注释里点了两个真实能触发的例子：在该出现字符串的位置塞一个 JSON 对象，
+      或者构造一个超过 63 字符的域名标签让 <code>IDN.toASCII</code> 炸掉。
+    </p>
+    <p>
+      所以<strong>校验完成之前的每一种失败，都答得和「签名错误」一模一样</strong>。
+      攻击者无法通过错误信息的差异来试探——这叫<strong>不可区分性</strong>，
+      和「用户名不存在」与「密码错误」必须同答是同一个道理。
+    </p>
+  </div>
+
+  <p class="srcpath">最后两行</p>
+  <pre><code><span class="k">if</span> (!PULL_REQUEST_EVENT.equals(event)) {
+    <span class="k">return</span>;                                     <span class="c">// 已验明身份，但本部署对这类事件无事可做</span>
+}
+sync.apply(repository, github.fetch(repository, pullRequestNumber(payload)));</code></pre>
+  <p>
+    第一段处理的是 GitHub 在你创建 hook 时发来的那个 <code>ping</code>：<strong>它是合法的，只是我们不关心</strong>。
+    最后一行是本站的出口——注意它<strong>先 <code>fetch</code> 再 <code>apply</code></strong>，这是第 3 站的主题。
+  </p>
+
+  <div class="aside">
+    <span class="label">一个容易被忽略的设计</span>
+    <p>
+      路径是 <code>/api/scm/github/webhook</code>，<strong>里面没有 projectId</strong>。
+      因为 GitHub 不知道你的项目编号，它只知道自己那个仓库。
+      所以定位项目的办法是：从载荷里取仓库的 <code>html_url</code> 和 <code>id</code>，反查我们库里哪个项目接了这个仓库。
+    </p>
+  </div>
+</div>
+
+<!-- ══════════ 02 ══════════ -->
+<div class="stop" id="s2">
+  <div class="stop-head">
+    <div class="stop-no">02</div>
+    <div class="stop-title">
+      <h2>先验明身份</h2>
+      <div class="stop-file">backend/src/main/java/com/forgepilot/scm/WebhookSignatureVerifier.java</div>
+    </div>
+  </div>
+
+  <div class="plain">
+    <span class="label">这一站在做什么</span>
+    <p>
+      这个端点谁都能打，那怎么确认这个请求真的来自 GitHub、而不是有人伪造的？
+      办法是<strong>共享密钥</strong>：你在 GitHub 上配 hook 时设一个密钥，我们库里也存一份。
+      GitHub 发请求时，用这个密钥对请求体算出一个指纹放在 header 里；我们用自己那份密钥重算一遍，两个指纹一致就说明对方也知道密钥。
+    </p>
+    <p>这个「用密钥对内容算指纹」的算法叫 <strong>HMAC</strong>。</p>
+  </div>
+
+  <p class="srcpath">真实代码</p>
+  <pre><code><span class="k">boolean</span> matches(<span class="k">byte</span>[] body, String secret, String signatureHeader) {
+    <span class="k">if</span> (signatureHeader == <span class="k">null</span> || !signatureHeader.startsWith(GITHUB_PREFIX)) {
+        <span class="k">return</span> <span class="k">false</span>;
+    }
+    <span class="k">byte</span>[] expected = HexFormat.of()
+            .formatHex(hmac(secret.getBytes(UTF_8), body))
+            .getBytes(UTF_8);
+    <span class="k">byte</span>[] provided = signatureHeader.substring(GITHUB_PREFIX.length())
+            .toLowerCase(Locale.ROOT).getBytes(UTF_8);
+    <span class="c">// 常数时间比较，且对长度安全：被截断的十六进制摘要只会判为不相等。</span>
+    <span class="k">return</span> MessageDigest.isEqual(expected, provided);
+}</code></pre>
+
+  <div class="trap">
+    <span class="label">两个不能改的细节</span>
+    <p>
+      <strong>一、HMAC 必须覆盖原始字节，而不是解析后再重新序列化的 JSON。</strong>
+      这就是上一站为什么用 <code>byte[] body</code>。JSON 解析再序列化会改变字节——键的顺序、空格、数字格式都可能变，
+      指纹就对不上了。所以原始字节必须一路带到这里。
+    </p>
+    <p>
+      <strong>二、比较必须用 <code>MessageDigest.isEqual</code>，不能用 <code>equals</code> 或 <code>==</code>。</strong>
+      普通的字符串比较发现第一个不同的字符就立刻返回，所以「第一个字符就错」比「只有最后一个字符错」返回得更快。
+      攻击者可以测量这个时间差，一个字符一个字符地把正确签名试出来——这叫<strong>时序攻击</strong>。
+      <code>MessageDigest.isEqual</code> 无论内容如何都花同样的时间。
+    </p>
+  </div>
+
+  <div class="aside">
+    <span class="label">GitLab 那半边</span>
+    <p>
+      GitLab 有两代机制：新版按 Standard Webhooks 规范签名，老版直接发明文密钥。代码里的规则是——
+      <strong>如果新版签名存在但验不过，绝不降级去试老版</strong>。
+      否则攻击者只要构造一个「新版签名故意写错」的请求，就能把整个校验降到更弱的那条路上。
+    </p>
+  </div>
+</div>
+
+<!-- ══════════ 03 ══════════ -->
+<div class="stop" id="s3">
+  <div class="stop-head">
+    <div class="stop-no">03</div>
+    <div class="stop-title">
+      <h2>不信载荷，回头再问一次</h2>
+      <div class="stop-file">backend/src/main/java/com/forgepilot/scm/github/GitHubClient.java</div>
+    </div>
+  </div>
+
+  <div class="plain">
+    <span class="label">这一站在做什么</span>
+    <p>
+      签名已经验过了，载荷确实来自 GitHub。但代码<strong>依然不用载荷里的内容</strong>，
+      而是拿着 PR 编号<strong>主动向 GitHub 的 API 再读一次</strong>。
+    </p>
+    <p>
+      为什么？因为 webhook 只是一个<strong>信号</strong>——「有事发生了」。载荷可能是旧的（重发的投递）、
+      可能是残缺的（不同事件类型给的字段不一样）。而这次主动读取拿到的是<strong>当下的权威状态</strong>。
+      这个区分在代码里有名字：webhook 是信号，<code>PullRequestSnapshot</code> 才是事实。
+    </p>
+  </div>
+
+  <p class="srcpath">真实代码 —— 一个看起来很啰嗦、但极其重要的方法</p>
+  <pre><code><span class="k">private static</span> String required(JsonNode parent, String field, String label) {
+    JsonNode node = parent.path(field);
+    <span class="k">if</span> (!node.isValueNode() || node.isNull()) {
+        <span class="k">throw</span> ApiException.unprocessable(
+                <span class="s">"The provider's pull request is missing "</span> + label + <span class="s">"."</span>);
+    }
+    String value = node.asString();
+    <span class="k">if</span> (value.isBlank()) {
+        <span class="k">throw</span> ApiException.unprocessable(
+                <span class="s">"The provider's pull request has an empty "</span> + label + <span class="s">"."</span>);
+    }
+    <span class="k">return</span> value;
+}</code></pre>
+
+  <div class="trap">
+    <span class="label">这个方法为什么必须存在</span>
+    <p>
+      Jackson（Java 的 JSON 库）的 <code>JsonNode.asString()</code> 对<strong>缺失的节点和 null 节点都返回空字符串 <code>""</code></strong>，
+      而不是抛异常。看起来很宽容，实际是个陷阱：
+    </p>
+    <ul>
+      <li>如果不检查，缺失的 <code>base.sha</code> 会变成 <code>base_sha = ""</code> 写进数据库。</li>
+      <li>数据库那一列是 <code>NOT NULL</code>——而 <code>""</code> <strong>满足</strong> <code>NOT NULL</code>，所以数据库抓不住。</li>
+      <li>然后 diff 指纹会基于一个空 SHA 算出来，这次 Review 的身份从此就是错的。</li>
+    </ul>
+    <p>
+      <code>author_external_user_id</code> 更糟：它是<strong>授权键</strong>——系统靠它判断「这个 PR 是不是你开的」。
+      如果它变成 <code>""</code>，所有「幽灵作者」的 PR 会共享同一个身份，权限就串了。
+    </p>
+    <p><strong>所以规则是：权威字段缺席、为 null、或是个容器，都必须大声失败，而不是存下坏数据。</strong></p>
+  </div>
+
+  <div class="aside">
+    <span class="label">另一条：代码里绝不硬编码 host</span>
+    <p>
+      请求的基地址来自数据库里那一列 <code>api_base</code>，不是写死的 <code>api.github.com</code>。
+      这不是为了测试方便——是因为自建 GitHub Enterprise / GitLab 实例必须能用。
+      而同一个设计顺带让集成测试能把仓库指向一个本地回环的桩服务，不需要真实凭据。
+    </p>
+    <p>
+      每次调用还会用 <code>OutboundUrlPolicy</code> <strong>重新</strong>校验地址一次——因为这一列可由项目负责人配置，
+      而安全策略可能在此期间收紧了。这是防 <strong>SSRF</strong>（诱导服务器去访问内网地址）的那道闸。
+    </p>
+  </div>
+</div>
+
+<!-- ══════════ 04 ══════════ -->
+<div class="stop" id="s4">
+  <div class="stop-head">
+    <div class="stop-no">04</div>
+    <div class="stop-title">
+      <h2>写进数据库，并发出一个事件</h2>
+      <div class="stop-file">backend/src/main/java/com/forgepilot/scm/PullRequestSyncService.java</div>
+    </div>
+  </div>
+
+  <div class="plain">
+    <span class="label">这一站在做什么</span>
+    <p>
+      把「已验明身份的投递 + 权威快照」变成数据库里的一行 <code>pull_request</code>。
+      如果这个 PR 已经存在（比如作者又推了一个 commit），就更新它；不存在就新建。
+      最后<strong>发出一个进程内事件</strong>，通知下游「这个 PR 变了」。
+    </p>
+  </div>
+
+  <p class="srcpath">真实代码（节选主干）</p>
+  <pre><code><span class="k">public void</span> apply(ScmRepository detached, PullRequestSnapshot snapshot) {
+    ScmRepository repository = repositories
+            .findWithLockByProjectIdAndId(detached.getProjectId(), detached.getId())
+            .orElseThrow(PullRequestSyncService::unauthenticated);
+
+    String fingerprint = ReviewInputFingerprint.of(repository.getProvider().name(),
+            repository.getInstanceIdentity(), repository.getExternalId(), snapshot);
+    String manifest = manifest(snapshot.changedFiles());
+
+    PullRequest existing = pullRequests
+            .findWithLockByProjectIdAndRepositoryIdAndExternalNumber(
+                    projectId, repository.getId(), snapshot.externalNumber())
+            .orElse(<span class="k">null</span>);
+
+    <span class="k">if</span> (existing != <span class="k">null</span>) {
+        <span class="k">if</span> (isOlderThan(snapshot.sourceUpdatedAt(), existing.getSourceUpdatedAt())) {
+            <span class="k">return</span>;                                <span class="c">// 乱序到达的旧投递，丢弃</span>
+        }
+        existing.applySnapshot(...);
+        existing.mapAuthor(authors.userIdFor(projectId, snapshot.authorExternalUserId()));
+        pullRequests.flush();
+        publish(existing);
+        <span class="k">return</span>;
+    }
+    <span class="c">// ... 新建分支，末尾同样 publish(created)</span>
+}</code></pre>
+
+  <ul class="lines">
+    <li><code>findWithLock…</code><span><strong>行锁</strong>。读这一行的同时锁住它，直到本次事务结束别人不能改。否则两个 webhook 同时到达会互相覆盖。</span></li>
+    <li><code>fingerprint</code><span>把「仓库身份 + head + 变更清单」算成一个哈希。它回答「这是不是同一次审查」——第 6 站会用到。</span></li>
+    <li><code>isOlderThan</code><span>网络投递不保证顺序。带着更旧时间戳的投递必须<strong>丢弃</strong>，否则新状态会被旧状态覆盖。</span></li>
+    <li><code>publish(…)</code><span>发事件。注意它在 <code>return</code> 之前、且在<strong>同一个事务内部</strong>。</span></li>
+  </ul>
+
+  <div class="aside">
+    <span class="label">什么是「事务」，为什么这里反复强调</span>
+    <p>
+      数据库<strong>事务</strong>是一组操作的「全有或全无」包装：要么全部生效，要么全部不生效，中间状态外界看不到。
+      Spring 里给方法加 <code>@Transactional</code> 就开一个。
+    </p>
+    <p>
+      这里为什么重要：事件在事务<strong>内部</strong>发布，且监听器是<strong>同步</strong>的。
+      所以下游创建 Review 这件事，和更新 PR 这件事，在同一个事务里。
+      结果是<strong>不存在「PR 已更新但 Review 没建」的已提交状态</strong>——要么两件都成了，要么两件都没发生。
+    </p>
+  </div>
+
+  <div class="trap">
+    <span class="label">变更文件清单是「存下来」的，不是「用时再拉」</span>
+    <p>
+      整份清单连同每个文件的 patch，作为<strong>一个</strong> JSONB 值（PostgreSQL 里可查询的 JSON 类型）存在这一行上。
+      为什么不等要用的时候再向 GitHub 拉？因为那样每次重看审查结果都可能拿到<strong>不同的</strong> diff——
+      而这次审查的结论是针对当时那份 diff 得出的。证据必须冻结。
+    </p>
+    <p>超出上限时<strong>入库显式失败</strong>，而不是静默截断——否则日后 Review 会被告知它「看过」一份其实不完整的清单。</p>
+  </div>
+</div>
+
+<!-- ══════════ 05 ══════════ -->
+<div class="stop" id="s5">
+  <div class="stop-head">
+    <div class="stop-no">05</div>
+    <div class="stop-title">
+      <h2>事件被同步接住</h2>
+      <div class="stop-file">backend/src/main/java/com/forgepilot/review/PullRequestChangedListener.java</div>
+    </div>
+  </div>
+
+  <div class="plain">
+    <span class="label">这一站在做什么</span>
+    <p>
+      上一站发出的事件在这里被接住。这是<strong>进程内事件</strong>——不是消息队列，就是同一个 JVM 里的一次方法调用，
+      Spring 帮你把「谁发」和「谁收」解开耦合。
+    </p>
+  </div>
+
+  <div class="aside">
+    <span class="label">为什么要用事件，而不是直接调用</span>
+    <p>
+      因为<strong>依赖方向</strong>。这个系统有一条硬规则：<code>review</code> 可以依赖 <code>scm</code>，
+      但 <code>scm</code> <strong>不能</strong>依赖 <code>review</code>。如果 <code>PullRequestSyncService</code> 直接
+      <code>new ReviewService()</code> 调过去，依赖图上就出现了一个环——而这条规则由 <code>ArchitectureRulesTest</code>
+      在每次构建时用 <strong>ArchUnit</strong>（一个专门检查架构约束的测试库）强制。
+    </p>
+    <p>
+      事件把箭头反了过来：<code>scm</code> 只是「广播一件事发生了」，它不知道谁在听；
+      <code>review</code> 主动去听。编译期的依赖方向仍然是 <code>review → scm</code>。
+    </p>
+  </div>
+
+  <div class="trap">
+    <span class="label">必须是同步监听器</span>
+    <p>
+      Spring 还提供 <code>@TransactionalEventListener</code>，它在事务<strong>提交后</strong>才执行。
+      这里<strong>不能</strong>用它——那样「PR 已提交、Review 还没建」就成了一个真实存在的已提交状态，
+      而如果紧接着进程崩溃，这个 PR 就永远不会有 Review 了。
+    </p>
+    <p>
+      顺带一个实现期的坑：这个类和另外两个模块的同类监听器起初都叫
+      <code>ProjectMemberRemovingListener</code>——Spring 默认拿<strong>简单类名</strong>做 bean 名字，
+      三个同名直接 <code>ConflictingBeanDefinitionException</code> 启动失败。所以现在它们各有不同的名字。
+    </p>
+  </div>
+</div>
+
+<!-- ══════════ 06 ══════════ -->
+<div class="stop" id="s6">
+  <div class="stop-head">
+    <div class="stop-no">06</div>
+    <div class="stop-title">
+      <h2>创建一次 Review：冻结上下文</h2>
+      <div class="stop-file">backend/src/main/java/com/forgepilot/review/ReviewService.java · Review.java</div>
+    </div>
+  </div>
+
+  <div class="plain">
+    <span class="label">这一站在做什么</span>
+    <p>
+      在 <code>review</code> 表里建一行，状态是 <code>PENDING</code>（等着被执行）。
+      关键在于：这一行<strong>把这次审查的全部输入都冻结了下来</strong>——
+      哪个 PR 的哪个 head、哪份 diff（用指纹标识）、哪一版需求、以及当时那份变更文件清单。
+    </p>
+  </div>
+
+  <div class="aside">
+    <span class="label">「一次 Review」的身份是什么</span>
+    <p>
+      是<strong>那组输入</strong>，不是那个 PR。所以：作者推一个新 commit → head 变了 → 指纹变了 → 那是一次<strong>新的</strong> Review，
+      之前那次成为历史记录（页面上显示「已过期」）而不是被覆盖。
+    </p>
+    <p>
+      这也是为什么系统能诚实地说「这条审查结论是针对当时那份代码的」——因为它真的把当时那份代码存下来了。
+    </p>
+  </div>
+
+  <div class="trap">
+    <span class="label">数据库层面的保护</span>
+    <p>
+      这些身份列不是靠「大家都别改」维持的。数据库上有<strong>触发器</strong>（trigger：数据写入时自动执行的检查）
+      直接拒绝事后修改它们，也拒绝「项目与上下文互相矛盾」的写入。
+    </p>
+    <p>
+      设计口径是：<strong>校验发生在写入之前，触发器是最后一道防线，不是第一道。</strong>
+      因为触发器一旦触发，中止的是<strong>整批</strong>插入，而不是那一行。
+    </p>
+  </div>
+
+  <p>还有一件事在这一站发生：<strong>自动投递建出的 <code>PENDING</code> Review 不算终局裁定。</strong>这很重要——因为 PR 作者能否纠正需求关联，判据是「当前 head 上有没有人做过终局裁定」。如果把判据写成「有没有 Review」，那作者的纠正窗口在自动投递那一刻就永久关闭了，实际上不可达。</p>
+</div>
+
+<!-- ══════════ 07 ══════════ -->
+<div class="stop" id="s7">
+  <div class="stop-head">
+    <div class="stop-no">07</div>
+    <div class="stop-title">
+      <h2>后台线程「抢」这个任务</h2>
+      <div class="stop-file">backend/src/main/java/com/forgepilot/review/ReviewClaimRepository.java</div>
+    </div>
+  </div>
+
+  <div class="plain">
+    <span class="label">这一站在做什么</span>
+    <p>
+      现在有一行 <code>PENDING</code> 的 Review 等着被做。后台线程池里的线程会来「抢」它。
+      同一次 Review 可能有多个线程想做（比如一个卡住了、定时任务又来捡），
+      <strong>必须保证只有一个能抢到</strong>——否则会产出两份互相矛盾的报告。
+    </p>
+  </div>
+
+  <p class="srcpath">真实代码 —— 整个并发控制的核心，就这一条 SQL</p>
+  <pre><code><span class="k">@Modifying</span>(clearAutomatically = <span class="k">true</span>, flushAutomatically = <span class="k">true</span>)
+<span class="k">@Query</span>(value = <span class="s">"""
+        UPDATE review
+           SET status = 'RUNNING',
+               execution_attempt = execution_attempt + 1,
+               execution_token = cast(:token AS uuid),
+               lease_until = now() + (:leaseSeconds * interval '1 second'),
+               updated_at = now()
+         WHERE project_id = :projectId
+           AND id = :reviewId
+           AND (status = 'PENDING'
+                OR (status = 'RUNNING' AND lease_until &lt; now()))
+        """</span>, nativeQuery = <span class="k">true</span>)
+<span class="k">int</span> claim(<span class="k">@Param</span>(<span class="s">"projectId"</span>) <span class="k">long</span> projectId, <span class="k">@Param</span>(<span class="s">"reviewId"</span>) <span class="k">long</span> reviewId,
+        <span class="k">@Param</span>(<span class="s">"token"</span>) String token, <span class="k">@Param</span>(<span class="s">"leaseSeconds"</span>) <span class="k">int</span> leaseSeconds);</code></pre>
+
+  <div class="plain">
+    <span class="label">这条 SQL 怎么读</span>
+    <p>它是<strong>一条语句</strong>，做了三件事：把状态改成 <code>RUNNING</code>、把尝试次数 +1、
+    生成一个只有本次持有者知道的随机令牌 <code>execution_token</code> 和一个到期时间 <code>lease_until</code>。</p>
+    <p>而 <code>WHERE</code> 里那个条件是闸门：<strong>只接纳还没人做的（<code>PENDING</code>），
+    或者有人做但已经超时的（<code>RUNNING</code> 且租约过期）。</strong></p>
+    <p>返回值是 <code>int</code>——<strong>影响了几行</strong>。1 表示抢到了，0 表示没抢到。</p>
+  </div>
+
+  <div class="trap">
+    <span class="label">为什么不能「先查再改」</span>
+    <p>
+      直觉写法是：先 <code>SELECT</code> 看看状态是不是 <code>PENDING</code>，是就 <code>UPDATE</code>。
+      这是错的——两次操作之间有一个<strong>时间窗口</strong>，另一个线程可能正好在这中间也查到 <code>PENDING</code>，
+      于是两个线程都认为自己抢到了。
+    </p>
+    <p>
+      写成一条带条件的 <code>UPDATE</code> 就没有这个窗口：数据库保证这条语句是原子的。
+      两个线程同时执行，<strong>失败方会拿胜者已提交的数据重新求值 <code>WHERE</code></strong>，
+      发现租约在未来，于是匹配到零行、返回 0。
+    </p>
+    <p>
+      这也是为什么整个文件都是<strong>原生 SQL</strong> 而不是用 ORM：
+      ORM 的「脏检查」机制报告不了「你匹配到了零行」这件事，而这里<strong>影响行数本身就是判定结果</strong>。
+    </p>
+  </div>
+
+  <div class="aside">
+    <span class="label">时间从哪来</span>
+    <p>
+      所有时间都用数据库的 <code>now()</code>，而 PostgreSQL 会在<strong>事务开始时把它冻结</strong>。
+      也就是说参照时间可能偏旧一点。这个方向是安全的那一侧：偏旧的时间只会找出<strong>更少</strong>的过期租约，
+      因此<strong>绝不会抢占一个还活着的 worker</strong>。
+    </p>
+  </div>
+</div>
+
+<!-- ══════════ 08 ══════════ -->
+<div class="stop" id="s8">
+  <div class="stop-head">
+    <div class="stop-no">08</div>
+    <div class="stop-title">
+      <h2>worker 主流程与三道围栏</h2>
+      <div class="stop-file">backend/src/main/java/com/forgepilot/review/ReviewExecutor.java</div>
+    </div>
+  </div>
+
+  <div class="plain">
+    <span class="label">这一站在做什么</span>
+    <p>抢到任务之后的完整流程：跑分析 → 处理失败 → 写结果。三个分支各有讲究。</p>
+  </div>
+
+  <p class="srcpath">真实代码 —— 全文只有这么长</p>
+  <pre><code><span class="k">void</span> run(<span class="k">long</span> projectId, <span class="k">long</span> reviewId) {
+    Optional&lt;Claim&gt; taken = claim(projectId, reviewId);
+    <span class="k">if</span> (taken.isEmpty()) {
+        <span class="k">return</span>;                                    <span class="c">// 没抢到，安静退出</span>
+    }
+    Claim claim = taken.get();
+
+    Optional&lt;ReviewPipeline.Report&gt; report;
+    <span class="k">try</span> {
+        report = pipeline.analyse(claim, () -&gt; renew(claim));
+    } <span class="k">catch</span> (ApiException providerFailure) {
+        fail(claim);                               <span class="c">// ① 模型调不通</span>
+        <span class="k">return</span>;
+    }
+    <span class="k">if</span> (report.isEmpty()) {
+        fail(claim);                               <span class="c">// ② 回答校验不过</span>
+        <span class="k">return</span>;
+    }
+
+    finishingTransaction.executeWithoutResult(status -&gt; {
+        pipeline.store(claim, report.get());
+        <span class="k">if</span> (!complete(claim)) {
+            status.setRollbackOnly();               <span class="c">// ③ 租约丢了，回滚</span>
+        }
+    });
+}</code></pre>
+
+  <h4>① 模型调不通 → 标记 FAILED，而不是让异常逃逸</h4>
+  <p>
+    如果让异常直接抛出去，这一行会一直停在 <code>RUNNING</code> 直到租约过期，
+    然后定时任务重新抢占它、再去调那个同样不可达的 provider——<strong>无限循环</strong>。
+    标成 <code>FAILED</code> 会停下来等人处理，而人可以手动点重试。
+  </p>
+
+  <h4>② 回答校验不过 → 什么都不写</h4>
+  <p>
+    注意是 <code>fail()</code> 而<strong>不是</strong>写一份空报告。
+    因为一份「零条问题」的报告读起来和「这个 PR 很干净」<strong>一模一样</strong>，
+    而实际情况是「我们没能得到一个能用的回答」。这两件事的处置完全相反。
+  </p>
+
+  <h4>③ 租约丢了 → 回滚，报告不得比它所属的 Review 活得更久</h4>
+  <p>
+    分析花了几分钟，这期间租约可能已经过期、被另一个线程接管了。
+    所以写结果和「把状态改成 COMPLETED」<strong>必须在同一个事务里</strong>，
+    并且 <code>complete()</code> 是带条件的——它要求令牌匹配且状态仍是 <code>RUNNING</code>。
+    匹配不上就整个回滚：这个尝试已不再拥有那一行，而另一个尝试正在产出它自己的结果。
+  </p>
+
+  <div class="trap">
+    <span class="label">最常被遗忘的那道围栏</span>
+    <p>
+      <strong>租约已过期的 worker 连「把这次 Review 标记为 FAILED」都不许。</strong>
+      所以 <code>fail()</code> 那条 SQL 也带着令牌条件。
+      如果这里不加围栏，一个已经死掉的尝试就能把取代它的那个尝试判为失败。
+    </p>
+    <p>
+      同理，<strong>续租本身就是心跳</strong>——租约过期就是停滞信号，
+      所以这个系统没有第二套存活检测机制，也不需要一张独立的心跳表。
+    </p>
+  </div>
+
+  <div class="aside">
+    <span class="label">重新抢占时那个必须同事务的删除</span>
+    <p>
+      如果一个 worker 崩了，另一个来重新抢占，它必须先<strong>删掉崩溃那次留下的 finding</strong>。
+      原因是 <code>finding</code> 表的外键指向 <code>(project_id, id, execution_attempt)</code>——
+      旧 finding 持有旧的尝试编号，在它们还存在时去递增该编号会以 <strong>23503</strong>
+      （外键违例的错误码）失败，把这个 Review <strong>永久钉死</strong>，而唯一能解开它的 worker 恰恰已经死了。
+    </p>
+    <p>
+      顺带说一个<strong>被明确否决的方案</strong>：给外键加 <code>ON UPDATE CASCADE</code> 也能让递增成功，
+      但绝不可用——它会静默地把已死尝试的 finding 重新标记为新尝试的产出。
+      那比完全没有围栏更糟，因为它在<strong>伪造证据</strong>。
+    </p>
+  </div>
+</div>
+
+<!-- ══════════ 09 ══════════ -->
+<div class="stop" id="s9">
+  <div class="stop-head">
+    <div class="stop-no">09</div>
+    <div class="stop-title">
+      <h2>组装上下文、切成批次</h2>
+      <div class="stop-file">backend/src/main/java/com/forgepilot/review/ReviewPipeline.java · ChangedFileBatcher.java</div>
+    </div>
+  </div>
+
+  <div class="plain">
+    <span class="label">这一站在做什么</span>
+    <p>
+      把送给模型的东西凑齐：<strong>变更 diff + 需求正文 + 验收条件 + 检索到的项目知识</strong>。
+      这就是 ForgePilot 与普通 AI 审查的全部区别所在——后三样是普通审查没有的。
+    </p>
+    <p>
+      然后按字符预算切成若干<strong>批次</strong>，因为一个大 PR 塞不进一次模型调用。
+    </p>
+  </div>
+
+  <div class="trap">
+    <span class="label">批次绝不下结论 —— 这是整个引擎最重要的一条规则</span>
+    <p>
+      批次只报告<strong>候选问题</strong>和<strong>验收条件的证据片段</strong>，
+      <strong>不给任何裁定</strong>。校验器里连 <code>acVerdicts</code> 这个字段都不读。
+    </p>
+    <p>
+      为什么？因为一个批次只看到了 diff 的一部分。
+      两个批次从同一处改动的两半出发，会对同一条验收条件得出<strong>相反</strong>的裁定。
+      所以下结论的资格只属于下一站那个能看到全部证据的综合阶段。
+    </p>
+    <p>
+      推论：<strong>小 PR 和大 PR 走完全相同的路径</strong>。
+      一个只改了一个文件的变更也会产生一个批次、也要经过综合阶段。
+      没有「小 PR 直接出结论」的捷径分支——那条捷径就是一条第二流水线，而它被明令禁止。
+    </p>
+  </div>
+
+  <h4>放不下的东西怎么办：可以裁，但绝不能悄悄地裁</h4>
+  <p>一个文件会被放进「未审查」清单，当它：超出变更文件数上限、provider 压根没给 patch（二进制文件）、或者连完整一行都塞不进一个批次。过长的 patch 会在<strong>行边界</strong>处裁剪并<strong>加以标注</strong>。</p>
+  <p>而「空的未审查清单」与「缺失的未审查清单」必须<strong>保持可区分</strong>——所以这个字段<strong>总是</strong>写入，哪怕什么都没被裁掉。缺失 manifest 绝不能在页面上显示成「全部覆盖」。</p>
+
+  <div class="aside">
+    <span class="label">一个批次失败，整次 Review 失败</span>
+    <p>
+      第一个「解析不过、那唯一一次格式修复也救不回来」的批次，会让整个阶段以失败收场，
+      并<strong>丢弃此前各批次已经产出的东西</strong>。
+    </p>
+    <p>
+      这次丢弃正是要点：一个只报告了五个批次中三个的 Review <strong>看上去是完整的</strong>，
+      而它对另外两个批次的判断是错的。
+    </p>
+  </div>
+</div>
+
+<!-- ══════════ 10 ══════════ -->
+<div class="stop" id="s10">
+  <div class="stop-head">
+    <div class="stop-no">10</div>
+    <div class="stop-title">
+      <h2>调模型：唯一的出口</h2>
+      <div class="stop-file">backend/src/main/java/com/forgepilot/ai/AiGateway.java · PromptSanitizer.java · AiFailurePolicy.java</div>
+    </div>
+  </div>
+
+  <div class="plain">
+    <span class="label">这一站在做什么</span>
+    <p>
+      全代码库<strong>只有这一个类</strong>能发出对模型 provider 的 HTTP 请求。
+      它管 HTTP、鉴权、超时、重试和调用记录，而且<strong>不认识任何业务类型</strong>——
+      它不知道什么是 Requirement、什么是 Finding。
+    </p>
+  </div>
+
+  <div class="aside">
+    <span class="label">它怎么做到「不认识业务」还能记录归属</span>
+    <p>
+      调用日志需要知道这次调用属于哪个项目、哪条需求。但如果 <code>AiGateway</code> 直接接收 <code>Requirement</code> 对象，
+      <code>ai</code> 就依赖了 <code>requirement</code>，依赖图就乱了。
+    </p>
+    <p>
+      解法是 <code>AiCallContext</code>：只传<strong>不透明的 <code>Long</code> id</strong>。
+      网关把它们原样写进日志，从不解读。所以 <code>ai</code> 至今只依赖 <code>common</code>。
+    </p>
+  </div>
+
+  <div class="trap">
+    <span class="label">三条不可动的规则</span>
+    <p>
+      <strong>一、重试只有一次，且只对瞬时错误（429 / 5xx / 网络）。</strong>
+      全代码库<strong>别处没有任何重试</strong>，也必须保持没有——这条例外只授权给网关。
+    </p>
+    <p>
+      <strong>二、日志记的是「一次尝试」而不是「一次调用」。</strong>
+      重试过的调用会留下<strong>两行</strong>。这是事后审计「确实只重试了一次」的唯一手段。
+    </p>
+    <p>
+      <strong>三、<code>TIMEOUT</code> 与 <code>FAILED</code> 必须分开记。</strong>
+      两者都属瞬时失败、都重试一次，看起来可以合并。但只有分开保留，
+      运维事后才分得清 provider 是<strong>答得不对</strong>还是<strong>根本没答</strong>。
+    </p>
+  </div>
+
+  <h4>发出去之前的最后一道处理</h4>
+  <p>
+    <code>PromptSanitizer</code> 做两件事：掩码看起来像凭据的字符串、把载荷裁剪到预算内。
+    它是<strong>纯函数</strong>——不写日志、不碰数据库、不抛异常。
+  </p>
+  <p>
+    最后这点是刻意的：<strong>一份文档不会因为「看起来含 token」而被拒绝</strong>，只会去掉那部分后照常发送。
+    拒绝非法输入是另一件事、另有归属（<code>KnowledgeUploadValidator</code>）。
+  </p>
+</div>
+
+<!-- ══════════ 11 ══════════ -->
+<div class="stop" id="s11">
+  <div class="stop-head">
+    <div class="stop-no">11</div>
+    <div class="stop-title">
+      <h2>校验回答：让空报告无法表达</h2>
+      <div class="stop-file">backend/src/main/java/com/forgepilot/review/ReviewOutputValidator.java</div>
+    </div>
+  </div>
+
+  <div class="plain">
+    <span class="label">这一站在做什么</span>
+    <p>
+      模型返回了一段 JSON。这一站把它变成一个<strong>对本次 Review 上下文而言为真</strong>的结果——
+      或者变成一个「失败」裁定。模型可能编造不存在的文件路径、引用别的修订的验收条件、
+      或者返回压根不是 JSON 的东西。
+    </p>
+  </div>
+
+  <p class="srcpath">真实代码 —— 用类型把「成功的空报告」变成不可表达</p>
+  <pre><code><span class="k">public record</span> Outcome(ReviewStatus status, ReviewOutput output, String failureReason) {
+
+    <span class="k">public</span> Outcome {                              <span class="c">// record 的紧凑构造器，每次创建都跑</span>
+        <span class="k">if</span> (status == ReviewStatus.COMPLETED) {
+            <span class="k">if</span> (output == <span class="k">null</span> || failureReason != <span class="k">null</span>) {
+                <span class="k">throw new</span> IllegalArgumentException(
+                    <span class="s">"A completed validation carries its output and no reason."</span>);
+            }
+        } <span class="k">else if</span> (status == ReviewStatus.FAILED) {
+            <span class="k">if</span> (output != <span class="k">null</span> || failureReason == <span class="k">null</span>) {
+                <span class="k">throw new</span> IllegalArgumentException(
+                    <span class="s">"A failed validation carries a reason and no output."</span>);
+            }
+        } <span class="k">else</span> {
+            <span class="k">throw new</span> IllegalArgumentException(
+                <span class="s">"Validation ends in COMPLETED or FAILED."</span>);
+        }
+    }
+
+    <span class="k">static</span> Outcome completed(ReviewOutput output) {
+        <span class="k">return new</span> Outcome(ReviewStatus.COMPLETED, output, <span class="k">null</span>);
+    }
+    <span class="k">static</span> Outcome failed(String reason) {
+        <span class="k">return new</span> Outcome(ReviewStatus.FAILED, <span class="k">null</span>, reason);
+    }
+}</code></pre>
+
+  <div class="plain">
+    <span class="label">这段代码在做一件很聪明的事</span>
+    <p>
+      它把「绝不产出一份成功但残缺的报告」从一条<strong>要靠人记住的规则</strong>，
+      变成了一条<strong>类型系统层面的事实</strong>。
+    </p>
+    <p>
+      <code>COMPLETED</code> 必须带着 output 且不能有失败原因；<code>FAILED</code> 必须带着原因且不能有 output。
+      任何写出「成功 + 空报告」的代码<strong>在创建对象的那一刻就会抛异常</strong>，而不是安静地产出一份误导人的报告。
+    </p>
+    <p>
+      同一个思路在 <code>ReviewPipeline.Report</code> 上再出现一次：失败的 Review <strong>根本没有</strong> Report，
+      而不是有一个空的。<code>Optional.isEmpty()</code> 就是判据。
+    </p>
+  </div>
+
+  <h4>两种失败的处置完全不同</h4>
+  <div class="tw"><table>
+    <thead><tr><th>情况</th><th>处置</th><th>为什么</th></tr></thead>
+    <tbody>
+      <tr><td><strong>结构非法</strong><br>不是 JSON、缺 <code>findings</code> 数组</td><td>给<strong>一次</strong>格式修复；仍不行则整次 Review FAILED</td><td>「模型返回了零条问题」与「模型返回的东西根本不像一个回答」会导向相反处置。混为一谈，正是一次失败的 Review 开始看起来像「PR 很干净」的方式。</td></tr>
+      <tr><td><strong>单条断言可疑</strong><br>路径不存在、AC 属于别的修订</td><td>丢弃那一条，记进 <code>warnings</code>，Review 继续</td><td>一条幻觉引用不该毁掉整份报告。但静默丢弃也不行——那只会让运维拿到一份更短的报告，却没有任何办法知道它被缩短过。</td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="trap">
+    <span class="label">修复只能一次，不能写循环</span>
+    <p>
+      代码里是 <code>try / catch / try</code> 的两层结构，而不是 <code>while</code>。
+      因为在这里写个循环，会悄悄把 AI 网关自身那次有界重试<strong>放大成四次调用</strong>。
+    </p>
+  </div>
+
+  <h4>沉默的模型无法把报告缩短</h4>
+  <p>
+    被审查修订的<strong>每一条</strong>验收条件最终都会有裁定。
+    模型跳过的那些被填成 <code>NOT_FOUND</code>，<strong>并记一条警告</strong>——
+    这样「模型什么都没说」与「模型说了没有」保持可区分。
+  </p>
+</div>
+
+<!-- ══════════ 12 ══════════ -->
+<div class="stop" id="s12">
+  <div class="stop-head">
+    <div class="stop-no">12</div>
+    <div class="stop-title">
+      <h2>落库：三个哈希与那把外键锁</h2>
+      <div class="stop-file">backend/src/main/java/com/forgepilot/review/FindingKeys.java · Finding.java</div>
+    </div>
+  </div>
+
+  <div class="plain">
+    <span class="label">这一站在做什么</span>
+    <p>
+      把通过校验的问题写进 <code>finding</code> 表。每条 finding 带三个<strong>确定性哈希</strong>——
+      同样的输入必然算出同样的值。它们让系统能回答：<strong>这条问题是上一轮那条问题，还是一条新问题？</strong>
+    </p>
+  </div>
+
+  <div class="tw"><table>
+    <thead><tr><th>哈希</th><th>作用</th></tr></thead>
+    <tbody>
+      <tr><td class="f">finding_key</td><td>批内去重 + <strong>跨 Review 匹配</strong>。作者推新 commit 后重新审查，靠它判断「这还是那条老问题」。</td></tr>
+      <tr><td class="f">evidence_hash</td><td>标识那段逐字引用的代码证据。</td></tr>
+      <tr><td class="f">basis_hash</td><td>标识产生这条 finding 的判定依据（含规则版本）。</td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="trap">
+    <span class="label">整个系统最脆弱的一条规则</span>
+    <p>
+      <strong>三个哈希都不得覆盖模型自己写的散文。</strong>
+      <code>explanation</code>（问题说明）、<code>suggestion</code>（修复建议）、<code>confidence</code>（置信度）
+      是回答里唯一允许随措辞自由变动的字段。
+    </p>
+    <p>
+      一旦它们中任何一个渗进哈希，同一个问题就会在每一轮<strong>换个说法后变成「新问题」</strong>——
+      跨轮次去重、抑制与血缘会同时失效。而<strong>要到下一轮审查才看得出来</strong>，
+      所以这不是那种会立刻暴露的 bug。
+    </p>
+    <p>
+      与此配套的是两个<strong>朝相反方向移动</strong>的版本常量，很容易改错：
+    </p>
+    <ul>
+      <li><code>ReviewPrompts.VERSION</code>——schema 变了就要递增，现在是 <code>"review-2"</code>。</li>
+      <li><code>FindingKeys.RULE_VERSION</code>——<strong>必须保持 <code>"1"</code></strong>。它进 <code>basis_hash</code>，一改就让全部历史 finding 的血缘断掉。</li>
+    </ul>
+  </div>
+
+  <div class="aside">
+    <span class="label">类别为什么要在应用层先映射</span>
+    <p>
+      <code>finding.category</code> 在数据库上有一个 CHECK 约束，限定合法取值。
+      但一个到达 CHECK 的非法值会<strong>中止整批插入</strong>，而不是它自己那一行——
+      所以 CHECK 忘掉的一个合法类别，会把同一次审查里其他所有 finding 一起带走。
+    </p>
+    <p>
+      因此：应用侧<strong>先映射到闭合枚举</strong>再插入，CHECK 只当最后防线，
+      并且有一个测试<strong>逐个走完枚举</strong>去比对 SQL 里那份清单。
+      「与应用侧词汇不一致的 CHECK 比没有 CHECK 更糟」——这句话在代码注释里就写着。
+    </p>
+  </div>
+
+  <h4>走到这里，一次 Review 完成了</h4>
+  <p>
+    状态变成 <code>COMPLETED</code>，页面上能看到：每条验收条件的裁定、findings、覆盖清单（含哪些文件没被审查）、
+    以及审查时的完整上下文快照。<strong>接下来全是人的事</strong>——
+    开发认领并修复、评审复核、负责人记录那次一次性的 Decision。
+    AI 到此为止，它不推进任何状态。
+  </p>
+</div>
+
+<!-- ══════════ 术语 ══════════ -->
+<div class="stop" id="glossary">
+  <h2>术语速查</h2>
+  <p>按走查中出现的顺序。只解释这个项目里实际用到的含义，不做完整定义。</p>
+
+  <div class="tw"><table>
+    <thead><tr><th>术语</th><th>在这个项目里的意思</th></tr></thead>
+    <tbody>
+      <tr><td class="f">webhook</td><td>「有事打这个电话」。你在 GitHub 上登记一个 URL，PR 有变动时 GitHub 主动 POST 过来。</td></tr>
+      <tr><td class="f">HMAC</td><td>用一个双方都知道的密钥，对一段内容算出的指纹。对方能算出同样的指纹，就证明它知道密钥。</td></tr>
+      <tr><td class="f">时序攻击</td><td>通过测量比较操作花的时间来推断正确答案。防法是让比较无论对错都花同样时间。</td></tr>
+      <tr><td class="f">SSRF</td><td>诱导服务器去访问它本不该访问的地址（通常是内网）。防法是每次出站前校验目标地址。</td></tr>
+      <tr><td class="f">Spring Boot</td><td>Java 的 Web 框架。你写带注解的类，它负责建 HTTP 路由、管理对象生命周期、开关数据库事务。</td></tr>
+      <tr><td class="f">bean</td><td>Spring 帮你创建并管理的对象。默认用类的简单名作标识，所以两个模块出现同名类会启动冲突。</td></tr>
+      <tr><td class="f">注解 <code>@Xxx</code></td><td>写在类或方法上的标记。框架扫到它就施加对应行为，比如 <code>@Transactional</code> 就是「给这个方法包一个事务」。</td></tr>
+      <tr><td class="f">事务</td><td>数据库的「全有或全无」包装：要么全部生效，要么全部不生效，中间状态外界看不到。</td></tr>
+      <tr><td class="f">行锁</td><td>读一行的同时锁住它，本次事务结束前别人不能改。用来让并发操作排队而不是互相覆盖。</td></tr>
+      <tr><td class="f">JPA / Hibernate</td><td>Java 的 ORM：把数据库表映射成对象，你操作对象它生成 SQL。本项目在<strong>影响行数即判定结果</strong>的地方刻意绕开它写原生 SQL。</td></tr>
+      <tr><td class="f">外键</td><td>「这一列的值必须在另一张表里真实存在」的约束。违反时数据库报错 <code>23503</code>。</td></tr>
+      <tr><td class="f">复合外键</td><td>由多列一起构成的外键。本项目用它同时保证「同项目 + 正确父行 + 存在」三件事。</td></tr>
+      <tr><td class="f">CHECK 约束</td><td>「这一列的值必须满足某个条件」。注意它失败时中止的是<strong>整批</strong>插入。</td></tr>
+      <tr><td class="f">触发器</td><td>数据写入时数据库自动执行的检查或动作。本项目用它拒绝事后篡改 Review 的身份列。</td></tr>
+      <tr><td class="f">部分唯一索引</td><td>只对满足条件的行要求唯一，例如「每个项目至多一个 LEADER」。它保证「至多」，「至少」得靠服务端。</td></tr>
+      <tr><td class="f">Flyway</td><td>数据库版本管理工具。每次 schema 变更写一个编号 SQL 文件，它按顺序执行并记录。<strong>已执行的文件改一个字节就会让启动失败。</strong></td></tr>
+      <tr><td class="f">schema</td><td>数据库的结构本身——有哪些表、哪些列、哪些约束。</td></tr>
+      <tr><td class="f">JSONB</td><td>PostgreSQL 里可查询的 JSON 列类型。本项目用它整份存下变更文件清单。</td></tr>
+      <tr><td class="f">pgvector</td><td>PostgreSQL 的向量扩展，让数据库能存向量并按相似度排序。</td></tr>
+      <tr><td class="f">embedding</td><td>把一段文本转成一串数字（向量），语义相近的文本向量也相近。用来做「按意思找」而不是「按关键词找」。</td></tr>
+      <tr><td class="f">余弦距离</td><td>衡量两个向量方向差异的算法。本项目用它做相似度排序。</td></tr>
+      <tr><td class="f">TopK</td><td>「取最相似的前 K 条」。本项目 K = 8，且强制限定在同一项目内。</td></tr>
+      <tr><td class="f">facade</td><td>只读的门面类。别的模块只能通过它问问题，碰不到底层仓库，也碰不到内部机制。</td></tr>
+      <tr><td class="f">依赖反转</td><td>本该 A 调 B，但依赖方向不允许，于是让 A 广播事件、B 主动来听。编译期的箭头方向就反过来了。</td></tr>
+      <tr><td class="f">ArchUnit</td><td>专门检查架构约束的测试库。本项目用它强制八个包的依赖单向、无环。</td></tr>
+      <tr><td class="f">进程内事件</td><td>同一个 JVM 里的解耦调用，不经过消息队列。本项目要求它<strong>同步</strong>执行。</td></tr>
+      <tr><td class="f">租约 / 围栏</td><td>租约是「我持有这个任务，有效期到某时刻」；围栏是「每次写入都检查我还持有它」。防止过期的 worker 继续写。</td></tr>
+      <tr><td class="f">抢占</td><td>多个线程竞争同一个任务，靠一条原子 SQL 保证只有一个成功。</td></tr>
+      <tr><td class="f">幂等</td><td>同样的操作做多次和做一次结果相同。webhook 会重复投递，所以处理必须幂等。</td></tr>
+      <tr><td class="f">不变量</td><td>系统在任何时刻都必须为真的性质，例如「每个项目恰好一个负责人」。</td></tr>
+      <tr><td class="f">reconciliation</td><td>定时巡检，把「已落库但不再推进」的任务重新放回轨道。</td></tr>
+      <tr><td class="f">CSRF</td><td>诱导已登录用户的浏览器发出非本意的请求。防法是写请求必须携带一个攻击者拿不到的令牌。</td></tr>
+      <tr><td class="f">BCrypt</td><td>专门用于存密码的哈希算法，故意算得慢，让暴力破解昂贵。</td></tr>
+      <tr><td class="f">SQLState</td><td>数据库错误的标准编码。本项目直接按码断言：<code>23505</code> 唯一冲突、<code>23503</code> 外键违例、<code>23514</code> CHECK 违例、<code>22000</code> 向量维度不一致。</td></tr>
+      <tr><td class="f">Testcontainers</td><td>测试时用 Docker 起一个真实数据库。本项目<strong>禁止</strong>用内存数据库替代。</td></tr>
+      <tr><td class="f">Surefire</td><td>Maven 跑测试的插件。它默认的类执行顺序是本项目一个已知脆弱点的来源。</td></tr>
+      <tr><td class="f">Precision / Recall</td><td>查准率（报出来的有多少是真的）与查全率（真的有多少被报出来）。评测同时报两者，<strong>不合成单一分数</strong>。</td></tr>
+      <tr><td class="f">Wilson 区间</td><td>小样本比例的置信区间算法。评测用它给出区间而不是只给一个点值。</td></tr>
+    </tbody>
+  </table></div>
+</div>
+
+<footer class="end">
+  <p>
+    这份走查覆盖的是<strong>主干</strong>：一次 PR 从到达到审查完成。它没有覆盖需求管理、
+    知识库入库与检索、成员与 SCM 身份绑定、以及人工闭环的那半边。
+  </p>
+  <p>
+    那些内容和全部 175 个后端类、34 个前端文件的逐一说明，在
+    <strong>《ForgePilot 使用与代码手册》</strong>里。两份文档配套：这一份用来<strong>学</strong>，那一份用来<strong>查</strong>。
+  </p>
+</footer>
+
+</div>
+</body>
+</html>

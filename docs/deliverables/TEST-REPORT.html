@@ -1,0 +1,651 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ForgePilot 测试报告</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=Noto+Serif+SC:wght@600;700&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+  :root {
+    --paper:#fbfbfc; --surface:#f4f5f8; --surface-2:#eceef3;
+    --ink:#16191f; --ink-2:#3b414d; --muted:#5c6472; --subtle:#8891a0;
+    --rule:#e2e5ea; --rule-strong:#cbd1da;
+    --accent:#2c5fd6; --accent-soft:#e8eefb;
+    --danger:#b4232e; --danger-soft:#fbeaec;
+    --warn:#8a5a00; --warn-soft:#fdf3e0;
+    --ok:#1d6b47; --ok-soft:#e6f3ec;
+    --sans:"Noto Sans SC",system-ui,-apple-system,sans-serif;
+    --serif:"Noto Serif SC",Georgia,"Songti SC",serif;
+    --mono:"JetBrains Mono",ui-monospace,Consolas,monospace;
+    --measure:70ch;
+    --s1:.25rem; --s2:.5rem; --s3:.75rem; --s4:1rem;
+    --s5:1.5rem; --s6:2rem; --s7:3rem; --s8:4.5rem;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper:#12141a; --surface:#191c23; --surface-2:#22262f;
+      --ink:#e6e8ec; --ink-2:#c3c8d2; --muted:#99a1b0; --subtle:#737c8c;
+      --rule:#2a2f3a; --rule-strong:#3a4150;
+      --accent:#7ba3f5; --accent-soft:#1a2440;
+      --danger:#f0808c; --danger-soft:#331a1e;
+      --warn:#e0aa55; --warn-soft:#2e2415;
+      --ok:#6cc59a; --ok-soft:#16291f;
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper:#12141a; --surface:#191c23; --surface-2:#22262f;
+    --ink:#e6e8ec; --ink-2:#c3c8d2; --muted:#99a1b0; --subtle:#737c8c;
+    --rule:#2a2f3a; --rule-strong:#3a4150;
+    --accent:#7ba3f5; --accent-soft:#1a2440;
+    --danger:#f0808c; --danger-soft:#331a1e;
+    --warn:#e0aa55; --warn-soft:#2e2415;
+    --ok:#6cc59a; --ok-soft:#16291f;
+  }
+  *,*::before,*::after{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{margin:0;background:var(--paper);color:var(--ink);font:400 16px/1.75 var(--sans);-webkit-font-smoothing:antialiased}
+  .layout{display:grid;grid-template-columns:16rem minmax(0,1fr);align-items:start;gap:var(--s7);max-width:92rem;margin:0 auto;padding:var(--s6) var(--s5) var(--s8)}
+
+  nav.toc{position:sticky;top:var(--s5);max-height:calc(100vh - 3rem);overflow-y:auto;padding-right:var(--s3);border-right:1px solid var(--rule);font-size:.8125rem}
+  nav.toc .brand{font:700 .6875rem/1.4 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--accent);margin-bottom:var(--s4)}
+  nav.toc ol{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:1px}
+  nav.toc a{display:flex;gap:var(--s3);padding:.3rem var(--s2);border-radius:3px;color:var(--muted);text-decoration:none;line-height:1.45}
+  nav.toc a:hover{background:var(--surface);color:var(--ink)}
+  nav.toc a:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+  nav.toc .n{flex:0 0 1.5rem;font:500 .6875rem/1.7 var(--mono);color:var(--subtle);font-variant-numeric:tabular-nums}
+  main{min-width:0;max-width:100%}
+
+  header.mast{padding-bottom:var(--s5);border-bottom:3px solid var(--ink);margin-bottom:var(--s6)}
+  .eyebrow{font:700 .6875rem/1.4 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--accent);margin:0 0 var(--s3)}
+  h1{font:700 clamp(1.875rem,4.2vw,2.75rem)/1.15 var(--serif);margin:0 0 var(--s4);letter-spacing:-.01em;text-wrap:balance}
+  .standfirst{max-width:var(--measure);margin:0;color:var(--ink-2);font-size:1.0625rem;line-height:1.8}
+  .docmeta{display:grid;grid-template-columns:repeat(auto-fit,minmax(9rem,1fr));gap:1px;margin-top:var(--s5);background:var(--rule);border:1px solid var(--rule)}
+  .docmeta > div{background:var(--paper);padding:var(--s3) var(--s4)}
+  .docmeta dt{font:500 .6875rem/1.5 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--subtle)}
+  .docmeta dd{margin:var(--s1) 0 0;font:500 .875rem/1.4 var(--sans)}
+
+  section{margin-top:var(--s8);scroll-margin-top:var(--s4)}
+  section > :first-child{margin-top:0}
+  h2{display:flex;align-items:baseline;gap:var(--s4);font:700 clamp(1.25rem,2.4vw,1.75rem)/1.25 var(--serif);margin:0 0 var(--s4);padding-bottom:var(--s3);border-bottom:1px solid var(--rule-strong);text-wrap:balance}
+  h2 .hn{flex:0 0 auto;font:500 .875rem/1.6 var(--mono);color:var(--accent);font-variant-numeric:tabular-nums}
+  h3{font:700 1.0625rem/1.4 var(--sans);margin:var(--s6) 0 var(--s3)}
+  h4{font:700 .9375rem/1.5 var(--sans);margin:var(--s5) 0 var(--s2);color:var(--ink-2)}
+  p,ul,ol{max-width:var(--measure)}
+  p{margin:0 0 var(--s4)}
+  ul,ol{margin:0 0 var(--s4);padding-left:1.35rem}
+  li{margin-bottom:var(--s2)}
+  a{color:var(--accent);text-underline-offset:2px}
+  a:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:2px}
+  code{font:400 .875em/1.5 var(--mono);background:var(--surface-2);padding:.1em .35em;border-radius:3px;word-break:break-word}
+  pre{margin:0 0 var(--s4);padding:var(--s4);overflow-x:auto;background:var(--surface);border:1px solid var(--rule);border-left:3px solid var(--accent);font:400 .8125rem/1.7 var(--mono)}
+  pre code{background:none;padding:0}
+  pre .c{color:var(--subtle)}
+
+  .tw{overflow-x:auto;margin:0 0 var(--s4);border:1px solid var(--rule)}
+  table{width:100%;border-collapse:collapse;font-size:.8125rem}
+  caption{caption-side:top;text-align:left;padding:var(--s3) var(--s4);background:var(--surface-2);border-bottom:1px solid var(--rule);font:500 .75rem/1.6 var(--mono);color:var(--muted)}
+  th,td{padding:.45rem var(--s4);text-align:left;vertical-align:top;border-bottom:1px solid var(--rule)}
+  thead th{background:var(--surface);font:700 .6875rem/1.6 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);white-space:nowrap}
+  tbody tr:last-child td{border-bottom:0}
+  tbody tr:hover{background:var(--surface)}
+  td.id{font:700 .75rem/1.6 var(--mono);white-space:nowrap;color:var(--accent)}
+  td.f{font:500 .75rem/1.6 var(--mono)}
+  td.n{font-variant-numeric:tabular-nums;white-space:nowrap;text-align:right}
+  .yes{color:var(--ok);font-weight:700}
+  .no{color:var(--subtle)}
+  .cond{color:var(--warn);font-size:.75rem}
+
+  .note{max-width:var(--measure);margin:0 0 var(--s4);padding:var(--s4) var(--s5);background:var(--surface);border-left:3px solid var(--accent)}
+  .note > :last-child{margin-bottom:0}
+  .note .label{display:block;font:700 .6875rem/1.5 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--accent);margin-bottom:var(--s2)}
+  .note.red{background:var(--danger-soft);border-left-color:var(--danger)}
+  .note.red .label{color:var(--danger)}
+  .note.amber{background:var(--warn-soft);border-left-color:var(--warn)}
+  .note.amber .label{color:var(--warn)}
+
+  footer.end{margin-top:var(--s8);padding-top:var(--s5);border-top:3px solid var(--ink);max-width:var(--measure);color:var(--muted);font-size:.875rem}
+
+  @media (max-width:68rem){
+    .layout{grid-template-columns:1fr;gap:var(--s5)}
+    nav.toc{position:static;max-height:none;border-right:0;border-bottom:1px solid var(--rule);padding:0 0 var(--s4)}
+    nav.toc ol{display:grid;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr))}
+  }
+  @media (prefers-reduced-motion:reduce){*{animation-duration:.01ms !important;transition-duration:.01ms !important}}
+  @media print{
+    .layout{grid-template-columns:1fr;padding:0}
+    nav.toc{display:none}
+    section{page-break-inside:avoid}
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+
+<nav class="toc" aria-label="目录">
+  <div class="brand">测试报告</div>
+  <ol>
+    <li><a href="#s1"><span class="n">1</span><span>范围与目标</span></a></li>
+    <li><a href="#s2"><span class="n">2</span><span>测试策略</span></a></li>
+    <li><a href="#s3"><span class="n">3</span><span>测试环境</span></a></li>
+    <li><a href="#s4"><span class="n">4</span><span>后端测试结果</span></a></li>
+    <li><a href="#s5"><span class="n">5</span><span>前端测试结果</span></a></li>
+    <li><a href="#s6"><span class="n">6</span><span>评测工具测试</span></a></li>
+    <li><a href="#s7"><span class="n">7</span><span>部署验证</span></a></li>
+    <li><a href="#s8"><span class="n">8</span><span>未覆盖部分</span></a></li>
+    <li><a href="#s9"><span class="n">9</span><span>已发现的缺陷</span></a></li>
+    <li><a href="#s10"><span class="n">10</span><span>结论</span></a></li>
+  </ol>
+</nav>
+
+<main>
+
+<header class="mast">
+  <p class="eyebrow">Test Report · 2026-08-27</p>
+  <h1>ForgePilot 测试报告</h1>
+  <p class="standfirst">
+    本报告汇总 ForgePilot 的测试策略、执行结果与<strong>覆盖不到的部分</strong>。
+    第 8、9 章刻意与前七章同等详细——一份只报告通过项的测试报告，
+    读起来和「系统没有缺陷」一模一样，而那不是事实。
+  </p>
+  <dl class="docmeta">
+    <div><dt>后端</dt><dd>333<small>／45 类</small></dd></div>
+    <div><dt>前端</dt><dd>42<small>／14 文件</small></dd></div>
+    <div><dt>评测</dt><dd>48<small>项检查</small></dd></div>
+    <div><dt>跳过</dt><dd>0</dd></div>
+    <div><dt>失败</dt><dd>0</dd></div>
+    <div><dt>人工验收项</dt><dd>105<small>行清单</small></dd></div>
+  </dl>
+</header>
+
+<!-- ══════ 1 ══════ -->
+<section id="s1">
+  <h2><span class="hn">1</span>范围与目标</h2>
+
+  <h3>1.1 被测对象</h3>
+  <div class="tw"><table>
+    <thead><tr><th>部分</th><th>规模</th><th>测试形态</th></tr></thead>
+    <tbody>
+      <tr><td>后端业务代码</td><td class="n">175 类 / 13,767 行</td><td>单元 + 集成 + 真实数据库 + 架构约束</td></tr>
+      <tr><td>前端应用</td><td class="n">34 文件 / 9,123 行</td><td>组件挂载 + 路由 + 请求契约 + 纯函数</td></tr>
+      <tr><td>评测工具链</td><td class="n">9 个 Python 工具</td><td>unittest + 自洽性自测</td></tr>
+      <tr><td>数据库 schema</td><td class="n">20 表 / 10 迁移</td><td>真实 PostgreSQL + 迁移升级路径</td></tr>
+      <tr><td>部署</td><td class="n">3 容器</td><td>冷启动脚本自证</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>1.2 测试要回答的问题</h3>
+  <p>本项目的测试不以覆盖率为目标，而以「<strong>锁住哪个不变量</strong>」为目标。每条测试都应能回答：<em>如果这条断言被删掉，什么错误会溜过去？</em>答不上的测试不写。</p>
+  <p>由此形成四类目标：</p>
+  <ul>
+    <li><strong>契约不被悄悄改变</strong>——API 响应结构、导航与路由形态、错误体结构。</li>
+    <li><strong>约束由数据库本身强制</strong>，而不是只由某个服务层调用者遵守。</li>
+    <li><strong>并发与失败路径真的走过</strong>——抢占竞争、租约过期、provider 不可达、结构非法的回答。</li>
+    <li><strong>接线真的存在</strong>——每个组件单独测都通过、而没有任何生产代码调用它们，是本项目真实发生过两次的故障形态。</li>
+  </ul>
+</section>
+
+<!-- ══════ 2 ══════ -->
+<section id="s2">
+  <h2><span class="hn">2</span>测试策略</h2>
+
+  <h3>2.1 分层</h3>
+  <div class="tw"><table>
+    <thead><tr><th>层</th><th>验证什么</th><th>代表</th></tr></thead>
+    <tbody>
+      <tr><td>纯函数单元</td><td>算法与归一化，无外部依赖</td><td class="f">ReviewInputFingerprintTest · InstanceIdentityTest · PromptSanitizerTest · diff.spec.ts</td></tr>
+      <tr><td>服务层</td><td>业务规则、状态机、授权</td><td class="f">RequirementLifecycleTest · FindingLifecycleTest · ScmBindingServiceTest</td></tr>
+      <tr><td>真实数据库</td><td>约束是否真的拒绝，绕过全部应用代码</td><td class="f">DatabaseConstraintTest · KnowledgeAndScmConstraintTest</td></tr>
+      <tr><td>迁移升级路径</td><td>已有数据的库能否升级成功</td><td class="f">V8/V9/V10MigrationTest</td></tr>
+      <tr><td>并发</td><td>竞争条件下的实际交错</td><td class="f">ReviewFencingTest · ScmIdentityFreezeConcurrencyTest</td></tr>
+      <tr><td>真实 HTTP</td><td>路径映射、状态码、过滤器链之后的答案</td><td class="f">BatchOneApiTest · AuthApiTest · ScmRepositoryApiTest</td></tr>
+      <tr><td>端到端链路</td><td>事件进 → 数据库行出，中间不打桩</td><td class="f">ReviewPipelineIntegrationTest</td></tr>
+      <tr><td>架构约束</td><td>依赖方向、包结构</td><td class="f">ArchitectureRulesTest</td></tr>
+      <tr><td>外部协议</td><td>对真实 socket 的 HTTP 行为</td><td class="f">AiGatewayTest · GitHubWebhookIngestionTest</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>2.2 硬性禁令</h3>
+  <div class="note red">
+    <span class="label">数据库测试中禁止的四件事</span>
+    <p>
+      <strong>禁止内存数据库替代</strong>（H2 等）、<strong>禁止「Docker 缺失就跳过」的分支</strong>、
+      <strong>禁止 <code>@Disabled</code></strong>、<strong>禁止 <code>assumeTrue</code> 守卫</strong>。
+    </p>
+    <p>
+      理由：一个跑不起来的数据库测试<strong>必须让构建失败</strong>。
+      这里的假绿会藏住模型依赖的约束行为——而那些行为恰恰是不能靠服务层保证的部分。
+      这条禁令由 lint 检查强制：<code>grep -rniE 'h2|DisabledIf|assumeTrue|@Disabled'</code> 必须无匹配。
+    </p>
+  </div>
+
+  <h3>2.3 三条从故障中学到的测试原则</h3>
+
+  <h4>原则一：服务层测试证明不了 MVC 映射</h4>
+  <p>
+    三个 <code>DELETE</code> 端点首次交付时只有服务层测试。<strong>路径接线与状态码没有任何证明</strong>——
+    一个写错的路径会在服务层测试里全绿，到了前端就是 404。
+    补充的 <code>BatchOneApiTest.theThreeDeleteEndpointsAreWiredAndInvisibleAcrossProjects</code>
+    在真实 HTTP 之上断言路径、204 状态码与跨项目不可见性。
+  </p>
+  <p>项目归档端点按同一原则处理：<code>theArchiveEndpointsAreWiredAndReversible</code> 走真实 HTTP，同时断言归档<strong>什么都不删</strong>。</p>
+
+  <h4>原则二：组件全绿而无人调用</h4>
+  <p>
+    本项目发生过两次：一次是全部验收条件通过，而 <code>AiGateway.chat</code> <strong>没有任何生产调用方</strong>；
+    另一次是引擎每个部分单独测过，而 <code>ReviewExecutor.run</code> 抢到 Review 后就停了。
+  </p>
+  <p>
+    组件测试<strong>按构造</strong>看不到这个问题——每个测试在「没人调用它」时通过得一样好。
+    所以 <code>ReviewPipelineIntegrationTest</code> 从 <code>scm</code> 发布的事件出发、断言数据库里的行，
+    中间<strong>只替换 provider</strong>，其余全是真实组件。
+  </p>
+
+  <h4>原则三：会过期的论据要写成测试，不要写成笔记</h4>
+  <p>
+    「为什么这个部署没有向量索引」是一条基于 pgvector 当前能力的论断。
+    写成 markdown 里的研究结论，它会静默过期；写成 <code>KnowledgeVectorIndexTest</code>，
+    <strong>pgvector 一旦放宽维度上限，测试就会失败——而那次失败正是回来重新决策的信号</strong>。
+  </p>
+  <p>该测试三个用例分别钉住：三种索引形态各自的拒绝理由、唯一能建出的两种形态都是有损预筛、顺序扫描在冻结维度上给出精确余弦序。</p>
+</section>
+
+<!-- ══════ 3 ══════ -->
+<section id="s3">
+  <h2><span class="hn">3</span>测试环境</h2>
+  <div class="tw"><table>
+    <thead><tr><th>项</th><th>配置</th></tr></thead>
+    <tbody>
+      <tr><td>后端运行时</td><td class="f">eclipse-temurin:21-jdk 容器（宿主机无 JDK）</td></tr>
+      <tr><td>构建命令</td><td class="f">./mvnw -B -ntp verify</td></tr>
+      <tr><td>数据库</td><td class="f">pgvector/pgvector:0.8.6-pg15-bookworm（Testcontainers）</td></tr>
+      <tr><td>容器复用</td><td>整个测试运行共用<strong>一个</strong>容器，由 <code>PostgresTestBase</code> 持有</td></tr>
+      <tr><td>前端运行时</td><td class="f">Node 24 · vitest 4.1.11 · jsdom 30.0.1</td></tr>
+      <tr><td>评测运行时</td><td class="f">Python 3（仅标准库）</td></tr>
+      <tr><td>宿主机</td><td>4 GB 内存 + 4 GB swap，磁盘 45% 已用</td></tr>
+    </tbody>
+  </table></div>
+  <div class="note">
+    <span class="label">镜像固定</span>
+    <p>
+      <code>compose.yaml</code> 按 <strong>tag 与 digest 双重</strong>固定同一个 pgvector 镜像，
+      冷启动脚本拒绝任何其他镜像字符串，Testcontainers 测试固定同一个 tag。
+      升级镜像必须在这三处<strong>同一次改动</strong>内完成，然后重跑两者。
+    </p>
+  </div>
+</section>
+
+<!-- ══════ 4 ══════ -->
+<section id="s4">
+  <h2><span class="hn">4</span>后端测试结果</h2>
+  <p><strong>333 个用例，45 个测试类，0 失败，0 错误，0 跳过。</strong>执行时间约 5 分 10 秒（含容器启动）。</p>
+
+  <h3>4.1 按包分布</h3>
+  <div class="tw"><table>
+    <thead><tr><th>包</th><th class="n">类</th><th class="n">用例</th><th>侧重</th></tr></thead>
+    <tbody>
+      <tr><td class="f">review</td><td class="n">9</td><td class="n">106</td><td>输出校验、抢占围栏、分批、Finding 血缘与生命周期、决策</td></tr>
+      <tr><td class="f">scm</td><td class="n">14</td><td class="n">93</td><td>webhook 认证、provider 权威读取、身份冻结、关联审计</td></tr>
+      <tr><td class="f">(根包)</td><td class="n">9</td><td class="n">54</td><td>数据库约束、架构规则、跨切片 HTTP 闭环、迁移升级路径</td></tr>
+      <tr><td class="f">requirement</td><td class="n">4</td><td class="n">30</td><td>修订不可变性、状态机、质量检查、实现建议</td></tr>
+      <tr><td class="f">ai</td><td class="n">3</td><td class="n">21</td><td>网关 HTTP 行为、超时与单次重试、Prompt 净化</td></tr>
+      <tr><td class="f">knowledge</td><td class="n">3</td><td class="n">17</td><td>入库校验、检索隔离、向量索引论据</td></tr>
+      <tr><td class="f">auth</td><td class="n">2</td><td class="n">8</td><td>认证契约、会话失效、端点暴露面</td></tr>
+      <tr><td class="f">project</td><td class="n">1</td><td class="n">4</td><td>项目内授权</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>4.2 用例数最多的十个类</h3>
+  <div class="tw"><table>
+    <thead><tr><th>测试类</th><th class="n">用例</th><th>它锁住什么</th></tr></thead>
+    <tbody>
+      <tr><td class="f">ReviewOutputValidatorTest</td><td class="n">23</td><td>模型回答的每种畸形形态各自的处置；三个哈希<strong>不覆盖模型散文</strong>这条红线</td></tr>
+      <tr><td class="f">GitHubClientGuardTest</td><td class="n">20</td><td>权威字段缺席/为 null/为容器时必须大声失败，而非存下空串</td></tr>
+      <tr><td class="f">AiGatewayTest</td><td class="n">16</td><td>对<strong>真实 socket</strong> 的 HTTP 行为：超时、那唯一一次重试、失败分类</td></tr>
+      <tr><td class="f">DatabaseConstraintTest</td><td class="n">16</td><td>每条约束<strong>真的会拒绝</strong>，且拒绝时的 SQLState 是预期的那个</td></tr>
+      <tr><td class="f">KnowledgeAndScmConstraintTest</td><td class="n">14</td><td>复合外键、MATCH SIMPLE 陷阱、向量维度防线</td></tr>
+      <tr><td class="f">ReviewEngineTest</td><td class="n">13</td><td>引擎整体行为；直接断言执行器 core size（并发上限 2）</td></tr>
+      <tr><td class="f">ReviewActivityTest</td><td class="n">13</td><td>派生活动状态的六值/聚合规则，以及「当前有效」的判定</td></tr>
+      <tr><td class="f">GitHubWebhookIngestionTest</td><td class="n">12</td><td>投递认证、乱序丢弃、事件同事务发布</td></tr>
+      <tr><td class="f">ReviewDecisionTest</td><td class="n">12</td><td>一次性裁定、head 闸门、前置条件</td></tr>
+      <tr><td class="f">RequirementQualityTest</td><td class="n">12</td><td>确定性规则 + 恰好一次 AI 调用；DRAFT 编辑使结果失效</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>4.3 几个值得单独说明的用例</h3>
+
+  <h4>数据库约束测试绕到应用代码之下</h4>
+  <p>
+    <code>DatabaseConstraintTest</code> 通过 <code>JdbcTemplate</code> 直接写入，<strong>绕过全部服务层</strong>，
+    并点名它期望的 SQLState：<code>23505</code>（唯一冲突）、<code>23503</code>（外键违例）、<code>23514</code>（CHECK 违例）。
+  </p>
+  <p><strong>一条只被服务强制的约束等于没被强制</strong>——未来任何调用者都能绕开它。</p>
+
+  <h4>迁移测试针对非空表</h4>
+  <p>
+    <code>ALTER TABLE … ADD CONSTRAINT … CHECK</code> 会<strong>校验表中已有的行</strong>。
+    因此一条不容忍 NULL 的 CHECK 在新建的空 schema 上必然通过，然后在任何已有数据的部署上直接让迁移失败。
+  </p>
+  <p>
+    <code>FoundationDatabaseTest</code> 迁移的是空 schema，<strong>看不见这件事</strong>。
+    所以 <code>V9MigrationTest</code> 与 <code>V10MigrationTest</code> 采用唯一有效的形状：
+    <strong>先迁到上一版、写入一行、再迁剩下的</strong>。
+  </p>
+
+  <h4>并发测试要求交错被观察到，而不是被假设</h4>
+  <p>
+    <code>ScmIdentityFreezeConcurrencyTest</code> 不用 sleep 等待，而是<strong>向 PostgreSQL 询问</strong>
+    另一个线程是否真的阻塞在那一行上。否则这个测试在「线程池根本没启动任务」时也会通过，
+    退化成它本要补充的单线程用例。
+  </p>
+
+  <h4>架构规则是可执行的，不是文档约定</h4>
+  <p>
+    <code>ArchitectureRulesTest</code> 8 个用例强制八包依赖单向无环、禁止的包名不存在、
+    <code>scm</code> 不依赖 <code>review</code>。它导入的是<strong>生产类</strong>，
+    所以测试作用域的监听器不会削弱这条规则。
+  </p>
+</section>
+
+<!-- ══════ 5 ══════ -->
+<section id="s5">
+  <h2><span class="hn">5</span>前端测试结果</h2>
+  <p><strong>42 个用例，14 个测试文件，全部通过。</strong>另有 lint（策略检查）、typecheck（<code>vue-tsc</code>）与 <code>vite build</code> 三道门同时通过。</p>
+
+  <div class="tw"><table>
+    <thead><tr><th>测试文件</th><th class="n">用例</th><th>它锁住什么</th></tr></thead>
+    <tbody>
+      <tr><td class="f">http.spec.ts</td><td class="n">6</td><td>统一请求边界：CSRF 令牌注入、错误体解析、401 处理、无 body 状态码</td></tr>
+      <tr><td class="f">routes.spec.ts</td><td class="n">5</td><td><strong>导航与路由形态</strong>：六个一级入口、11 条路由、登录守卫、旧路径重定向</td></tr>
+      <tr><td class="f">session.spec.ts</td><td class="n">3</td><td>会话引导与清理</td></tr>
+      <tr><td class="f">scm.spec.ts</td><td class="n">3</td><td>Token 创建页路径推导（自建实例地址变化时入口跟随）</td></tr>
+      <tr><td class="f">reviewContext.spec.ts</td><td class="n">3</td><td>对不可变 Review 上下文的<strong>收窄在归属处发生</strong>，视图不做类型断言</td></tr>
+      <tr><td class="f">requirementRowActions.spec.ts</td><td class="n">3</td><td>需求行内操作<strong>不放宽</strong>后端门槛：终态无编辑入口、删除仅对已作废</td></tr>
+      <tr><td class="f">requirement.spec.ts</td><td class="n">3</td><td>需求详情的修订、附件与导出</td></tr>
+      <tr><td class="f">motion.spec.ts</td><td class="n">3</td><td>减动效模式停止运动但不改变内容</td></tr>
+      <tr><td class="f">journey.spec.ts</td><td class="n">3</td><td>审查证据页的四个标记分开呈现；未审查文件被<strong>点名</strong>而非静默丢弃</td></tr>
+      <tr><td class="f">cyberParticles.spec.ts</td><td class="n">3</td><td>粒子模拟纯逻辑（与渲染分离故可测）</td></tr>
+      <tr><td class="f">workspace.spec.ts</td><td class="n">2</td><td>默认项目规则<strong>只</strong>在 URL 缺 query 时触发——两个方向写错都有真实后果</td></tr>
+      <tr><td class="f">projectArchive.spec.ts</td><td class="n">2</td><td>归档闸门：前缀、大小写、首尾空格<strong>四种退化方向</strong>全部保持禁用</td></tr>
+      <tr><td class="f">diff.spec.ts</td><td class="n">2</td><td>unified patch 转展示行与<strong>真实</strong> hunk 行号</td></tr>
+      <tr><td class="f">reviewApi.spec.ts</td><td class="n">1</td><td>Review 请求契约</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>5.1 lint 策略检查的内容</h3>
+  <p><code>npm run lint</code> 不是通用代码风格检查，而是四条项目策略：</p>
+  <ul>
+    <li>无 tab、无行尾空格。</li>
+    <li><strong>原始色值只允许出现在 <code>tokens.css</code></strong>，其他文件必须用设计令牌。</li>
+    <li><strong>禁止依赖清单</strong>：状态管理库、UI 组件库、HTTP 客户端库、图表库共 13 个包名。</li>
+    <li>扫描范围含 <code>src/</code>、<code>tests/</code> 与根级配置文件。</li>
+  </ul>
+
+  <div class="note amber">
+    <span class="label">jsdom 的两处能力缺口影响了实现选择</span>
+    <p>
+      jsdom 30.0.1 <strong>不实现 <code>&lt;dialog&gt;</code></strong>（<code>showModal</code> 与 <code>close</code> 均为 undefined），
+      也<strong>不实现 <code>navigator.clipboard</code></strong>。
+    </p>
+    <p>
+      这两点是实测确认后才做的设计决定：归档确认层因此采用<strong>卡片内联面板</strong>而非模态框；
+      复制按钮的剪贴板调用<strong>必须包 try/catch</strong>，失败时不报错也不拦路——项目名就在旁边的只读输入框里可手动选中。
+    </p>
+  </div>
+</section>
+
+<!-- ══════ 6 ══════ -->
+<section id="s6">
+  <h2><span class="hn">6</span>评测工具测试</h2>
+  <p>共 <strong>48 项检查</strong>，全部通过。</p>
+  <div class="tw"><table>
+    <thead><tr><th>套件</th><th class="n">检查</th><th>内容</th></tr></thead>
+    <tbody>
+      <tr><td class="f">4 个 unittest 模块</td><td class="n">18</td><td>三臂适配器、正式评测、历史格式适配、端点更正记录</td></tr>
+      <tr><td class="f">score.py --selftest</td><td class="n">30</td><td>匹配规则、零分母、schema 严格性、结构失败与 notRun 的区分</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>6.1 自测钉住的关键口径</h3>
+  <div class="tw"><table>
+    <thead><tr><th>检查</th><th>为什么重要</th></tr></thead>
+    <tbody>
+      <tr><td class="f">zero denominator is null</td><td>分母为零输出 <code>null</code> 而<strong>不伪造为零</strong>——零精确率与「没有样本」是两件事</td></tr>
+      <tr><td class="f">structure failure is attempted, not notRun</td><td>显式 <code>FAILED/STRUCTURE</code> 是<strong>一次尝试</strong>，不等于未运行，两者进不同分母</td></tr>
+      <tr><td class="f">missing output is notRun</td><td>缺少输出必须记为 <code>notRun</code>，不得当作空的成功预测</td></tr>
+      <tr><td class="f">partial usage keeps totals null</td><td>Token 或耗时任一缺失时对应指标为 <code>null</code>，不部分求和</td></tr>
+      <tr><td class="f">finding type remains independent</td><td>需求违规召回<strong>只</strong>统计真值里显式标注的类型，不从显示类别反推</td></tr>
+      <tr><td class="f">manifest/run/report rejects extra field</td><td>7 项 schema 严格性检查：多一个字段即拒绝，防止契约悄悄漂移</td></tr>
+      <tr><td class="f">greedy one-to-one</td><td>匹配是贪心 1:1，每条 Finding 最多参与一次，不重复计入</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>6.2 冻结完整性验证</h3>
+  <p>两条命令在不接触任何凭据的前提下证明证据未被篡改，均通过：</p>
+  <pre><code>python3 evaluation/tools/formal_evaluation.py verify-freeze
+python3 evaluation/tools/postfreeze_provider_correction.py verify</code></pre>
+  <p>
+    前者按内容哈希核对 <strong>9 个模型面与评分文件</strong>；后者绑定实际使用的端点，
+    同时确认<strong>模型、温度、Prompt、评分器、语料与划分均未变更</strong>。
+  </p>
+  <div class="note red">
+    <span class="label">一次真实的近失事件</span>
+    <p>
+      在一轮「文档只保留当前功能」的清理中，<code>evaluation/contracts/metrics.md</code> 曾被当作普通指标说明文档
+      列入待清理项。它<strong>在冻结哈希列表内</strong>——改动它会使 <code>verify-freeze</code> 永久无法通过，
+      而 holdout 只运行过一次且不可重跑，<strong>冻结证据一旦失效就无法重建</strong>。
+    </p>
+    <p>
+      检查后确认该文件内容无需改动，未被修改。由此形成流程要求：
+      <strong>动 <code>evaluation/</code> 下任何文件前，先运行 <code>verify-freeze</code> 取得那份列表，再与改动清单比对。</strong>
+    </p>
+  </div>
+</section>
+
+<!-- ══════ 7 ══════ -->
+<section id="s7">
+  <h2><span class="hn">7</span>部署验证</h2>
+  <p>冷启动脚本创建独立 Compose 项目与<strong>全新数据卷</strong>，校验完成后只删除它自己创建的临时资源。它断言：</p>
+  <ul>
+    <li>三个健康检查全部通过，反向代理可达（后端 <code>/actuator/health</code>，经前端代理 <code>/api/actuator/health</code>）。</li>
+    <li>PostgreSQL 版本 ≥ 15，<code>vector</code> 扩展已安装，距离运算返回预期值。</li>
+    <li>Flyway <strong>十条</strong>版本化迁移全部成功，最高版本 V10 成功。</li>
+    <li><code>public</code> 中<strong>恰好</strong>这二十张业务表，按 C 排序逐字符比对（不依赖容器 locale）。</li>
+  </ul>
+
+  <div class="note red">
+    <span class="label">本次报告期内修复的一个缺陷</span>
+    <p>
+      该脚本此前仍断言「<strong>8 条迁移、到 V8</strong>」与一份<strong>缺少 <code>project_deletion_record</code> 的 19 表清单</strong>——
+      V9 与 V10 落地时都漏了同步更新。
+    </p>
+    <p>
+      后果：它是复现指南指定的冷启动证明，也是 CI 每次构建运行两次的作业，
+      <strong>对当前 schema 必然失败</strong>。
+      而 <code>FoundationDatabaseTest</code> 里的 20 表清单是正确的，所以 <code>mvnw verify</code> 一直全绿——
+      <strong>后端测试证明不了一个 shell 脚本的期望值</strong>。
+    </p>
+    <p>
+      已修正并对照运行中的部署逐项核验：迁移数 10、V10 成功、表名字符串与 <code>information_schema</code> 逐字节一致。
+      由此形成的规则：<strong>新增建表迁移必须同步三处</strong>——
+      <code>FoundationDatabaseTest.EXPECTED_TABLES</code>、脚本的 <code>expected_tables</code>、
+      以及同一脚本内的迁移计数与版本成功检查。
+    </p>
+  </div>
+</section>
+
+<!-- ══════ 8 ══════ -->
+<section id="s8">
+  <h2><span class="hn">8</span>未覆盖部分</h2>
+  <p>本章列出<strong>自动化测试无法覆盖</strong>的范围。它与前面各章同等重要——不写出来，读者会把「测试全绿」误读为「全部行为已验证」。</p>
+
+  <h3>8.1 必须人工验收的类别</h3>
+  <div class="tw"><table>
+    <thead><tr><th>类别</th><th>为什么自动化测不了</th><th>验收方式</th></tr></thead>
+    <tbody>
+      <tr><td>视觉与布局</td><td>横向溢出、元素对齐、三档宽度下的实际渲染需要真实排版引擎</td><td>1440 / 768 / 390 三档人工检查</td></tr>
+      <tr><td>键盘可达性</td><td>Tab 顺序、焦点环可见性、Escape 回焦需要真实焦点管理</td><td>人工键盘走查</td></tr>
+      <tr><td>动效与减动效</td><td>需要真实 <code>prefers-reduced-motion</code> 环境</td><td>两种模式各走一遍</td></tr>
+      <tr><td>剪贴板</td><td>jsdom 不实现该 API</td><td>人工点击复制按钮</td></tr>
+      <tr><td>模态与焦点陷阱</td><td>jsdom 不实现 <code>&lt;dialog&gt;</code></td><td>（当前实现已避开该 API）</td></tr>
+      <tr><td>真实 provider 联调</td><td>需要真实 GitHub / GitLab 凭据与真实 webhook 投递</td><td>用一次性账号与临时 hook 演练</td></tr>
+      <tr><td>浏览器控制台与网络</td><td>需要真实浏览器开发者工具</td><td>确认无新 error、无被静默吞掉的 4xx/5xx</td></tr>
+    </tbody>
+  </table></div>
+  <p>完整清单为 <code>frontend/MANUAL-ACCEPTANCE.md</code>，共 <strong>105 行</strong>、七个章节，结果写入当前任务的验收记录。</p>
+
+  <h3>8.2 当前尚未完成的人工验收项</h3>
+  <div class="note amber">
+    <span class="label">两批待执行</span>
+    <p>
+      <strong>三档宽度与菜单键盘行为</strong>——前端交互整改的两条验收项。
+    </p>
+    <p>
+      <strong>本轮新增功能的视觉与交互验收</strong>——成员表角色列对齐、仓库表单字段对齐、
+      归档确认区的复制与恢复往返、需求行内操作的按状态门控。已写入清单，尚未在浏览器中执行。
+    </p>
+  </div>
+
+  <h3>8.3 有意不做的测试</h3>
+  <p>以下测试<strong>刻意没有写</strong>，理由记录在此以免后续被当作缺口补上：</p>
+  <ul>
+    <li><strong>不为 DTO / record 的 getter 写测试</strong>——它们没有行为，测试只会重复声明。</li>
+    <li><strong>不重复测已由类型系统保证的性质</strong>——例如「FAILED 的 Review 没有 Report」是构造器强制的，写测试只是复述编译器。</li>
+    <li><strong>不为覆盖率补测</strong>——本项目不设覆盖率目标；答不上「锁住哪个不变量」的测试不写。</li>
+    <li><strong>不测模型输出质量</strong>——那属于评测体系，用固定语料与确定性评分器度量，不属于单元测试。</li>
+  </ul>
+</section>
+
+<!-- ══════ 9 ══════ -->
+<section id="s9">
+  <h2><span class="hn">9</span>已发现的缺陷</h2>
+
+  <h3>9.1 未修复：测试套件存在潜伏的类执行顺序依赖</h3>
+  <div class="note red">
+    <span class="label">状态：已确认 · 根因未定位 · 已规避</span>
+    <p><strong>现象</strong></p>
+    <p>
+      仅重命名 <code>BatchOneApiTest</code> 类名与注释（<strong>diff 中没有任何代码行变化</strong>），
+      导致该类 4 个用例在完整构建中失败，全部倒在同一个辅助方法上，
+      断言为 <code>GET /api/auth/me must issue the XSRF-TOKEN cookie</code>，实际取得的 cookie 为 null。
+    </p>
+    <p><strong>决定性证据</strong></p>
+    <ul>
+      <li>单独运行该类：<strong>5/5 全绿</strong>。</li>
+      <li>完整构建：<strong>4/5 失败</strong>。</li>
+      <li><code>SecurityConfig</code> 与该测试类的 diff 均为<strong>纯注释</strong>。</li>
+    </ul>
+    <p><strong>分析</strong></p>
+    <p>
+      测试框架默认按文件系统顺序执行测试类。重命名改变了该类的排序位置，
+      使某个先运行的类留下的状态影响到匿名请求的 CSRF cookie 下发。<strong>污染源尚未定位。</strong>
+    </p>
+    <p><strong>处置</strong></p>
+    <p>
+      已回退重命名，保留历史类名，套件恢复 333/333。
+      由此形成的规则：<code>phase1-quick.json</code>、<code>phase1-compose-smoke.sh</code>、
+      <code>BatchOneApiTest</code> 这类<strong>历史名字一律保留</strong>，只清理散文。
+    </p>
+    <p><strong>影响</strong></p>
+    <p>
+      后续在 <code>com.forgepilot</code> 下<strong>新增测试类</strong>可能再次触发，
+      而失败信息（CSRF cookie 为 null）完全指不到真正的原因。
+      诊断特征是「<strong>单类运行绿、全量运行红</strong>」——出现该特征时应先用单类运行确认是顺序依赖，
+      <strong>不要去改 <code>SecurityConfig</code></strong>。
+    </p>
+  </div>
+
+  <h3>9.2 已修复：冷启动脚本与当前 schema 不一致</h3>
+  <p>详见第 7 章。根因是「加表需同步三处」缺少机制保障，其中两处在 V9/V10 落地时被遗漏，且后端测试按构造无法发现。</p>
+
+  <h3>9.3 已修复：文档中的过期数字</h3>
+  <p>
+    七个文件（含 <code>README.md</code>、<code>CLAUDE.md</code>、<code>AGENTS.md</code> 与三个子项目 README）
+    仍写着「332 个测试 / 37 个测试」，而实际为 333 / 42；产品文档中也<strong>一处未提及</strong>已交付的项目归档能力。
+    已全部修正。
+  </p>
+
+  <h3>9.4 测试执行过程中暴露的一个方法学问题</h3>
+  <div class="note amber">
+    <span class="label">把构建输出管进 tail 会掩盖真实的失败</span>
+    <p>
+      本轮有两次执行将 Maven 输出通过管道传给 <code>tail</code>。管道的退出码来自<strong>最后一个命令</strong>，
+      因此 <code>tail</code> 的 0 掩盖了 Maven 的 <code>BUILD FAILURE</code>，一次真实失败被误读为通过。
+    </p>
+    <p>
+      正确做法：<strong>重定向到日志文件再检索</strong>，并显式检查退出码。
+      本报告的所有结果均按此方式取得。
+    </p>
+  </div>
+</section>
+
+<!-- ══════ 10 ══════ -->
+<section id="s10">
+  <h2><span class="hn">10</span>结论</h2>
+
+  <h3>10.1 执行结果</h3>
+  <div class="tw"><table>
+    <thead><tr><th>门</th><th>结果</th><th>规模</th></tr></thead>
+    <tbody>
+      <tr><td class="f">./mvnw -B -ntp verify</td><td><span class="yes">BUILD SUCCESS</span></td><td class="n">333 / 0 失败 / 0 跳过</td></tr>
+      <tr><td class="f">npm run lint</td><td><span class="yes">通过</span></td><td class="n">4 条策略</td></tr>
+      <tr><td class="f">npm run typecheck</td><td><span class="yes">通过</span></td><td class="n">vue-tsc 严格模式</td></tr>
+      <tr><td class="f">npm test -- --run</td><td><span class="yes">通过</span></td><td class="n">42 / 14 文件</td></tr>
+      <tr><td class="f">npm run build</td><td><span class="yes">通过</span></td><td class="n">产物 241.57 kB（gzip 79.17 kB）</td></tr>
+      <tr><td class="f">评测 unittest + selftest</td><td><span class="yes">通过</span></td><td class="n">48 项</td></tr>
+      <tr><td class="f">verify-freeze + 端点更正</td><td><span class="yes">通过</span></td><td class="n">9 文件哈希核对</td></tr>
+      <tr><td class="f">冷启动脚本</td><td><span class="yes">修复后与运行部署一致</span></td><td class="n">10 迁移 / 20 表</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>10.2 可以支持的结论</h3>
+  <ul>
+    <li>业务规则、状态机与授权边界<strong>有自动化验证</strong>，且约束由数据库本身而非仅服务层强制。</li>
+    <li>并发与失败路径<strong>真的被执行过</strong>，不是靠代码审查推断——抢占竞争、租约过期、provider 不可达、结构非法的回答各有用例。</li>
+    <li>架构约束<strong>可执行</strong>，依赖方向由构建强制而非文档约定。</li>
+    <li>评测证据<strong>完整且可核验</strong>，重算不需要任何凭据。</li>
+  </ul>
+
+  <h3>10.3 不能由本报告支持的结论</h3>
+  <div class="note amber">
+    <span class="label">三条界限</span>
+    <p>
+      <strong>不能得出「界面正确」。</strong>视觉、布局、键盘可达性与动效均无自动化覆盖，
+      且本轮新增功能的人工验收<strong>尚未执行</strong>。
+    </p>
+    <p>
+      <strong>不能得出「与真实 GitHub / GitLab 集成已验证」。</strong>
+      webhook 认证与 provider 读取对回环桩服务测试充分，但未对真实凭据与真实投递做过端到端演练。
+    </p>
+    <p>
+      <strong>不能得出「AI 审查质量」。</strong>那由评测体系度量，样本为 12 例 holdout 且缺陷手工构造，
+      报告给出 95% Wilson 区间并明确声明泛化限制。
+    </p>
+  </div>
+
+  <h3>10.4 建议的后续工作</h3>
+  <ol>
+    <li><strong>定位 9.1 的顺序依赖污染源</strong>——它会让未来任何新增测试类随机变红，且报错指向错误方向。</li>
+    <li><strong>执行 8.2 的两批人工验收</strong>，把结果记入清单。</li>
+    <li><strong>为「加表需同步三处」增加机制保障</strong>——目前靠规范约束，而它已被遗漏过一次。</li>
+    <li><strong>用一次性账号做真实 provider 端到端演练</strong>，补上 10.3 第二条界限。</li>
+  </ol>
+</section>
+
+<footer class="end">
+  <p>
+    本报告数据取自 2026-08-27 的实际执行，日志保留于构建输出。
+    未通过项、未覆盖项与已知缺陷均如实记录于第 8、9 章。
+  </p>
+  <p>
+    配套文档：《ForgePilot 需求规格说明书》（含需求追溯矩阵，本报告的测试类可反查到需求编号）、
+    《ForgePilot 使用与代码手册》、《跟着一次 PR 走完 ForgePilot》、《ForgePilot 安全设计说明》。
+  </p>
+</footer>
+
+</main>
+</div>
+
+</body>
+</html>

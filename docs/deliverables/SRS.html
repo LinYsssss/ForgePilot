@@ -1,0 +1,733 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ForgePilot 需求规格说明书</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=Noto+Serif+SC:wght@600;700&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+  :root {
+    --paper:#fbfbfc; --surface:#f4f5f8; --surface-2:#eceef3;
+    --ink:#16191f; --ink-2:#3b414d; --muted:#5c6472; --subtle:#8891a0;
+    --rule:#e2e5ea; --rule-strong:#cbd1da;
+    --accent:#2c5fd6; --accent-soft:#e8eefb;
+    --danger:#b4232e; --danger-soft:#fbeaec;
+    --warn:#8a5a00; --warn-soft:#fdf3e0;
+    --ok:#1d6b47; --ok-soft:#e6f3ec;
+    --sans:"Noto Sans SC",system-ui,-apple-system,sans-serif;
+    --serif:"Noto Serif SC",Georgia,"Songti SC",serif;
+    --mono:"JetBrains Mono",ui-monospace,Consolas,monospace;
+    --measure:70ch;
+    --s1:.25rem; --s2:.5rem; --s3:.75rem; --s4:1rem;
+    --s5:1.5rem; --s6:2rem; --s7:3rem; --s8:4.5rem;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper:#12141a; --surface:#191c23; --surface-2:#22262f;
+      --ink:#e6e8ec; --ink-2:#c3c8d2; --muted:#99a1b0; --subtle:#737c8c;
+      --rule:#2a2f3a; --rule-strong:#3a4150;
+      --accent:#7ba3f5; --accent-soft:#1a2440;
+      --danger:#f0808c; --danger-soft:#331a1e;
+      --warn:#e0aa55; --warn-soft:#2e2415;
+      --ok:#6cc59a; --ok-soft:#16291f;
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper:#12141a; --surface:#191c23; --surface-2:#22262f;
+    --ink:#e6e8ec; --ink-2:#c3c8d2; --muted:#99a1b0; --subtle:#737c8c;
+    --rule:#2a2f3a; --rule-strong:#3a4150;
+    --accent:#7ba3f5; --accent-soft:#1a2440;
+    --danger:#f0808c; --danger-soft:#331a1e;
+    --warn:#e0aa55; --warn-soft:#2e2415;
+    --ok:#6cc59a; --ok-soft:#16291f;
+  }
+  *,*::before,*::after{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{margin:0;background:var(--paper);color:var(--ink);font:400 16px/1.75 var(--sans);-webkit-font-smoothing:antialiased}
+  .layout{display:grid;grid-template-columns:16rem minmax(0,1fr);align-items:start;gap:var(--s7);max-width:92rem;margin:0 auto;padding:var(--s6) var(--s5) var(--s8)}
+
+  nav.toc{position:sticky;top:var(--s5);max-height:calc(100vh - 3rem);overflow-y:auto;padding-right:var(--s3);border-right:1px solid var(--rule);font-size:.8125rem}
+  nav.toc .brand{font:700 .6875rem/1.4 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--accent);margin-bottom:var(--s4)}
+  nav.toc ol{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:1px}
+  nav.toc a{display:flex;gap:var(--s3);padding:.3rem var(--s2);border-radius:3px;color:var(--muted);text-decoration:none;line-height:1.45}
+  nav.toc a:hover{background:var(--surface);color:var(--ink)}
+  nav.toc a:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+  nav.toc .n{flex:0 0 1.5rem;font:500 .6875rem/1.7 var(--mono);color:var(--subtle);font-variant-numeric:tabular-nums}
+  main{min-width:0;max-width:100%}
+
+  header.mast{padding-bottom:var(--s5);border-bottom:3px solid var(--ink);margin-bottom:var(--s6)}
+  .eyebrow{font:700 .6875rem/1.4 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--accent);margin:0 0 var(--s3)}
+  h1{font:700 clamp(1.875rem,4.2vw,2.75rem)/1.15 var(--serif);margin:0 0 var(--s4);letter-spacing:-.01em;text-wrap:balance}
+  .standfirst{max-width:var(--measure);margin:0;color:var(--ink-2);font-size:1.0625rem;line-height:1.8}
+  .docmeta{display:grid;grid-template-columns:repeat(auto-fit,minmax(9rem,1fr));gap:1px;margin-top:var(--s5);background:var(--rule);border:1px solid var(--rule)}
+  .docmeta > div{background:var(--paper);padding:var(--s3) var(--s4)}
+  .docmeta dt{font:500 .6875rem/1.5 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--subtle)}
+  .docmeta dd{margin:var(--s1) 0 0;font:500 .875rem/1.4 var(--sans)}
+
+  section{margin-top:var(--s8);scroll-margin-top:var(--s4)}
+  section > :first-child{margin-top:0}
+  h2{display:flex;align-items:baseline;gap:var(--s4);font:700 clamp(1.25rem,2.4vw,1.75rem)/1.25 var(--serif);margin:0 0 var(--s4);padding-bottom:var(--s3);border-bottom:1px solid var(--rule-strong);text-wrap:balance}
+  h2 .hn{flex:0 0 auto;font:500 .875rem/1.6 var(--mono);color:var(--accent);font-variant-numeric:tabular-nums}
+  h3{font:700 1.0625rem/1.4 var(--sans);margin:var(--s6) 0 var(--s3)}
+  h4{font:700 .9375rem/1.5 var(--sans);margin:var(--s5) 0 var(--s2);color:var(--ink-2)}
+  p,ul,ol{max-width:var(--measure)}
+  p{margin:0 0 var(--s4)}
+  ul,ol{margin:0 0 var(--s4);padding-left:1.35rem}
+  li{margin-bottom:var(--s2)}
+  a{color:var(--accent);text-underline-offset:2px}
+  a:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:2px}
+  code{font:400 .875em/1.5 var(--mono);background:var(--surface-2);padding:.1em .35em;border-radius:3px;word-break:break-word}
+  pre{margin:0 0 var(--s4);padding:var(--s4);overflow-x:auto;background:var(--surface);border:1px solid var(--rule);border-left:3px solid var(--accent);font:400 .8125rem/1.7 var(--mono)}
+  pre code{background:none;padding:0}
+  pre .c{color:var(--subtle)}
+
+  .tw{overflow-x:auto;margin:0 0 var(--s4);border:1px solid var(--rule)}
+  table{width:100%;border-collapse:collapse;font-size:.8125rem}
+  caption{caption-side:top;text-align:left;padding:var(--s3) var(--s4);background:var(--surface-2);border-bottom:1px solid var(--rule);font:500 .75rem/1.6 var(--mono);color:var(--muted)}
+  th,td{padding:.45rem var(--s4);text-align:left;vertical-align:top;border-bottom:1px solid var(--rule)}
+  thead th{background:var(--surface);font:700 .6875rem/1.6 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);white-space:nowrap}
+  tbody tr:last-child td{border-bottom:0}
+  tbody tr:hover{background:var(--surface)}
+  td.id{font:700 .75rem/1.6 var(--mono);white-space:nowrap;color:var(--accent)}
+  td.f{font:500 .75rem/1.6 var(--mono)}
+  td.n{font-variant-numeric:tabular-nums;white-space:nowrap;text-align:right}
+  .yes{color:var(--ok);font-weight:700}
+  .no{color:var(--subtle)}
+  .cond{color:var(--warn);font-size:.75rem}
+
+  .note{max-width:var(--measure);margin:0 0 var(--s4);padding:var(--s4) var(--s5);background:var(--surface);border-left:3px solid var(--accent)}
+  .note > :last-child{margin-bottom:0}
+  .note .label{display:block;font:700 .6875rem/1.5 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--accent);margin-bottom:var(--s2)}
+  .note.red{background:var(--danger-soft);border-left-color:var(--danger)}
+  .note.red .label{color:var(--danger)}
+  .note.amber{background:var(--warn-soft);border-left-color:var(--warn)}
+  .note.amber .label{color:var(--warn)}
+
+  footer.end{margin-top:var(--s8);padding-top:var(--s5);border-top:3px solid var(--ink);max-width:var(--measure);color:var(--muted);font-size:.875rem}
+
+  @media (max-width:68rem){
+    .layout{grid-template-columns:1fr;gap:var(--s5)}
+    nav.toc{position:static;max-height:none;border-right:0;border-bottom:1px solid var(--rule);padding:0 0 var(--s4)}
+    nav.toc ol{display:grid;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr))}
+  }
+  @media (prefers-reduced-motion:reduce){*{animation-duration:.01ms !important;transition-duration:.01ms !important}}
+  @media print{
+    .layout{grid-template-columns:1fr;padding:0}
+    nav.toc{display:none}
+    section{page-break-inside:avoid}
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+
+<nav class="toc" aria-label="目录">
+  <div class="brand">需求规格说明书</div>
+  <ol>
+    <li><a href="#s1"><span class="n">1</span><span>引言</span></a></li>
+    <li><a href="#s2"><span class="n">2</span><span>项目概述</span></a></li>
+    <li><a href="#s3"><span class="n">3</span><span>角色与权限</span></a></li>
+    <li><a href="#s4"><span class="n">4</span><span>功能需求</span></a></li>
+    <li><a href="#s5"><span class="n">5</span><span>非功能需求</span></a></li>
+    <li><a href="#s6"><span class="n">6</span><span>明确不做的范围</span></a></li>
+    <li><a href="#s7"><span class="n">7</span><span>需求追溯矩阵</span></a></li>
+    <li><a href="#s8"><span class="n">8</span><span>已知限制</span></a></li>
+  </ol>
+</nav>
+
+<main>
+
+<header class="mast">
+  <p class="eyebrow">Software Requirements Specification</p>
+  <h1>ForgePilot 需求规格说明书</h1>
+  <p class="standfirst">
+    本文为 ForgePilot 的需求规格说明书。它把产品意图拆成<strong>逐条编号、可独立验收</strong>的需求，
+    并在第 7 章给出<strong>需求追溯矩阵</strong>——每条需求指向它的设计位置、实现类与验证它的测试用例。
+  </p>
+  <dl class="docmeta">
+    <div><dt>系统名称</dt><dd>ForgePilot</dd></div>
+    <div><dt>定位</dt><dd>需求驱动的 AI 代码审查平台</dd></div>
+    <div><dt>功能需求</dt><dd>69 条（FR）</dd></div>
+    <div><dt>非功能需求</dt><dd>37 条（NFR）</dd></div>
+    <div><dt>验证规模</dt><dd>333 后端 + 42 前端测试</dd></div>
+    <div><dt>文档日期</dt><dd>2026-08-27</dd></div>
+  </dl>
+</header>
+
+<!-- ══════ 1 ══════ -->
+<section id="s1">
+  <h2><span class="hn">1</span>引言</h2>
+
+  <h3>1.1 编写目的</h3>
+  <p>
+    本文档确定 ForgePilot 应当做什么、不做什么，以及每条要求凭什么算作已实现。
+    它服务三类读者：
+  </p>
+  <ul>
+    <li><strong>评审者</strong>——按第 7 章的追溯矩阵逐条核对需求是否落地。</li>
+    <li><strong>开发者</strong>——在动手前确认某项改动属于范围之内还是之外。</li>
+    <li><strong>接手者</strong>——理解现有约束的来源，避免把有意为之的设计当成缺陷去「修」。</li>
+  </ul>
+
+  <h3>1.2 与其他文档的关系</h3>
+  <p>
+    本项目遵循<strong>每类事实只在一处定义</strong>的原则。本文档定义的是<strong>需求条目及其编号</strong>；
+    其余事实在别处定义，本文只引用，不复述：
+  </p>
+  <div class="tw"><table>
+    <thead><tr><th>文档</th><th>权威内容</th></tr></thead>
+    <tbody>
+      <tr><td class="f">docs/v2/PRD.md</td><td>产品定位、角色权限表、业务状态机、关键产品规则 P1–P11</td></tr>
+      <tr><td class="f">docs/v2/ARCHITECTURE.md</td><td>模块边界、20 张表、数据库约束、流程契约、运行边界实测值</td></tr>
+      <tr><td class="f">docs/v2/API.md</td><td>接口契约</td></tr>
+      <tr><td class="f">docs/v2/DEFENSE-GUIDE.md</td><td>无凭据部署与评测复现步骤</td></tr>
+      <tr><td class="f">frontend/MANUAL-ACCEPTANCE.md</td><td>无法自动化的人工验收项</td></tr>
+      <tr><td class="f">.trellis/spec/</td><td>18 份编码规范（后端 6、前端 9、通用 3）</td></tr>
+    </tbody>
+  </table></div>
+  <p>本文与上述文档冲突时，<strong>以被引用的那一份为准</strong>，并应视为本文的缺陷。</p>
+
+  <h3>1.3 需求编号约定</h3>
+  <ul>
+    <li><strong>FR-<em>模块字母</em><em>序号</em></strong>——功能需求。模块字母：A 账户会话、B 项目成员、C 需求管理、D 项目知识、E 仓库与 PR、F 代码审查、G 评测。</li>
+    <li><strong>NFR-<em>类别字母</em><em>序号</em></strong>——非功能需求。类别字母：P 性能容量、S 安全、R 可靠性、M 可维护性、C 兼容可移植。</li>
+    <li>编号一经分配<strong>不再重用</strong>。需求作废时保留编号并标注，不删除、不顶替。</li>
+  </ul>
+
+  <h3>1.4 术语</h3>
+  <p>本文使用的项目术语，完整解释见配套文档《ForgePilot 使用与代码手册》第 13 章「术语速查」。此处只列最高频的四个：</p>
+  <div class="tw"><table>
+    <thead><tr><th>术语</th><th>含义</th></tr></thead>
+    <tbody>
+      <tr><td class="f">Requirement / 需求</td><td>一条研发需求。身份稳定，正文存在不可变的 Revision（修订）里。</td></tr>
+      <tr><td class="f">AC / 验收条件</td><td>Acceptance Criterion。附属于某次修订，携带跨修订稳定的 <code>ac_key</code>。</td></tr>
+      <tr><td class="f">Review / 审查</td><td>针对<strong>一组冻结输入</strong>（PR 的某个 head + 某份 diff + 某一版需求）的一次 AI 审查。</td></tr>
+      <tr><td class="f">Finding / 发现</td><td>一次审查报出的一个具体问题，带三个确定性哈希以支持跨轮次匹配。</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<!-- ══════ 2 ══════ -->
+<section id="s2">
+  <h2><span class="hn">2</span>项目概述</h2>
+
+  <h3>2.1 要解决的问题</h3>
+  <p>
+    通用 AI 代码审查工具只能看到 diff，因此只能回答「这段代码写得好不好」。
+    它无法回答另一个在真实研发中更常被问到的问题：<strong>这次改动有没有做到需求要求的事</strong>。
+  </p>
+  <p>
+    ForgePilot 的做法是把三样东西一起送进模型上下文：<strong>变更 diff + 该 PR 关联的需求与验收条件 + 项目知识库检索片段</strong>。
+    审查结论因此能落到具体验收条件上，而不只是代码风格。
+  </p>
+
+  <h3>2.2 系统边界</h3>
+  <p>ForgePilot 是一个<strong>Web 应用</strong>，通过 webhook 与 GitHub / GitLab 集成，通过 HTTP 调用 OpenAI 兼容的模型服务。它<strong>不</strong>做以下事情，这些是边界而非未完成项：</p>
+  <ul>
+    <li>不克隆代码仓库，不执行 Git 命令——只消费 provider API 返回的 patch。</li>
+    <li>不修改代码、不提交、不合并——AI 只产出分析结果。</li>
+    <li>不推进任何业务状态——所有状态流转由人触发。</li>
+  </ul>
+
+  <h3>2.3 运行环境</h3>
+  <div class="tw"><table>
+    <thead><tr><th>层</th><th>技术</th><th>说明</th></tr></thead>
+    <tbody>
+      <tr><td>后端</td><td class="f">Java 21 · Spring Boot 4.1</td><td>模块化单体，8 个顶层业务包</td></tr>
+      <tr><td>数据库</td><td class="f">PostgreSQL 15 + pgvector 0.8.6</td><td>业务事实源；Flyway 管理 schema</td></tr>
+      <tr><td>前端</td><td class="f">Vue 3 · TypeScript · Vite</td><td>无状态管理库、无 UI 组件库、无 HTTP 客户端库</td></tr>
+      <tr><td>模型服务</td><td class="f">OpenAI 兼容端点</td><td>base URL 由部署配置，代码不硬编码任何 host</td></tr>
+      <tr><td>部署</td><td class="f">Docker Compose</td><td>三容器：frontend / backend / postgres</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>2.4 设计约束</h3>
+  <p>以下约束不是实现细节，而是需求层面的硬性限制，违反即视为需求未满足：</p>
+  <ul>
+    <li><strong>模块依赖单向无环</strong>，由 ArchUnit 在每次构建时强制。</li>
+    <li><strong>每个项目内引用都携带 <code>project_id</code></strong>，不存在「先按裸 id 查再检查项目」的读路径。</li>
+    <li><strong>只有一个 Review Engine</strong>，只有一个 AI 网关出口。</li>
+    <li><strong>数据模型 20 张表</strong>；新增表需要业务事实与记录在案的理由。</li>
+    <li><strong>Flyway 迁移只追加</strong>，已应用的迁移逐字节不可变。</li>
+  </ul>
+</section>
+
+<!-- ══════ 3 ══════ -->
+<section id="s3">
+  <h2><span class="hn">3</span>角色与权限</h2>
+  <p>
+    每个项目<strong>恰有一个 LEADER</strong>。同一成员可同时拥有多个角色，权限取<strong>能力并集</strong>。
+    不设独立 OWNER 角色。<strong>跨项目一律不可见、不可操作</strong>。
+  </p>
+  <div class="tw"><table>
+    <caption>权威定义在 PRD.md §3；本表为需求编号的对应视图</caption>
+    <thead><tr><th>动作</th><th>LEADER</th><th>DEVELOPER</th><th>REVIEWER</th><th>需求编号</th></tr></thead>
+    <tbody>
+      <tr><td>创建项目、管理成员与角色</td><td class="yes">✅</td><td class="no">—</td><td class="no">—</td><td class="id">FR-B1, B4–B8</td></tr>
+      <tr><td>归档 / 恢复项目</td><td class="yes">✅</td><td class="no">—</td><td class="no">—</td><td class="id">FR-B9</td></tr>
+      <tr><td>配置 SCM 仓库、上传项目知识</td><td class="yes">✅</td><td class="no">—</td><td class="no">—</td><td class="id">FR-E1, D1</td></tr>
+      <tr><td>验证、标注、撤销自己的 SCM 身份</td><td class="yes">✅</td><td class="yes">✅</td><td class="yes">✅</td><td class="id">FR-E3</td></tr>
+      <tr><td>为项目选择自己的兼容 SCM 身份</td><td class="yes">✅</td><td class="yes">✅</td><td class="yes">✅</td><td class="id">FR-E4</td></tr>
+      <tr><td>批准 / 拒绝成员待审身份绑定</td><td class="yes">✅</td><td class="no">—</td><td class="no">—</td><td class="id">FR-E4</td></tr>
+      <tr><td>创建 / 编辑需求与 AC</td><td class="yes">✅</td><td class="no">—</td><td class="no">—</td><td class="id">FR-C1–C5</td></tr>
+      <tr><td>上传需求文档</td><td class="yes">✅</td><td class="no">—</td><td class="no">—</td><td class="id">FR-C8</td></tr>
+      <tr><td>阅读 / 下载需求文档、导出结构化需求</td><td class="yes">✅</td><td class="yes">✅</td><td class="yes">✅</td><td class="id">FR-C8, C9</td></tr>
+      <tr><td>运行需求质量检查</td><td class="yes">✅</td><td class="no">—</td><td class="no">—</td><td class="id">FR-C10</td></tr>
+      <tr><td>需求 DRAFT → READY、指派开发</td><td class="yes">✅</td><td class="no">—</td><td class="no">—</td><td class="id">FR-C4, C7</td></tr>
+      <tr><td>生成一次性实现建议</td><td class="yes">✅</td><td><span class="cond">仅被指派需求</span></td><td class="no">—</td><td class="id">FR-C11</td></tr>
+      <tr><td>修改 PR ↔ 需求关联</td><td class="yes">✅</td><td><span class="cond">仅本人 PR，且当前 head 无终局 Decision</span></td><td class="no">—</td><td class="id">FR-E7, E8</td></tr>
+      <tr><td>触发 / 重试 Review</td><td class="yes">✅</td><td><span class="cond">仅本人 PR</span></td><td class="yes">✅</td><td class="id">FR-F1, F12</td></tr>
+      <tr><td>Finding 确认 / 拒绝</td><td class="yes">✅</td><td class="no">—</td><td class="yes">✅</td><td class="id">FR-F9</td></tr>
+      <tr><td>Finding 认领、标记已修复</td><td class="no">—</td><td class="yes">✅</td><td class="no">—</td><td class="id">FR-F9</td></tr>
+      <tr><td>Finding 验证通过 / 打回</td><td class="yes">✅</td><td class="no">—</td><td class="yes">✅</td><td class="id">FR-F9</td></tr>
+      <tr><td>Review 终局 APPROVE / REQUEST_CHANGES</td><td class="yes">✅</td><td class="no">—</td><td class="yes">✅</td><td class="id">FR-F10</td></tr>
+      <tr><td>取消 / 删除需求</td><td class="yes">✅</td><td class="no">—</td><td class="no">—</td><td class="id">FR-C6, C12</td></tr>
+    </tbody>
+  </table></div>
+  <div class="note">
+    <span class="label">一条容易被忽略的权限设计</span>
+    <p>
+      <strong>Finding 的「认领」只有 DEVELOPER 能做，LEADER 也不能。</strong>
+      这不是遗漏——认领意味着「我来修」，是本人动作。因此系统里<strong>没有「指派 Finding」这个端点</strong>。
+    </p>
+  </div>
+</section>
+
+<!-- ══════ 4 ══════ -->
+<section id="s4">
+  <h2><span class="hn">4</span>功能需求</h2>
+  <p>共 69 条。每条给出验收判据；「验证」列的测试类见第 7 章完整追溯。</p>
+
+  <h3>4.1 账户与会话（FR-A）</h3>
+  <div class="tw"><table>
+    <thead><tr><th>编号</th><th>需求</th><th>验收判据</th></tr></thead>
+    <tbody>
+      <tr><td class="id">FR-A1</td><td>注册本地账号，含用户名、显示名、口令</td><td>注册成功返回 <code>{id, username, displayName}</code>；系统第一个账号也走此路径，仓库内不存在任何预置口令</td></tr>
+      <tr><td class="id">FR-A2</td><td>表单登录，服务端进程内会话</td><td>登录后携带会话 cookie 可访问受保护端点</td></tr>
+      <tr><td class="id">FR-A3</td><td>读取当前登录账号</td><td>返回体不含口令哈希与 <code>enabled</code> 等内部字段</td></tr>
+      <tr><td class="id">FR-A4</td><td>修改显示名</td><td>刷新后保持</td></tr>
+      <tr><td class="id">FR-A5</td><td>修改口令后，除本会话外其余会话立即失效</td><td>改密后旧会话的下一个请求即被拒绝；执行改密的会话仍可用</td></tr>
+      <tr><td class="id">FR-A6</td><td>「用户名不存在」与「口令错误」不可区分</td><td>两种失败的响应体<strong>逐字节相同</strong>，且 <code>traceId</code> 为空</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>4.2 项目与成员（FR-B）</h3>
+  <div class="tw"><table>
+    <thead><tr><th>编号</th><th>需求</th><th>验收判据</th></tr></thead>
+    <tbody>
+      <tr><td class="id">FR-B1</td><td>创建项目，创建者在同一事务内成为该项目 LEADER</td><td>不存在「项目已建但无 LEADER」的已提交状态</td></tr>
+      <tr><td class="id">FR-B2</td><td>列出当前账号参与的项目，含本人角色</td><td>不返回未参与的项目</td></tr>
+      <tr><td class="id">FR-B3</td><td>按显示名、用户名或平台 ID 搜索候选账号</td><td>少于两字符且非纯数字时不发请求</td></tr>
+      <tr><td class="id">FR-B4</td><td>原子批量添加成员，上限 50，支持三角色任意非空组合</td><td>任一行失败则<strong>整批不产生任何成员</strong>；服务端逐行报错时前端标出对应行</td></tr>
+      <tr><td class="id">FR-B5</td><td>覆盖成员的角色集合</td><td>角色集合不得为空</td></tr>
+      <tr><td class="id">FR-B6</td><td>移除成员（硬删），并撤销其在需求指派、Finding 认领、SCM 绑定三处的活权限</td><td>三处引用全部撤销；漏撤销时删除被外键以 23503 拒绝，而非静默通过</td></tr>
+      <tr><td class="id">FR-B7</td><td>唯一 LEADER 不可被移除</td><td>返回 409，成员数不变</td></tr>
+      <tr><td class="id">FR-B8</td><td>LEADER 转移为显式独立动作</td><td>转移后仍<strong>恰有一个</strong> LEADER；并发转移串行化，失败方重新求值自身角色</td></tr>
+      <tr><td class="id">FR-B9</td><td>归档项目并可恢复；归档需重新输入项目名确认</td><td>输入不做 trim、不忽略大小写、不认前缀；归档后数据与审计一行不动；重复归档返回 409</td></tr>
+      <tr><td class="id">FR-B10</td><td>跨项目资源一律不可见、不可操作</td><td>外项目的 id 与从未签发过的 id <strong>返回相同状态码</strong>，不泄露存在性</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>4.3 需求管理（FR-C）</h3>
+  <div class="tw"><table>
+    <thead><tr><th>编号</th><th>需求</th><th>验收判据</th></tr></thead>
+    <tbody>
+      <tr><td class="id">FR-C1</td><td>创建需求，含标题、背景、描述与验收条件</td><td>创建即产生 Revision 1</td></tr>
+      <tr><td class="id">FR-C2</td><td>验收条件携带跨修订稳定的 <code>ac_key</code></td><td>发布新修订时 <code>ac_key</code> 原样复制；行 id 变化不影响身份</td></tr>
+      <tr><td class="id">FR-C3</td><td>DRAFT 阶段 Revision 1 可原地编辑</td><td>编辑同事务清空该修订的质量检查结果</td></tr>
+      <tr><td class="id">FR-C4</td><td>DRAFT → READY 在同一事务内冻结正文与 AC</td><td>READY 后再调编辑接口返回 409</td></tr>
+      <tr><td class="id">FR-C5</td><td>READY 后的变更以发布新修订实现，必填变更原因</td><td>旧修订与旧 AC <strong>永久保留</strong></td></tr>
+      <tr><td class="id">FR-C6</td><td>状态机 <code>DRAFT → READY → IN_DEVELOPMENT → DONE</code>，另有 <code>CANCELED</code></td><td>无 <code>IN_REVIEW</code> 状态；评审进展是只读派生量</td></tr>
+      <tr><td class="id">FR-C7</td><td>首次指派与 <code>READY → IN_DEVELOPMENT</code> 同事务；后续更换负责人不再改变状态</td><td>—</td></tr>
+      <tr><td class="id">FR-C8</td><td>LEADER 上传 <code>.txt/.md</code> 需求文档；全体成员可阅读并按原文件名下载</td><td>—</td></tr>
+      <tr><td class="id">FR-C9</td><td>结构化需求可导出 Markdown</td><td>含标题、背景、描述与 AC；与需求文档<strong>不自动同步</strong></td></tr>
+      <tr><td class="id">FR-C10</td><td>需求质量检查：确定性规则 + <strong>一次</strong>结构化 AI 调用</td><td>结果归属具体修订；<strong>不改变需求状态</strong>；DRAFT 正文一改即失效</td></tr>
+      <tr><td class="id">FR-C11</td><td>一次性知识增强实现建议</td><td>无输入框、无对话历史；需求正文变更后旧结果清除</td></tr>
+      <tr><td class="id">FR-C12</td><td>已作废需求可软删</td><td>非作废需求返回 409；重复删除返回 404；AI 调用审计与 PR 关联事实<strong>保持完整</strong></td></tr>
+      <tr><td class="id">FR-C13</td><td>AI、Webhook、PR、Review <strong>一律不得</strong>推进需求状态</td><td>状态变更只能由具备权限的人触发</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>4.4 项目知识（FR-D）</h3>
+  <div class="tw"><table>
+    <thead><tr><th>编号</th><th>需求</th><th>验收判据</th></tr></thead>
+    <tbody>
+      <tr><td class="id">FR-D1</td><td>上传 <code>.txt/.md</code>，切片并生成向量</td><td>单文件上限 5 MB；失败文档显示<strong>真实失败原因</strong>，不显示为「处理中」或「已就绪」</td></tr>
+      <tr><td class="id">FR-D2</td><td>一次选择多个文件上传，逐文件报告成败</td><td>每个文件<strong>独立一次调用、独立一个事务</strong>；一个失败不影响其余</td></tr>
+      <tr><td class="id">FR-D3</td><td>项目内语义检索，TopK = 8</td><td><code>project_id</code> 为 SQL 硬过滤；别的项目的行既不出现也不影响排序</td></tr>
+      <tr><td class="id">FR-D4</td><td>需求附件与公共知识分离展示；附件可显式提升为公共知识</td><td>提升采用<strong>复制</strong>而非改写，原附件保留归属与历史</td></tr>
+      <tr><td class="id">FR-D5</td><td>展示切片数、已嵌入数、向量维度、Embedding Profile 与索引状态</td><td><strong>任何位置不展示原始向量</strong>，无手工向量查询台</td></tr>
+      <tr><td class="id">FR-D6</td><td>LEADER 可删除公共知识文档</td><td>同事务显式删除其切片与向量；<strong>需求附件来源的文档被拒绝删除</strong>，并说明去哪解除附件</td></tr>
+      <tr><td class="id">FR-D7</td><td>拒绝与本项目已有维度不一致的向量写入</td><td>这是唯一防线：一行维度不匹配会使该项目<strong>全部</strong>检索以 22000 失败</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>4.5 仓库接入与 PR（FR-E）</h3>
+  <div class="tw"><table>
+    <thead><tr><th>编号</th><th>需求</th><th>验收判据</th></tr></thead>
+    <tbody>
+      <tr><td class="id">FR-E1</td><td>每个项目一个活动 GitHub 或 GitLab 仓库，可注册与修改</td><td>一旦有 PR 存在，仓库<strong>稳定身份即冻结</strong>，而 API 基地址仍可变更</td></tr>
+      <tr><td class="id">FR-E2</td><td>访问令牌与 webhook 密钥只写不回显，静态加密存储</td><td>响应体、页面、日志<strong>任何位置</strong>不出现凭据；修改时留空表示保持原值</td></tr>
+      <tr><td class="id">FR-E3</td><td>每个账号可验证多个 SCM 身份，各带标签与用途</td><td>验证使用<strong>一次性</strong>个人 Token，提交后清空、不回显、不持久化</td></tr>
+      <tr><td class="id">FR-E4</td><td>成员为项目选择自己的兼容身份；可选 LEADER 严格审批</td><td>每成员每项目<strong>最多一个活动绑定</strong>；LEADER 不能替他人选择身份；待审批期间不参与「本人 PR」权限</td></tr>
+      <tr><td class="id">FR-E5</td><td>Webhook 对<strong>原始请求字节</strong>做认证</td><td>HMAC 覆盖原始字节；常数时间比较；GitLab 新版签名存在但验不过时<strong>绝不降级</strong>到旧版</td></tr>
+      <tr><td class="id">FR-E6</td><td>认证通过后回头向 provider 做一次权威读取</td><td>不信任载荷内容；权威字段缺席、为 null 或为容器时<strong>显式失败</strong>而非存下空串</td></tr>
+      <tr><td class="id">FR-E7</td><td>标题或分支名中的 <code>REQ-&lt;id&gt;</code> 自动关联需求，人工可纠正</td><td>解析失败或跨项目引用<strong>不阻塞入库</strong>，只是保持未关联</td></tr>
+      <tr><td class="id">FR-E8</td><td>关联变更与其审计记录写在同一事务</td><td>不存在「关联已变但无审计行」或「有审计行但变更未提交」的状态</td></tr>
+      <tr><td class="id">FR-E9</td><td>每次出站调用前校验目标 URL 是否被本部署允许</td><td>每次调用<strong>重新</strong>校验，因为该配置可由 LEADER 修改而策略可能已收紧</td></tr>
+      <tr><td class="id">FR-E10</td><td>乱序到达的旧投递被丢弃</td><td>带更旧时间戳的快照不覆盖较新状态</td></tr>
+      <tr><td class="id">FR-E11</td><td>变更文件清单连同 patch 整份存储</td><td>超出上限时<strong>入库显式失败</strong>，不静默截断</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>4.6 代码审查（FR-F）</h3>
+  <div class="tw"><table>
+    <thead><tr><th>编号</th><th>需求</th><th>验收判据</th></tr></thead>
+    <tbody>
+      <tr><td class="id">FR-F1</td><td>PR 变更自动创建共享的 PENDING Review</td><td>与更新 PR 行<strong>同一事务</strong>；不存在「PR 已更新但 Review 缺失」的已提交状态</td></tr>
+      <tr><td class="id">FR-F2</td><td>Review 创建时冻结上下文：head SHA、diff 指纹、需求修订、变更文件清单</td><td>数据库触发器拒绝事后修改身份列，并拒绝项目与上下文不一致的写入</td></tr>
+      <tr><td class="id">FR-F3</td><td>并发抢占围栏：同一次 Review 同时只有一个 worker 能执行</td><td>抢占为<strong>单条原子条件更新</strong>；失败方匹配零行；过期 worker 不得完成、失败、续租或追加 Finding</td></tr>
+      <tr><td class="id">FR-F4</td><td>大 PR 分批送模型；批次<strong>只报告候选与证据，绝不给出裁定</strong></td><td>小 PR 与大 PR 走<strong>完全相同</strong>的路径，无捷径分支</td></tr>
+      <tr><td class="id">FR-F5</td><td>综合阶段对被审查修订的<strong>每一条</strong> AC 给出裁定</td><td>模型跳过的填为 <code>NOT_FOUND</code> 并记警告；沉默的模型无法缩短报告</td></tr>
+      <tr><td class="id">FR-F6</td><td>结构非法的回答获得<strong>恰好一次</strong>格式修复；仍失败则整次 Review FAILED</td><td><strong>绝不产出「成功但为空」的报告</strong>；FAILED 的 Review 在类型上没有 Report</td></tr>
+      <tr><td class="id">FR-F7</td><td>覆盖清单显式标注被截断、已审查与未审查的文件</td><td>「空的未审查清单」与「缺失的未审查清单」<strong>保持可区分</strong>；缺失 manifest 不显示为「全部覆盖」</td></tr>
+      <tr><td class="id">FR-F8</td><td>Finding 携带三个确定性哈希，支撑跨轮次去重、抑制与血缘</td><td><strong>三个哈希都不覆盖模型散文</strong>（说明、建议、置信度）</td></tr>
+      <tr><td class="id">FR-F9</td><td>Finding 人工生命周期：认领 → 标记已修复 → 复核通过/打回；可填备注</td><td>按角色的按钮矩阵与后端一致；审计永久保留，成员已删时回退数字 id</td></tr>
+      <tr><td class="id">FR-F10</td><td>Review 终局裁定为<strong>一次性</strong>，只允许 <code>PENDING → APPROVE | REQUEST_CHANGES</code></td><td>前置条件不满足时列出具体原因</td></tr>
+      <tr><td class="id">FR-F11</td><td>新 head 产生新 Review，前次结果保留为历史</td><td>页面显示「审查已过期」；<strong>不自动重审</strong>，由人按权限触发</td></tr>
+      <tr><td class="id">FR-F12</td><td>停滞的 Review 由对账调度恢复</td><td>其唯一查询的 FROM 子句<strong>只有 <code>review</code> 一张表</strong>，因此不可能补建从未创建过的 Review</td></tr>
+      <tr><td class="id">FR-F13</td><td>模型置信度只记 <code>HIGH/MEDIUM/LOW</code> 三档</td><td><strong>不进任何哈希、不参与任何自动门禁或状态流转</strong>；UI 与其他三个标记分开呈现</td></tr>
+      <tr><td class="id">FR-F14</td><td><code>REQUEST_CHANGES</code> 对该 head 形成闸门</td><td>每次读取时<strong>现算</strong>而非缓存，因为 force-push 会改变 head</td></tr>
+      <tr><td class="id">FR-F15</td><td>SUPPRESSED 的 Finding 位于独立折叠组，可按真实规则重开</td><td>重开<strong>只</strong>在 <code>continuity = SUPPRESSED</code> 时允许；普通驳回对任何角色都不可逆</td></tr>
+      <tr><td class="id">FR-F16</td><td>证据工作台展示审查时的完整上下文</td><td>含 Requirement、AC、PR 身份、召回知识集合、改动文件与 unified diff；原始 JSON 只在底部折叠诊断区</td></tr>
+      <tr><td class="id">FR-F17</td><td>知识区域只称为「本 Review 召回的知识证据集」</td><td><strong>不声称</strong>某一块知识直接支持某一条 Finding</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>4.7 评测（FR-G）</h3>
+  <div class="tw"><table>
+    <thead><tr><th>编号</th><th>需求</th><th>验收判据</th></tr></thead>
+    <tbody>
+      <tr><td class="id">FR-G1</td><td>三臂对照实验：Diff / +需求与 AC / +项目知识</td><td>三臂只改变<strong>暴露给模型的上下文</strong>，输出走同一 run contract</td></tr>
+      <tr><td class="id">FR-G2</td><td>确定性评分器，分别报告各项指标</td><td><strong>不合成单一综合分</strong>；分母为零输出 <code>null</code> 而非伪造为零</td></tr>
+      <tr><td class="id">FR-G3</td><td>配置冻结与一次性 holdout 台账</td><td>模型面与评分文件由内容哈希钉住；holdout <strong>只运行一次</strong>，不可重跑</td></tr>
+      <tr><td class="id">FR-G4</td><td>无凭据条件下从保留的原始输出重算全部指标</td><td>重算<strong>不发起任何 provider 调用</strong>，不读 API key</td></tr>
+      <tr><td class="id">FR-G5</td><td>失败与未运行的 case 保持显式</td><td>工具<strong>绝不</strong>把它们改写成空的成功预测；<code>COMPLETED</code> 且零 finding 是有效空结果</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<!-- ══════ 5 ══════ -->
+<section id="s5">
+  <h2><span class="hn">5</span>非功能需求</h2>
+
+  <h3>5.1 性能与容量（NFR-P）</h3>
+  <p>下表全部为<strong>实测值而非估算</strong>。权威定义在 <code>ARCHITECTURE.md</code> §7.2，调整任何一行都要连带更新该表。</p>
+  <div class="tw"><table>
+    <thead><tr><th>编号</th><th>参数</th><th class="n">冻结值</th><th>超出时的行为</th></tr></thead>
+    <tbody>
+      <tr><td class="id">NFR-P1</td><td>单 PR 最大变更文件数</td><td class="n">300</td><td>进入截断清单并在 UI 显式提示</td></tr>
+      <tr><td class="id">NFR-P2</td><td>单文件 patch 最大字符</td><td class="n">60,000</td><td>按<strong>行边界</strong>截断并标注</td></tr>
+      <tr><td class="id">NFR-P3</td><td>单批次输入预算</td><td class="n">60,000</td><td>分批依据</td></tr>
+      <tr><td class="id">NFR-P4</td><td>模型单次调用超时</td><td class="n">120 s</td><td>按瞬时失败处理</td></tr>
+      <tr><td class="id">NFR-P5</td><td>模型重试次数</td><td class="n">1</td><td>仅 429/5xx/网络错误；<strong>全代码库别处无重试</strong></td></tr>
+      <tr><td class="id">NFR-P6</td><td>并发 Review 上限</td><td class="n">2</td><td>资源更紧的部署可显式降为 1</td></tr>
+      <tr><td class="id">NFR-P7</td><td>单文件上传上限</td><td class="n">5 MB</td><td>入库前拒绝</td></tr>
+      <tr><td class="id">NFR-P8</td><td>检索 TopK</td><td class="n">8</td><td>项目内硬过滤</td></tr>
+      <tr><td class="id">NFR-P9</td><td>批量添加成员上限</td><td class="n">50</td><td>前端在提交前拦住</td></tr>
+    </tbody>
+  </table></div>
+  <div class="note">
+    <span class="label">NFR-P6 的实测依据</span>
+    <p>
+      在 4,101,304,320 字节主机上：backend 768 MiB（heap 384 / direct 128 / metaspace 128），
+      PostgreSQL 512 MiB，连接池 5。两个并发 Review 各含 300 文件与 3,989,101 字符的规范化清单，
+      经生产网关、60,000 字符批次、校验、持久化与围栏全链路完成，共 152 次模型调用；
+      两条均 <code>COMPLETED</code>、<code>execution_attempt=1</code>、<code>truncated=false</code>。
+      采样峰值 heap 83,167,816 字节，连接池 active/pending 1/0，无 OOM、无重启。
+    </p>
+  </div>
+
+  <h3>5.2 安全（NFR-S）</h3>
+  <div class="tw"><table>
+    <thead><tr><th>编号</th><th>需求</th><th>验收判据</th></tr></thead>
+    <tbody>
+      <tr><td class="id">NFR-S1</td><td>口令使用适合存储口令的慢哈希</td><td>BCrypt；数据源口令<strong>无默认回退值</strong></td></tr>
+      <tr><td class="id">NFR-S2</td><td>写请求需携带 CSRF 令牌</td><td>缺失或错误的令牌是访问被拒的唯一来源；令牌经 Cookie 下发、Header 回显</td></tr>
+      <tr><td class="id">NFR-S3</td><td>凭据静态加密</td><td>provider token 与 webhook 密钥加密存储；<strong>不做密钥轮换</strong>（需要密钥版本列与重加密扫描，属新结构）</td></tr>
+      <tr><td class="id">NFR-S4</td><td>Webhook 认证使用常数时间比较</td><td>被截断的摘要只判为不相等，不泄露长度信息</td></tr>
+      <tr><td class="id">NFR-S5</td><td>出站请求受策略控制</td><td>防止诱导服务器访问内网地址</td></tr>
+      <tr><td class="id">NFR-S6</td><td>发往模型的内容先做敏感信息脱敏与预算裁剪</td><td>掩码疑似凭据；该处理为<strong>纯函数</strong>，不因「看起来含 token」拒绝整份文档</td></tr>
+      <tr><td class="id">NFR-S7</td><td>需求文本、文档、PR 标题与代码注释<strong>全部视为不可信数据</strong></td><td>—</td></tr>
+      <tr><td class="id">NFR-S8</td><td>错误响应不泄露存在性</td><td>跨项目资源与不存在的资源同答；两种登录失败逐字节相同</td></tr>
+      <tr><td class="id">NFR-S9</td><td>公开端点的任何失败不得以堆栈逃逸</td><td>校验完成前的每种失败都答成同一种「无法验证」</td></tr>
+      <tr><td class="id">NFR-S10</td><td>模型调用留下审计</td><td>记录的是「一次<strong>尝试</strong>」，重试留两行；超时与失败分开记录</td></tr>
+      <tr><td class="id">NFR-S11</td><td>人工决策全部留痕</td><td>Finding 每次流转、PR 关联每次变更、三类资源每次删除均永久记录</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>5.3 可靠性（NFR-R）</h3>
+  <div class="tw"><table>
+    <thead><tr><th>编号</th><th>需求</th><th>验收判据</th></tr></thead>
+    <tbody>
+      <tr><td class="id">NFR-R1</td><td>webhook 重复投递是幂等的</td><td>同一快照重复到达不产生重复 PR 行或重复 Review</td></tr>
+      <tr><td class="id">NFR-R2</td><td>崩溃的 worker 不得永久占住 Review</td><td>租约过期后可被重新抢占；重新抢占同事务丢弃前次 Finding</td></tr>
+      <tr><td class="id">NFR-R3</td><td>报告不得比它所属的 Review 活得更久</td><td>写结果与状态转换同事务，租约丢失即整体回滚</td></tr>
+      <tr><td class="id">NFR-R4</td><td>模型不可达不导致无限重试</td><td>标记 FAILED 并停下等人工重试</td></tr>
+      <tr><td class="id">NFR-R5</td><td>约束冲突不得被捕获后在同一事务内继续执行</td><td>冲突到达统一处理器时其事务必定已回滚</td></tr>
+      <tr><td class="id">NFR-R6</td><td>并发写入由行锁串行化</td><td>LEADER 转移、仓库重配置、PR 同步均先取行锁</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>5.4 可维护性（NFR-M）</h3>
+  <div class="tw"><table>
+    <thead><tr><th>编号</th><th>需求</th><th>验收判据</th></tr></thead>
+    <tbody>
+      <tr><td class="id">NFR-M1</td><td>模块依赖单向无环</td><td>由 ArchUnit 在每次构建强制；反向需求只能用只读 facade 或进程内事件</td></tr>
+      <tr><td class="id">NFR-M2</td><td>数据库约束由数据库本身强制，而非仅由服务层</td><td>约束测试通过 JdbcTemplate 绕到应用代码之下写入，并点名期望的 SQLState</td></tr>
+      <tr><td class="id">NFR-M3</td><td>数据库行为只对真实 PostgreSQL + pgvector 验证</td><td><strong>禁止</strong>内存数据库替代、禁止「Docker 缺失就跳过」、禁止 <code>@Disabled</code> 与 <code>assumeTrue</code></td></tr>
+      <tr><td class="id">NFR-M4</td><td>Flyway 迁移只追加</td><td>已应用的迁移<strong>逐字节不可变</strong>——改动会使部署以校验失败无法启动</td></tr>
+      <tr><td class="id">NFR-M5</td><td>测试零跳过</td><td>跑不起来的测试必须让构建失败</td></tr>
+      <tr><td class="id">NFR-M6</td><td>前端不引入状态管理库、UI 组件库或 HTTP 客户端库</td><td>由 lint 策略检查禁止依赖清单</td></tr>
+      <tr><td class="id">NFR-M7</td><td>颜色只在设计令牌文件中定义</td><td>lint 拒绝其他文件中出现原始色值</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>5.5 兼容与可移植（NFR-C）</h3>
+  <div class="tw"><table>
+    <thead><tr><th>编号</th><th>需求</th><th>验收判据</th></tr></thead>
+    <tbody>
+      <tr><td class="id">NFR-C1</td><td>支持自建 GitHub / GitLab 实例</td><td>API 基地址来自配置，<strong>代码中不硬编码任何 host</strong></td></tr>
+      <tr><td class="id">NFR-C2</td><td>支持任意 OpenAI 兼容模型服务</td><td>未配置的部署在<strong>调用时</strong>失败，而非阻止应用启动</td></tr>
+      <tr><td class="id">NFR-C3</td><td>无凭据即可完成部署与报告重算</td><td>空栈演示与确定性重算均不需要 provider 凭据</td></tr>
+      <tr><td class="id">NFR-C4</td><td>界面在 1440 / 768 / 390 三档宽度下无页面级横向滚动</td><td>宽表格在自身容器内滚动</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<!-- ══════ 6 ══════ -->
+<section id="s6">
+  <h2><span class="hn">6</span>明确不做的范围</h2>
+  <p>
+    以下项目<strong>不是未完成的需求</strong>，而是明确划在范围之外的决定。
+    把它们列进本文档，是为了让「没做」与「漏做」可区分。
+  </p>
+  <div class="tw"><table>
+    <thead><tr><th>不做</th><th>理由</th></tr></thead>
+    <tbody>
+      <tr><td>通用聊天助手、对话历史、流式会话、多轮记忆</td><td>产品定位是审查而非对话。AI 能力全部为一次性调用。</td></tr>
+      <tr><td>Agent、Planner、Tool、Memory、自动改代码或提交</td><td>AI 不改变任何业务状态，这是权限模型的基础。</td></tr>
+      <tr><td>多仓库、多 SCM 连接、通用 Commit 审查</td><td>一个项目一个活动仓库是当前的边界。</td></tr>
+      <tr><td>本地 clone、Git CLI</td><td>只消费 provider API 返回的 patch。</td></tr>
+      <tr><td>相关代码语义检索、代码向量库、AST / 调用图</td><td>知识库只索引文档，不索引代码。</td></tr>
+      <tr><td>消息队列、Redis、微服务、独立沙箱</td><td>模块化单体足以承载当前边界。</td></tr>
+      <tr><td>第二个 Review Engine、第二条流水线</td><td>唯一引擎是架构不变量。</td></tr>
+      <tr><td>向量索引</td><td>见下条独立说明。</td></tr>
+      <tr><td>额外一级菜单</td><td>六入口是导航契约，由测试锁定。</td></tr>
+    </tbody>
+  </table></div>
+  <div class="note amber">
+    <span class="label">向量索引是已决策的非目标，不是缺失的迁移</span>
+    <p>
+      冻结的 Embedding Profile 是 <strong>4096 维</strong>，超过 pgvector 0.8.6 全部<strong>精确</strong>索引形态的维度上限。
+      能建出来的两种形态——二值量化（压成 1 bit 按汉明距离排序）与截断到前 2000 维——<strong>都是有损预筛</strong>，
+      采用它们还必须再补一个 rerank 阶段。
+    </p>
+    <p>
+      而在 MVP 语料规模下，顺序扫描给出的<strong>就是精确余弦序</strong>。
+      这三件事被写成测试（<code>KnowledgeVectorIndexTest</code>）而不是研究笔记，
+      因为这条论据会过期：pgvector 一旦放宽维度上限，该测试就会失败，<strong>而那次失败正是回来重新决策的信号</strong>。
+    </p>
+  </div>
+</section>
+
+<!-- ══════ 7 ══════ -->
+<section id="s7">
+  <h2><span class="hn">7</span>需求追溯矩阵</h2>
+  <p>
+    本章是全文的核心。每条功能需求指向<strong>它在哪里设计、由哪些类实现、由哪个测试验证</strong>。
+    「验证」列为空的条目表示<strong>无自动化覆盖</strong>，只能靠人工验收——这些条目单独列在 7.3。
+  </p>
+
+  <h3>7.1 功能需求追溯</h3>
+  <div class="tw"><table>
+    <caption>设计列引用 ARCHITECTURE.md 章节号；PRD 引用 PRD.md</caption>
+    <thead><tr><th>需求</th><th>设计</th><th>关键实现类</th><th>验证（测试类）</th></tr></thead>
+    <tbody>
+      <tr><td class="id">FR-A1–A4</td><td class="f">PRD §3</td><td class="f">AuthService · AuthController · UserAccount</td><td class="f">AuthApiTest</td></tr>
+      <tr><td class="id">FR-A5</td><td class="f">ARCH §7.1</td><td class="f">SessionVersionFilter · UserAccount</td><td class="f">AuthApiTest</td></tr>
+      <tr><td class="id">FR-A6</td><td class="f">ARCH §2.4</td><td class="f">SecurityConfig · AccountDetailsService</td><td class="f">AuthApiTest</td></tr>
+      <tr><td class="id">FR-B1</td><td class="f">ARCH §2.1</td><td class="f">ProjectService.create</td><td class="f">BatchOneApiTest · ProjectAuthorizationTest</td></tr>
+      <tr><td class="id">FR-B2</td><td class="f">API.md</td><td class="f">ProjectService.listForUser</td><td class="f">BatchOneApiTest</td></tr>
+      <tr><td class="id">FR-B3, B4</td><td class="f">PRD §4</td><td class="f">ProjectMemberService · ProjectMemberController</td><td class="f">ProjectAuthorizationTest · BatchOneApiTest</td></tr>
+      <tr><td class="id">FR-B5</td><td class="f">ARCH §2.1</td><td class="f">ProjectMemberService</td><td class="f">ProjectAuthorizationTest</td></tr>
+      <tr><td class="id">FR-B6</td><td class="f">ARCH §2.3</td><td class="f">ProjectMemberService · ProjectMemberRemoving · 三个 RemovedMember*Listener</td><td class="f">ResourceRemovalTest · BatchOneApiTest</td></tr>
+      <tr><td class="id">FR-B7</td><td class="f">ARCH §2.1</td><td class="f">ProjectMemberService.remove</td><td class="f">ResourceRemovalTest · BatchOneApiTest</td></tr>
+      <tr><td class="id">FR-B8</td><td class="f">ARCH §2.1</td><td class="f">ProjectMemberService · ProjectRepository（行锁）</td><td class="f">DatabaseConstraintTest · ProjectAuthorizationTest</td></tr>
+      <tr><td class="id">FR-B9</td><td class="f">ARCH §2.1</td><td class="f">ProjectService.archive/unarchive · Project · ProjectsPage.vue</td><td class="f">BatchOneApiTest · projectArchive.spec.ts</td></tr>
+      <tr><td class="id">FR-B10</td><td class="f">ARCH §2.3</td><td class="f">ProjectAccessService · 各 Repository</td><td class="f">ProjectAuthorizationTest · BatchOneApiTest</td></tr>
+      <tr><td class="id">FR-C1, C2</td><td class="f">ARCH §2.3</td><td class="f">RequirementService · AcceptanceCriterion</td><td class="f">RequirementLifecycleTest</td></tr>
+      <tr><td class="id">FR-C3–C5</td><td class="f">PRD §5</td><td class="f">RequirementService · RequirementRevision.editProse</td><td class="f">RequirementLifecycleTest</td></tr>
+      <tr><td class="id">FR-C6, C7</td><td class="f">PRD §5</td><td class="f">RequirementService · RequirementStatus</td><td class="f">RequirementLifecycleTest · BatchOneApiTest</td></tr>
+      <tr><td class="id">FR-C8</td><td class="f">PRD §4</td><td class="f">RequirementAttachmentService · RequirementController</td><td class="f">RequirementAttachmentServiceTest</td></tr>
+      <tr><td class="id">FR-C9</td><td class="f">PRD §4</td><td class="f">RequirementDetailPage.vue</td><td class="f">requirement.spec.ts</td></tr>
+      <tr><td class="id">FR-C10</td><td class="f">PRD §4</td><td class="f">RequirementQualityService · QualityReport</td><td class="f">RequirementQualityTest</td></tr>
+      <tr><td class="id">FR-C11</td><td class="f">PRD §4</td><td class="f">ImplementationGuidanceService</td><td class="f">ImplementationGuidanceTest</td></tr>
+      <tr><td class="id">FR-C12</td><td class="f">ARCH §2.3</td><td class="f">RequirementService.delete</td><td class="f">ResourceRemovalTest · BatchOneApiTest · requirementRowActions.spec.ts</td></tr>
+      <tr><td class="id">FR-C13</td><td class="f">PRD §5</td><td class="f">（无写入路径即为实现）</td><td class="f">ReviewActivityTest · ArchitectureRulesTest</td></tr>
+      <tr><td class="id">FR-D1, D2</td><td class="f">ARCH §5</td><td class="f">KnowledgeService · KnowledgeUploadValidator · KnowledgePage.vue</td><td class="f">KnowledgeServiceTest · KnowledgeGuardTest</td></tr>
+      <tr><td class="id">FR-D3</td><td class="f">ARCH §5</td><td class="f">ChunkSearchRepository.search</td><td class="f">KnowledgeServiceTest · KnowledgeVectorIndexTest</td></tr>
+      <tr><td class="id">FR-D4</td><td class="f">ARCH §2.3</td><td class="f">RequirementAttachmentService · KnowledgeService.promote</td><td class="f">KnowledgeServiceTest · RequirementAttachmentServiceTest</td></tr>
+      <tr><td class="id">FR-D5</td><td class="f">ARCH §5</td><td class="f">KnowledgeReadRepository · KnowledgeDocumentView</td><td class="f">KnowledgeServiceTest</td></tr>
+      <tr><td class="id">FR-D6</td><td class="f">ARCH §2.3</td><td class="f">KnowledgeService.delete · KnowledgeChunkRepository</td><td class="f">ResourceRemovalTest · KnowledgeAndScmConstraintTest</td></tr>
+      <tr><td class="id">FR-D7</td><td class="f">ARCH §5</td><td class="f">ChunkSearchRepository.writeEmbedding</td><td class="f">KnowledgeAndScmConstraintTest</td></tr>
+      <tr><td class="id">FR-E1</td><td class="f">ARCH §2.1</td><td class="f">ScmRepositoryService · ScmRepository</td><td class="f">ScmRepositoryApiTest · ScmIdentityFreezeConcurrencyTest</td></tr>
+      <tr><td class="id">FR-E2</td><td class="f">ARCH §7.1</td><td class="f">ScmSecretCipher · ScmRepositoryResponse</td><td class="f">ScmSecretKeyStartupTest · ScmRepositoryApiTest</td></tr>
+      <tr><td class="id">FR-E3</td><td class="f">API.md</td><td class="f">ScmIdentityService · ScmIdentityVerifier</td><td class="f">ScmIdentityVerifierTest</td></tr>
+      <tr><td class="id">FR-E4</td><td class="f">API.md</td><td class="f">ScmBindingService · ProjectMemberScmBinding</td><td class="f">ScmBindingServiceTest</td></tr>
+      <tr><td class="id">FR-E5</td><td class="f">ARCH §3.1</td><td class="f">WebhookSignatureVerifier · ScmWebhookSecurityConfig</td><td class="f">WebhookSignatureVerifierTest · GitHubWebhookIngestionTest · GitLabWebhookIngestionTest</td></tr>
+      <tr><td class="id">FR-E6</td><td class="f">ARCH §3.1</td><td class="f">GitHubClient.required · GitLabClient</td><td class="f">GitHubClientGuardTest</td></tr>
+      <tr><td class="id">FR-E7, E8</td><td class="f">PRD §6 P1</td><td class="f">RequirementReferenceParser · PullRequestAssociationService</td><td class="f">PullRequestAssociationTest</td></tr>
+      <tr><td class="id">FR-E9</td><td class="f">ARCH §4.3</td><td class="f">OutboundUrlPolicy</td><td class="f">OutboundUrlPolicyTest</td></tr>
+      <tr><td class="id">FR-E10</td><td class="f">ARCH §3.1</td><td class="f">PullRequestSyncService.apply</td><td class="f">GitHubWebhookIngestionTest</td></tr>
+      <tr><td class="id">FR-E11</td><td class="f">ARCH §7.2</td><td class="f">ChangedFile · PullRequestSyncService</td><td class="f">ChangedFileLimitTest</td></tr>
+      <tr><td class="id">FR-F1</td><td class="f">ARCH §3.1</td><td class="f">PullRequestChangedListener · ReviewService</td><td class="f">ReviewPipelineIntegrationTest · GitHubWebhookIngestionTest</td></tr>
+      <tr><td class="id">FR-F2</td><td class="f">ARCH §3.1</td><td class="f">Review · ReviewInputFingerprint</td><td class="f">ReviewInputFingerprintTest · ReviewFencingTest</td></tr>
+      <tr><td class="id">FR-F3</td><td class="f">ARCH §3.2</td><td class="f">ReviewClaimRepository · ReviewExecutor</td><td class="f">ReviewFencingTest · ReviewEngineTest</td></tr>
+      <tr><td class="id">FR-F4</td><td class="f">ARCH §3.4</td><td class="f">ChangedFileBatcher · ReviewPrompts</td><td class="f">ChangedFileBatcherTest · ReviewPipelineIntegrationTest</td></tr>
+      <tr><td class="id">FR-F5</td><td class="f">ARCH §3.5</td><td class="f">ReviewOutputValidator · AcVerdict</td><td class="f">ReviewOutputValidatorTest · ReviewPipelineIntegrationTest</td></tr>
+      <tr><td class="id">FR-F6</td><td class="f">ARCH §3.5</td><td class="f">ReviewOutputValidator.Outcome · ReviewPipeline.Report</td><td class="f">ReviewOutputValidatorTest · ChangedFileBatcherTest</td></tr>
+      <tr><td class="id">FR-F7</td><td class="f">ARCH §3.4</td><td class="f">ChangedFileBatcher.Plan · ReviewViews</td><td class="f">ChangedFileBatcherTest · ReviewPipelineIntegrationTest</td></tr>
+      <tr><td class="id">FR-F8</td><td class="f">ARCH §3.6</td><td class="f">FindingKeys · FindingContinuityCalculator</td><td class="f">FindingContinuityTest · ReviewOutputValidatorTest</td></tr>
+      <tr><td class="id">FR-F9</td><td class="f">PRD §5</td><td class="f">FindingLifecycleService · FindingController · FindingEvent</td><td class="f">FindingLifecycleTest</td></tr>
+      <tr><td class="id">FR-F10</td><td class="f">ARCH §3.1</td><td class="f">ReviewDecisionService · DecisionRepository</td><td class="f">ReviewDecisionTest</td></tr>
+      <tr><td class="id">FR-F11</td><td class="f">ARCH §3.1</td><td class="f">ReviewActivityRepository · ReviewDecisionService</td><td class="f">ReviewActivityTest</td></tr>
+      <tr><td class="id">FR-F12</td><td class="f">ARCH §3.2</td><td class="f">ReviewReconciliationScheduler · ReviewClaimRepository</td><td class="f">ReviewEngineTest · ReviewFencingTest</td></tr>
+      <tr><td class="id">FR-F13</td><td class="f">PRD §6</td><td class="f">FindingConfidence · labels.ts</td><td class="f">ReviewOutputValidatorTest · journey.spec.ts</td></tr>
+      <tr><td class="id">FR-F14</td><td class="f">ARCH §3.1</td><td class="f">ReviewDecisionGate · ReviewDetailPage.vue</td><td class="f">ReviewDecisionTest · PullRequestAssociationTest</td></tr>
+      <tr><td class="id">FR-F15</td><td class="f">ARCH §3.6</td><td class="f">DecisionRepository · FindingContinuity</td><td class="f">FindingLifecycleTest · FindingContinuityTest</td></tr>
+      <tr><td class="id">FR-F16, F17</td><td class="f">ARCH §6</td><td class="f">ReviewDetailPage.vue · context.ts · DiffEvidenceViewer.vue</td><td class="f">reviewContext.spec.ts · diff.spec.ts · journey.spec.ts</td></tr>
+      <tr><td class="id">FR-G1–G5</td><td class="f">evaluation/README.md</td><td class="f">run_development.py · score.py · formal_evaluation.py</td><td class="f">test_run_development.py · test_formal_evaluation.py · score.py --selftest</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>7.2 非功能需求追溯（节选承重项）</h3>
+  <div class="tw"><table>
+    <thead><tr><th>需求</th><th>关键实现</th><th>验证</th></tr></thead>
+    <tbody>
+      <tr><td class="id">NFR-P1–P3, P5</td><td class="f">ChangedFileBatcher · AiFailurePolicy</td><td class="f">ChangedFileBatcherTest · ChangedFileLimitTest · AiGatewayTest</td></tr>
+      <tr><td class="id">NFR-P6</td><td class="f">ReviewExecutorConfig</td><td class="f">ReviewEngineTest（直接断言执行器 core size）</td></tr>
+      <tr><td class="id">NFR-S1</td><td class="f">SecurityConfig · application.yml</td><td class="f">AuthApiTest · ScmSecretKeyStartupTest</td></tr>
+      <tr><td class="id">NFR-S2</td><td class="f">SecurityConfig · lib/http.ts</td><td class="f">BatchOneApiTest · http.spec.ts</td></tr>
+      <tr><td class="id">NFR-S3</td><td class="f">ScmSecretCipher</td><td class="f">ScmSecretKeyStartupTest</td></tr>
+      <tr><td class="id">NFR-S4</td><td class="f">WebhookSignatureVerifier</td><td class="f">WebhookSignatureVerifierTest</td></tr>
+      <tr><td class="id">NFR-S5</td><td class="f">OutboundUrlPolicy</td><td class="f">OutboundUrlPolicyTest · GitHubClientGuardTest</td></tr>
+      <tr><td class="id">NFR-S6, S7</td><td class="f">PromptSanitizer</td><td class="f">PromptSanitizerTest</td></tr>
+      <tr><td class="id">NFR-S9</td><td class="f">GitHubWebhookController</td><td class="f">GitHubWebhookIngestionTest</td></tr>
+      <tr><td class="id">NFR-S10</td><td class="f">AiCallLog · AiCallStatus</td><td class="f">AiGatewayTest</td></tr>
+      <tr><td class="id">NFR-R1</td><td class="f">PullRequestSyncService</td><td class="f">GitHubWebhookIngestionTest · GitLabWebhookIngestionTest</td></tr>
+      <tr><td class="id">NFR-R2, R3</td><td class="f">ReviewExecutor · ReviewClaimRepository</td><td class="f">ReviewFencingTest</td></tr>
+      <tr><td class="id">NFR-R5</td><td class="f">ApiExceptionHandler</td><td class="f">DatabaseConstraintTest</td></tr>
+      <tr><td class="id">NFR-R6</td><td class="f">ProjectRepository · ScmRepositoryService</td><td class="f">DatabaseConstraintTest · ScmIdentityFreezeConcurrencyTest</td></tr>
+      <tr><td class="id">NFR-M1</td><td class="f">（八包结构本身）</td><td class="f">ArchitectureRulesTest</td></tr>
+      <tr><td class="id">NFR-M2</td><td class="f">（迁移中的约束）</td><td class="f">DatabaseConstraintTest · KnowledgeAndScmConstraintTest</td></tr>
+      <tr><td class="id">NFR-M3, M5</td><td class="f">PostgresTestBase</td><td class="f">FoundationDatabaseTest · 全部数据库测试</td></tr>
+      <tr><td class="id">NFR-M4</td><td class="f">db/migration/*.sql</td><td class="f">V8MigrationTest · V9MigrationTest · V10MigrationTest</td></tr>
+      <tr><td class="id">NFR-M6, M7</td><td class="f">frontend/scripts/lint.mjs</td><td class="f">npm run lint</td></tr>
+      <tr><td class="id">NFR-C1</td><td class="f">ScmRepository.apiBase · InstanceIdentity</td><td class="f">InstanceIdentityTest · ScmRepositoryApiTest</td></tr>
+      <tr><td class="id">NFR-C2</td><td class="f">AiGateway</td><td class="f">AiGatewayConfigurationTest</td></tr>
+      <tr><td class="id">NFR-C3</td><td class="f">DEFENSE-GUIDE.md 流程</td><td class="f">phase1-compose-smoke.sh · formal_evaluation.py verify-freeze</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>7.3 无自动化覆盖的需求</h3>
+  <div class="note amber">
+    <span class="label">以下需求只能人工验收</span>
+    <p>
+      自动化测试覆盖请求契约、路由、角色动作面与结构化证据，<strong>但不能替代真实浏览器中的视觉、键盘与真实后端联调</strong>。
+      下列条目的验收清单在 <code>frontend/MANUAL-ACCEPTANCE.md</code>，按 1440 / 768 / 390 三档宽度、
+      正常与减动效两种模式执行。
+    </p>
+  </div>
+  <div class="tw"><table>
+    <thead><tr><th>需求</th><th>为什么自动化测不了</th></tr></thead>
+    <tbody>
+      <tr><td class="id">NFR-C4</td><td>横向溢出、三档宽度下的实际布局需要真实渲染引擎</td></tr>
+      <tr><td class="id">FR-B9（复制按钮）</td><td>剪贴板 API 在测试环境（jsdom）不存在</td></tr>
+      <tr><td class="id">FR-F16（证据定位）</td><td>点击「在证据中定位」后的高亮与滚动行为需要真实布局</td></tr>
+      <tr><td class="id">键盘可达性</td><td>Tab 顺序、焦点环可见性、Escape 回焦需要真实焦点管理</td></tr>
+      <tr><td class="id">减动效模式</td><td>需要真实的 <code>prefers-reduced-motion</code> 环境</td></tr>
+      <tr><td class="id">真实 provider 联调</td><td>需要真实 GitHub / GitLab 凭据与 webhook 投递</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<!-- ══════ 8 ══════ -->
+<section id="s8">
+  <h2><span class="hn">8</span>已知限制</h2>
+  <p>本章列出<strong>已实现但有边界</strong>的部分。它们不是缺陷，但在评价系统能力时必须计入。</p>
+
+  <div class="note amber">
+    <span class="label">限制 1 · 评测结论的准确范围</span>
+    <p>
+      三臂评测比较的是<strong>上下文构成</strong>，不是某条检索管线。评测 runner 自行组装上下文、
+      对后端<strong>零引用</strong>；第三臂把 case 的知识文件<strong>全文</strong>渲入 prompt，
+      既不做 embedding 调用也不做 TopK 检索。
+    </p>
+    <p>
+      因此结论应表述为「<strong>把需求与项目知识放进上下文有用</strong>」，
+      <strong>不能</strong>表述为「ForgePilot 的 pgvector 检索有效」。检索是产品能力、有自己的测试，
+      但不是这组数字所评价的对象。
+    </p>
+  </div>
+
+  <div class="note amber">
+    <span class="label">限制 2 · 评测样本规模</span>
+    <p>
+      holdout 为 12 例，且缺陷为手工构造。报告因此给出 95% Wilson 置信区间而非点值，
+      并明确声明这两点限制泛化能力。holdout <strong>只运行过一次</strong>，按约定不可重跑。
+    </p>
+  </div>
+
+  <div class="note amber">
+    <span class="label">限制 3 · 归档不冻结写入</span>
+    <p>
+      <code>project.status</code> 目前不 gate 任何写路径，因此归档只是从工作区列表收起，
+      该项目的需求、知识、仓库与审查<strong>仍然可写</strong>。
+      将归档变为只读闸门需要在五个模块的写入口增加检查，属范围外。
+    </p>
+  </div>
+
+  <div class="note red">
+    <span class="label">限制 4 · 测试套件存在潜伏的类执行顺序依赖</span>
+    <p>
+      已确认：仅重命名 <code>BatchOneApiTest</code> 类名（<strong>无任何代码行变化</strong>）
+      会导致其 4 个测试在完整构建中失败，而单独运行该类 <strong>5/5 全绿</strong>。
+      失败点为匿名请求未下发 CSRF cookie。原因是测试框架默认的类执行顺序改变后，
+      某个先运行的类留下了影响状态。<strong>根因尚未定位。</strong>
+    </p>
+    <p>
+      当前处置：保留历史类名不改，套件维持 333/333 全绿。
+      本限制记录在此，以免后续新增测试类时被误判为新引入的缺陷。
+    </p>
+  </div>
+</section>
+
+<footer class="end">
+  <p>
+    本文档描述 2026-08-27 的系统形态：69 条功能需求、37 条非功能需求，
+    由 333 个后端测试、42 个前端测试与 48 项评测工具检查验证，另有 105 行人工验收清单覆盖无法自动化的部分。
+  </p>
+  <p>
+    配套文档：《ForgePilot 使用与代码手册》（逐类代码说明与术语速查）、
+    《跟着一次 PR 走完 ForgePilot》（主干代码走查）、
+    《ForgePilot 测试报告》、《ForgePilot 安全设计说明》。
+  </p>
+</footer>
+
+</main>
+</div>
+</body>
+</html>

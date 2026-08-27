@@ -1,0 +1,1535 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ForgePilot 使用与代码手册</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=Noto+Serif+SC:wght@600;700&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+img, svg { max-width: 100%; height: auto; }
+:root {
+    --paper: #fbfbfc;
+    --surface: #f4f5f8;
+    --surface-2: #eceef3;
+    --ink: #16191f;
+    --ink-2: #3b414d;
+    --muted: #5c6472;
+    --subtle: #8891a0;
+    --rule: #e2e5ea;
+    --rule-strong: #cbd1da;
+    --accent: #2c5fd6;
+    --accent-soft: #e8eefb;
+    --danger: #b4232e;
+    --danger-soft: #fbeaec;
+    --warn: #8a5a00;
+    --warn-soft: #fdf3e0;
+    --ok: #1d6b47;
+    --ok-soft: #e6f3ec;
+
+    --sans: "Noto Sans SC", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --serif: "Noto Serif SC", Georgia, "Songti SC", serif;
+    --mono: "JetBrains Mono", ui-monospace, "SF Mono", Consolas, monospace;
+
+    --measure: 68ch;
+    --s1: .25rem; --s2: .5rem; --s3: .75rem; --s4: 1rem;
+    --s5: 1.5rem; --s6: 2rem; --s7: 3rem; --s8: 4.5rem;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #12141a;
+      --surface: #191c23;
+      --surface-2: #22262f;
+      --ink: #e6e8ec;
+      --ink-2: #c3c8d2;
+      --muted: #99a1b0;
+      --subtle: #737c8c;
+      --rule: #2a2f3a;
+      --rule-strong: #3a4150;
+      --accent: #7ba3f5;
+      --accent-soft: #1a2440;
+      --danger: #f0808c;
+      --danger-soft: #331a1e;
+      --warn: #e0aa55;
+      --warn-soft: #2e2415;
+      --ok: #6cc59a;
+      --ok-soft: #16291f;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --paper: #12141a;
+    --surface: #191c23;
+    --surface-2: #22262f;
+    --ink: #e6e8ec;
+    --ink-2: #c3c8d2;
+    --muted: #99a1b0;
+    --subtle: #737c8c;
+    --rule: #2a2f3a;
+    --rule-strong: #3a4150;
+    --accent: #7ba3f5;
+    --accent-soft: #1a2440;
+    --danger: #f0808c;
+    --danger-soft: #331a1e;
+    --warn: #e0aa55;
+    --warn-soft: #2e2415;
+    --ok: #6cc59a;
+    --ok-soft: #16291f;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font: 400 16px/1.75 var(--sans);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .layout {
+    display: grid;
+    grid-template-columns: 17rem minmax(0, 1fr);
+    align-items: start;
+    gap: var(--s7);
+    max-width: 92rem;
+    margin: 0 auto;
+    padding: var(--s6) var(--s5) var(--s8);
+  }
+
+  /* ─────────────── 目录 ─────────────── */
+  nav.toc {
+    position: sticky;
+    top: var(--s5);
+    max-height: calc(100vh - 3rem);
+    overflow-y: auto;
+    padding-right: var(--s3);
+    border-right: 1px solid var(--rule);
+    font-size: .8125rem;
+  }
+  nav.toc .toc-brand {
+    font: 700 .6875rem/1.4 var(--mono);
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: var(--s4);
+  }
+  nav.toc ol { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 1px; }
+  nav.toc a {
+    display: flex;
+    gap: var(--s3);
+    padding: .3rem var(--s2);
+    border-radius: 3px;
+    color: var(--muted);
+    text-decoration: none;
+    line-height: 1.45;
+  }
+  nav.toc a:hover { background: var(--surface); color: var(--ink); }
+  nav.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  nav.toc .num {
+    flex: 0 0 1.4rem;
+    font: 500 .6875rem/1.7 var(--mono);
+    color: var(--subtle);
+    font-variant-numeric: tabular-nums;
+  }
+  nav.toc .sub a { padding-left: 2.2rem; font-size: .78125rem; }
+
+  main { min-width: 0; max-width: 100%; }
+
+  /* ─────────────── 首屏 ─────────────── */
+  header.masthead {
+    padding-bottom: var(--s5);
+    border-bottom: 3px solid var(--ink);
+    margin-bottom: var(--s6);
+  }
+  .eyebrow {
+    font: 700 .6875rem/1.4 var(--mono);
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 var(--s3);
+  }
+  h1 {
+    font: 700 clamp(2rem, 4.5vw, 3rem)/1.15 var(--serif);
+    margin: 0 0 var(--s4);
+    letter-spacing: -.01em;
+    text-wrap: balance;
+  }
+  .standfirst {
+    max-width: var(--measure);
+    margin: 0;
+    color: var(--ink-2);
+    font-size: 1.0625rem;
+    line-height: 1.8;
+  }
+
+  .facts {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr));
+    gap: 1px;
+    margin-top: var(--s5);
+    background: var(--rule);
+    border: 1px solid var(--rule);
+  }
+  .fact { background: var(--paper); padding: var(--s3) var(--s4); }
+  .fact dt {
+    font: 500 .6875rem/1.5 var(--mono);
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--subtle);
+  }
+  .fact dd {
+    margin: var(--s1) 0 0;
+    font: 700 1.375rem/1.2 var(--mono);
+    font-variant-numeric: tabular-nums;
+  }
+  .fact dd small { font: 400 .75rem/1 var(--sans); color: var(--muted); margin-left: .2rem; }
+
+  /* ─────────────── 章节 ─────────────── */
+  section { margin-top: var(--s8); scroll-margin-top: var(--s4); }
+  section > :first-child { margin-top: 0; }
+
+  h2 {
+    display: flex;
+    align-items: baseline;
+    gap: var(--s4);
+    font: 700 clamp(1.375rem, 2.6vw, 1.875rem)/1.25 var(--serif);
+    margin: 0 0 var(--s4);
+    padding-bottom: var(--s3);
+    border-bottom: 1px solid var(--rule-strong);
+    text-wrap: balance;
+  }
+  h2 .h-num {
+    flex: 0 0 auto;
+    font: 500 .875rem/1.6 var(--mono);
+    color: var(--accent);
+    font-variant-numeric: tabular-nums;
+  }
+  h3 {
+    font: 700 1.125rem/1.4 var(--sans);
+    margin: var(--s6) 0 var(--s3);
+    text-wrap: balance;
+  }
+  h4 {
+    font: 700 .9375rem/1.5 var(--sans);
+    margin: var(--s5) 0 var(--s2);
+    color: var(--ink-2);
+  }
+  p, ul, ol { max-width: var(--measure); }
+  p { margin: 0 0 var(--s4); }
+  ul, ol { margin: 0 0 var(--s4); padding-left: 1.35rem; }
+  li { margin-bottom: var(--s2); }
+  li > ul, li > ol { margin-top: var(--s2); }
+  strong { font-weight: 700; }
+  a { color: var(--accent); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+  a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+
+  code {
+    font: 400 .875em/1.5 var(--mono);
+    background: var(--surface-2);
+    padding: .1em .35em;
+    border-radius: 3px;
+    word-break: break-word;
+  }
+
+  pre {
+    margin: 0 0 var(--s4);
+    padding: var(--s4);
+    overflow-x: auto;
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-left: 3px solid var(--accent);
+    font: 400 .8125rem/1.7 var(--mono);
+  }
+  pre code { background: none; padding: 0; font-size: inherit; }
+  pre .c { color: var(--subtle); }
+
+  /* ─────────────── 表格 ─────────────── */
+  .tw { overflow-x: auto; margin: 0 0 var(--s4); border: 1px solid var(--rule); }
+  table { width: 100%; border-collapse: collapse; font-size: .8125rem; }
+  caption {
+    caption-side: top;
+    text-align: left;
+    padding: var(--s3) var(--s4);
+    background: var(--surface-2);
+    border-bottom: 1px solid var(--rule);
+    font: 500 .75rem/1.6 var(--mono);
+    color: var(--muted);
+  }
+  th, td { padding: .45rem var(--s4); text-align: left; vertical-align: top; border-bottom: 1px solid var(--rule); }
+  thead th {
+    background: var(--surface);
+    font: 700 .6875rem/1.6 var(--mono);
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+  tbody tr:last-child td { border-bottom: 0; }
+  tbody tr:hover { background: var(--surface); }
+  td.f { font: 500 .78125rem/1.6 var(--mono); white-space: nowrap; }
+  td.n { font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .verb {
+    display: inline-block;
+    min-width: 3.6rem;
+    padding: .05rem .3rem;
+    border-radius: 2px;
+    font: 700 .6875rem/1.5 var(--mono);
+    text-align: center;
+    background: var(--surface-2);
+    color: var(--ink-2);
+  }
+  .verb.get { background: var(--accent-soft); color: var(--accent); }
+  .verb.post { background: var(--ok-soft); color: var(--ok); }
+  .verb.del { background: var(--danger-soft); color: var(--danger); }
+  .verb.patch, .verb.put { background: var(--warn-soft); color: var(--warn); }
+
+  /* 承重标记 —— 编码的是「改这个文件要格外小心」这件事实 */
+  .lb {
+    display: inline-block;
+    width: .5rem; height: .5rem;
+    border-radius: 50%;
+    background: var(--danger);
+    vertical-align: middle;
+  }
+  .lb-key { display: flex; gap: var(--s4); flex-wrap: wrap; align-items: center; margin: 0 0 var(--s3); font-size: .8125rem; color: var(--muted); }
+
+  /* ─────────────── 提示块 ─────────────── */
+  .note {
+    max-width: var(--measure);
+    margin: 0 0 var(--s4);
+    padding: var(--s4) var(--s5);
+    background: var(--surface);
+    border-left: 3px solid var(--accent);
+  }
+  .note > :last-child { margin-bottom: 0; }
+  .note .label {
+    display: block;
+    font: 700 .6875rem/1.5 var(--mono);
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: var(--s2);
+  }
+  .note.red { background: var(--danger-soft); border-left-color: var(--danger); }
+  .note.red .label { color: var(--danger); }
+  .note.amber { background: var(--warn-soft); border-left-color: var(--warn); }
+  .note.amber .label { color: var(--warn); }
+
+  /* ─────────────── 包卡片 ─────────────── */
+  .pkg { margin-bottom: var(--s6); }
+  .pkg-head {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: var(--s3) var(--s4);
+    padding-bottom: var(--s2);
+    border-bottom: 2px solid var(--ink);
+    margin-bottom: var(--s3);
+  }
+  .pkg-name { font: 700 1.0625rem/1.4 var(--mono); }
+  .pkg-count {
+    font: 500 .75rem/1.5 var(--mono);
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+  }
+  .pkg-role { margin: 0 0 var(--s3); max-width: var(--measure); color: var(--ink-2); }
+
+  .chain { display: grid; grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+           gap: 1px; margin: 0 0 var(--s4); background: var(--rule);
+           border: 1px solid var(--rule); counter-reset: ch; }
+  .chain-step { position: relative; background: var(--paper);
+           padding: var(--s3) var(--s4) var(--s3) 2.4rem; counter-increment: ch; }
+  .chain-step::before { content: counter(ch); position: absolute; left: var(--s3); top: var(--s3);
+           font: 700 .6875rem/1.6 var(--mono); color: var(--accent);
+           font-variant-numeric: tabular-nums; }
+  .chain-step b { display: block; font-size: .875rem; line-height: 1.5; }
+  .chain-step span { display: block; margin-top: .1rem; font-size: .75rem;
+           line-height: 1.5; color: var(--muted); }
+
+  .flow { counter-reset: step; list-style: none; padding: 0; max-width: var(--measure); }
+  .flow > li {
+    counter-increment: step;
+    position: relative;
+    padding-left: 2.6rem;
+    margin-bottom: var(--s4);
+  }
+  .flow > li::before {
+    content: counter(step);
+    position: absolute;
+    left: 0; top: .1rem;
+    width: 1.75rem; height: 1.75rem;
+    display: grid;
+    place-items: center;
+    border: 1px solid var(--rule-strong);
+    border-radius: 50%;
+    font: 700 .75rem/1 var(--mono);
+    color: var(--accent);
+    background: var(--paper);
+  }
+  .flow strong { display: block; }
+
+  footer.end {
+    margin-top: var(--s8);
+    padding-top: var(--s5);
+    border-top: 3px solid var(--ink);
+    max-width: var(--measure);
+    color: var(--muted);
+    font-size: .875rem;
+  }
+
+  @media (max-width: 68rem) {
+    .layout { grid-template-columns: 1fr; gap: var(--s5); padding-top: var(--s5); }
+    nav.toc {
+      position: static;
+      max-height: none;
+      border-right: 0;
+      border-bottom: 1px solid var(--rule);
+      padding: 0 0 var(--s4);
+    }
+    nav.toc ol { display: grid; grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)); }
+    nav.toc .sub { display: none; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+
+<nav class="toc" aria-label="目录">
+  <div class="toc-brand">ForgePilot 手册</div>
+  <ol>
+    <li><a href="#s1"><span class="num">01</span><span>系统是什么</span></a></li>
+    <li><a href="#s2"><span class="num">02</span><span>部署与启动</span></a></li>
+    <li><a href="#s3"><span class="num">03</span><span>使用流程</span></a></li>
+    <li><a href="#s4"><span class="num">04</span><span>模块与依赖</span></a></li>
+    <li><a href="#s5"><span class="num">05</span><span>后端代码地图</span></a></li>
+    <li class="sub"><a href="#p-common">common</a></li>
+    <li class="sub"><a href="#p-auth">auth</a></li>
+    <li class="sub"><a href="#p-project">project</a></li>
+    <li class="sub"><a href="#p-requirement">requirement</a></li>
+    <li class="sub"><a href="#p-knowledge">knowledge</a></li>
+    <li class="sub"><a href="#p-ai">ai</a></li>
+    <li class="sub"><a href="#p-scm">scm</a></li>
+    <li class="sub"><a href="#p-review">review</a></li>
+    <li><a href="#s6"><span class="num">06</span><span>前端代码地图</span></a></li>
+    <li><a href="#s7"><span class="num">07</span><span>数据模型 20 表</span></a></li>
+    <li><a href="#s8"><span class="num">08</span><span>API 端点</span></a></li>
+    <li><a href="#s9"><span class="num">09</span><span>评测体系</span></a></li>
+    <li><a href="#s10"><span class="num">10</span><span>运行边界</span></a></li>
+    <li><a href="#s11"><span class="num">11</span><span>红线</span></a></li>
+    <li><a href="#s12"><span class="num">12</span><span>测试与质量门</span></a></li>
+    <li><a href="#glossary"><span class="num">13</span><span>术语速查</span></a></li>
+  </ol>
+</nav>
+
+<main>
+
+<header class="masthead">
+  <p class="eyebrow">使用与代码手册 · 2026-08-27</p>
+  <h1>ForgePilot 使用与代码手册</h1>
+  <p class="standfirst">
+    一个<strong>基于需求上下文增强的 AI 代码审查系统</strong>。它把研发需求、验收条件与项目知识
+    放进审查上下文，让模型不只挑代码毛病，还能判断这次改动有没有兑现需求。
+    本手册两部分：怎么用它，以及它的每一段代码在做什么。
+  </p>
+  <dl class="facts">
+    <div class="fact"><dt>后端</dt><dd>175<small>个类</small></dd></div>
+    <div class="fact"><dt>后端代码</dt><dd>13.8k<small>行</small></dd></div>
+    <div class="fact"><dt>前端</dt><dd>34<small>个文件</small></dd></div>
+    <div class="fact"><dt>数据表</dt><dd>20<small>／10 迁移</small></dd></div>
+    <div class="fact"><dt>API 端点</dt><dd>60</dd></div>
+    <div class="fact"><dt>后端测试</dt><dd>333<small>零跳过</small></dd></div>
+    <div class="fact"><dt>前端测试</dt><dd>42</dd></div>
+  </dl>
+</header>
+
+  <div class="note">
+    <span class="label">这份手册写给谁 · 配套文档</span>
+    <p>
+      本手册假定你<strong>会写代码</strong>，但<strong>不假定</strong>你用过 Spring Boot、Vue 或 PostgreSQL。
+      承重文件（带 <span class="lb"></span> 标记）都先给一句<strong>「它做什么」</strong>，再讲「为什么这么写」；
+      不认识的术语见末尾<a href="#glossary">术语速查</a>。
+    </p>
+    <p>
+      不过手册是<strong>按包组织</strong>的，适合<strong>查</strong>。
+      如果你是第一次接触这个代码库、想知道<strong>从哪读起</strong>，
+      先看配套的《<strong>跟着一次 PR 走完 ForgePilot</strong>》——
+      它拿一次真实请求从入口一路跟到结果落库，12 站每站贴真实代码。走完再回来查这份手册会顺畅得多。
+    </p>
+  </div>
+
+<!-- ═══════════════════ 01 ═══════════════════ -->
+<section id="s1">
+  <h2><span class="h-num">01</span>系统是什么</h2>
+
+  <p>
+    普通的 AI 代码审查看到的只有 diff，所以它只能回答「这段代码写得好不好」。
+    ForgePilot 的出发点是另一个问题：<strong>这次改动有没有做到需求要求的事</strong>。
+    为此它把三样东西一起送进模型上下文——变更 diff、该 PR 关联的需求与验收条件、以及项目知识库里检索到的片段。
+  </p>
+
+  <h3>一条完整的因果链</h3>
+  <p>整个系统只为这一条链服务，其余都是它的支撑：</p>
+  <div class="chain">
+  <div class="chain-step"><b>需求 + 验收条件</b><span>人工录入，不可变修订</span></div>
+  <div class="chain-step"><b>PR 到达</b><span>webhook 认证 + 权威读取</span></div>
+  <div class="chain-step"><b>REQ-n 关联</b><span>自动猜测，人工可纠正</span></div>
+  <div class="chain-step"><b>上下文冻结</b><span>head + diff 指纹 + 需求修订</span></div>
+  <div class="chain-step"><b>分批送模型</b><span>批次只给候选，不下结论</span></div>
+  <div class="chain-step"><b>综合阶段</b><span>唯一有资格下裁定的地方</span></div>
+  <div class="chain-step"><b>Finding 落库</b><span>三个确定性哈希</span></div>
+  <div class="chain-step"><b>人工闭环</b><span>认领 → 修复 → 复核 → Decision</span></div>
+</div>
+
+  <h3>三个角色</h3>
+  <div class="tw">
+    <table>
+      <thead><tr><th>角色</th><th>能做什么</th></tr></thead>
+      <tbody>
+        <tr><td class="f">LEADER</td><td>建项目、加成员、写需求并冻结、上传项目知识、配置仓库、记录最终 Decision、归档项目。一个项目<strong>恰好一个</strong> LEADER，只能显式转移。</td></tr>
+        <tr><td class="f">DEVELOPER</td><td>认领 Finding、标记已修复、绑定自己的 SCM 身份、对自己的 PR 纠正需求关联。</td></tr>
+        <tr><td class="f">REVIEWER</td><td>复核 Finding（通过或打回）、记录最终 Decision。</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>同一个人可以同时是开发和评审，权限取<strong>能力并集</strong>。</p>
+
+  <h3>能力边界（会被问到，所以先说清）</h3>
+  <div class="note amber">
+    <span class="label">语义检索没有向量索引</span>
+    <p>
+      这是<strong>决策，不是遗漏</strong>。冻结的 Embedding Profile 是 4096 维，
+      超过 pgvector 0.8.6 全部精确索引形态的上限；能建出来的两种（二值量化、截断到 2000 维）
+      都是有损预筛，还得再补一个 rerank 阶段。MVP 语料规模下顺序扫描给出的<strong>就是精确余弦序</strong>，
+      <code>KnowledgeVectorIndexTest</code> 在冻结维度上把这三件事逐条钉住了。
+    </p>
+  </div>
+  <div class="note amber">
+    <span class="label">评测结论的准确表述</span>
+    <p>
+      三臂评测比较的是<strong>上下文构成</strong>，不是某条检索管线。评测 runner 自己组装上下文、
+      对后端零引用，第三臂把 case 的知识文件<strong>全文</strong>渲进 prompt，既不做 embedding 调用也不做 TopK 检索。
+      所以 21.62% → 32.26% 证明的是「把需求与项目知识放进上下文有用」，
+      <strong>不是</strong>「ForgePilot 的 pgvector 检索有效」。检索是产品能力、有自己的测试，但不是这组数字评的东西。
+    </p>
+  </div>
+  <div class="note amber">
+    <span class="label">归档不冻结写入</span>
+    <p>
+      <code>project.status</code> 目前不 gate 任何写路径（全库只有 <code>ProjectResponse</code> 读它用于展示），
+      所以归档只是从工作区列表收起来，该项目的需求、知识、仓库、审查<strong>仍然可写</strong>。
+    </p>
+  </div>
+  <div class="note amber">
+    <span class="label">AI 置信度不参与任何自动门禁</span>
+    <p>
+      模型自报的把握未经校准，所以只记 <code>HIGH/MEDIUM/LOW</code> 三档而不是数字——精确数字会暗示它校准过。
+      它不进任何哈希，也不推进任何状态。
+    </p>
+  </div>
+</section>
+
+<!-- ═══════════════════ 02 ═══════════════════ -->
+<section id="s2">
+  <h2><span class="h-num">02</span>部署与启动</h2>
+
+  <p>需要 Docker（Compose v2）、Git。跑前端门禁或后端构建时另需 Node 24 / Java 21，本机没有 JDK 时走容器路径。</p>
+
+  <h3>首次部署</h3>
+  <ol class="flow">
+    <li>
+      <strong>准备环境变量</strong>
+      从模板复制，然后<strong>务必</strong>改掉数据库口令与 <code>FORGEPILOT_SCM_SECRET_KEY</code>。
+      <code>.env</code> 被 Git 忽略。聊天与 embedding 的值可以留空——空栈演示和确定性重算都不需要它们。
+      <pre><code>cp .env.example .env</code></pre>
+    </li>
+    <li>
+      <strong>冷启动自证</strong>
+      这个脚本会新建一个独立 Compose 项目和全新数据卷，等三个健康检查、校验反向代理、pgvector、
+      Flyway 十条迁移与<strong>恰好二十张业务表</strong>，然后只删掉它自己建的那套临时资源。
+      <pre><code>FORGEPILOT_BACKEND_PORT=28080 \
+FORGEPILOT_FRONTEND_PORT=28081 \
+scripts/phase1-compose-smoke.sh forgepilot-phase1-defense-clean</code></pre>
+    </li>
+    <li>
+      <strong>正式启动</strong>
+      <pre><code>docker compose up --build --detach --wait</code></pre>
+      后端健康契约是 <code>/actuator/health</code>；经前端代理是 <code>/api/actuator/health</code>。
+    </li>
+    <li>
+      <strong>创建第一个账号</strong>
+      没有任何迁移携带种子数据，所以仓库里不存在任何口令。第一个账号通过
+      <code>POST /api/auth/register</code> 建立，注册者创建项目时在<strong>同一个事务</strong>里成为该项目 LEADER。
+    </li>
+  </ol>
+
+  <h3>日常更新（不重建数据库）</h3>
+  <div class="note red">
+    <span class="label">绝不带 volume 参数</span>
+    <p>
+      更新只重建应用容器，<strong>postgres 不动</strong>。
+      <code>docker compose down --volumes</code> 只适用于明确一次性的演示项目，
+      永远不要指向需要保留数据的部署。
+    </p>
+  </div>
+  <pre><code><span class="c"># 有迁移时先备份</span>
+docker exec fp-demo-postgres-1 pg_dump -U forgepilot -d forgepilot \
+  > /root/fp-demo-pre-vN-$(date +%Y%m%d).sql
+
+<span class="c"># 串行构建（4 GB 主机上避免同时压榨内存）</span>
+docker compose -p fp-demo build backend
+docker compose -p fp-demo build frontend
+
+<span class="c"># 只启动应用容器</span>
+docker compose -p fp-demo up --detach --wait backend frontend</code></pre>
+
+  <h3>Webhook 路径</h3>
+  <div class="tw">
+    <table>
+      <thead><tr><th>Provider</th><th>路径</th><th>认证方式</th></tr></thead>
+      <tbody>
+        <tr><td class="f">GitHub</td><td class="f">/api/scm/github/webhook</td><td>HMAC 覆盖<strong>原始请求字节</strong></td></tr>
+        <tr><td class="f">GitLab</td><td class="f">/api/scm/gitlab/webhook</td><td>新版 <code>whsec_</code> 签名令牌；旧实例用 legacy secret token</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>Token 与 webhook 密钥<strong>只写不回显</strong>，任何响应、页面、日志里都不出现。</p>
+</section>
+
+<!-- ═══════════════════ 03 ═══════════════════ -->
+<section id="s3">
+  <h2><span class="h-num">03</span>使用流程</h2>
+
+  <p>登录后顶部居中导航有六个一级入口，另有非一级的 <code>/account</code>：</p>
+  <div class="tw">
+    <table>
+      <caption>六个一级入口 + 11 条路由</caption>
+      <thead><tr><th>入口</th><th>路由</th><th>作用</th></tr></thead>
+      <tbody>
+        <tr><td>工作台</td><td class="f">/workspace</td><td>项目概况。URL 不带 <code>project</code> 时自动补上列表第一个；手动切换后刷新会停留在手动选择的那个。</td></tr>
+        <tr><td>项目</td><td class="f">/projects</td><td>项目列表与创建。每张卡六个操作入口。</td></tr>
+        <tr><td>—</td><td class="f">/projects/:id/members</td><td>成员目录、角色编辑、SCM 绑定审批。</td></tr>
+        <tr><td>研发需求</td><td class="f">/requirements</td><td>需求列表、筛选、行内操作、创建表单。</td></tr>
+        <tr><td>—</td><td class="f">/requirements/:id</td><td>需求详情：修订历史、附件、质量检查、实现建议。</td></tr>
+        <tr><td>项目知识</td><td class="f">/knowledge</td><td>知识文档上传（可多选）、切片与向量状态。</td></tr>
+        <tr><td>仓库接入</td><td class="f">/repositories</td><td>GitHub / GitLab 注册与修改。<code>/projects/:id/settings</code> 重定向到这里。</td></tr>
+        <tr><td>代码审查</td><td class="f">/reviews</td><td>项目级 Review 列表。</td></tr>
+        <tr><td>—</td><td class="f">/reviews/:id</td><td>证据工作台：上下文快照、diff、Finding、人工闭环。</td></tr>
+        <tr><td>账户</td><td class="f">/account</td><td>显示名、改密、多个 GitHub/GitLab 身份验证。</td></tr>
+        <tr><td>—</td><td class="f">/login</td><td>登录与注册。</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>一次完整走查</h3>
+  <ol class="flow">
+    <li>
+      <strong>LEADER 建项目与需求</strong>
+      建项目 → 加成员并分配角色 →「研发需求」写一条带验收条件的需求。
+      <code>DRAFT</code> 阶段正文可原地编辑；<code>DRAFT → READY</code> 在<strong>同一个事务</strong>里冻结。
+      冻结后任何变更都是发布 <code>seq + 1</code> 的新修订并填写变更原因，旧验收条件<strong>永久保留</strong>。
+    </li>
+    <li>
+      <strong>上传项目知识</strong>
+      「项目知识」上传 <code>.txt</code> / <code>.md</code>，可一次选多个文件。
+      每个文件是<strong>独立一次调用、独立一个事务</strong>，所以逐文件报告成败，一个失败不影响其余。
+      上传后能看到切片数、已嵌入数、向量维度、Embedding Profile 与索引状态。
+    </li>
+    <li>
+      <strong>配置仓库</strong>
+      「仓库接入」注册 GitHub 或 GitLab：外部仓库 ID、API 基地址、访问令牌、webhook 密钥。
+      最小权限：GitHub <code>repo</code>（公开仓库 <code>public_repo</code>），GitLab <code>read_api</code>。
+      成员各自在 <code>/account</code> 用一次性个人 Token 验证自己的 SCM 身份（GitHub <code>read:user</code> / GitLab <code>read_user</code>）。
+    </li>
+    <li>
+      <strong>PR 到达，Review 自动建立</strong>
+      webhook 先对<strong>原始字节</strong>认证，再回头向 provider 做一次权威读取（不信任载荷内容），
+      标题或分支里出现 <code>REQ-&lt;id&gt;</code> 时自动关联需求，然后创建共享的 <code>PENDING</code> Review。
+      关联只是入库时的一次猜测，<strong>最终话语权在页面</strong>：LEADER 随时可改，PR 作者在当前 head 尚无终局 Decision 时也可改。
+    </li>
+    <li>
+      <strong>人工闭环</strong>
+      DEVELOPER 认领并标记已修复 → REVIEWER 复核通过或打回 → LEADER 或 REVIEWER 记录<strong>一次性</strong>的 Review Decision。
+      每次流转可填备注，审计永久保留。
+    </li>
+    <li>
+      <strong>新 head 让旧 Review 成为历史</strong>
+      推新 commit 后，之前那次 Review 变为「已过期」，而<strong>需求状态始终由人控制</strong>——
+      AI、Webhook、PR、Review 一律不得推进需求状态。
+    </li>
+  </ol>
+
+  <h3>删除与归档的三种语义</h3>
+  <p>三类资源三种策略，<strong>不一致是结论而不是妥协</strong>——决定它的是三组外键语义：</p>
+  <div class="tw">
+    <table>
+      <thead><tr><th>资源</th><th>语义</th><th>为什么</th></tr></thead>
+      <tbody>
+        <tr><td>知识文档</td><td><strong>硬删</strong></td><td>切片与向量是纯派生数据，随文档一起消亡（同事务显式删 chunk）。</td></tr>
+        <tr><td>项目成员</td><td><strong>硬删</strong></td><td>成员关系是<strong>活权限</strong>。删除时靠进程内事件让三个模块各自撤销指派、认领与绑定。</td></tr>
+        <tr><td>作废需求</td><td><strong>软删</strong></td><td><code>ai_call_log</code> 与 <code>pull_request_requirement_event</code> 都挂在这一行上，物理销毁它就是销毁调用审计、抹掉一件已发生的 PR 关联事实。</td></tr>
+        <tr><td>项目</td><td><strong>归档</strong></td><td>数据库先做了决定，见下。</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="note red">
+    <span class="label">项目为什么只能归档</span>
+    <p>
+      <code>project_deletion_record.project_id</code> 有一条指向 <code>project(id)</code> 的外键且<strong>没有 <code>ON DELETE</code></strong>。
+      也就是说，那张<em>记录删除行为的台账</em>自己会拒绝项目被硬删——要硬删就得先销毁删除审计，
+      而那张表存在的全部理由正是让这件事不可能发生。
+      所以走归档：<code>ARCHIVED</code> 从 V2 起就在 <code>ck_project_status</code> 里，零迁移。
+    </p>
+    <p>
+      归档入口要求<strong>一字不差重新输入项目名</strong>：不 trim、不忽略大小写、不认前缀。
+      项目名旁有复制按钮。归档可逆，「恢复」在已归档折叠组里。
+    </p>
+  </div>
+  <p>此外 <code>project_deletion_record</code> 是「不建通用 audit_event」的<strong>唯一记录在案例外</strong>。它的 <code>resource_id</code> 故意没有外键——被引对象按定义已经不存在，没有可指向的目标。这条例外不推广：针对<strong>存活</strong>实体的多态审计表仍然不建。</p>
+</section>
+
+<!-- ═══════════════════ 04 ═══════════════════ -->
+<section id="s4">
+  <h2><span class="h-num">04</span>模块与依赖</h2>
+
+  <p>后端是<strong>模块化单体</strong>：八个顶层包，依赖<strong>单向</strong>，由 ArchUnit 强制。</p>
+  <div class="tw"><table>
+  <caption>依赖单向，由 ArchUnit 强制</caption>
+  <thead><tr><th>包</th><th>可以依赖</th><th>层</th></tr></thead>
+  <tbody>
+    <tr><td class="f">review</td><td class="f">scm · requirement · knowledge · ai · project · common</td><td>引擎层</td></tr>
+    <tr><td class="f">scm</td><td class="f">requirement · project · common</td><td>接入层</td></tr>
+    <tr><td class="f">requirement</td><td class="f">knowledge · ai · project · common</td><td>业务层</td></tr>
+    <tr><td class="f">knowledge</td><td class="f">ai · project · common</td><td>业务层</td></tr>
+    <tr><td class="f">project</td><td class="f">auth · common</td><td>边界层</td></tr>
+    <tr><td class="f">ai</td><td class="f">common</td><td>基础层</td></tr>
+    <tr><td class="f">auth</td><td class="f">common</td><td>基础层</td></tr>
+    <tr><td class="f">common</td><td class="f">—</td><td>底</td></tr>
+  </tbody>
+</table></div>
+  <p>
+    两条推论决定了很多代码的形状：
+  </p>
+  <ul>
+    <li><strong>反向需求只能用只读 facade 或事件。</strong><code>scm</code> 需要问需求存不存在，但不能碰 <code>RequirementRepository</code>，于是有 <code>RequirementDirectory</code>；<code>project</code> 删成员要让三个下游撤销引用，但不能依赖它们，于是用进程内事件 <code>ProjectMemberRemoving</code> 反转方向。</li>
+    <li><strong>同时需要自己的表与 PR 推导的逻辑归 <code>review</code>。</strong>反过来会在 ArchUnit 最重要的那条规则面前摆上一个环。所以审查活动状态由 <code>review</code> 而非需求端点提供。</li>
+  </ul>
+  <div class="note">
+    <span class="label">实现期踩过的坑</span>
+    <p>
+      三个模块的成员移除监听器起初都叫 <code>ProjectMemberRemovingListener</code>——
+      Spring 默认 bean 名取简单类名，直接 <code>ConflictingBeanDefinitionException</code> 启动失败。
+      现名 <code>RemovedMemberAssignmentListener</code> / <code>RemovedMemberClaimListener</code> / <code>RemovedMemberBindingListener</code>。
+    </p>
+    <p>
+      监听器必须<strong>同步</strong>；<code>@TransactionalEventListener</code> 是错的工具。
+      而<strong>漏掉一个监听器不会静默通过</strong>：那三处外键没有 <code>ON DELETE</code>，
+      未撤销的引用会让删除以 23503 被拒——外键本身就是撤销完整性的证明。
+    </p>
+  </div>
+</section>
+
+<!-- ═══════════════════ 05 ═══════════════════ -->
+<section id="s5">
+  <h2><span class="h-num">05</span>后端代码地图</h2>
+
+  <p>
+    <code>backend/src/main/java/com/forgepilot/</code> 下 175 个类，按包列全。
+    每包先给职责，再逐文件说明。
+  </p>
+  <p class="lb-key"><span class="lb"></span> 标记<strong>承重文件</strong>：改动它们会影响不变量、哈希稳定性或授权边界，动前先读它自己的 javadoc。</p>
+  <p>每个包还有一个 <code>package-info.java</code>，只承载包级 javadoc，共 8 个，下表不再重复列出。</p>
+
+  <!-- common -->
+  <div class="pkg" id="p-common">
+    <div class="pkg-head"><span class="pkg-name">common</span><span class="pkg-count">4 文件 · 110 行</span></div>
+    <p class="pkg-role">跨模块横切基础设施，<strong>不承载任何业务语义</strong>。它是依赖图的底，谁都可以依赖它，它不依赖任何人。</p>
+    <div class="tw"><table>
+      <thead><tr><th>文件</th><th>作用</th></tr></thead>
+      <tbody>
+        <tr><td class="f">ApiError</td><td>全部 API 失败响应的<strong>唯一</strong>错误体结构：<code>code</code> / <code>message</code> / <code>traceId</code>。</td></tr>
+        <tr><td class="f">ApiException</td><td>允许被调用方看到的失败，自带它映射到的 HTTP 状态码与错误码。<code>notFound()</code> / <code>conflict()</code> / <code>forbidden()</code> / <code>unprocessable()</code> 是全代码库统一的抛出方式。</td></tr>
+        <tr><td class="f">ApiExceptionHandler <span class="lb"></span></td><td><b>它做什么：</b>把所有失败统一成同一种错误格式返回给前端。<br><b>为什么这么写：</b>把各类失败统一收敛成 <code>ApiError</code>。约束冲突到达这里时其事务<strong>必定已回滚</strong>——任何代码都不得捕获约束冲突后在同一事务里继续执行。</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+
+  <!-- auth -->
+  <div class="pkg" id="p-auth">
+    <div class="pkg-head"><span class="pkg-name">auth</span><span class="pkg-count">12 文件 · 595 行</span></div>
+    <p class="pkg-role">本地账号、会话，以及一个只读的用户目录 facade。账号是<strong>全局作用域</strong>，绝不携带 project id。</p>
+    <div class="tw"><table>
+      <thead><tr><th>文件</th><th>作用</th></tr></thead>
+      <tbody>
+        <tr><td class="f">UserAccount</td><td>本地演示账号实体。<code>session_version</code> 是改密踢出其他会话的机制载体。</td></tr>
+        <tr><td class="f">UserAccountRepository</td><td>账号的 JPA 仓库。仅 <code>auth</code> 内部可见。</td></tr>
+        <tr><td class="f">AuthService</td><td>只负责注册与改密。<strong>不</strong>负责认证——那是 Spring Security 的事。</td></tr>
+        <tr><td class="f">AuthController</td><td>不由安全过滤器链直接处理的那部分认证端点：注册、读自己、改显示名、改密。</td></tr>
+        <tr><td class="f">SecurityConfig <span class="lb"></span></td><td><b>它做什么：</b>定义谁能访问哪些接口、怎么登录、怎么防 CSRF。<br><b>为什么这么写：</b>基于服务端 <code>HttpSession</code> 的表单登录 + Cookie 形式 CSRF。它的 401/403 在 Spring MVC 之前产生，因此永远到不了 <code>ApiExceptionHandler</code>，必须在此统一成同一个错误体。口令哈希用 BCrypt。</td></tr>
+        <tr><td class="f">SessionVersionFilter <span class="lb"></span></td><td><b>它做什么：</b>每个请求都检查一次会话有没有被改密作废。<br><b>为什么这么写：</b>强制执行 <code>session_version</code>：会话建立时捕获该值，之后每个请求与库中比对，于是一次改密杀掉<strong>除执行改密那个会话之外</strong>的全部会话。</td></tr>
+        <tr><td class="f">AccountDetailsService</td><td>把表单登录的用户名解析到 <code>user_account</code>。</td></tr>
+        <tr><td class="f">AccountPrincipal</td><td>已认证账号，携带 id 与认证时读到的 <code>session_version</code>，使二者此后不必再按用户名查一次。</td></tr>
+        <tr><td class="f">UserDirectory <span class="lb"></span></td><td><b>它做什么：</b>别的模块想查账号信息，只能走这个只读门面。<br><b>为什么这么写：</b>其他模块读取账号数据的<strong>唯一</strong>途径。查询 facade 而非仓库，所以各模块既碰不到 <code>UserAccountRepository</code>，也碰不到会话如何建立。</td></tr>
+        <tr><td class="f">AccountView</td><td>其他模块被允许看到的账号信息。<strong>绝不携带口令哈希</strong>。</td></tr>
+        <tr><td class="f">AccountResponse</td><td>认证端点的 HTTP 响应体。与 <code>AccountView</code> 并存不复用，因为契约只公开 <code>id/username/displayName</code>——<code>enabled</code> 属于内部事实。</td></tr>
+      </tbody>
+    </table></div>
+    <div class="note">
+      <span class="label">安全口径</span>
+      <p>「用户名不存在」与「口令错误」在字节层面<strong>不可区分</strong>：两者共用同一个响应体，且 <code>traceId</code> 为空——逐响应生成一个值会让二者可区分。同理，别的项目的资源与从未签发过的 id 也必须同答 404，否则状态码本身就泄露了存在性。</p>
+    </div>
+  </div>
+
+  <!-- project -->
+  <div class="pkg" id="p-project">
+    <div class="pkg-head"><span class="pkg-name">project</span><span class="pkg-count">20 文件 · 1009 行</span></div>
+    <p class="pkg-role">项目边界：项目、成员、项目角色与<strong>项目内授权</strong>。所有其他模块的授权都经由这里。</p>
+    <div class="tw"><table>
+      <thead><tr><th>文件</th><th>作用</th></tr></thead>
+      <tbody>
+        <tr><td class="f">Project</td><td>项目实体。<code>createdBy</code> 记录创建者且永不变更；LEADER 角色是另一回事、可转移。<code>archive()</code> / <code>unarchive()</code> 是意图命名的状态迁移。</td></tr>
+        <tr><td class="f">ProjectStatus</td><td><code>ACTIVE</code> / <code>ARCHIVED</code>，与 <code>ck_project_status</code> 一一对应。</td></tr>
+        <tr><td class="f">ProjectRepository <span class="lb"></span></td><td><b>它做什么：</b>读写 project 表，其中一个方法带行锁，用来让并发的负责人转移排队。<br><b>为什么这么写：</b><code>findByIdForUpdate</code> 在项目行上把并发的 LEADER 转移串行化。没有它，两次转移可能都读到同一个 LEADER、都降级、都升级，而部分唯一索引会让后提交方悄无声息胜出。</td></tr>
+        <tr><td class="f">ProjectService</td><td>创建项目与把创建者设为 LEADER 是<strong>同一个事务</strong>；否则「至少一个 LEADER」这条不变式无从起步。归档／取消归档也在这里，各自取行锁。</td></tr>
+        <tr><td class="f">ProjectController</td><td>项目列表、创建、读取、归档、取消归档。登录身份在<strong>控制器层</strong>经 <code>UserDirectory</code> 解析为 user id——业务服务永远看不到 Spring Security。</td></tr>
+        <tr><td class="f">ProjectResponse</td><td>项目的 HTTP 响应体，含 <code>myRoles</code>。</td></tr>
+        <tr><td class="f">ProjectAccessService <span class="lb"></span></td><td><b>它做什么：</b>回答「这个人在这个项目里有没有权限做这件事」，全项目唯一的授权入口。<br><b>为什么这么写：</b>项目内一切操作的<strong>唯一授权入口</strong>。<code>requireMember</code> / <code>requireRole</code>。其他模块经由它，而不是自己去读成员表。</td></tr>
+        <tr><td class="f">ProjectRole</td><td><code>LEADER</code> / <code>DEVELOPER</code> / <code>REVIEWER</code>。刻意<strong>不做成</strong> Spring Security authority——项目角色是项目内概念，全局安全体系只区分已认证与匿名。</td></tr>
+        <tr><td class="f">ProjectMember</td><td>某账号在某项目的成员关系。<strong>只是成员事实</strong>：角色集合在 <code>project_member_role</code>，SCM 身份归 <code>scm</code>。</td></tr>
+        <tr><td class="f">ProjectMemberRepository</td><td>每次读取都带 <code>projectId</code>；不存在「日后再补一道检查」的裸 id 查询。</td></tr>
+        <tr><td class="f">ProjectMemberService <span class="lb"></span></td><td><b>它做什么：</b>增删成员、改角色、转移负责人。<br><b>为什么这么写：</b>成员与角色集合的全部变更。唯一 LEADER 由<strong>服务端</strong>拒绝移除——部分唯一索引保证的是「至多一个」，「至少一个」历来是服务端职责。LEADER 转移必须<em>降级 → flush → 升级</em>，且先锁项目行。</td></tr>
+        <tr><td class="f">ProjectMemberController</td><td>成员目录、候选账号搜索、批量添加、逐行角色覆盖、移除、LEADER 转移。</td></tr>
+        <tr><td class="f">MemberResponse</td><td>成员目录的响应体；SCM 身份由独立的绑定响应提供。</td></tr>
+        <tr><td class="f">MemberCandidateResponse</td><td>批量添加时的候选账号（按显示名／用户名／平台 ID 搜索）。</td></tr>
+        <tr><td class="f">ProjectMemberRemoving <span class="lb"></span></td><td><b>它做什么：</b>一个通知：「某个成员正要被移出项目」，让三个下游模块各自去清理。<br><b>为什么这么写：</b>删除 <code>project_member</code> 行的那个事务<strong>内部</strong>、且在删除<strong>之前</strong>发布的进程内事件。它是依赖反转的载体。</td></tr>
+        <tr><td class="f">ProjectDeletionRecord</td><td>一次删除这件事实本身，永久保存。<code>resourceId</code> <strong>故意无外键</strong>。</td></tr>
+        <tr><td class="f">ProjectDeletionRecordRepository</td><td>每次读取都带 <code>projectId</code>；台账同样没有跨项目裸 id 查询。</td></tr>
+        <tr><td class="f">ProjectDeletionLog</td><td>三类删除写留痕的<strong>唯一</strong>途径。<code>knowledge</code> 与 <code>requirement</code> 经由它写入，因此都碰不到台账仓库。</td></tr>
+        <tr><td class="f">DeletedResourceType</td><td>会被记入台账的三类资源。这份枚举与 SQL 里的 CHECK 是<strong>一套词汇两处存放</strong>，有测试逐个走完枚举比对。</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+
+  <!-- requirement -->
+  <div class="pkg" id="p-requirement">
+    <div class="pkg-head"><span class="pkg-name">requirement</span><span class="pkg-count">25 文件 · 1936 行</span></div>
+    <p class="pkg-role">需求、它们<strong>不可变的修订</strong>，支配二者的状态机，以及两个一次性 AI 能力（质量检查、实现建议）。</p>
+    <div class="tw"><table>
+      <thead><tr><th>文件</th><th>作用</th></tr></thead>
+      <tbody>
+        <tr><td class="f">Requirement <span class="lb"></span></td><td><b>它做什么：</b>需求这一行本身，只存身份和指针，正文在修订表里。<br><b>为什么这么写：</b>需求的<strong>稳定身份</strong>，本行不携带任何文本。写入走标量 <code>currentRevisionId</code>，关联只读——这是全项目应对「复合外键重复列」的统一形态。</td></tr>
+        <tr><td class="f">RequirementRevision</td><td>需求文本的某个版本 + 该版本的质量检查结果。离开 DRAFT 即冻结；此后变更都是发布 <code>seq + 1</code>。<code>editProse</code> 是唯一的修改方法，作用是<em>清空</em>质量结果。</td></tr>
+        <tr><td class="f">RequirementRepository</td><td>每次读取都带 <code>projectId</code>。</td></tr>
+        <tr><td class="f">RequirementRevisionRepository</td><td>同上；修订绝不按裸 id 查询。</td></tr>
+        <tr><td class="f">RequirementService <span class="lb"></span></td><td><b>它做什么：</b>需求的增删改、状态流转、指派。<br><b>为什么这么写：</b>需求与修订的全部变更、状态机、指派、软删。创建需求是<strong>一个事务三步写</strong>：先插指针为 null 的需求行、再插修订 1、最后回填——Hibernate 的 flush 顺序正好产生这个次序。</td></tr>
+        <tr><td class="f">RequirementController</td><td>需求的全部 HTTP 端点：列表、创建、读取、改草稿、发新修订、状态流转、指派、附件、质量检查、实现建议、删除。</td></tr>
+        <tr><td class="f">RequirementStatus</td><td><code>DRAFT → READY → IN_DEVELOPMENT → DONE</code>，另有 <code>CANCELED</code>。没有 <code>IN_REVIEW</code>——评审进展是只读派生量。</td></tr>
+        <tr><td class="f">RequirementContent</td><td>调用方提交的某次修订的文本与验收条件。创建与此后每次内容变更都用它。</td></tr>
+        <tr><td class="f">RequirementDetail</td><td>需求详情响应体，带当前修订。</td></tr>
+        <tr><td class="f">RequirementSummary</td><td>列表中的一条需求。标题取自当前修订，因为需求行本身不含文本。</td></tr>
+        <tr><td class="f">RevisionView</td><td>单次修订的响应体，附带属于该修订的验收条件。</td></tr>
+        <tr><td class="f">AcceptanceCriterion <span class="lb"></span></td><td><b>它做什么：</b>一条验收条件。<br><b>为什么这么写：</b>属于某次修订的验收条件。<code>acKey</code> 是<strong>跨修订稳定的业务身份</strong>，会原样复制进后续修订；行 id 绝不允许当身份使用。</td></tr>
+        <tr><td class="f">AcceptanceCriterionRepository</td><td>每次读取都带 <code>projectId</code>。</td></tr>
+        <tr><td class="f">AcceptanceCriterionView</td><td>验收条件的响应体。</td></tr>
+        <tr><td class="f">CriterionInput</td><td>提交的单条验收条件。<code>acKey</code> 为 null 表示新增，由服务端分配；<code>sortOrder</code> 由数组顺序推导。</td></tr>
+        <tr><td class="f">RequirementDirectory <span class="lb"></span></td><td><b>它做什么：</b>别的模块想问「这条需求存在吗」，只能走这个只读门面。<br><b>为什么这么写：</b>其他模块询问需求的<strong>唯一</strong>途径。查询 facade 而非仓库，所以 <code>scm</code> 既碰不到需求仓库也碰不到内部机制。<code>existsInProject</code> 让跨项目的 <code>REQ-n</code> 变成「没有关联需求」而不是一个错误。</td></tr>
+        <tr><td class="f">RequirementAttachment</td><td>需求与知识文档之间的关系，也是附件归属的<strong>唯一事实源</strong>。</td></tr>
+        <tr><td class="f">RequirementAttachmentRepository</td><td>附件关系的仓库。</td></tr>
+        <tr><td class="f">RequirementAttachmentService</td><td>附件的唯一拥有者。文档上的 scope 只是投影，归属事实在关系表。</td></tr>
+        <tr><td class="f">RequirementQualityService</td><td>需求质量检查：确定性规则 + <strong>一次</strong>结构化 AI 调用，结果归属具体修订。<code>QUALITY_VERSION</code> 随规则集或 Prompt 变化而变——存下来的报告只有对着产生它的版本才可解读。</td></tr>
+        <tr><td class="f">QualityReport</td><td>质量检查结果。含 <code>DUPLICATE_CRITERION</code>（两条 AC 文本完全相同会让同一缺陷以两个 key 报告两次，而抑制按 key 生效）与 <code>PROMPT_BUDGET_EXCEEDED</code>（被截断却仍「成功作答」就是那种绝不允许的静默截断）。</td></tr>
+        <tr><td class="f">ImplementationGuidanceService</td><td>一次性、知识增强的实现建议。只读当前需求、其 AC 与当前需求可见的知识。</td></tr>
+        <tr><td class="f">ImplementationGuidance</td><td>建议结果，点名具体修订。</td></tr>
+        <tr><td class="f">RemovedMemberAssignmentListener</td><td>成员离开项目时释放它在需求上的指派——指派是<strong>活权限</strong>而非既成事实。</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+
+  <!-- knowledge -->
+  <div class="pkg" id="p-knowledge">
+    <div class="pkg-head"><span class="pkg-name">knowledge</span><span class="pkg-count">13 文件 · 895 行</span></div>
+    <p class="pkg-role">项目知识的入库与检索。本模块只把需求 id 当作<strong>不透明作用域取值</strong>接收，从不查询任何需求。</p>
+    <div class="tw"><table>
+      <thead><tr><th>文件</th><th>作用</th></tr></thead>
+      <tbody>
+        <tr><td class="f">KnowledgeDocument</td><td>项目知识与需求附件<strong>共用</strong>的内容载体。<code>sourceRequirementId</code> 为 null 即公共知识，非 null 即属于那一条需求。提升为公共知识采用<strong>复制</strong>而非改写，原附件保留自己的归属与历史。</td></tr>
+        <tr><td class="f">KnowledgeDocumentRepository</td><td>每次读取都带 <code>projectId</code>。</td></tr>
+        <tr><td class="f">KnowledgeChunk <span class="lb"></span></td><td><b>它做什么：</b>知识文档切出来的一小段，附带它的向量。<br><b>为什么这么写：</b>可检索切片 + 产生其向量的 Embedding 档案。<code>embedding</code> 列<strong>刻意不做映射</strong>：映射成 <code>String</code> 能通过 <code>ddl-auto=validate</code> 却让每次运行时写入以 42804 失败，是四个选项里最糟的。</td></tr>
+        <tr><td class="f">KnowledgeChunkRepository</td><td>切片仓库。切片与向量是派生数据，随文档一起消亡。</td></tr>
+        <tr><td class="f">ChunkSearchRepository <span class="lb"></span></td><td><b>它做什么：</b>按语义相似度检索知识片段，全项目唯一能写向量 SQL 的地方。<br><b>为什么这么写：</b>全代码库<strong>唯一</strong>允许出现 <code>::vector</code> 与 <code>&lt;=&gt;</code> 的地方。<code>writeEmbedding</code> 里那道维度检查是本项目<strong>唯一真正的防线</strong>——一行维度不匹配就会让该项目<em>每一个</em>相似度查询以 22000 失败，而无维度列建不出索引。</td></tr>
+        <tr><td class="f">KnowledgeService</td><td>入库与检索的业务入口。<code>projectId</code> 是检索里的<strong>硬过滤</strong>，实测在排序表达式之前求值，所以别的项目的行既不会出现也不会污染结果。</td></tr>
+        <tr><td class="f">KnowledgeController</td><td>知识文档的可见流程。原文与向量只进入入库/检索，<strong>不出现在响应里</strong>。批量上传是前端 N 次调用现有单文档端点，各自一个事务。</td></tr>
+        <tr><td class="f">KnowledgeUploadValidator</td><td>在分块或向量化<strong>之前</strong>拒绝绝不该入库的文本。四道检查里两道数据库根本做不到；另两道提前做是为了不为「证明落不了库」的输入向 embedding provider 付费。</td></tr>
+        <tr><td class="f">KnowledgeReadRepository</td><td>知识页面的聚合读取。维度与向量不映射到实体，故用一次分组 SQL 产出状态与档案。</td></tr>
+        <tr><td class="f">KnowledgeDocumentView</td><td>面向产品的文档摘要。正文与原始向量都不属于这个 HTTP 契约。</td></tr>
+        <tr><td class="f">KnowledgeSourceType</td><td>文档属于某条需求还是整个项目。</td></tr>
+        <tr><td class="f">KnowledgeStatus</td><td>入库状态。<code>FAILED</code> 必须带失败原因——不得显示为「处理中」或「已就绪」。</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+
+  <!-- ai -->
+  <div class="pkg" id="p-ai">
+    <div class="pkg-head"><span class="pkg-name">ai</span><span class="pkg-count">9 文件 · 636 行</span></div>
+    <p class="pkg-role">通往 OpenAI 兼容 provider 的<strong>唯一技术入口</strong>。它只依赖 <code>common</code>，不认识任何业务类型。</p>
+    <div class="tw"><table>
+      <thead><tr><th>文件</th><th>作用</th></tr></thead>
+      <tbody>
+        <tr><td class="f">AiGateway <span class="lb"></span></td><td><b>它做什么：</b>全项目唯一能向 AI 服务发请求的类。<br><b>为什么这么写：</b>HTTP、鉴权、超时、那<strong>唯一一次</strong>有界重试、调用记录。业务归属以不透明 id 经 <code>AiCallContext</code> 传入，因此 <code>ai</code> 仍只依赖 <code>common</code>。未配置的部署在<strong>调用时</strong>失败而非启动时失败。</td></tr>
+        <tr><td class="f">AiFailurePolicy <span class="lb"></span></td><td><b>它做什么：</b>判断一次失败该不该重试，全项目唯一允许重试的地方。<br><b>为什么这么写：</b>本项目允许的唯一一次重试及其适用规则（仅 429/5xx/网络）。<strong>其他任何地方都没有重试，也必须保持没有</strong>。</td></tr>
+        <tr><td class="f">PromptSanitizer</td><td>内容发往 provider 前的最后一道处理：掩码疑似凭据、裁剪到预算内。纯函数——不写日志、不碰数据库、不抛异常；文档不会因「看起来含 token」被拒绝，只会去掉那部分照常发送。</td></tr>
+        <tr><td class="f">AiCallContext</td><td>标明一次调用属于哪些业务行，以 <code>Long</code> 形式的不透明 id 携带。</td></tr>
+        <tr><td class="f">AiCallLog</td><td>一次<strong>尝试</strong>而非一次调用——重试过的调用留下两行，这是事后审计「恰好只重试一次」的唯一手段。</td></tr>
+        <tr><td class="f">AiCallLogRepository</td><td>每次读取都带 <code>projectId</code>。</td></tr>
+        <tr><td class="f">AiCallStatus</td><td>尝试的结束方式。<code>TIMEOUT</code> 有意与 <code>FAILED</code> 分开：两者都属瞬时失败都重试一次，但只有分开保留，运维事后才分得清 provider 是<em>答得不对</em>还是<em>根本没答</em>。</td></tr>
+        <tr><td class="f">AiUseCase</td><td>调用属于哪个场景，与 SQL 里的 CHECK 一一对应。取值在 V4 生效那刻就冻结了，本列表是一份<strong>副本</strong>而非可自由发挥的选择。</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+
+  <!-- scm -->
+  <div class="pkg" id="p-scm">
+    <div class="pkg-head"><span class="pkg-name">scm</span><span class="pkg-count">48 文件 · 3303 行</span></div>
+    <p class="pkg-role">源码托管接入：仓库配置与静态加密凭据、webhook 认证、权威 PR 快照、成员 SCM 身份与项目绑定。</p>
+
+    <h4>仓库与凭据</h4>
+    <div class="tw"><table>
+      <thead><tr><th>文件</th><th>作用</th></tr></thead>
+      <tbody>
+        <tr><td class="f">ScmRepository <span class="lb"></span></td><td><b>它做什么：</b>项目接入的那个代码仓库，以及加密存放的凭据。<br><b>为什么这么写：</b>一个项目唯一的活动仓库 + 静态存储的凭据。<code>provider + instance_identity + external_id</code> 是稳定身份，<strong>全局唯一</strong>而非项目内唯一——因为 webhook 投递靠载荷定位仓库。</td></tr>
+        <tr><td class="f">ScmRepositoryRepository</td><td>项目内读取都带 <code>projectId</code>；唯一例外是 webhook 查找。</td></tr>
+        <tr><td class="f">ScmRepositoryService <span class="lb"></span></td><td><b>它做什么：</b>注册和修改仓库配置。<br><b>为什么这么写：</b>仓库注册与重配置，仅 LEADER。逐次提交的服务层不变式在先取得的行锁下强制执行。一旦有 PR 存在，身份即冻结，而 <code>api_base</code> 仍可移动。</td></tr>
+        <tr><td class="f">ScmRepositoryResponse</td><td>成员可读的安全连接信息。<strong>token 与 webhook 密钥都不出现</strong>。</td></tr>
+        <tr><td class="f">ScmController</td><td>仓库端点 + PR 读取 + 需求关联纠正。所有字段可选，null 表示该部分配置不变。</td></tr>
+        <tr><td class="f">ScmSecretCipher <span class="lb"></span></td><td><b>它做什么：</b>加解密 token 和 webhook 密钥。<br><b>为什么这么写：</b>对 provider token 与 webhook 密钥做静态加密，单个对称密钥。<strong>不做密钥轮换</strong>——轮换需要密钥版本列加一次重加密扫描，那是新的结构。</td></tr>
+        <tr><td class="f">ScmProvider</td><td>能对接的 provider 枚举：GitHub / GitLab。</td></tr>
+        <tr><td class="f">InstanceIdentity</td><td>把 <code>api_base</code> 归一化成稳定身份中的「实例」那一半。</td></tr>
+        <tr><td class="f">OutboundUrlPolicy <span class="lb"></span></td><td><b>它做什么：</b>在向外网发请求前检查目标地址允不允许。<br><b>为什么这么写：</b>判定是否允许向调用方提供的 URL 发起出站调用。每次调用都<strong>重新校验</strong>，因为该列可由 LEADER 配置而策略可能已收紧（SSRF 防线）。</td></tr>
+      </tbody>
+    </table></div>
+
+    <h4>Webhook 与权威读取</h4>
+    <div class="tw"><table>
+      <thead><tr><th>文件</th><th>作用</th></tr></thead>
+      <tbody>
+        <tr><td class="f">WebhookSignatureVerifier <span class="lb"></span></td><td><b>它做什么：</b>验证一个 webhook 请求真的来自 GitHub / GitLab。<br><b>为什么这么写：</b>对<strong>原始请求字节</strong>校验 provider 认证信息。常数时间比较且对长度安全——被截断的十六进制摘要只会判为不相等。</td></tr>
+        <tr><td class="f">ScmWebhookSecurityConfig <span class="lb"></span></td><td><b>它做什么：</b>让两个 webhook 端点走自己的认证方式，不走常规登录检查。<br><b>为什么这么写：</b>两个 webhook 端点各自对原始字节认证，因此被排除在常规过滤器链之外。</td></tr>
+        <tr><td class="f">github/GitHubWebhookController</td><td>GitHub webhook 端点。路径里<strong>不带 projectId</strong>——一次投递并不知道自己属于哪个项目，靠载荷定位仓库。</td></tr>
+        <tr><td class="f">gitlab/GitLabWebhookController</td><td>GitLab 接收端：先认证原始字节，再拉取权威快照。</td></tr>
+        <tr><td class="f">github/GitHubClient <span class="lb"></span></td><td><b>它做什么：</b>向 GitHub 发请求，读取 PR 的权威状态。<br><b>为什么这么写：</b>从 GitHub 读权威 PR 快照。base URI 来自 <code>api_base</code>，<strong>代码中绝不硬编码任何 host</strong>。<code>required()</code> 让缺席/null/容器的权威字段<strong>大声失败</strong>——<code>asString()</code> 对缺失节点返回 <code>""</code>，会写下空 SHA 或空作者 id 而数据库抓不住。</td></tr>
+        <tr><td class="f">gitlab/GitLabClient</td><td>读取内部自洽的权威 merge request 快照。</td></tr>
+        <tr><td class="f">PullRequestSnapshot</td><td>provider 声明的 PR 当前状态。一次 webhook 投递只是<strong>信号</strong>，内容以这次权威读取为准。</td></tr>
+        <tr><td class="f">PullRequestSyncService <span class="lb"></span></td><td><b>它做什么：</b>把读到的 PR 状态写进数据库，并通知下游。<br><b>为什么这么写：</b>把「已认证投递 + 权威快照」变成 <code>pull_request</code> 行。变更文件清单连同每个 patch 作为<strong>一个</strong> JSONB 值存下，超限时入库显式失败而不是静默截断。</td></tr>
+        <tr><td class="f">PullRequest</td><td>PR 的权威快照实体。<code>author_user_id</code> 是全库<strong>唯一</strong>带 <code>ON DELETE SET NULL</code> 的外键；不可变快照是 <code>author_external_user_id</code> / <code>author_username</code>。</td></tr>
+        <tr><td class="f">PullRequestRepository</td><td>PR 仓库。</td></tr>
+        <tr><td class="f">PullRequestResponse</td><td>PR 快照响应体。变更文件清单刻意缺席——没有调用方消费它。</td></tr>
+        <tr><td class="f">ChangedFile</td><td>清单中的一条。provider 没提供 patch 时 <code>patch</code> 为 null，「缺席」与「空」是两个不同的事实。</td></tr>
+        <tr><td class="f">PullRequestChanged</td><td>更新 PR 行那个事务<strong>内部</strong>发布的事件；同步监听。</td></tr>
+        <tr><td class="f">ReviewInputFingerprint <span class="lb"></span></td><td><b>它做什么：</b>把一次审查的输入算成一个哈希，用来判断「是不是同一次审查」。<br><b>为什么这么写：</b>归一化审查输入的确定性哈希：仓库身份、head、变更清单。它决定「这是不是同一次审查」。</td></tr>
+      </tbody>
+    </table></div>
+
+    <h4>需求关联</h4>
+    <div class="tw"><table>
+      <thead><tr><th>文件</th><th>作用</th></tr></thead>
+      <tbody>
+        <tr><td class="f">RequirementReferenceParser</td><td>解析分支名或标题里第一个 <code>REQ-&lt;n&gt;</code>。它<strong>永远不阻塞入库</strong>：复合外键做不到这种过滤——它只会让整条插入失败，而捕获后继续执行是被禁止的，所以在写行<strong>之前</strong>经只读 facade 问清楚。</td></tr>
+        <tr><td class="f">PullRequestAssociationService <span class="lb"></span></td><td><b>它做什么：</b>人工修改「这个 PR 对应哪条需求」。<br><b>为什么这么写：</b>人工纠正 PR↔需求关联。每次纠正<strong>在同一事务里</strong>写一行审计——关联变了却没审计行，或有审计行却描述了未提交的变更，都比没有审计更糟。「本人 PR」按稳定外部 user id 判定，<strong>绝不按用户名</strong>。</td></tr>
+        <tr><td class="f">PullRequestRequirementEvent</td><td>关联变更的审计记录，与变更本身同一事务。</td></tr>
+        <tr><td class="f">PullRequestRequirementEventRepository</td><td>审计仓库。</td></tr>
+        <tr><td class="f">PullRequestDecisionGate</td><td>「当前 head 上是否已有终局裁定？」接口在本包、实现在 <code>review</code>，因此编译期方向仍是 <code>review → scm</code>。</td></tr>
+        <tr><td class="f">ScmActorType</td><td>是谁改动了关联。没有第三种情况，也没有匿名。</td></tr>
+      </tbody>
+    </table></div>
+
+    <h4>成员 SCM 身份与项目绑定</h4>
+    <div class="tw"><table>
+      <thead><tr><th>文件</th><th>作用</th></tr></thead>
+      <tbody>
+        <tr><td class="f">ScmIdentity</td><td>用户自己拥有的 provider 身份（可多个，带标签与用途）。</td></tr>
+        <tr><td class="f">ScmIdentityRepository</td><td>身份仓库。</td></tr>
+        <tr><td class="f">ScmIdentityService</td><td>身份的增删改。</td></tr>
+        <tr><td class="f">ScmIdentityController</td><td><code>/api/scm/identities</code>：列出、验证、改标签、删除。</td></tr>
+        <tr><td class="f">ScmIdentityVerifier <span class="lb"></span></td><td><b>它做什么：</b>用一次性 token 向 provider 确认「你确实是这个账号」。<br><b>为什么这么写：</b>用<strong>一次性个人 token</strong> 调 provider 验证身份。token <strong>永不</strong>返回、永不持久化、永不记日志。</td></tr>
+        <tr><td class="f">ScmIdentityResponse</td><td>身份响应体。</td></tr>
+        <tr><td class="f">ScmIdentityUsage</td><td>身份用途枚举（如 WORK / PERSONAL）。</td></tr>
+        <tr><td class="f">VerifiedScmUser</td><td>验证成功后从 provider 拿到的远程用户事实。</td></tr>
+        <tr><td class="f">ProjectMemberScmBinding</td><td>成员在某项目选用哪个身份，含审批状态与仓库权限核验结果。</td></tr>
+        <tr><td class="f">ProjectMemberScmBindingRepository</td><td>绑定仓库。</td></tr>
+        <tr><td class="f">ScmBindingService</td><td>绑定的建立、审批、拒绝、撤销。开启严格审批后需 LEADER 批准，批准前不参与「本人 PR」权限。</td></tr>
+        <tr><td class="f">ScmBindingController</td><td>绑定端点与可选身份列表。</td></tr>
+        <tr><td class="f">ScmBindingResponse</td><td>绑定响应体。</td></tr>
+        <tr><td class="f">ProjectScmIdentityAccess</td><td>与 <code>review</code> 共享的「本人 PR」实时身份判定，<strong>不暴露</strong>仓库层细节。</td></tr>
+        <tr><td class="f">PullRequestAuthorMapper</td><td>从当前已核验绑定<strong>重算</strong>那个可空的 PR→成员投影。它是可重算映射，不是快照。</td></tr>
+        <tr><td class="f">RemovedMemberBindingListener</td><td>成员离开项目时删除其绑定——绑定是活权限。</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+
+  <!-- review -->
+  <div class="pkg" id="p-review">
+    <div class="pkg-head"><span class="pkg-name">review</span><span class="pkg-count">43 文件 · 5271 行</span></div>
+    <p class="pkg-role">唯一的 Review Engine，以及 Finding 的人工闭环。全项目最大的包，因为这里是那条因果链的落点。</p>
+
+    <h4>执行引擎</h4>
+    <div class="tw"><table>
+      <thead><tr><th>文件</th><th>作用</th></tr></thead>
+      <tbody>
+        <tr><td class="f">ReviewService</td><td>进入引擎的<strong>唯一</strong>入口：自动投递、人工点「审查」、失败后重试都走这里。</td></tr>
+        <tr><td class="f">Review <span class="lb"></span></td><td><b>它做什么：</b>一次审查记录，把当时的全部输入都冻结在这一行里。<br><b>为什么这么写：</b>针对<strong>一组冻结输入</strong>的一次审查：某个 head 的 PR、某个 diff 指纹、某个需求修订。数据库触发器拒绝事后改动其身份列。</td></tr>
+        <tr><td class="f">ReviewRepository</td><td>每次读取都限定项目内，所以猜到的外项目 id 与不存在的 id 同答。</td></tr>
+        <tr><td class="f">ReviewStatus</td><td><strong>执行</strong>状态，与 <code>ReviewDecision</code> 正交。</td></tr>
+        <tr><td class="f">ReviewClaimRepository <span class="lb"></span></td><td><b>它做什么：</b>让后台线程「抢」审查任务，保证同一次只有一个线程做。<br><b>为什么这么写：</b>凡是「影响行数本身即判定结果」的语句都在这里，全是带条件的原生 SQL——先读后写会把 WHERE 刚关上的窗口重新打开。抢占是<strong>一条语句</strong>里的原子条件更新，同时铸出围栏三元组。所有时间来自 <code>now()</code>，偏旧的参照时间只会找出<em>更少</em>过期租约，绝不抢活着的 worker。</td></tr>
+        <tr><td class="f">ReviewExecutor <span class="lb"></span></td><td><b>它做什么：</b>后台线程的主流程：抢任务、跑分析、写结果。<br><b>为什么这么写：</b>worker 一侧：抢占、持有、做完。租约续期即心跳，因此没有第二套存活检测。已过期的 worker <strong>连标记 FAILED 都不许</strong>——这是最常被遗忘的那道围栏。</td></tr>
+        <tr><td class="f">ReviewExecutorConfig</td><td>线程池与调度器。并发上限<strong>冻结为 2</strong>，依据是 4 GB 主机上的实测（两个 300 文件 Review、各带 3,989,101 字符清单，无截断、无重启、无 OOM）。</td></tr>
+        <tr><td class="f">ReviewPipeline <span class="lb"></span></td><td><b>它做什么：</b>一次审查的完整流程编排。<br><b>为什么这么写：</b>完整流程：从被抢占的行到落库的报告。小 PR 与大 PR<strong>走完全相同的路径</strong>——「让批次直接下结论」的捷径正是被明令禁止的第二条流水线。</td></tr>
+        <tr><td class="f">ChangedFileBatcher <span class="lb"></span></td><td><b>它做什么：</b>把变更文件切成若干批，因为大 PR 一次塞不进模型。<br><b>为什么这么写：</b>把变更文件切批并运行分批阶段。批次只产出候选与证据。第一个「解析不过、修复也救不回来」的批次让<strong>整次 Review</strong> 失败并丢弃已有产出——只报告了五个批次中三个的 Review 看上去是完整的，而它对另外两个的判断是错的。</td></tr>
+        <tr><td class="f">ReviewPrompts <span class="lb"></span></td><td><b>它做什么：</b>发给模型的两段提示词和两个输出格式定义。<br><b>为什么这么写：</b>两个 Prompt 与两个 schema，以常量形式存在。三条承重规则都为了让抑制机制保持诚实。<code>VERSION</code> 现为 <code>review-2</code>。</td></tr>
+        <tr><td class="f">ReviewOutputValidator <span class="lb"></span></td><td><b>它做什么：</b>检查模型的回答是否可用，不可用就判定失败。<br><b>为什么这么写：</b>把模型回答变成对本次 Review 上下文<strong>为真</strong>的结果，或变成 FAILED 裁定。结构非法只给<strong>一次</strong>格式修复；编造的引用被丢弃并记入 warnings，而不是让整次失败。校验发生在写入<strong>之前</strong>，触发器是最后一道防线不是第一道。</td></tr>
+        <tr><td class="f">ReviewOutput</td><td>校验后的结果。FAILED 的 Review <strong>根本没有</strong> Report 而不是有一个空的——「绝无残缺报告」因此是关于类型的事实。</td></tr>
+        <tr><td class="f">AcVerdict</td><td><code>COVERED</code> / <code>NOT_FOUND</code> / <code>AT_RISK</code>。<strong>只有综合阶段有资格下裁定</strong>；被审查修订的每一条 AC 最终都有裁定，模型跳过的填成 <code>NOT_FOUND</code>，所以沉默的模型永远无法把报告缩短。</td></tr>
+        <tr><td class="f">ReviewReconciliationScheduler</td><td>把「已落库但不再推进」的 Review 放回轨道。它的唯一查询 FROM 子句里<strong>有且仅有 <code>review</code> 一张表</strong>——由 review 驱动的结果集必然是已存在行的子集，所以无论条件写得多错都不可能产出一个从未创建的 Review。</td></tr>
+        <tr><td class="f">PullRequestChangedListener</td><td>自动触发的两半，是两个方法而非一个——实测表明这不是风格选择。</td></tr>
+      </tbody>
+    </table></div>
+
+    <h4>Finding 与跨轮连续性</h4>
+    <div class="tw"><table>
+      <thead><tr><th>文件</th><th>作用</th></tr></thead>
+      <tbody>
+        <tr><td class="f">Finding</td><td>一次 Review 报出的一个问题 + 它的跨轮血缘。<code>explanation</code> / <code>suggestion</code> 是模型自己的话，<code>evidence</code> 只能是逐字引用。</td></tr>
+        <tr><td class="f">FindingRepository</td><td>Finding 仓库。</td></tr>
+        <tr><td class="f">FindingKeys <span class="lb"></span></td><td><b>它做什么：</b>算出三个哈希，用来判断「这条问题是不是上一轮那条」。<br><b>为什么这么写：</b>三个确定性 key：<code>finding_key</code>（批内去重 + 跨 Review 匹配）、<code>evidence_hash</code>、<code>basis_hash</code>。<strong><code>RULE_VERSION</code> 必须保持 <code>"1"</code></strong>，它与 <code>ReviewPrompts.VERSION</code> 朝相反方向移动。</td></tr>
+        <tr><td class="f">FindingContinuityCalculator</td><td>判定本轮每条 finding 从哪来。</td></tr>
+        <tr><td class="f">FindingContinuity</td><td>相对上一轮的来源：新增 / 延续 / 已抑制。</td></tr>
+        <tr><td class="f">FindingLineageRepository</td><td>血缘读取，无一例外限定项目内。</td></tr>
+        <tr><td class="f">FindingType</td><td>报告的是哪一类问题。这个区分对 <code>finding_key</code> 是<strong>承重的</strong>。</td></tr>
+        <tr><td class="f">FindingCategory</td><td>封闭类别词汇。应用侧<strong>先映射再插入</strong>——一个到达 CHECK 的值会中止<em>整批</em>插入，所以 CHECK 是最后防线；有测试逐个走完枚举比对 SQL 列表。</td></tr>
+        <tr><td class="f">FindingConfidence</td><td><code>HIGH/MEDIUM/LOW</code> 三档。三条硬约束：绝不进三个哈希中任何一个；绝不参与任何自动门禁；UI 上与其他标记分开呈现。</td></tr>
+        <tr><td class="f">FindingStatus</td><td>人工处理生命周期，与 <code>FindingContinuity</code> <strong>正交</strong>。</td></tr>
+        <tr><td class="f">FindingAction</td><td>操作者<em>想做什么</em>，与机械的 from/to 状态对<strong>一起</strong>记录。</td></tr>
+        <tr><td class="f">FindingLifecycleService <span class="lb"></span></td><td><b>它做什么：</b>一条问题从认领到修复到复核的流转，以及每步谁能做。<br><b>为什么这么写：</b>Finding 的人工生命周期及每一步由谁执行。</td></tr>
+        <tr><td class="f">FindingController</td><td>状态流转与审计读取。<strong>没有「指派」端点</strong>——认领是本人动作。</td></tr>
+        <tr><td class="f">FindingEvent</td><td>关于某个 Finding 的一次人工决定，永久保存。<code>actorId</code> 指向 <code>user_account</code>，成员离开项目不该抹掉这条记录。</td></tr>
+        <tr><td class="f">FindingEventRepository</td><td>审计仓库。</td></tr>
+        <tr><td class="f">RemovedMemberClaimListener</td><td>成员离开项目时释放其认领的 Finding。</td></tr>
+      </tbody>
+    </table></div>
+
+    <h4>决策与派生活动状态</h4>
+    <div class="tw"><table>
+      <thead><tr><th>文件</th><th>作用</th></tr></thead>
+      <tbody>
+        <tr><td class="f">ReviewDecision</td><td>一次性人工裁定，只允许 <code>PENDING → APPROVE | REQUEST_CHANGES</code>。</td></tr>
+        <tr><td class="f">ReviewDecisionService <span class="lb"></span></td><td><b>它做什么：</b>记录那次一次性的最终裁定。<br><b>为什么这么写：</b>裁定与展示读取。「当前有效」只由 head、diff 指纹与需求修订三者决定。</td></tr>
+        <tr><td class="f">DecisionRepository <span class="lb"></span></td><td><b>它做什么：</b>裁定与问题重开的 SQL。<br><b>为什么这么写：</b>支撑两条人工闭环的语句。重开 Finding <strong>只</strong>在 <code>continuity = SUPPRESSED</code> 时允许，且这条规则住在 SQL 的<strong>条件里</strong>而不是一次会留下窗口的前置读取里——CHECK 表达不了它（需要子查询）。</td></tr>
+        <tr><td class="f">ReviewDecisionGate</td><td><code>PullRequestDecisionGate</code> 的实现，住在 <code>review</code> 因为 Decision 是它的数据。</td></tr>
+        <tr><td class="f">ReviewController</td><td>发起、读取、决策。返回 <code>executionAttempt</code>。</td></tr>
+        <tr><td class="f">ReviewViews</td><td>审查与 Finding 相关端点的响应体，全是无行为的朴素 record。<code>coverage</code> 与 <code>acVerdicts</code> 从 <code>summary_json</code> <strong>原样透传</strong>，因此「字段为 null」与「空数组」是两个不同答案。</td></tr>
+        <tr><td class="f">ReviewActivityService</td><td>只读派生量，每次读取<strong>现算</strong>、不落表。</td></tr>
+        <tr><td class="f">ReviewActivityRepository <span class="lb"></span></td><td><b>它做什么：</b>一次查询算出项目内所有 PR 的当前审查状态。<br><b>为什么这么写：</b>那<strong>一次</strong>读取。两条 SQL 不能一视同仁加 <code>deleted_at is null</code>：<code>requirementIds</code> 要过滤，但 <code>left join requirement</code> 不能——它只是取 <code>current_revision_id</code> 来匹配「当前有效 Review」，过滤会让修订变 NULL 从而改写判定。</td></tr>
+        <tr><td class="f">ReviewActivityController</td><td>活动状态端点。由 <code>review</code> 提供而非需求端点，否则依赖图成环。</td></tr>
+        <tr><td class="f">PullRequestActivity</td><td>单个 PR 的派生状态，<strong>六个</strong>取值不是八个。</td></tr>
+        <tr><td class="f">RequirementActivity</td><td>单条需求的聚合状态。<code>NO_PR</code> 与 <code>MIXED</code> 属于需求层面，在 PR 层面毫无意义——所以是两个枚举而非共用一个。</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+</section>
+
+<!-- ═══════════════════ 06 ═══════════════════ -->
+<section id="s6">
+  <h2><span class="h-num">06</span>前端代码地图</h2>
+  <p>Vue 3 + TypeScript + Vite，<code>frontend/src/</code> 下 34 个文件 / 9123 行。无状态管理库、无 UI 组件库、无 HTTP 客户端库——这些都被 lint 明确禁止。</p>
+
+  <div class="tw"><table>
+    <caption>基础设施与外壳</caption>
+    <thead><tr><th>文件</th><th class="n">行</th><th>作用</th></tr></thead>
+    <tbody>
+      <tr><td class="f">main.ts</td><td class="n">13</td><td>应用入口。</td></tr>
+      <tr><td class="f">App.vue</td><td class="n">19</td><td>根组件。</td></tr>
+      <tr><td class="f">app/router.ts</td><td class="n">32</td><td>路由器工厂，接受 history 实现以便测试注入 memory history。</td></tr>
+      <tr><td class="f">app/routes.ts</td><td class="n">210</td><td>路由表 + <code>TOP_LEVEL_NAVIGATION</code> 六个入口 + 路由构造函数。<strong>导航与路由形态由 <code>routes.spec.ts</code> 断言锁死。</strong></td></tr>
+      <tr><td class="f">components/AppShell.vue</td><td class="n">171</td><td>顶部应用栏：横版 Logo 居左、六入口页面水平居中、账户操作居右，<strong>没有侧栏</strong>。账户弹层有点击外部/Escape/路由三条关闭路径。</td></tr>
+      <tr><td class="f">lib/http.ts <span class="lb"></span></td><td class="n">104</td><td><b>它做什么：</b>前端所有请求的统一出口，自动带上 CSRF 令牌。<br><b>为什么这么写：</b>统一请求边界：唯一错误体结构、写请求自动携带 <code>X-XSRF-TOKEN</code>、same-origin cookie、401 处理器。全部 API 调用都经它。</td></tr>
+      <tr><td class="f">lib/datetime.ts</td><td class="n">9</td><td>按查看者本地化设置渲染 ISO-8601。</td></tr>
+      <tr><td class="f">env.d.ts</td><td class="n">1</td><td>Vite 类型声明。</td></tr>
+      <tr><td class="f">components/motion/CyberParticleField.vue</td><td class="n">170</td><td>Canvas 粒子场背景。</td></tr>
+      <tr><td class="f">components/motion/cyberParticles.ts</td><td class="n">102</td><td>粒子模拟纯逻辑，与渲染分离以便测试。减动效模式停止持续运动但不改变内容。</td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="tw"><table>
+    <caption>业务页面与 API 层</caption>
+    <thead><tr><th>文件</th><th class="n">行</th><th>作用</th></tr></thead>
+    <tbody>
+      <tr><td class="f">features/auth/session.ts</td><td class="n">87</td><td>会话状态与引导。</td></tr>
+      <tr><td class="f">features/auth/LoginPage.vue</td><td class="n">519</td><td>登录与注册。只出现<strong>一个</strong>应用图标。</td></tr>
+      <tr><td class="f">features/auth/AccountSettingsPage.vue</td><td class="n">271</td><td><code>/account</code>：显示名、改密、多个 SCM 身份验证。口令输入<strong>只</strong>在这里，账户弹层里没有。</td></tr>
+      <tr><td class="f">features/workspace/WorkspacePage.vue</td><td class="n">517</td><td>工作台。以真实列表 API 组合概况，<strong>没有任何虚构的评分或健康度</strong>。URL 缺 <code>project</code> 时补第一个，不引入客户端存储。</td></tr>
+      <tr><td class="f">features/project/api.ts</td><td class="n">128</td><td>项目、成员、归档／取消归档的请求层。</td></tr>
+      <tr><td class="f">features/project/ProjectsPage.vue</td><td class="n">415</td><td>项目列表与创建；每卡六入口；归档确认面板（复制项目名 + 一字不差重输才解锁）；已归档折叠组与恢复。</td></tr>
+      <tr><td class="f">features/project/ProjectMembersPage.vue</td><td class="n">628</td><td>成员目录四列表格 + 文本/角色筛选 + 批量添加（50 上限、2 字符下限、行角色非空）+ 角色编辑 + 绑定审批。</td></tr>
+      <tr><td class="f">features/requirement/api.ts</td><td class="n">283</td><td>需求全部请求 + <code>toDraft</code> 转换。</td></tr>
+      <tr><td class="f">features/requirement/status.ts</td><td class="n">49</td><td>状态词汇、徽标修饰符、<code>STATUS_TRANSITIONS</code>、<code>isTerminal</code>。状态<strong>绝不仅靠颜色</strong>传达。</td></tr>
+      <tr><td class="f">features/requirement/RequirementsPage.vue</td><td class="n">488</td><td>需求列表、三个可组合筛选、行内操作（按状态门控，不放宽后端前置条件）、创建 disclosure。</td></tr>
+      <tr><td class="f">features/requirement/RequirementDetailPage.vue</td><td class="n">898</td><td>详情：当前内容、负责人、人工状态、评审活动、六项 PR 计数、修订历史、附件、质量检查、实现建议。长 AI 输出定高滚动。</td></tr>
+      <tr><td class="f">features/requirement/AcceptanceCriteriaEditor.vue</td><td class="n">98</td><td>验收条件编辑器。<code>sortOrder</code> 由数组顺序推导。</td></tr>
+      <tr><td class="f">features/knowledge/api.ts</td><td class="n">41</td><td>知识请求层。读模型<strong>只</strong>暴露索引元数据，绝不含正文或原始向量。</td></tr>
+      <tr><td class="f">features/knowledge/KnowledgePage.vue</td><td class="n">300</td><td>多文件上传，逐文件报告成败；切片/向量状态；公共文档删除；附件来源文档不给删除入口而是说明去哪解除附件。</td></tr>
+      <tr><td class="f">features/scm/api.ts</td><td class="n">262</td><td>仓库、身份、绑定请求层 + Token 创建页路径推导（自建实例地址变了入口跟着变）。</td></tr>
+      <tr><td class="f">features/scm/RepositoryPage.vue</td><td class="n">330</td><td>仓库注册与修改。token 与 webhook 密钥<strong>只写字段</strong>，任何位置不回显。</td></tr>
+      <tr><td class="f">features/review/api.ts</td><td class="n">292</td><td>Review、Finding、活动状态请求层与类型。</td></tr>
+      <tr><td class="f">features/review/labels.ts <span class="lb"></span></td><td class="n">250</td><td><b>它做什么：</b>四种状态标记的文案与配色，规定它们不许合并。<br><b>为什么这么写：</b>四个标记的词汇与修饰符。<strong>禁止合并其中任何两个</strong>：Review 执行状态、Finding 人工状态、跨轮血缘、一次性 Decision。类别与置信度<strong>刻意没有</strong>色调映射——它们不是严重度。</td></tr>
+      <tr><td class="f">features/review/context.ts</td><td class="n">236</td><td>在归属处对外部 JSON 做一次收窄。视图<strong>绝不</strong>对不可变上下文做类型断言或私自重解读。</td></tr>
+      <tr><td class="f">features/review/diff.ts</td><td class="n">69</td><td>把 unified patch 转成稳定展示行与<strong>真实</strong> hunk 行号。</td></tr>
+      <tr><td class="f">features/review/ReviewsPage.vue</td><td class="n">441</td><td>项目级 Review 列表，四个筛选；内部 PR 记录 id 输入只在底部「故障恢复」disclosure。</td></tr>
+      <tr><td class="f">features/review/ReviewDetailPage.vue</td><td class="n">1063</td><td>证据工作台：上下文快照、召回知识集合、覆盖清单、diff、Finding、决策闸门。<code>REQUEST_CHANGES</code> 让该 head 永久封锁，每次读取<strong>现算</strong>而不缓存。原始 JSON 只在底部折叠诊断区。</td></tr>
+      <tr><td class="f">features/review/FindingCard.vue</td><td class="n">433</td><td>Finding 卡片，层次为<strong>问题说明 → 代码证据 → 修复建议</strong>；三个哈希收进可核验性折叠区。</td></tr>
+      <tr><td class="f">features/review/DiffEvidenceViewer.vue</td><td class="n">194</td><td>diff 渲染。增/删/上下文/分段样式可辨，长行局部滚动，无 patch 有明确空态。</td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="note">
+    <span class="label">两条前端硬教训</span>
+    <p>
+      原生 <code>&lt;details&gt;</code> <strong>不会</strong>因点击外部而关闭——必须自己补 pointerdown、Escape + 回焦、路由三条路径，并在卸载时摘监听。
+    </p>
+    <p>
+      <code>white-space: pre-wrap</code> <strong>绝不能</strong>加在 <code>&lt;ul&gt;</code> / <code>&lt;ol&gt;</code> / <code>&lt;table&gt;</code> 上，模板缩进会渲染成可见空行。
+    </p>
+    <p>
+      还有一条 CSS 层面的：<code>display: flex</code> 加在 <code>&lt;td&gt;</code> 上会覆盖 <code>display: table-cell</code>，
+      于是单元格的 <code>border-bottom</code> 与 <code>vertical-align</code> 一起失效、高度塌缩成内容高度，行分隔线画在内容下方而非行底。flex 必须落在单元格<strong>内层</strong>。
+    </p>
+  </div>
+</section>
+
+<!-- ═══════════════════ 07 ═══════════════════ -->
+<section id="s7">
+  <h2><span class="h-num">07</span>数据模型 20 表</h2>
+  <p>PostgreSQL 15 + pgvector 0.8.6，Flyway 管理，<strong>十条迁移 V1–V10</strong>。<code>ddl-auto</code> 是 <code>validate</code>，Hibernate 只验证从不生成。</p>
+
+  <div class="tw"><table>
+    <thead><tr><th>表</th><th>归属</th><th>作用</th></tr></thead>
+    <tbody>
+      <tr><td class="f">user_account</td><td>auth</td><td>本地账号。全局作用域，含 <code>session_version</code>。</td></tr>
+      <tr><td class="f">project</td><td>project</td><td>项目边界，<code>status ∈ {ACTIVE, ARCHIVED}</code>。</td></tr>
+      <tr><td class="f">project_member</td><td>project</td><td><strong>只是</strong>成员事实。不要把角色数组或身份列加回来。</td></tr>
+      <tr><td class="f">project_member_role</td><td>project</td><td>角色集合。<code>UNIQUE(project_id) WHERE role='LEADER'</code> 是部分唯一索引。</td></tr>
+      <tr><td class="f">project_deletion_record</td><td>project</td><td>删除台账。<code>resource_id</code> 故意<strong>无</strong>外键；<code>resource_type</code> 是闭合三值 CHECK。</td></tr>
+      <tr><td class="f">requirement</td><td>requirement</td><td>需求身份，<strong>不含文本</strong>。<code>current_revision_id</code> 可空、<code>MATCH SIMPLE</code>、<code>NOT DEFERRABLE</code>。</td></tr>
+      <tr><td class="f">requirement_revision</td><td>requirement</td><td>不可变修订，含质量检查结果三列。</td></tr>
+      <tr><td class="f">acceptance_criterion</td><td>requirement</td><td>属于某修订的验收条件。<code>ac_key</code> 是跨修订身份。</td></tr>
+      <tr><td class="f">requirement_attachment</td><td>requirement</td><td>需求↔文档关系，附件归属的唯一事实源。</td></tr>
+      <tr><td class="f">knowledge_document</td><td>knowledge</td><td>知识与附件共用的内容载体。</td></tr>
+      <tr><td class="f">knowledge_chunk</td><td>knowledge</td><td>切片 + <code>embedding vector</code>（<strong>无维度</strong>）+ Embedding 档案。</td></tr>
+      <tr><td class="f">ai_call_log</td><td>ai</td><td>一次<strong>尝试</strong>。重试留两行，用于评测与故障定位。</td></tr>
+      <tr><td class="f">scm_repository</td><td>scm</td><td>项目唯一活动仓库 + 加密凭据。稳定身份全局唯一。</td></tr>
+      <tr><td class="f">scm_identity</td><td>scm</td><td>用户自己拥有的 provider 身份。</td></tr>
+      <tr><td class="f">project_member_scm_binding</td><td>scm</td><td>项目内身份选择与审批历史。</td></tr>
+      <tr><td class="f">pull_request</td><td>scm</td><td>权威 PR 快照。变更清单以<strong>一个</strong> JSONB 存下。<code>author_user_id</code> 是全库唯一带 <code>ON DELETE SET NULL</code> 的外键。</td></tr>
+      <tr><td class="f">pull_request_requirement_event</td><td>scm</td><td>关联变更审计，与变更同事务。</td></tr>
+      <tr><td class="f">review</td><td>review</td><td>一次审查 + 冻结的上下文快照 + 围栏三元组。触发器拒绝事后改身份列。</td></tr>
+      <tr><td class="f">finding</td><td>review</td><td>报出的问题 + 三个确定性哈希 + 模型散文三列。<code>fk_finding_review</code> 指向 <code>(project_id, id, execution_attempt)</code>。</td></tr>
+      <tr><td class="f">finding_event</td><td>review</td><td>人工决定的永久审计。</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>贯穿全表的三条规则</h3>
+  <ul>
+    <li><strong>每个项目内外键都带 <code>project_id</code>。</strong>所以读路径都带 <code>projectId</code>，不存在「按裸 id 查了之后再检查项目」的写法。代价是几乎每个关联都重复一个已映射的列，而 Hibernate 7 会<strong>拒绝启动</strong>——统一解法是「写入走标量 <code>xxxId</code>，关联的每个 <code>@JoinColumn</code> 都 <code>insertable = false, updatable = false</code>」。</li>
+    <li><strong>唯一的 <code>ON DELETE</code> 是 <code>pull_request.author_user_id</code>。</strong>别处硬删都被外键拒绝，直到有决策定义其语义。三种删除语义的级联都<strong>显式写在服务里</strong>，未被撤销的引用会让删除以 23503 失败——外键本身就是撤销完整性的证明。</li>
+    <li><strong>没有种子数据。</strong>任何迁移都不携带口令。</li>
+  </ul>
+
+  <div class="note amber">
+    <span class="label">加表要同步改三处</span>
+    <p>
+      漏掉任何一处都<strong>不会</strong>让单元测试变红：<code>FoundationDatabaseTest.EXPECTED_TABLES</code>、
+      <code>scripts/phase1-compose-smoke.sh</code> 的 <code>expected_tables</code>、以及同一脚本里的
+      <code>migration_count</code> 与按版本取 <code>success</code> 的那一行。
+      V9/V10 落地时后两处都漏了，脚本长期停在「V8 + 19 张表」，CI 的 compose job 与冷启动自证因此一直是失败的——
+      而 <code>mvnw verify</code> 全绿，<strong>后端测试证明不了一个 shell 脚本</strong>。
+    </p>
+  </div>
+  <div class="note amber">
+    <span class="label">两个 CHECK 陷阱</span>
+    <p>
+      <code>ALTER TABLE … ADD CONSTRAINT … CHECK</code> 会<strong>校验表里已有的行</strong>。
+      不容忍 NULL 的 CHECK 在新建的空 schema 上必然通过，然后在任何已有数据的部署上直接让迁移失败。
+      <code>FoundationDatabaseTest</code> 迁移的是空 schema，看不见这件事——所以加受约束列时要像 <code>V9MigrationTest</code> 那样，
+      先迁到上一版、写一行、再迁剩下的。
+    </p>
+    <p>
+      而<strong>与应用侧词汇不一致的 CHECK 比没有 CHECK 更糟</strong>：一个到达约束的值会中止<em>整批</em>插入而不是它自己那一行，
+      所以 CHECK 忘掉的一个合法类别会把同一次审查里其他所有 finding 一起带走。
+      应用侧先映射到闭合枚举，CHECK 只做最后防线，并用测试逐个走完枚举比对两份清单。
+    </p>
+  </div>
+</section>
+
+<!-- ═══════════════════ 08 ═══════════════════ -->
+<section id="s8">
+  <h2><span class="h-num">08</span>API 端点</h2>
+  <p>60 个端点。写请求都需要 <code>X-XSRF-TOKEN</code>；失败一律是同一个 <code>ApiError</code> 结构。</p>
+
+  <div class="tw"><table>
+    <caption>认证 · /api/auth</caption>
+    <thead><tr><th>方法</th><th>路径</th><th>说明</th></tr></thead>
+    <tbody>
+      <tr><td><span class="verb post">POST</span></td><td class="f">/api/auth/register</td><td>注册。系统的第一个账号也走这里。</td></tr>
+      <tr><td><span class="verb get">GET</span></td><td class="f">/api/auth/me</td><td>读自己。也是前端引导 CSRF cookie 的那次请求。</td></tr>
+      <tr><td><span class="verb patch">PATCH</span></td><td class="f">/api/auth/profile</td><td>改显示名。</td></tr>
+      <tr><td><span class="verb post">POST</span></td><td class="f">/api/auth/password</td><td>改密。当前会话保留，其他会话全部失效。</td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="tw"><table>
+    <caption>项目与成员</caption>
+    <thead><tr><th>方法</th><th>路径</th><th>说明</th></tr></thead>
+    <tbody>
+      <tr><td><span class="verb get">GET</span></td><td class="f">/api/projects</td><td>我参与的项目。</td></tr>
+      <tr><td><span class="verb post">POST</span></td><td class="f">/api/projects</td><td>建项目，创建者同事务成为 LEADER。</td></tr>
+      <tr><td><span class="verb get">GET</span></td><td class="f">/api/projects/{projectId}</td><td>单个项目。</td></tr>
+      <tr><td><span class="verb post">POST</span></td><td class="f">/api/projects/{projectId}/archive</td><td>归档。仅 LEADER，已归档返 409。</td></tr>
+      <tr><td><span class="verb post">POST</span></td><td class="f">/api/projects/{projectId}/unarchive</td><td>取消归档。仅 LEADER，未归档返 409。</td></tr>
+      <tr><td><span class="verb get">GET</span></td><td class="f">…/members</td><td>成员目录。</td></tr>
+      <tr><td><span class="verb get">GET</span></td><td class="f">…/members/candidates</td><td>按显示名／用户名／平台 ID 搜索候选账号。</td></tr>
+      <tr><td><span class="verb post">POST</span></td><td class="f">…/members/batch</td><td>批量添加，最多 50。任一行失败则整批不产生部分成员。</td></tr>
+      <tr><td><span class="verb patch">PATCH</span></td><td class="f">…/members/{userId}/roles</td><td>覆盖角色集合。</td></tr>
+      <tr><td><span class="verb del">DELETE</span></td><td class="f">…/members/{userId}</td><td>硬删成员。唯一 LEADER 返 409。</td></tr>
+      <tr><td><span class="verb post">POST</span></td><td class="f">…/members/leader-transfer</td><td>转移 LEADER。降级 → flush → 升级，先锁项目行。</td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="tw"><table>
+    <caption>需求 · /api/projects/{projectId}/requirements</caption>
+    <thead><tr><th>方法</th><th>路径</th><th>说明</th></tr></thead>
+    <tbody>
+      <tr><td><span class="verb get">GET</span></td><td class="f">/</td><td>需求列表。</td></tr>
+      <tr><td><span class="verb post">POST</span></td><td class="f">/</td><td>建需求（一事务三步写）。</td></tr>
+      <tr><td><span class="verb get">GET</span></td><td class="f">/{requirementId}</td><td>需求详情。</td></tr>
+      <tr><td><span class="verb patch">PATCH</span></td><td class="f">/{requirementId}</td><td>改草稿。<strong>仅 DRAFT</strong>。</td></tr>
+      <tr><td><span class="verb del">DELETE</span></td><td class="f">/{requirementId}</td><td>软删。<strong>仅已作废</strong>，非作废返 409，重复删除返 404。</td></tr>
+      <tr><td><span class="verb get">GET</span></td><td class="f">/{requirementId}/revisions</td><td>修订历史。</td></tr>
+      <tr><td><span class="verb post">POST</span></td><td class="f">/{requirementId}/revisions</td><td>发布新修订，必须填变更原因。</td></tr>
+      <tr><td><span class="verb post">POST</span></td><td class="f">/{requirementId}/status</td><td>状态流转。</td></tr>
+      <tr><td><span class="verb post">POST</span></td><td class="f">/{requirementId}/assignee</td><td>指派。首次指派与 <code>READY → IN_DEVELOPMENT</code> 同事务。</td></tr>
+      <tr><td><span class="verb get">GET</span></td><td class="f">/{requirementId}/attachments</td><td>附件列表。</td></tr>
+      <tr><td><span class="verb post">POST</span></td><td class="f">/{requirementId}/attachments</td><td>上传附件。</td></tr>
+      <tr><td><span class="verb get">GET</span></td><td class="f">…/attachments/{documentId}/content</td><td>读完整原文。</td></tr>
+      <tr><td><span class="verb get">GET</span></td><td class="f">…/attachments/{documentId}/download</td><td>按原文件名下载。</td></tr>
+      <tr><td><span class="verb post">POST</span></td><td class="f">…/attachments/{documentId}/promote</td><td>提升为公共知识（<strong>复制</strong>，非改写）。</td></tr>
+      <tr><td><span class="verb post">POST</span></td><td class="f">/{requirementId}/quality</td><td>质量检查：规则 + 一次结构化 AI 调用。不改需求状态。</td></tr>
+      <tr><td><span class="verb post">POST</span></td><td class="f">/{requirementId}/guidance</td><td>一次性实现建议。</td></tr>
+      <tr><td><span class="verb get">GET</span></td><td class="f">/{requirementId}/review-activity</td><td>该需求的派生评审活动。</td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="tw"><table>
+    <caption>知识 · 仓库 · 身份 · 绑定</caption>
+    <thead><tr><th>方法</th><th>路径</th><th>说明</th></tr></thead>
+    <tbody>
+      <tr><td><span class="verb get">GET</span></td><td class="f">…/knowledge/documents</td><td>文档列表 + 切片/向量状态。</td></tr>
+      <tr><td><span class="verb post">POST</span></td><td class="f">…/knowledge/documents</td><td>上传单个文档。批量上传是前端 N 次调用它。</td></tr>
+      <tr><td><span class="verb del">DELETE</span></td><td class="f">…/knowledge/documents/{documentId}</td><td>硬删（同事务显式删 chunk）。附件来源的文档被<strong>拒绝</strong>。</td></tr>
+      <tr><td><span class="verb post">POST</span></td><td class="f">…/knowledge/documents/{documentId}/promote</td><td>提升为公共知识。</td></tr>
+      <tr><td><span class="verb get">GET</span></td><td class="f">…/scm/repositories</td><td>安全元数据，不含凭据。</td></tr>
+      <tr><td><span class="verb post">POST</span></td><td class="f">…/scm/repositories</td><td>注册仓库。</td></tr>
+      <tr><td><span class="verb patch">PATCH</span></td><td class="f">…/scm/repositories/{repositoryId}</td><td>改配置。字段留空表示保持原值。</td></tr>
+      <tr><td><span class="verb get">GET</span></td><td class="f">/api/scm/identities</td><td>我的 SCM 身份。</td></tr>
+      <tr><td><span class="verb post">POST</span></td><td class="f">/api/scm/identities/verify</td><td>用一次性 token 验证身份。token 不回显、不落库。</td></tr>
+      <tr><td><span class="verb patch">PATCH</span></td><td class="f">/api/scm/identities/{identityId}</td><td>改标签／用途。</td></tr>
+      <tr><td><span class="verb del">DELETE</span></td><td class="f">/api/scm/identities/{identityId}</td><td>删身份。</td></tr>
+      <tr><td><span class="verb get">GET</span></td><td class="f">…/scm/binding-options</td><td>与项目仓库兼容的可选身份。</td></tr>
+      <tr><td><span class="verb get">GET</span></td><td class="f">…/scm/bindings</td><td>绑定列表。</td></tr>
+      <tr><td><span class="verb post">POST</span></td><td class="f">…/scm/bindings</td><td>建绑定。只能为自己选。</td></tr>
+      <tr><td><span class="verb post">POST</span></td><td class="f">…/scm/bindings/{bindingId}/approve</td><td>LEADER 批准。</td></tr>
+      <tr><td><span class="verb post">POST</span></td><td class="f">…/scm/bindings/{bindingId}/reject</td><td>LEADER 拒绝。</td></tr>
+      <tr><td><span class="verb post">POST</span></td><td class="f">…/scm/bindings/{bindingId}/revoke</td><td>撤销绑定。</td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="tw"><table>
+    <caption>PR · Review · Finding</caption>
+    <thead><tr><th>方法</th><th>路径</th><th>说明</th></tr></thead>
+    <tbody>
+      <tr><td><span class="verb get">GET</span></td><td class="f">…/pull-requests/{pullRequestId}</td><td>PR 快照。</td></tr>
+      <tr><td><span class="verb put">PUT</span></td><td class="f">…/pull-requests/{pullRequestId}/requirement</td><td>人工纠正需求关联，同事务写审计。</td></tr>
+      <tr><td><span class="verb get">GET</span></td><td class="f">…/pull-requests/{pullRequestId}/reviews</td><td>该 PR 的全部审查，旧行全保留。</td></tr>
+      <tr><td><span class="verb post">POST</span></td><td class="f">…/pull-requests/{pullRequestId}/reviews</td><td>发起／重试。返回 <code>executionAttempt</code>。两人同点重试得到「一次重试 + 一个 409」。</td></tr>
+      <tr><td><span class="verb get">GET</span></td><td class="f">…/reviews</td><td>项目级 Review 列表。</td></tr>
+      <tr><td><span class="verb get">GET</span></td><td class="f">…/reviews/{reviewId}</td><td>Review 详情：上下文快照、覆盖清单、AC 裁定、Finding。</td></tr>
+      <tr><td><span class="verb post">POST</span></td><td class="f">…/reviews/{reviewId}/decision</td><td><strong>一次性</strong>裁定。</td></tr>
+      <tr><td><span class="verb post">POST</span></td><td class="f">…/findings/{findingId}/status</td><td>Finding 流转，可带备注。</td></tr>
+      <tr><td><span class="verb get">GET</span></td><td class="f">…/findings/{findingId}/events</td><td>审计轨迹。项目内任何成员可读。</td></tr>
+      <tr><td><span class="verb get">GET</span></td><td class="f">…/review-activity</td><td>项目内全部需求的派生活动。</td></tr>
+      <tr><td><span class="verb post">POST</span></td><td class="f">/api/scm/{github,gitlab}/webhook</td><td>Webhook 接收。<strong>不带 projectId</strong>，靠载荷定位仓库。</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<!-- ═══════════════════ 09 ═══════════════════ -->
+<section id="s9">
+  <h2><span class="h-num">09</span>评测体系</h2>
+  <p><code>evaluation/</code> 下是版本化评测契约、确定性评分器与可重算的参考结果。三臂正式评测已完成，<strong>holdout 按约定只运行过一次</strong>。</p>
+
+  <h3>三臂对照</h3>
+  <ol class="flow">
+    <li><strong>Diff + LLM</strong>只给变更 diff。</li>
+    <li><strong>Diff + Requirement + AC + LLM</strong>加入需求与验收条件。</li>
+    <li><strong>Diff + Requirement + AC + Project Knowledge + LLM</strong>再加入该 case 的知识文件<strong>全文</strong>。</li>
+  </ol>
+
+  <div class="tw"><table>
+    <thead><tr><th>文件</th><th>作用</th></tr></thead>
+    <tbody>
+      <tr><td class="f">tools/score.py <span class="lb"></span></td><td><b>它做什么：</b>评测打分器，只用 Python 标准库。<br><b>为什么这么写：</b>仅用标准库的 corpus validator、确定性评分器、自测与 snapshot 比较器。匹配规则 <code>forgepilot-deterministic-match-v1</code>。</td></tr>
+      <tr><td class="f">tools/run_development.py <span class="lb"></span></td><td><b>它做什么：</b>离线跑三臂评测的适配器。<br><b>为什么这么写：</b>离线评测适配器，<strong>不是第二个生产 Review Engine</strong>。固定读 12 个 development case，三臂只改变暴露给模型的上下文。不把真值、nonFinding 或 selectionReason 放进 prompt。</td></tr>
+      <tr><td class="f">tools/formal_evaluation.py <span class="lb"></span></td><td><b>它做什么：</b>正式评测：配置冻结校验与报告生成。<br><b>为什么这么写：</b>正式实验：配置冻结校验、一次性 ledger、三臂运行、95% Wilson 区间报告。</td></tr>
+      <tr><td class="f">tools/postfreeze_provider_correction.py</td><td>内容寻址的端点更正记录。绑定实际使用的 endpoint，同时拒绝任何模型、温度、prompt/scorer、corpus 或 split 变更。</td></tr>
+      <tr><td class="f">tools/postfreeze_legacy_adapter.py</td><td>历史格式适配。</td></tr>
+      <tr><td class="f">contracts/metrics.md <span class="lb"></span></td><td><b>它做什么：</b>指标定义文档。<br><b>为什么这么写：</b>指标定义。<strong>被配置冻结按哈希钉住</strong>。</td></tr>
+      <tr><td class="f">contracts/*.schema.json <span class="lb"></span></td><td><b>它做什么：</b>评测数据格式的 JSON Schema。<br><b>为什么这么写：</b>manifest / run / score report 的 JSON Schema。均被哈希钉住。</td></tr>
+      <tr><td class="f">manifest.quick.json</td><td>冻结的 12 个 development case 及真值。</td></tr>
+      <tr><td class="f">case-sets/phase1-quick.json</td><td>quick corpus 唯一允许执行的 case set。</td></tr>
+      <tr><td class="f">reference-runs/</td><td>明确标记为 synthetic/reference 的规范化运行输入。<strong>只验证评分口径，不能作为产品质量证据。</strong></td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>指标口径</h3>
+  <p>分别报告 Finding Precision/Recall、<code>falseReportRate</code>、miss rate、需求违规召回、AC verdict、结构失败、<code>notRun</code>、Token 与耗时。</p>
+  <ul>
+    <li><strong>不存在综合质量分数。</strong>指标彼此独立，不合成单一总分。</li>
+    <li><strong>分母为零时输出 <code>null</code></strong>，不伪造为零。</li>
+    <li><code>COMPLETED</code> 且 findings 为空是<strong>有效空结果</strong>；显式 <code>FAILED/STRUCTURE</code> 是一次结构失败尝试，<strong>不等于</strong> <code>notRun</code>。</li>
+    <li>失败与 <code>NOT_RUN</code> 保持显式，工具<strong>绝不</strong>把它们改写成空的成功预测。</li>
+  </ul>
+
+  <h3>无凭据重算</h3>
+  <pre><code><span class="c"># 证明模型面与评分文件一字未改</span>
+python3 evaluation/tools/formal_evaluation.py verify-freeze
+python3 evaluation/tools/postfreeze_provider_correction.py verify
+
+<span class="c"># 从保留的原始 envelope 重算全部指标 + Wilson 区间</span>
+<span class="c"># 不发起任何 provider 调用，不读 OPENAI_API_KEY</span>
+python3 evaluation/tools/formal_evaluation.py report \
+  --out-dir /tmp/forgepilot-formal-rescore</code></pre>
+</section>
+
+<!-- ═══════════════════ 10 ═══════════════════ -->
+<section id="s10">
+  <h2><span class="h-num">10</span>运行边界</h2>
+  <p>全部是<strong>实测值而非估算</strong>；调整任何一行都要连带更新架构文档里的这张表。</p>
+  <div class="tw"><table>
+    <thead><tr><th>参数</th><th class="n">冻结值</th><th>说明</th></tr></thead>
+    <tbody>
+      <tr><td>单 PR 最大 changed files</td><td class="n">300</td><td>超出进 truncation manifest 并在 UI 显式提示。</td></tr>
+      <tr><td>单文件 patch 最大字符</td><td class="n">60,000</td><td>超出按<strong>行边界</strong>截断并标注。</td></tr>
+      <tr><td>单 Batch 输入预算</td><td class="n">60,000</td><td><code>ChangedFileBatcher</code> 的分批依据。</td></tr>
+      <tr><td>LLM 单次调用超时</td><td class="n">120 s</td><td>超时按瞬时失败处理。</td></tr>
+      <tr><td>LLM 重试次数</td><td class="n">1</td><td>仅瞬时错误（429/5xx/网络）。<strong>全代码库别处没有重试。</strong></td></tr>
+      <tr><td>并发 Review 上限</td><td class="n">2</td><td>实测得出，见下。资源更紧的部署可显式降为 1。</td></tr>
+      <tr><td>单文件上传上限</td><td class="n">5 MB</td><td><code>KnowledgeUploadValidator</code>。</td></tr>
+      <tr><td>检索 TopK</td><td class="n">8</td><td>project-scoped 硬过滤。</td></tr>
+    </tbody>
+  </table></div>
+  <div class="note">
+    <span class="label">并发 2 的实测依据</span>
+    <p>
+      在 4,101,304,320-byte 主机上，backend 768 MiB（heap 384 / direct 128 / metaspace 128），PostgreSQL 512 MiB，Hikari 5。
+      两个并发 Review 各含 300 文件与 3,989,101 字符的规范化 manifest，经生产 <code>AiGateway</code>、60,000 字符 Batch、
+      校验、持久化与 fencing 全链路完成，共 152 次调用；两条均 <code>COMPLETED</code>、<code>execution_attempt=1</code>、<code>truncated=false</code>。
+      采样峰值 heap 83,167,816 bytes、direct 428,032 bytes、Hikari active/pending 1/0；无 OOM、无重启。
+    </p>
+  </div>
+</section>
+
+<!-- ═══════════════════ 11 ═══════════════════ -->
+<section id="s11">
+  <h2><span class="h-num">11</span>红线</h2>
+  <p>下面三类文件<strong>改一个字节就会造成实际损坏</strong>，而损坏不会在编辑时报错。</p>
+
+  <div class="note red">
+    <span class="label">一 · 被配置冻结哈希钉住的 9 个评测文件</span>
+    <p>
+      <code>contracts/formal-manifest.schema.json</code>、<code>contracts/metrics.md</code>、
+      <code>contracts/run.schema.json</code>、<code>contracts/score-report.schema.json</code>、
+      <code>formal/config.json</code>、<code>tools/category-aliases.json</code>、
+      <code>tools/formal_evaluation.py</code>、<code>tools/run_development.py</code>、<code>tools/score.py</code>
+    </p>
+    <p>
+      改其中任何一个，<code>verify-freeze</code> 就再也无法通过——而 <strong>holdout 只跑过一次且不可重跑，冻结证据一旦失效就无法重建</strong>。
+      <code>metrics.md</code> 尤其危险：它读起来就是一份普通指标说明文档，做「文档只保留当前功能」这类清理时极容易顺手改掉。
+      <code>evaluation/README.md</code> <strong>不</strong>在冻结列表里，可以自由改写。
+    </p>
+    <p><strong>动 <code>evaluation/</code> 下任何文件前，先跑一次 <code>verify-freeze</code> 拿到那份列表，再比对 <code>git status</code>。</strong></p>
+  </div>
+
+  <div class="note red">
+    <span class="label">二 · Flyway 迁移被 live 库的 checksum 校验</span>
+    <p>
+      <code>validate-on-migrate</code> 取默认 <code>true</code>，而部署库的 <code>flyway_schema_history</code> 存着每个版本的 checksum。
+      <strong>编辑已应用迁移里的一行注释就会改变 checksum，后端在真实部署上直接以 <code>FlywayValidateException</code> 起不来。</strong>
+      所以 <code>backend/src/main/resources/db/migration/*.sql</code> 在任何注释或文档清理里都必须<strong>逐字节不变</strong>——
+      那里现在仍留有历史决策编号与「batch 2/3」叙述，这是<strong>有意保留</strong>而不是漏改。
+    </p>
+    <p>迁移是<strong>只追加</strong>的：永不编辑、永不重编号已应用的迁移，只加下一个版本。重命名一个已应用的迁移会同时弄坏测试和每一个既有数据库。</p>
+  </div>
+
+  <div class="note red">
+    <span class="label">三 · 两个朝相反方向移动的版本常量</span>
+    <p>
+      <code>ReviewPrompts.VERSION</code> 现为 <code>"review-2"</code>，schema 变化时递增。
+      <code>FindingKeys.RULE_VERSION</code> <strong>必须保持 <code>"1"</code></strong>——它进 <code>basis_hash</code>，
+      一改就让全部历史 Finding 的血缘断掉。
+    </p>
+    <p><strong>三个哈希都不得覆盖模型散文。</strong><code>explanation</code>、<code>suggestion</code>、<code>confidence</code> 是回答里唯一允许随措辞自由变动的字段；任何一个渗进哈希，同一个问题就会在每轮换个说法后变成「新问题」，跨轮去重、抑制与血缘同时失效——而且要到下一轮审查才看得出来。</p>
+  </div>
+
+  <div class="note amber">
+    <span class="label">四 · 测试套件有潜伏的类执行顺序依赖</span>
+    <p>
+      把 <code>BatchOneApiTest</code> 改名（<strong>只改类名与注释，没有任何代码行变化</strong>）会让它在完整 <code>verify</code> 里 4 个测试失败，
+      全部倒在 <code>GET /api/auth/me must issue the XSRF-TOKEN cookie</code>；而单独跑 <code>-Dtest=</code> 该类<strong>5/5 全绿</strong>。
+      Surefire 默认 <code>runOrder=filesystem</code>，改名把它挪到了另一个位置，某个先跑的类留下的状态让匿名请求不再下发 CSRF cookie。<strong>根因未定位。</strong>
+    </p>
+    <p>
+      所以：<code>phase1-quick.json</code>、<code>phase1-compose-smoke.sh</code>、<code>BatchOneApiTest</code> 这类历史名字<strong>一律保留</strong>，只清理散文。
+      遇到那条断言失败，先用 <code>-Dtest=&lt;类名&gt;</code> 单跑确认是顺序依赖，<strong>不要去改 <code>SecurityConfig</code></strong>。
+    </p>
+  </div>
+</section>
+
+<!-- ═══════════════════ 12 ═══════════════════ -->
+<section id="s12">
+  <h2><span class="h-num">12</span>测试与质量门</h2>
+
+  <div class="tw"><table>
+    <thead><tr><th>范围</th><th class="n">规模</th><th>说明</th></tr></thead>
+    <tbody>
+      <tr><td>后端</td><td class="n">333</td><td>53 个测试文件，<strong>零跳过</strong>。</td></tr>
+      <tr><td>前端</td><td class="n">42</td><td>14 个测试文件。</td></tr>
+      <tr><td>评测</td><td class="n">18 + 30</td><td>18 个 unittest + <code>score.py --selftest</code> 的 30 项检查。</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>运行全部门</h3>
+  <pre><code><span class="c"># 前端</span>
+cd frontend
+npm ci &amp;&amp; npm run lint &amp;&amp; npm run typecheck &amp;&amp; npm test -- --run &amp;&amp; npm run build
+
+<span class="c"># 后端（本机无 JDK，走容器路径）</span>
+<span class="c"># 注意：不要把输出管进 tail —— 那会用 tail 的退出码盖住真实的 BUILD FAILURE</span>
+docker run --rm --network host \
+  -v "$PWD/backend:/workspace" -v "$HOME/.m2:/root/.m2" \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  -w /workspace eclipse-temurin:21-jdk \
+  ./mvnw -B -ntp verify > /tmp/verify.log 2>&amp;1; echo "exit=$?"
+
+<span class="c"># 评测</span>
+python3 -m unittest \
+  evaluation/tools/test_run_development.py \
+  evaluation/tools/test_formal_evaluation.py \
+  evaluation/tools/test_postfreeze_legacy_adapter.py \
+  evaluation/tools/test_postfreeze_provider_correction.py
+python3 evaluation/tools/score.py --selftest</code></pre>
+
+  <h3>数据库测试的禁令</h3>
+  <p>数据库行为只对<strong>真实 PostgreSQL + pgvector</strong> 验证，绝不用替代品。<code>PostgresTestBase</code> 为整个测试运行持有一个 <code>pgvector/pgvector:0.8.6-pg15-bookworm</code> 容器。</p>
+  <p><strong>数据库测试里禁止：</strong>H2 或任何内存替代、「Docker 缺失就跳过」的分支、<code>@Disabled</code>、<code>assumeTrue</code> 守卫。一个跑不起来的数据库测试必须让构建失败——这里的假绿会藏住模型依赖的约束行为。</p>
+
+  <h3>几条被测试钉住的形态</h3>
+  <ul>
+    <li><code>routes.spec.ts</code> 断言锁死导航与路由形态（6 入口 / 11 路由）。</li>
+    <li><code>ArchitectureRulesTest</code> 强制八包依赖单向、无环。</li>
+    <li><code>DatabaseConstraintTest</code> 通过 <code>JdbcTemplate</code> <strong>绕到所有应用代码之下</strong>写入，并点名期望的 SQLState（23505 / 23503 / 23514）。<strong>只被服务强制的约束等于没被强制。</strong></li>
+    <li><code>KnowledgeVectorIndexTest</code> 把「为什么没有向量索引」写成测试而不是研究笔记——因为这条论据会过期：pgvector 一旦放宽维度上限，该测试就会失败，而那次失败正是「回去重新决策」的信号。</li>
+    <li><code>ReviewPipelineIntegrationTest</code> 从 <code>scm</code> 发布的事件出发、断言数据库里的行，中间只替换 provider。它存在的理由是这个项目真实发生过两次的故障形态：每个组件都测过、而没有任何生产代码调用它们。</li>
+    <li><code>V9MigrationTest</code> / <code>V10MigrationTest</code> 先迁到上一版、写一行、再迁剩下的——这是唯一能抓住「CHECK 校验既有行」那个陷阱的形状。</li>
+  </ul>
+
+  <div class="note">
+    <span class="label">一条复盘教训</span>
+    <p>
+      三个 <code>DELETE</code> 端点首次交付时只有 Service 层测试，<strong>路径接线与状态码没有任何证明</strong>——
+      路径写错会在 Service 测试里全绿、而在前端 404。
+      新增端点时记住：<strong>Service 测试证明不了 MVC 映射。</strong>
+    </p>
+  </div>
+</section>
+
+
+<section id="glossary">
+  <h2><span class="h-num">13</span>术语速查</h2>
+  <p>只解释这些词在<strong>本项目里</strong>的含义，不做完整定义。与走查文档的术语表同一份。</p>
+  <div class="tw"><table>
+    <thead><tr><th>术语</th><th>在这个项目里的意思</th></tr></thead>
+    <tbody>
+      <tr><td class="f">webhook</td><td>「有事打这个电话」。你在 GitHub 上登记一个 URL，PR 有变动时 GitHub 主动 POST 过来。</td></tr>
+      <tr><td class="f">HMAC</td><td>用一个双方都知道的密钥，对一段内容算出的指纹。对方能算出同样的指纹，就证明它知道密钥。</td></tr>
+      <tr><td class="f">时序攻击</td><td>通过测量比较操作花的时间来推断正确答案。防法是让比较无论对错都花同样时间。</td></tr>
+      <tr><td class="f">SSRF</td><td>诱导服务器去访问它本不该访问的地址（通常是内网）。防法是每次出站前校验目标地址。</td></tr>
+      <tr><td class="f">Spring Boot</td><td>Java 的 Web 框架。你写带注解的类，它负责建 HTTP 路由、管理对象生命周期、开关数据库事务。</td></tr>
+      <tr><td class="f">bean</td><td>Spring 帮你创建并管理的对象。默认用类的简单名作标识，所以两个模块出现同名类会启动冲突。</td></tr>
+      <tr><td class="f">注解 <code>@Xxx</code></td><td>写在类或方法上的标记。框架扫到它就施加对应行为，比如 <code>@Transactional</code> 就是「给这个方法包一个事务」。</td></tr>
+      <tr><td class="f">事务</td><td>数据库的「全有或全无」包装：要么全部生效，要么全部不生效，中间状态外界看不到。</td></tr>
+      <tr><td class="f">行锁</td><td>读一行的同时锁住它，本次事务结束前别人不能改。用来让并发操作排队而不是互相覆盖。</td></tr>
+      <tr><td class="f">JPA / Hibernate</td><td>Java 的 ORM：把数据库表映射成对象，你操作对象它生成 SQL。本项目在<strong>影响行数即判定结果</strong>的地方刻意绕开它写原生 SQL。</td></tr>
+      <tr><td class="f">外键</td><td>「这一列的值必须在另一张表里真实存在」的约束。违反时数据库报错 <code>23503</code>。</td></tr>
+      <tr><td class="f">复合外键</td><td>由多列一起构成的外键。本项目用它同时保证「同项目 + 正确父行 + 存在」三件事。</td></tr>
+      <tr><td class="f">CHECK 约束</td><td>「这一列的值必须满足某个条件」。注意它失败时中止的是<strong>整批</strong>插入。</td></tr>
+      <tr><td class="f">触发器</td><td>数据写入时数据库自动执行的检查或动作。本项目用它拒绝事后篡改 Review 的身份列。</td></tr>
+      <tr><td class="f">部分唯一索引</td><td>只对满足条件的行要求唯一，例如「每个项目至多一个 LEADER」。它保证「至多」，「至少」得靠服务端。</td></tr>
+      <tr><td class="f">Flyway</td><td>数据库版本管理工具。每次 schema 变更写一个编号 SQL 文件，它按顺序执行并记录。<strong>已执行的文件改一个字节就会让启动失败。</strong></td></tr>
+      <tr><td class="f">schema</td><td>数据库的结构本身——有哪些表、哪些列、哪些约束。</td></tr>
+      <tr><td class="f">JSONB</td><td>PostgreSQL 里可查询的 JSON 列类型。本项目用它整份存下变更文件清单。</td></tr>
+      <tr><td class="f">pgvector</td><td>PostgreSQL 的向量扩展，让数据库能存向量并按相似度排序。</td></tr>
+      <tr><td class="f">embedding</td><td>把一段文本转成一串数字（向量），语义相近的文本向量也相近。用来做「按意思找」而不是「按关键词找」。</td></tr>
+      <tr><td class="f">余弦距离</td><td>衡量两个向量方向差异的算法。本项目用它做相似度排序。</td></tr>
+      <tr><td class="f">TopK</td><td>「取最相似的前 K 条」。本项目 K = 8，且强制限定在同一项目内。</td></tr>
+      <tr><td class="f">facade</td><td>只读的门面类。别的模块只能通过它问问题，碰不到底层仓库，也碰不到内部机制。</td></tr>
+      <tr><td class="f">依赖反转</td><td>本该 A 调 B，但依赖方向不允许，于是让 A 广播事件、B 主动来听。编译期的箭头方向就反过来了。</td></tr>
+      <tr><td class="f">ArchUnit</td><td>专门检查架构约束的测试库。本项目用它强制八个包的依赖单向、无环。</td></tr>
+      <tr><td class="f">进程内事件</td><td>同一个 JVM 里的解耦调用，不经过消息队列。本项目要求它<strong>同步</strong>执行。</td></tr>
+      <tr><td class="f">租约 / 围栏</td><td>租约是「我持有这个任务，有效期到某时刻」；围栏是「每次写入都检查我还持有它」。防止过期的 worker 继续写。</td></tr>
+      <tr><td class="f">抢占</td><td>多个线程竞争同一个任务，靠一条原子 SQL 保证只有一个成功。</td></tr>
+      <tr><td class="f">幂等</td><td>同样的操作做多次和做一次结果相同。webhook 会重复投递，所以处理必须幂等。</td></tr>
+      <tr><td class="f">不变量</td><td>系统在任何时刻都必须为真的性质，例如「每个项目恰好一个负责人」。</td></tr>
+      <tr><td class="f">reconciliation</td><td>定时巡检，把「已落库但不再推进」的任务重新放回轨道。</td></tr>
+      <tr><td class="f">CSRF</td><td>诱导已登录用户的浏览器发出非本意的请求。防法是写请求必须携带一个攻击者拿不到的令牌。</td></tr>
+      <tr><td class="f">BCrypt</td><td>专门用于存密码的哈希算法，故意算得慢，让暴力破解昂贵。</td></tr>
+      <tr><td class="f">SQLState</td><td>数据库错误的标准编码。本项目直接按码断言：<code>23505</code> 唯一冲突、<code>23503</code> 外键违例、<code>23514</code> CHECK 违例、<code>22000</code> 向量维度不一致。</td></tr>
+      <tr><td class="f">Testcontainers</td><td>测试时用 Docker 起一个真实数据库。本项目<strong>禁止</strong>用内存数据库替代。</td></tr>
+      <tr><td class="f">Surefire</td><td>Maven 跑测试的插件。它默认的类执行顺序是本项目一个已知脆弱点的来源。</td></tr>
+      <tr><td class="f">Precision / Recall</td><td>查准率（报出来的有多少是真的）与查全率（真的有多少被报出来）。评测同时报两者，<strong>不合成单一分数</strong>。</td></tr>
+      <tr><td class="f">Wilson 区间</td><td>小样本比例的置信区间算法。评测用它给出区间而不是只给一个点值。</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<footer class="end">
+  <p>
+    本手册描述的是<strong>当前形态</strong>，不含沿革叙述。数字来自 2026-08-27 的实测：
+    后端 175 个类 / 13,767 行 / 333 测试，前端 34 个文件 / 9,123 行 / 42 测试，20 张表 / 10 条迁移，60 个 API 端点。
+  </p>
+  <p>
+    更权威的单一定义处在仓库里：架构与数据模型见 <code>docs/v2/ARCHITECTURE.md</code>，
+    产品规则见 <code>docs/v2/PRD.md</code>，端点契约见 <code>docs/v2/API.md</code>，
+    无凭据复现见 <code>docs/v2/DEFENSE-GUIDE.md</code>，人工验收清单见 <code>frontend/MANUAL-ACCEPTANCE.md</code>。
+    本手册与它们冲突时，以仓库为准。此外，《跟着一次 PR 走完 ForgePilot》是本手册的配套走查文档——那一份用来<strong>学</strong>，这一份用来<strong>查</strong>。
+  </p>
+</footer>
+
+</main>
+</div>
+</body>
+</html>

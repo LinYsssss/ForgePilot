@@ -1,0 +1,675 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ForgePilot 安全设计说明</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=Noto+Serif+SC:wght@600;700&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+  :root {
+    --paper:#fbfbfc; --surface:#f4f5f8; --surface-2:#eceef3;
+    --ink:#16191f; --ink-2:#3b414d; --muted:#5c6472; --subtle:#8891a0;
+    --rule:#e2e5ea; --rule-strong:#cbd1da;
+    --accent:#2c5fd6; --accent-soft:#e8eefb;
+    --danger:#b4232e; --danger-soft:#fbeaec;
+    --warn:#8a5a00; --warn-soft:#fdf3e0;
+    --ok:#1d6b47; --ok-soft:#e6f3ec;
+    --sans:"Noto Sans SC",system-ui,-apple-system,sans-serif;
+    --serif:"Noto Serif SC",Georgia,"Songti SC",serif;
+    --mono:"JetBrains Mono",ui-monospace,Consolas,monospace;
+    --measure:70ch;
+    --s1:.25rem; --s2:.5rem; --s3:.75rem; --s4:1rem;
+    --s5:1.5rem; --s6:2rem; --s7:3rem; --s8:4.5rem;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper:#12141a; --surface:#191c23; --surface-2:#22262f;
+      --ink:#e6e8ec; --ink-2:#c3c8d2; --muted:#99a1b0; --subtle:#737c8c;
+      --rule:#2a2f3a; --rule-strong:#3a4150;
+      --accent:#7ba3f5; --accent-soft:#1a2440;
+      --danger:#f0808c; --danger-soft:#331a1e;
+      --warn:#e0aa55; --warn-soft:#2e2415;
+      --ok:#6cc59a; --ok-soft:#16291f;
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper:#12141a; --surface:#191c23; --surface-2:#22262f;
+    --ink:#e6e8ec; --ink-2:#c3c8d2; --muted:#99a1b0; --subtle:#737c8c;
+    --rule:#2a2f3a; --rule-strong:#3a4150;
+    --accent:#7ba3f5; --accent-soft:#1a2440;
+    --danger:#f0808c; --danger-soft:#331a1e;
+    --warn:#e0aa55; --warn-soft:#2e2415;
+    --ok:#6cc59a; --ok-soft:#16291f;
+  }
+  *,*::before,*::after{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{margin:0;background:var(--paper);color:var(--ink);font:400 16px/1.75 var(--sans);-webkit-font-smoothing:antialiased}
+  .layout{display:grid;grid-template-columns:16rem minmax(0,1fr);align-items:start;gap:var(--s7);max-width:92rem;margin:0 auto;padding:var(--s6) var(--s5) var(--s8)}
+
+  nav.toc{position:sticky;top:var(--s5);max-height:calc(100vh - 3rem);overflow-y:auto;padding-right:var(--s3);border-right:1px solid var(--rule);font-size:.8125rem}
+  nav.toc .brand{font:700 .6875rem/1.4 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--accent);margin-bottom:var(--s4)}
+  nav.toc ol{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:1px}
+  nav.toc a{display:flex;gap:var(--s3);padding:.3rem var(--s2);border-radius:3px;color:var(--muted);text-decoration:none;line-height:1.45}
+  nav.toc a:hover{background:var(--surface);color:var(--ink)}
+  nav.toc a:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+  nav.toc .n{flex:0 0 1.5rem;font:500 .6875rem/1.7 var(--mono);color:var(--subtle);font-variant-numeric:tabular-nums}
+  main{min-width:0;max-width:100%}
+
+  header.mast{padding-bottom:var(--s5);border-bottom:3px solid var(--ink);margin-bottom:var(--s6)}
+  .eyebrow{font:700 .6875rem/1.4 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--accent);margin:0 0 var(--s3)}
+  h1{font:700 clamp(1.875rem,4.2vw,2.75rem)/1.15 var(--serif);margin:0 0 var(--s4);letter-spacing:-.01em;text-wrap:balance}
+  .standfirst{max-width:var(--measure);margin:0;color:var(--ink-2);font-size:1.0625rem;line-height:1.8}
+  .docmeta{display:grid;grid-template-columns:repeat(auto-fit,minmax(9rem,1fr));gap:1px;margin-top:var(--s5);background:var(--rule);border:1px solid var(--rule)}
+  .docmeta > div{background:var(--paper);padding:var(--s3) var(--s4)}
+  .docmeta dt{font:500 .6875rem/1.5 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--subtle)}
+  .docmeta dd{margin:var(--s1) 0 0;font:500 .875rem/1.4 var(--sans)}
+
+  section{margin-top:var(--s8);scroll-margin-top:var(--s4)}
+  section > :first-child{margin-top:0}
+  h2{display:flex;align-items:baseline;gap:var(--s4);font:700 clamp(1.25rem,2.4vw,1.75rem)/1.25 var(--serif);margin:0 0 var(--s4);padding-bottom:var(--s3);border-bottom:1px solid var(--rule-strong);text-wrap:balance}
+  h2 .hn{flex:0 0 auto;font:500 .875rem/1.6 var(--mono);color:var(--accent);font-variant-numeric:tabular-nums}
+  h3{font:700 1.0625rem/1.4 var(--sans);margin:var(--s6) 0 var(--s3)}
+  h4{font:700 .9375rem/1.5 var(--sans);margin:var(--s5) 0 var(--s2);color:var(--ink-2)}
+  p,ul,ol{max-width:var(--measure)}
+  p{margin:0 0 var(--s4)}
+  ul,ol{margin:0 0 var(--s4);padding-left:1.35rem}
+  li{margin-bottom:var(--s2)}
+  a{color:var(--accent);text-underline-offset:2px}
+  a:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:2px}
+  code{font:400 .875em/1.5 var(--mono);background:var(--surface-2);padding:.1em .35em;border-radius:3px;word-break:break-word}
+  pre{margin:0 0 var(--s4);padding:var(--s4);overflow-x:auto;background:var(--surface);border:1px solid var(--rule);border-left:3px solid var(--accent);font:400 .8125rem/1.7 var(--mono)}
+  pre code{background:none;padding:0}
+  pre .c{color:var(--subtle)}
+
+  .tw{overflow-x:auto;margin:0 0 var(--s4);border:1px solid var(--rule)}
+  table{width:100%;border-collapse:collapse;font-size:.8125rem}
+  caption{caption-side:top;text-align:left;padding:var(--s3) var(--s4);background:var(--surface-2);border-bottom:1px solid var(--rule);font:500 .75rem/1.6 var(--mono);color:var(--muted)}
+  th,td{padding:.45rem var(--s4);text-align:left;vertical-align:top;border-bottom:1px solid var(--rule)}
+  thead th{background:var(--surface);font:700 .6875rem/1.6 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);white-space:nowrap}
+  tbody tr:last-child td{border-bottom:0}
+  tbody tr:hover{background:var(--surface)}
+  td.id{font:700 .75rem/1.6 var(--mono);white-space:nowrap;color:var(--accent)}
+  td.f{font:500 .75rem/1.6 var(--mono)}
+  td.n{font-variant-numeric:tabular-nums;white-space:nowrap;text-align:right}
+  .yes{color:var(--ok);font-weight:700}
+  .no{color:var(--subtle)}
+  .cond{color:var(--warn);font-size:.75rem}
+
+  .note{max-width:var(--measure);margin:0 0 var(--s4);padding:var(--s4) var(--s5);background:var(--surface);border-left:3px solid var(--accent)}
+  .note > :last-child{margin-bottom:0}
+  .note .label{display:block;font:700 .6875rem/1.5 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--accent);margin-bottom:var(--s2)}
+  .note.red{background:var(--danger-soft);border-left-color:var(--danger)}
+  .note.red .label{color:var(--danger)}
+  .note.amber{background:var(--warn-soft);border-left-color:var(--warn)}
+  .note.amber .label{color:var(--warn)}
+
+  footer.end{margin-top:var(--s8);padding-top:var(--s5);border-top:3px solid var(--ink);max-width:var(--measure);color:var(--muted);font-size:.875rem}
+
+  @media (max-width:68rem){
+    .layout{grid-template-columns:1fr;gap:var(--s5)}
+    nav.toc{position:static;max-height:none;border-right:0;border-bottom:1px solid var(--rule);padding:0 0 var(--s4)}
+    nav.toc ol{display:grid;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr))}
+  }
+  @media (prefers-reduced-motion:reduce){*{animation-duration:.01ms !important;transition-duration:.01ms !important}}
+  @media print{
+    .layout{grid-template-columns:1fr;padding:0}
+    nav.toc{display:none}
+    section{page-break-inside:avoid}
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+
+<nav class="toc" aria-label="目录">
+  <div class="brand">安全设计说明</div>
+  <ol>
+    <li><a href="#s1"><span class="n">1</span><span>范围与威胁模型</span></a></li>
+    <li><a href="#s2"><span class="n">2</span><span>认证与会话</span></a></li>
+    <li><a href="#s3"><span class="n">3</span><span>授权与项目隔离</span></a></li>
+    <li><a href="#s4"><span class="n">4</span><span>凭据管理</span></a></li>
+    <li><a href="#s5"><span class="n">5</span><span>Webhook 认证</span></a></li>
+    <li><a href="#s6"><span class="n">6</span><span>出站请求控制</span></a></li>
+    <li><a href="#s7"><span class="n">7</span><span>AI 相关安全</span></a></li>
+    <li><a href="#s8"><span class="n">8</span><span>审计与留痕</span></a></li>
+    <li><a href="#s9"><span class="n">9</span><span>攻击面清单</span></a></li>
+    <li><a href="#s10"><span class="n">10</span><span>残余风险</span></a></li>
+  </ol>
+</nav>
+
+<main>
+
+<header class="mast">
+  <p class="eyebrow">Security Design · 2026-08-27</p>
+  <h1>ForgePilot 安全设计说明</h1>
+  <p class="standfirst">
+    ForgePilot 持有三类高价值秘密：用户口令、代码仓库的访问令牌、以及 webhook 签名密钥。
+    它还有一个<strong>公开且未认证</strong>的 HTTP 端点，以及一条把用户内容发往第三方模型服务的出站通路。
+    本文说明针对这些面的防护措施、每条措施的具体实现，以及<strong>明确未被防护的部分</strong>。
+  </p>
+  <dl class="docmeta">
+    <div><dt>安全需求</dt><dd>11 条<small>（NFR-S）</small></dd></div>
+    <div><dt>专项测试</dt><dd>7 个类</dd></div>
+    <div><dt>公开端点</dt><dd>2<small>／webhook</small></dd></div>
+    <div><dt>秘密类型</dt><dd>3</dd></div>
+    <div><dt>残余风险</dt><dd>9 条<small>已记录</small></dd></div>
+  </dl>
+</header>
+
+<!-- ══════ 1 ══════ -->
+<section id="s1">
+  <h2><span class="hn">1</span>范围与威胁模型</h2>
+
+  <h3>1.1 保护对象</h3>
+  <div class="tw"><table>
+    <thead><tr><th>资产</th><th>泄露后果</th><th>存储形态</th></tr></thead>
+    <tbody>
+      <tr><td>用户口令</td><td>账号被冒用</td><td>BCrypt 哈希，不可逆</td></tr>
+      <tr><td>仓库访问令牌</td><td><strong>攻击者获得目标代码仓库的读写权</strong></td><td>AES-256-GCM 密文</td></tr>
+      <tr><td>Webhook 签名密钥</td><td>攻击者可伪造投递，注入虚假 PR 状态</td><td>AES-256-GCM 密文</td></tr>
+      <tr><td>一次性个人 Token</td><td>攻击者获得该用户的 provider 身份读取权</td><td><strong>从不存储</strong></td></tr>
+      <tr><td>需求、知识文档、diff</td><td>项目内容外泄</td><td>明文（业务数据）</td></tr>
+      <tr><td>评测冻结证据</td><td>实验结论不可信</td><td>内容哈希钉住</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>1.2 假定的攻击者能力</h3>
+  <ul>
+    <li><strong>能向任意公开端点发送任意字节</strong>——包括畸形 JSON、超长字段、构造过的域名。</li>
+    <li><strong>能测量响应时间与响应差异</strong>——用于时序攻击与存在性探测。</li>
+    <li><strong>能诱导已登录用户的浏览器发出请求</strong>——CSRF。</li>
+    <li><strong>能控制送进系统的内容</strong>——需求正文、知识文档、PR 标题、代码注释。</li>
+    <li><strong>可能是一个已认证的普通用户</strong>，试图访问其他项目的资源。</li>
+  </ul>
+
+  <h3>1.3 假定不设防的范围</h3>
+  <div class="note amber">
+    <span class="label">明确的信任边界</span>
+    <p>
+      <strong>数据库与应用进程之间的网络</strong>被视为可信（同一 Compose 网络，PostgreSQL 不对外暴露端口）。
+      <strong>宿主机与部署者</strong>被视为可信——能读取 <code>.env</code> 的人本就掌握全部秘密。
+      <strong>模型服务提供方</strong>被视为半可信：会收到脱敏后的业务内容，但不被授予任何写权限。
+    </p>
+  </div>
+</section>
+
+<!-- ══════ 2 ══════ -->
+<section id="s2">
+  <h2><span class="hn">2</span>认证与会话</h2>
+
+  <h3>2.1 口令存储</h3>
+  <p>使用 Spring Security 默认的 <strong>BCrypt</strong>——一种为存储口令设计的慢哈希，使暴力破解昂贵。</p>
+  <p><strong>数据源口令没有默认回退值。</strong>未配置的部署<strong>启动失败</strong>，而不是悄悄用一个弱默认值跑起来。<code>ScmSecretKeyStartupTest</code> 断言这一点。</p>
+
+  <h3>2.2 两种登录失败在字节层面不可区分</h3>
+  <p>「用户名不存在」与「口令错误」共用同一个响应体，且 <code>traceId</code> <strong>为空</strong>。</p>
+  <div class="note">
+    <span class="label">为什么 traceId 必须为空</span>
+    <p>
+      统一错误处理器<strong>只在同时记录原因的地方</strong>才生成 traceId。
+      如果这里逐响应生成一个值，两种登录失败就会在<strong>字节层面变得可区分</strong>——
+      攻击者据此可以枚举哪些用户名存在。
+    </p>
+    <p>这条约束写在 <code>SecurityConfig</code> 的常量注释里，因为它看起来像「忘了填 traceId」，实际是刻意的。</p>
+  </div>
+
+  <h3>2.3 会话与改密联动</h3>
+  <p>会话是服务端进程内 <code>HttpSession</code>。<code>user_account</code> 上有一列 <code>session_version</code>：</p>
+  <ol>
+    <li>会话建立时，把当时的 <code>session_version</code> 捕获进 <code>HttpSession</code>。</li>
+    <li><code>SessionVersionFilter</code> 在<strong>每个请求</strong>上把会话里的值与库中的值比对。</li>
+    <li>改密时递增库中的值。</li>
+  </ol>
+  <p>
+    结果：<strong>一次改密杀掉除执行改密那个会话之外的全部会话</strong>。
+    执行者不必重新登录，其他设备上的会话在下一个请求即失效。
+  </p>
+
+  <h3>2.4 CSRF</h3>
+  <p>
+    采用 Spring Security 7.1 内置的 SPA 接线（<code>CsrfConfigurer::spa</code>）：Cookie 仓库 + 一个使<strong>每个响应</strong>都带上 <code>XSRF-TOKEN</code> 的处理器。
+  </p>
+  <div class="note">
+    <span class="label">那个处理器不是可选的</span>
+    <p>
+      没有它，延迟生成的 token <strong>永远不会写出</strong>——前端拿不到令牌，所有写请求都会被拒。
+      前端侧由 <code>lib/http.ts</code> 统一在写请求上回显该令牌，凭据使用 same-origin cookie。
+    </p>
+  </div>
+  <p><strong>缺失或错误的 CSRF 令牌是访问被拒的唯一来源</strong>——这使 403 的含义单一，便于排查。</p>
+
+  <h3>2.5 端点暴露面</h3>
+  <p>管理端点<strong>只暴露 <code>health</code></strong>。<code>ActuatorExposureTest</code> 断言：</p>
+  <ul>
+    <li><code>/actuator/health</code> → 200，含 <code>"status":"UP"</code></li>
+    <li><code>/actuator/metrics</code> → <strong>404</strong>（不是 401、不是 403——它根本不存在）</li>
+    <li><code>/api/auth/me</code> 未认证 → 401</li>
+  </ul>
+</section>
+
+<!-- ══════ 3 ══════ -->
+<section id="s3">
+  <h2><span class="hn">3</span>授权与项目隔离</h2>
+
+  <h3>3.1 单一授权入口</h3>
+  <p>
+    项目内一切操作的授权<strong>只经由 <code>ProjectAccessService</code></strong>
+    （<code>requireMember</code> / <code>requireRole</code>）。其他模块<strong>不允许</strong>自己去读成员表。
+  </p>
+  <p>这个约束的价值是可审计性：想知道「哪些操作要求 LEADER」，搜索这一个方法的调用点即可，不必逐个模块排查。</p>
+
+  <h3>3.2 项目角色刻意不做成全局权限</h3>
+  <p>
+    <code>ProjectRole</code> <strong>不是</strong> Spring Security 的 authority。
+    全局安全体系只区分「已认证」与「匿名」；项目角色是<strong>项目内概念</strong>，在服务层判定。
+  </p>
+  <p>如果把项目角色提升为全局 authority，一个用户在 A 项目的 LEADER 身份就可能被误用于 B 项目。</p>
+
+  <h3>3.3 项目隔离靠 schema 而非纪律</h3>
+  <p><strong>每个项目内外键都携带 <code>project_id</code></strong>，因此所有读路径都带 <code>projectId</code>。代码库里<strong>不存在</strong>「先按裸 id 查、之后再检查项目」的写法。</p>
+  <div class="note">
+    <span class="label">为什么这不只是编码规范</span>
+    <p>
+      「先查再检查」有两个问题：一是检查可能被遗漏；二是<strong>即使不遗漏也已经泄露了信息</strong>——
+      查询本身能区分「id 存在但属于别人」与「id 不存在」。
+    </p>
+    <p>
+      带 <code>project_id</code> 的复合键让这个区分在数据库层就不成立。
+      <code>ProjectAuthorizationTest</code> 与 <code>BatchOneApiTest</code> 断言：
+      <strong>外项目的 id 与从未签发过的 id 返回相同状态码</strong>。
+    </p>
+  </div>
+
+  <h3>3.4 权限判定用稳定 id，不用用户名</h3>
+  <p>
+    「这个 PR 是不是我开的」按<strong>项目级稳定外部 user id</strong> 判定，<strong>绝不按用户名</strong>。
+    用户名可以被重新分配——按名字匹配会把别人的 PR 交给一个改过名的账号。
+  </p>
+  <p>没有已核验 SCM 身份的成员匹配不到任何东西，这是 fail-closed 的方向。</p>
+
+  <h3>3.5 一条容易被忽略的权限设计</h3>
+  <p>
+    Finding 的<strong>「认领」只有 DEVELOPER 能做，LEADER 也不能</strong>。
+    认领意味着「我来修」，是本人动作。因此系统里<strong>没有「指派 Finding」这个端点</strong>——
+    少一个端点，也少一个授权面。
+  </p>
+</section>
+
+<!-- ══════ 4 ══════ -->
+<section id="s4">
+  <h2><span class="hn">4</span>凭据管理</h2>
+
+  <h3>4.1 静态加密</h3>
+  <div class="tw"><table>
+    <thead><tr><th>参数</th><th>取值</th></tr></thead>
+    <tbody>
+      <tr><td>算法</td><td class="f">AES-256-GCM（<code>AES/GCM/NoPadding</code>）</td></tr>
+      <tr><td>IV 长度</td><td class="f">12 字节，每次加密随机生成</td></tr>
+      <tr><td>认证标签</td><td class="f">128 位</td></tr>
+      <tr><td>信封格式</td><td class="f">IV ‖ 密文（IV 前置，解密时按固定长度切分）</td></tr>
+      <tr><td>密钥来源</td><td class="f">环境变量 <code>FORGEPILOT_SCM_SECRET_KEY</code></td></tr>
+    </tbody>
+  </table></div>
+  <p>选 GCM 而非 CBC 的理由是<strong>它自带认证</strong>：密文被篡改会在解密时失败，而不是解出一段垃圾明文。</p>
+
+  <h3>4.2 只写不回显</h3>
+  <p>访问令牌与 webhook 密钥是<strong>只写字段</strong>：</p>
+  <ul>
+    <li>响应体<strong>不包含</strong>它们——<code>ScmRepositoryResponse</code> 在类型层面就没有这两个字段。</li>
+    <li>页面任何位置不回显，前端表单提交后清空。</li>
+    <li>修改时<strong>留空表示保持原值</strong>，因此改别的字段不需要重新粘贴凭据。</li>
+    <li>不写入日志。</li>
+  </ul>
+
+  <h3>4.3 一次性个人 Token 从不存储</h3>
+  <p>
+    成员验证自己的 SCM 身份时提交一个个人 Token。它被用于<strong>一次</strong> provider 调用，
+    然后即被丢弃：<strong>不返回、不持久化、不记日志</strong>。
+  </p>
+  <p>系统存下来的只是验证<strong>结果</strong>——远程用户名与稳定外部 id。</p>
+
+  <h3>4.4 冻结证据的完整性</h3>
+  <p>
+    评测的模型面与评分文件（共 <strong>9 个</strong>）由内容哈希钉住。
+    <code>verify-freeze</code> 在不接触任何凭据的前提下核对它们未被改动。
+  </p>
+  <p>冻结记录本身<strong>只保存 <code>apiKeyPresent: true/false</code></strong>，从不保存密钥或授权头。</p>
+</section>
+
+<!-- ══════ 5 ══════ -->
+<section id="s5">
+  <h2><span class="hn">5</span>Webhook 认证</h2>
+  <p>这是系统唯一<strong>公开且未认证</strong>的入口，因此防护最密。</p>
+
+  <h3>5.1 HMAC 覆盖原始请求字节</h3>
+  <p>
+    控制器接收的是 <code>byte[] body</code>，<strong>不是</strong>解析后的对象。
+    HMAC 必须覆盖原始字节——JSON 解析再重新序列化会改变字节（键序、空格、数字格式），指纹就对不上。
+  </p>
+  <p>原始字节因此一路带到验签处，这是签名机制成立的前提，不是实现偏好。</p>
+
+  <h3>5.2 常数时间比较</h3>
+  <p>
+    比较使用 <code>MessageDigest.isEqual</code>，<strong>不是</strong> <code>equals</code> 或 <code>==</code>。
+  </p>
+  <div class="note">
+    <span class="label">为什么普通比较不行</span>
+    <p>
+      字符串比较发现第一个不同字符就立刻返回，因此「第一个字符就错」比「只有最后一个字符错」返回得更快。
+      攻击者测量这个时间差，可以逐字符把正确签名试出来——这是<strong>时序攻击</strong>。
+    </p>
+    <p>该方法还<strong>对长度安全</strong>：被截断的十六进制摘要只会判为不相等，不泄露长度信息。</p>
+  </div>
+
+  <h3>5.3 GitLab 双代机制不降级</h3>
+  <p>
+    当前版本 GitLab 按 Standard Webhooks 签名，较老安装发送明文秘密 token。
+    规则是：<strong>Standard 形式存在但校验不通过时，绝不降级到更弱的旧版形式。</strong>
+  </p>
+  <p>否则攻击者只需构造一个「新版签名故意写错」的请求，就能把整个校验降到较弱的那条路径上。</p>
+
+  <h3>5.4 校验前的任何失败都答成同一种</h3>
+  <p>控制器把「解析载荷 → 定位仓库 → 验签」整段包在保护块里：</p>
+  <pre><code>try {
+    payload = parse(body);
+    repository = sync.authenticate(...);
+} catch (ApiException rejected) {
+    throw rejected;
+} catch (RuntimeException malformed) {
+    throw unverifiable();          <span class="c">// 一律答成「无法验证」</span>
+}</code></pre>
+  <div class="note red">
+    <span class="label">这个保护块防的是两件事</span>
+    <p>
+      <strong>一、堆栈逃逸。</strong>端点是公开的。一个恶意载荷若能触发意外异常，
+      默认错误页会带出堆栈与内部结构，且脱离统一错误契约。
+      代码注释点了两个真实能触发的例子：在该出现字符串的位置放一个容器节点，
+      或让一个超过 63 字符的 DNS label 走到 <code>IDN.toASCII</code>。
+    </p>
+    <p>
+      <strong>二、不可区分性。</strong>「载荷畸形」「仓库不存在」「签名错误」<strong>答得一模一样</strong>，
+      攻击者无法据错误差异探测本部署接入了哪些仓库。
+    </p>
+  </div>
+
+  <h3>5.5 认证之后仍不信任载荷</h3>
+  <p>
+    签名验过只证明<strong>发送方知道密钥</strong>，不证明载荷内容是当下事实。
+    因此系统<strong>回头向 provider 做一次权威读取</strong>：webhook 是<em>信号</em>，权威快照才是<em>事实</em>。
+  </p>
+  <p>这同时防住重放：带更旧时间戳的快照被丢弃，不覆盖较新状态。</p>
+
+  <h3>5.6 权威字段必须大声失败</h3>
+  <p>
+    Jackson 的 <code>asString()</code> 对<strong>缺失与 null 节点都返回空字符串</strong>。不检查的后果：
+  </p>
+  <ul>
+    <li>缺失的 <code>base.sha</code> 变成 <code>base_sha = ""</code> 入库。</li>
+    <li>该列是 <code>NOT NULL</code>，而 <code>""</code> <strong>满足</strong> <code>NOT NULL</code>——数据库抓不住。</li>
+    <li>diff 指纹基于空 SHA 算出，这次审查的身份从此是错的。</li>
+  </ul>
+  <p>
+    <code>author_external_user_id</code> 更严重：<strong>它是授权键</strong>。
+    若变成 <code>""</code>，所有「幽灵作者」的 PR 会共享同一个身份，「本人 PR」权限就串了。
+    <code>GitHubClientGuardTest</code> 20 个用例专门覆盖这条路径。
+  </p>
+</section>
+
+<!-- ══════ 6 ══════ -->
+<section id="s6">
+  <h2><span class="hn">6</span>出站请求控制</h2>
+
+  <h3>6.1 为什么需要这道闸</h3>
+  <p>
+    <code>scm_repository.api_base</code> 由项目负责人配置，用于支持自建实例。
+    这使它成为一个 <strong>SSRF 入口</strong>：指向 <code>169.254.169.254</code> 就能读取云元数据服务，
+    进而可能取得云凭据。
+  </p>
+
+  <h3>6.2 策略内容</h3>
+  <div class="tw"><table>
+    <thead><tr><th>检查</th><th>规则</th></tr></thead>
+    <tbody>
+      <tr><td>协议</td><td>只允许 <code>http</code> 与 <code>https</code></td></tr>
+      <tr><td>主机白名单</td><td><strong>唯一放行途径</strong>：<code>forgepilot.scm.allowed-hosts</code> 中的显式主机</td></tr>
+      <tr><td>内网地址</td><td>解析后逐个地址拒绝 loopback、any-local、link-local、site-local</td></tr>
+      <tr><td>大小写</td><td>协议与主机统一转小写后比较，防大小写绕过</td></tr>
+    </tbody>
+  </table></div>
+  <p>
+    注意<strong>解析后再判定</strong>：仅检查字符串无法防住一个解析到 <code>127.0.0.1</code> 的公网域名。
+    <code>link-local</code> 的拒绝正是覆盖 <code>169.254.0.0/16</code> 这个云元数据网段。
+  </p>
+
+  <h3>6.3 每次调用重新校验</h3>
+  <p>
+    每次出站调用前都<strong>重新</strong>校验地址，而不是在配置保存时校验一次。
+    因为该列可由负责人随时修改，而安全策略也可能在此期间收紧。
+  </p>
+
+  <h3>6.4 不硬编码任何 host</h3>
+  <p>
+    provider 的 base URI 全部来自 <code>api_base</code>，<strong>代码中不硬编码任何 host</strong>。
+    这既是自建实例支持的需要，也顺带让集成测试能把仓库指向回环桩服务——
+    白名单里加入 <code>127.0.0.1</code>，<strong>策略本身仍然开启</strong>，而不是为测试关掉它。
+  </p>
+</section>
+
+<!-- ══════ 7 ══════ -->
+<section id="s7">
+  <h2><span class="hn">7</span>AI 相关安全</h2>
+
+  <h3>7.1 唯一出口</h3>
+  <p>
+    全代码库<strong>只有 <code>AiGateway</code></strong> 能向模型服务发出请求。
+    它管 HTTP、鉴权、超时与那唯一一次重试，且<strong>不认识任何业务类型</strong>——
+    业务归属以不透明的 <code>Long</code> id 经 <code>AiCallContext</code> 传入。
+  </p>
+  <p>单一出口的安全价值：所有发往外部的内容必然经过同一处脱敏，不存在绕过路径。</p>
+
+  <h3>7.2 发送前的处理</h3>
+  <p><code>PromptSanitizer</code> 做两件事，且<strong>只做这两件</strong>：掩码疑似凭据的字符串、把载荷裁剪到预算内。</p>
+  <div class="note">
+    <span class="label">它是纯函数，这是刻意的</span>
+    <p>
+      不写日志、不碰数据库、<strong>不抛异常</strong>。
+      一份文档<strong>不会</strong>因为「看起来含 token」而被整份拒绝，只会去掉那部分后照常发送。
+    </p>
+    <p>拒绝非法输入是另一件事、另有归属（<code>KnowledgeUploadValidator</code> 在入库前拦截）。把两件事混在一处会让上传变得不可预测。</p>
+  </div>
+
+  <h3>7.3 全部用户内容视为不可信</h3>
+  <p>需求文本、知识文档、PR 标题与代码注释<strong>全部是不可信数据</strong>。它们会进入 Prompt。</p>
+
+  <h3>7.4 真正的防线是「AI 不改变任何业务状态」</h3>
+  <div class="note red">
+    <span class="label">诚实说明：本系统不防 Prompt 注入</span>
+    <p>
+      <code>PromptSanitizer</code> <strong>不是</strong> Prompt 注入防护——它只掩码凭据。
+      一个精心构造的需求正文<strong>确实可能</strong>影响模型的输出内容。
+    </p>
+    <p>
+      系统的实际防线是<strong>架构层面的</strong>：<strong>AI 不改变任何业务状态。</strong>
+      它不能推进需求状态、不能修改代码、不能提交、不能合并、不能授予权限、不能删除任何东西。
+      模型输出的全部去处是——通过校验后写入 <code>finding</code> 表，等待人工处置。
+    </p>
+    <p>
+      因此注入成功的最坏后果是<strong>一条误导性的审查意见出现在页面上等待人看</strong>，
+      而不是任何自动执行的动作。这是把「无法可靠防住的输入」限制在「无权限的输出」上的设计选择。
+    </p>
+  </div>
+
+  <h3>7.5 模型输出同样被视为不可信</h3>
+  <p><code>ReviewOutputValidator</code> 对模型回答逐项核验，且核验发生在<strong>写入之前</strong>：</p>
+  <ul>
+    <li>路径必须是<strong>本次调用被展示过</strong>的变更文件之一——一个批次无法对它从未见过的文件作出报告。</li>
+    <li>验收条件 id 必须属于<strong>本次被审查的那个修订</strong>——来自别的修订的 AC 读起来同样合情合理，但它针对的是另一段文本。</li>
+    <li>无证据的 finding 被丢弃：没有逐字引用就没有确定性的东西可供哈希。</li>
+    <li>散文字段有长度上限（2000），模型不遵守时在此截断。</li>
+  </ul>
+  <p>被丢弃的断言<strong>记入 warnings</strong> 而非静默移除——静默丢弃只会让运维拿到一份更短的报告，却无法知道它被缩短过。</p>
+
+  <h3>7.6 失败不放大成调用风暴</h3>
+  <ul>
+    <li><strong>重试只有一次</strong>，且只对瞬时错误（429/5xx/网络）。全代码库别处<strong>没有任何重试</strong>。</li>
+    <li>格式修复<strong>只有一次</strong>，写成 <code>try/catch/try</code> 而非循环——循环会把网关那次有界重试放大成四次调用。</li>
+    <li>provider 不可达时 Review 标为 FAILED 并<strong>停下等人工</strong>，而不是让异常逃逸后被对账任务反复重新抢占、反复重调。</li>
+  </ul>
+</section>
+
+<!-- ══════ 8 ══════ -->
+<section id="s8">
+  <h2><span class="hn">8</span>审计与留痕</h2>
+
+  <h3>8.1 三类永久记录</h3>
+  <div class="tw"><table>
+    <thead><tr><th>表</th><th>记录什么</th><th>关键设计</th></tr></thead>
+    <tbody>
+      <tr><td class="f">ai_call_log</td><td>每一次模型调用<strong>尝试</strong></td><td>重试留<strong>两行</strong>——这是事后审计「确实只重试了一次」的唯一手段；<code>TIMEOUT</code> 与 <code>FAILED</code> 分开记录，以便区分「答得不对」与「根本没答」</td></tr>
+      <tr><td class="f">finding_event</td><td>Finding 每一次人工决定</td><td>同时记录操作者<em>意图</em>与机械的 from/to 状态对；<code>actorId</code> 指向 <code>user_account</code> 而非成员关系，成员离开项目不抹掉记录</td></tr>
+      <tr><td class="f">pull_request_requirement_event</td><td>PR↔需求关联的每次变更</td><td>与变更本身<strong>同一事务</strong>——关联变了却无审计行、或有审计行却描述了未提交的变更，两者都比没有审计更糟</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>8.2 删除台账</h3>
+  <p>
+    <code>project_deletion_record</code> 记录三类资源的删除事实。
+    它的 <code>resource_id</code> <strong>故意没有外键</strong>——被引用的行按定义已经不存在，
+    没有可指向的目标。加一个外键会使这张表<strong>无法记录它存在的全部理由</strong>。
+  </p>
+  <div class="note">
+    <span class="label">这张台账反过来保护了项目本身</span>
+    <p>
+      <code>project_deletion_record.project_id</code> <strong>有</strong>一条指向 <code>project(id)</code> 的外键，
+      且<strong>没有 <code>ON DELETE</code></strong>。因此硬删一个项目会被这张记录删除行为的台账挡住——
+      要硬删就得先销毁删除审计。
+    </p>
+    <p>这正是项目「删除」被实现为<strong>归档</strong>的原因：数据库先做了这个决定。</p>
+  </div>
+
+  <h3>8.3 不外送、不聚合</h3>
+  <p>
+    审计记录只存在于业务数据库，<strong>不外送到任何日志聚合或监控系统</strong>。
+    这减少了泄露面，代价见第 10 章残余风险第 7 条。
+  </p>
+
+  <h3>8.4 日志中不出现的内容</h3>
+  <ul>
+    <li>凭据、令牌、webhook 密钥、口令与其哈希。</li>
+    <li>provider 的原始报错消息——它可能引用回答，而回答可能引用 Prompt。失败原因经过改写后才进入运维可见输出。</li>
+    <li>Docker 检查输出与环境变量转储<strong>不得作为证据归档</strong>（复现指南明文规定）。</li>
+  </ul>
+</section>
+
+<!-- ══════ 9 ══════ -->
+<section id="s9">
+  <h2><span class="hn">9</span>攻击面清单</h2>
+  <div class="tw"><table>
+    <thead><tr><th>面</th><th>认证要求</th><th>主要防护</th><th>验证</th></tr></thead>
+    <tbody>
+      <tr><td class="f">POST /api/scm/*/webhook</td><td><strong>无</strong>（公开）</td><td>HMAC 覆盖原始字节 · 常数时间比较 · 保护块统一答案 · 不降级</td><td class="f">WebhookSignatureVerifierTest · GitHub/GitLabWebhookIngestionTest</td></tr>
+      <tr><td class="f">POST /api/auth/register</td><td>无</td><td>BCrypt · 输入长度约束</td><td class="f">AuthApiTest</td></tr>
+      <tr><td class="f">POST /api/auth/login</td><td>无</td><td>失败不可区分 · traceId 为空</td><td class="f">AuthApiTest</td></tr>
+      <tr><td class="f">其余 57 个 API 端点</td><td>会话 + CSRF</td><td>单一授权入口 · 项目隔离复合键 · 404/403 不可区分</td><td class="f">ProjectAuthorizationTest · BatchOneApiTest</td></tr>
+      <tr><td class="f">出站至 provider</td><td>—</td><td>协议白名单 · 主机白名单 · 内网地址拒绝 · 每次重校验</td><td class="f">OutboundUrlPolicyTest · GitHubClientGuardTest</td></tr>
+      <tr><td class="f">出站至模型服务</td><td>—</td><td>单一出口 · 凭据掩码 · 预算裁剪 · 输出逐项核验</td><td class="f">PromptSanitizerTest · ReviewOutputValidatorTest</td></tr>
+      <tr><td class="f">文件上传</td><td>会话 + LEADER</td><td>入库前四道校验 · 5 MB 上限 · 类型限定</td><td class="f">KnowledgeGuardTest</td></tr>
+      <tr><td class="f">GET /actuator/health</td><td>无</td><td>只暴露 health，其余端点返回 404</td><td class="f">ActuatorExposureTest</td></tr>
+      <tr><td class="f">PostgreSQL</td><td>—</td><td>不对外暴露端口 · Flyway 禁 clean · <code>ddl-auto=validate</code></td><td class="f">FoundationDatabaseTest</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<!-- ══════ 10 ══════ -->
+<section id="s10">
+  <h2><span class="hn">10</span>残余风险</h2>
+  <p>以下风险<strong>已知且当前未防护</strong>。列出它们，是因为一份只写防护措施的安全文档会被误读为「没有剩余风险」。</p>
+
+  <div class="tw"><table>
+    <thead><tr><th class="n">#</th><th>风险</th><th>现状与理由</th><th>影响</th></tr></thead>
+    <tbody>
+      <tr>
+        <td class="n">1</td>
+        <td><strong>不防 Prompt 注入</strong></td>
+        <td>见 7.4。防线是架构性的——AI 无任何写权限</td>
+        <td>最坏后果是一条误导性审查意见等待人工处置，无自动执行动作</td>
+      </tr>
+      <tr>
+        <td class="n">2</td>
+        <td><strong>凭据加密不做密钥轮换</strong></td>
+        <td>轮换需要密钥版本列加一次重加密扫描，属新结构，明确划在范围外</td>
+        <td>密钥泄露后必须手工重新配置全部仓库凭据</td>
+      </tr>
+      <tr>
+        <td class="n">3</td>
+        <td><strong>单一对称密钥</strong></td>
+        <td>所有项目的凭据用同一个 <code>FORGEPILOT_SCM_SECRET_KEY</code></td>
+        <td>该密钥泄露即全部仓库凭据泄露，无项目级隔离</td>
+      </tr>
+      <tr>
+        <td class="n">4</td>
+        <td><strong>无速率限制</strong></td>
+        <td>登录、注册与 webhook 端点均无限流</td>
+        <td>可被口令暴力尝试与投递洪泛；当前依赖部署侧反向代理提供</td>
+      </tr>
+      <tr>
+        <td class="n">5</td>
+        <td><strong>无多因素认证</strong></td>
+        <td>本地账号只有口令一个因素</td>
+        <td>口令泄露即账号失守；改密可踢出其他会话，但这是事后手段</td>
+      </tr>
+      <tr>
+        <td class="n">6</td>
+        <td><strong>归档不冻结写入</strong></td>
+        <td><code>project.status</code> 不 gate 任何写路径；变为只读闸门需改五个模块</td>
+        <td>已归档项目的需求、知识、仓库与审查仍可写入</td>
+      </tr>
+      <tr>
+        <td class="n">7</td>
+        <td><strong>审计不外送</strong></td>
+        <td>只存业务库，无外部聚合</td>
+        <td>取得数据库写权限者可篡改审计；无独立副本可比对</td>
+      </tr>
+      <tr>
+        <td class="n">8</td>
+        <td><strong>TLS 依赖部署侧</strong></td>
+        <td>应用自身不终结 TLS；出站连接的证书校验依赖 JDK 默认信任库</td>
+        <td>反向代理配置不当会使会话 cookie 与凭据在明文信道上传输</td>
+      </tr>
+      <tr>
+        <td class="n">9</td>
+        <td><strong>知识文档无内容分级</strong></td>
+        <td>上传的项目知识会整体进入检索与 Prompt，无「不发往模型」的标记</td>
+        <td>误上传的敏感文档会被发往模型服务；凭据类字符串由掩码兜住，其余内容不会</td>
+      </tr>
+    </tbody>
+  </table></div>
+
+  <h3>10.1 建议的处置优先级</h3>
+  <ol>
+    <li><strong>速率限制（#4）</strong>——投入最小、缓解最直接的一项，且登录端点当前完全裸露。</li>
+    <li><strong>确认部署侧 TLS 配置（#8）</strong>——不需要改代码，但配置错误的后果最严重。</li>
+    <li><strong>知识文档分级（#9）</strong>——一个「不参与检索」的标记即可显著降低误发风险。</li>
+    <li><strong>密钥轮换与项目级密钥（#2、#3）</strong>——需要迁移与重加密，规模较大，适合作为独立工作。</li>
+  </ol>
+  <p>风险 #1 与 #6 是<strong>有意接受</strong>的设计取舍，不建议在当前范围内改动；#5 与 #7 取决于部署场景，单机演示环境下优先级低。</p>
+</section>
+
+<footer class="end">
+  <p>
+    本文描述 2026-08-27 的实现。全部措施均对应到代码位置与验证它的测试类；
+    第 10 章的九条残余风险为已知未防护项，如实记录。
+  </p>
+  <p>
+    配套文档：《ForgePilot 需求规格说明书》（NFR-S1–S11 及其追溯）、《ForgePilot 测试报告》、
+    《ForgePilot 使用与代码手册》、《跟着一次 PR 走完 ForgePilot》。
+  </p>
+</footer>
+
+</main>
+</div>
+
+</body>
+</html>
