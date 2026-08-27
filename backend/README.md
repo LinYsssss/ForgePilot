@@ -1,7 +1,7 @@
 # Backend
 
 ForgePilot 的 Spring Boot 模块化单体：8 个顶层业务包、20 张业务表、10 个 Flyway 迁移。
-完整 `verify` 为 332 个测试通过、零失败、零跳过。
+完整 `verify` 为 333 个测试通过、零失败、零跳过。
 
 本地入口是 `./mvnw`；它使用仓库锁定的 Maven 3.9.16，不要求全局 Maven。分发包 URL 与
 sha256 校验值只在 `.mvn/wrapper/maven-wrapper.properties` 中定义。需要 Java 21
