@@ -186,7 +186,7 @@ watch(projectId, load, { immediate: true });
               <option v-for="item in SCM_PROVIDERS" :key="item" :value="item">{{ item }}</option>
             </select>
           </div>
-          <div class="field">
+          <div class="field" :class="{ 'repository-span': repository }">
             <label for="repository-external-id">
               仓库外部 ID{{ repository ? "（留空不改）" : "" }}
             </label>
@@ -197,11 +197,7 @@ watch(projectId, load, { immediate: true });
               maxlength="128"
             />
           </div>
-          <label v-if="repository" class="field checkbox-field">
-            <input v-model="identityApprovalRequired" type="checkbox" />
-            成员 SCM 身份通过仓库验证后仍需负责人批准
-          </label>
-          <div class="field repository-api-field">
+          <div class="field repository-span">
             <label for="repository-api-base">
               API 基地址{{ repository ? "（留空不改）" : "" }}
             </label>
@@ -248,6 +244,10 @@ watch(projectId, load, { immediate: true });
             />
             <p class="field-hint">只写，不回显。</p>
           </div>
+          <label v-if="repository" class="checkbox-field">
+            <input v-model="identityApprovalRequired" type="checkbox" />
+            <span>成员 SCM 身份通过仓库验证后仍需负责人批准</span>
+          </label>
           <div class="form-actions repository-actions">
             <button class="button button-primary" :disabled="pending">
               {{ pending ? "正在保存…" : repository ? "保存修改" : "注册仓库" }}
@@ -276,16 +276,33 @@ watch(projectId, load, { immediate: true });
   margin-bottom: var(--fp-space-2);
 }
 
+/* start 而非 end：同行两格按顶部对齐，标签与输入框才会落在同一水平线。
+   end 会让「访问令牌」那两条 hint（含会换行的长 token-source）把同行的
+   Webhook 输入框整体压低。高度差留在底部是无害的。 */
 .repository-form {
   display: grid;
-  align-items: end;
+  align-items: start;
   gap: var(--fp-space-4);
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
-.repository-api-field,
+.repository-span,
 .repository-actions {
   grid-column: 1 / -1;
+}
+
+/* 不带 .field：.field 是 display: grid，会把勾选框和它的文字排成上下两行。 */
+.checkbox-field {
+  display: flex;
+  grid-column: 1 / -1;
+  align-items: center;
+  gap: var(--fp-space-3);
+  color: var(--fp-color-text-muted);
+}
+
+.checkbox-field input {
+  width: auto;
+  flex: 0 0 auto;
 }
 
 /* 自建实例分支会渲染 /-/user_settings/personal_access_tokens 这种长路径，
@@ -305,7 +322,7 @@ watch(projectId, load, { immediate: true });
     grid-template-columns: 1fr;
   }
 
-  .repository-api-field,
+  .repository-span,
   .repository-actions {
     grid-column: auto;
   }

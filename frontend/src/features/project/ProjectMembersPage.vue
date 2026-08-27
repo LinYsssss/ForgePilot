@@ -402,18 +402,20 @@ onMounted(load);
                   <span class="muted">@{{ row.candidate.username }}</span>
                 </td>
                 <td><code>{{ row.candidate.userId }}</code></td>
-                <td class="preview-roles">
-                  <label v-for="role in assignableRoles" :key="role">
-                    <input
-                      type="checkbox"
-                      :checked="row.roles.includes(role)"
-                      @change="toggleRole(row.roles, role)"
-                    /> {{ PROJECT_ROLE_LABELS[role] }}
-                  </label>
-                  <span v-if="row.roles.length === 0" class="badge badge-warning">
-                    至少选一个角色
+                <td>
+                  <span class="cell-roles">
+                    <label v-for="role in assignableRoles" :key="role">
+                      <input
+                        type="checkbox"
+                        :checked="row.roles.includes(role)"
+                        @change="toggleRole(row.roles, role)"
+                      /> {{ PROJECT_ROLE_LABELS[role] }}
+                    </label>
+                    <span v-if="row.roles.length === 0" class="badge badge-warning">
+                      至少选一个角色
+                    </span>
+                    <span v-if="index === failedRow" class="badge badge-danger">本行被服务端拒绝</span>
                   </span>
-                  <span v-if="index === failedRow" class="badge badge-danger">本行被服务端拒绝</span>
                 </td>
               </tr>
             </tbody>
@@ -483,9 +485,11 @@ onMounted(load);
                 <strong>{{ row.member.displayName }}</strong><br />
                 <span class="muted">@{{ row.member.username }} · ID {{ row.member.userId }}</span>
               </td>
-              <td class="member-roles">
-                <span v-for="role in row.member.roles" :key="role" class="badge badge-info">
-                  {{ PROJECT_ROLE_LABELS[role] }}
+              <td>
+                <span class="cell-roles">
+                  <span v-for="role in row.member.roles" :key="role" class="badge badge-info">
+                    {{ PROJECT_ROLE_LABELS[role] }}
+                  </span>
                 </span>
               </td>
               <td>
@@ -606,7 +610,10 @@ onMounted(load);
 
 <style scoped>
 .batch-panel { display: grid; gap: var(--fp-space-4); }
-.role-picker, .preview-roles, .member-roles, .row-editor-form { display: flex; flex-wrap: wrap; gap: var(--fp-space-3); align-items: center; }
+/* flex 必须落在单元格**内层**：加在 <td> 上会覆盖 display: table-cell，
+   于是 .data-table td 的 border-bottom 与 vertical-align 一起失效，
+   单元格高度塌缩成内容高度，行分隔线画在徽章下方而非行底。 */
+.role-picker, .cell-roles, .row-editor-form { display: flex; flex-wrap: wrap; gap: var(--fp-space-3); align-items: center; }
 .member-filters { display: grid; gap: var(--fp-space-4); grid-template-columns: minmax(15rem, 1.4fr) minmax(10rem, 0.6fr); }
 .member-table td, .candidate-table td, .preview-table td { min-width: 0; }
 .row-editor > summary { cursor: pointer; }
