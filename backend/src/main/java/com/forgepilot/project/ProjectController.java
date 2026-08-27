@@ -46,6 +46,20 @@ class ProjectController {
         return projects.get(projectId, userIdOf(principal));
     }
 
+    /** 归档：项目从工作区列表收起，数据与审计全部留在原地。仅 LEADER。 */
+    @PostMapping("/{projectId}/archive")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    void archive(@PathVariable long projectId, Principal principal) {
+        projects.archive(projectId, userIdOf(principal));
+    }
+
+    /** 取消归档：项目回到工作区列表。仅 LEADER。 */
+    @PostMapping("/{projectId}/unarchive")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    void unarchive(@PathVariable long projectId, Principal principal) {
+        projects.unarchive(projectId, userIdOf(principal));
+    }
+
     /**
      * 登录身份在这里——控制器层——通过只读账号 facade 解析为 user id。
      * 业务服务永远看不到 Spring Security，本功能模块也不依赖会话是如何建立的

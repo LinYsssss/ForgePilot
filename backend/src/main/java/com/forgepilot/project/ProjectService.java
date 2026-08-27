@@ -56,4 +56,36 @@ public class ProjectService {
     public void lockForUpdate(long projectId) {
         projects.findByIdForUpdate(projectId).orElseThrow(ApiException::notFound);
     }
+
+    /**
+     * 归档一个项目：它从工作区列表里收起来，数据与审计一行不动。
+     *
+     * <p>只有 LEADER 可以归档，与其余项目级写操作同一口径。取行锁是为了让
+     * 两个并发归档串行化——后到的那个会读到已提交的 ARCHIVED 并以 409 收场，
+     * 而不是双双“成功”。
+     *
+     * <p>刻意**不**级联、不改任何子表：归档是产品面的可见性，不是删除。
+     * 归档后该项目的需求、知识、仓库与审查仍可写入——{@code project.status}
+     * 目前不 gate 任何写操作，把它变成只读闸门是另一件事。
+     */
+    @Transactional
+    public void archive(long projectId, long actorId) {
+        access.requireRole(projectId, actorId, ProjectRole.LEADER);
+        Project project = projects.findByIdForUpdate(projectId).orElseThrow(ApiException::notFound);
+        if (project.getStatus() == ProjectStatus.ARCHIVED) {
+            throw ApiException.conflict("This project is already archived.");
+        }
+        project.archive();
+    }
+
+    /** 取消归档，与 {@link #archive} 完全对称：同样只有 LEADER，同样在行锁下判定。 */
+    @Transactional
+    public void unarchive(long projectId, long actorId) {
+        access.requireRole(projectId, actorId, ProjectRole.LEADER);
+        Project project = projects.findByIdForUpdate(projectId).orElseThrow(ApiException::notFound);
+        if (project.getStatus() != ProjectStatus.ARCHIVED) {
+            throw ApiException.conflict("This project is not archived.");
+        }
+        project.unarchive();
+    }
 }

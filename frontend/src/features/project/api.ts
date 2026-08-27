@@ -61,6 +61,22 @@ export function createProject(name: string): Promise<Project> {
   });
 }
 
+/**
+ * 归档一个项目：它从工作区列表收起，数据与审计一行不动。
+ *
+ * 这里不是删除，文案也不该说成删除。硬删在数据库层就走不通——
+ * `project_deletion_record` 指向 `project(id)` 的外键没有 `ON DELETE`，
+ * 那张记录删除行为的台账自己会拒绝项目被删掉。
+ */
+export function archiveProject(projectId: number): Promise<void> {
+  return requestJson<void>(`/api/projects/${projectId}/archive`, { method: "POST" });
+}
+
+/** 取消归档：项目回到工作区列表。归档不销毁任何东西，所以它必须可逆。 */
+export function unarchiveProject(projectId: number): Promise<void> {
+  return requestJson<void>(`/api/projects/${projectId}/unarchive`, { method: "POST" });
+}
+
 export function listMembers(projectId: number): Promise<Member[]> {
   return requestJson<Member[]>(`/api/projects/${projectId}/members`);
 }

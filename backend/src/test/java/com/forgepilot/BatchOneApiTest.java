@@ -218,6 +218,53 @@ class BatchOneApiTest extends PostgresTestBase {
         assertThat(owner.read("/api/projects/" + project + "/members").size()).isEqualTo(1);
     }
 
+    /**
+     * 归档端点在**真实 HTTP** 之上的接线，连同它的两道门禁。
+     *
+     * <p>与上面那三个 DELETE 同一条理由：Service 测试证明不了路径映射与状态码。
+     *
+     * <p>额外钉住一件事——归档**什么都不删**。归档之后项目仍然出现在列表里、
+     * 只是状态变成 ARCHIVED，且可以原样恢复。这正是选择归档而非硬删的原因：
+     * {@code project_deletion_record.project_id} 的外键没有 {@code ON DELETE}，
+     * 那张记录删除行为的台账自己会拒绝项目被删掉。
+     */
+    @Test
+    void theArchiveEndpointsAreWiredAndReversible() throws Exception {
+        Client owner = register();
+        Client developer = register();
+        Client outsider = register();
+
+        long project = owner.post("/api/projects", """
+                {"name": "Archivable"}""").path("id").asLong();
+        owner.post("/api/projects/" + project + "/members/batch", """
+                {"members": [{"userId": %d, "roles": ["DEVELOPER"]}]}"""
+                .formatted(developer.userId));
+
+        String archive = "/api/projects/" + project + "/archive";
+        String unarchive = "/api/projects/" + project + "/unarchive";
+
+        // 还没归档就取消归档：端点存在（不是 404），被状态门禁以 409 拒绝。
+        owner.postExpecting(unarchive, "{}", status().isConflict());
+
+        owner.postExpecting(archive, "{}", status().isNoContent());
+
+        // 归档不是删除：项目还在列表里，只是状态变了。
+        JsonNode archived = owner.read("/api/projects");
+        assertThat(archived.size()).isEqualTo(1);
+        assertThat(archived.get(0).path("status").asString()).isEqualTo("ARCHIVED");
+
+        // 重复归档以 409 收场，而不是悄悄再成功一次。
+        owner.postExpecting(archive, "{}", status().isConflict());
+
+        // 非 LEADER 成员看得见项目，但归档是 LEADER 的事。
+        developer.postExpecting(archive, "{}", status().isForbidden());
+        // 外人连项目存不存在都不该知道。
+        outsider.postExpecting(archive, "{}", status().isNotFound());
+
+        owner.postExpecting(unarchive, "{}", status().isNoContent());
+        assertThat(owner.read("/api/projects").get(0).path("status").asString()).isEqualTo("ACTIVE");
+    }
+
     @Test
     void writesWithoutTheCsrfHeaderAreRejected() throws Exception {
         Client leader = register();
