@@ -19,15 +19,19 @@ import {
 } from "../review/labels";
 import AcceptanceCriteriaEditor from "./AcceptanceCriteriaEditor.vue";
 import {
+  changeStatus,
   createRequirement,
+  deleteRequirement,
   listRequirements,
   type AcceptanceCriterionDraft,
   type RequirementSummary,
 } from "./api";
 import {
+  isTerminal,
   REQUIREMENT_STATUS_LABELS,
   REQUIREMENT_STATUSES,
   REQUIREMENT_STATUS_TONES,
+  STATUS_TRANSITIONS,
 } from "./status";
 
 const route = useRoute();
@@ -143,6 +147,60 @@ async function create(): Promise<void> {
     creating.value = false;
   }
 }
+
+/**
+ * 行内动作只是把详情页早就有的能力提到列表上，**不放宽任何前置条件**：
+ * 正文修改仍然只对 DRAFT（READY 之后必须发布新修订），
+ * 删除仍然只对已作废需求，且后端做的是软删。
+ */
+const rowError = ref<string | null>(null);
+const rowPending = ref<number | null>(null);
+
+function canCancel(item: RequirementSummary): boolean {
+  return STATUS_TRANSITIONS[item.status].includes("CANCELED");
+}
+
+async function cancelRequirement(item: RequirementSummary): Promise<void> {
+  const id = projectId.value;
+  if (id === null) return;
+  if (!window.confirm(`确认作废「${item.title}」？作废后它不再参与开发，可再删除。`)) {
+    return;
+  }
+  rowPending.value = item.id;
+  rowError.value = null;
+  try {
+    const updated = await changeStatus(id, item.id, "CANCELED");
+    requirements.value = requirements.value.map((it) =>
+      it.id === item.id ? { ...it, status: updated.status } : it,
+    );
+  } catch (failure: unknown) {
+    rowError.value = apiErrorMessage(failure);
+  } finally {
+    rowPending.value = null;
+  }
+}
+
+async function removeRequirement(item: RequirementSummary): Promise<void> {
+  const id = projectId.value;
+  if (id === null) return;
+  if (
+    !window.confirm(
+      `确认删除已作废的「${item.title}」？它将从需求列表中消失，AI 调用审计与 PR 关联记录仍然保留。`,
+    )
+  ) {
+    return;
+  }
+  rowPending.value = item.id;
+  rowError.value = null;
+  try {
+    await deleteRequirement(id, item.id);
+    requirements.value = requirements.value.filter((it) => it.id !== item.id);
+  } catch (failure: unknown) {
+    rowError.value = apiErrorMessage(failure);
+  } finally {
+    rowPending.value = null;
+  }
+}
 </script>
 
 <template>
@@ -207,6 +265,8 @@ async function create(): Promise<void> {
         </div>
       </section>
 
+      <p v-if="rowError" class="alert" role="alert">{{ rowError }}</p>
+
       <p v-if="filteredRequirements.length === 0" class="empty-state">
         没有符合当前筛选条件的需求。
       </p>
@@ -256,6 +316,31 @@ async function create(): Promise<void> {
               <dd>{{ formatDateTime(item.updatedAt) }}</dd>
             </div>
           </dl>
+
+          <div v-if="isLeader" class="record-actions requirement-actions">
+            <RouterLink
+              v-if="!isTerminal(item.status)"
+              class="button button-quiet"
+              :to="requirementDetailRoute(projectId, item.id)"
+            >{{ item.status === "DRAFT" ? "编辑草稿" : "发布新版本" }}</RouterLink>
+            <button
+              v-if="canCancel(item)"
+              type="button"
+              class="button button-quiet"
+              :disabled="rowPending === item.id"
+              @click="cancelRequirement(item)"
+            >作废</button>
+            <button
+              v-if="item.status === 'CANCELED'"
+              type="button"
+              class="button button-danger"
+              :disabled="rowPending === item.id"
+              @click="removeRequirement(item)"
+            >删除</button>
+            <p v-if="item.status === 'DONE'" class="field-hint">
+              已完成的需求不再接受编辑、修订或状态流转。
+            </p>
+          </div>
         </li>
       </ul>
       </template>
