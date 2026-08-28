@@ -163,6 +163,11 @@ async function restore(project: Project): Promise<void> {
 
     <p v-if="loading" class="muted">正在加载项目…</p>
     <p v-else-if="loadError" class="alert" role="alert">{{ loadError }}</p>
+    <!--
+      恢复失败也要看得见。归档失败显示在确认表单里，但恢复没有那个表单
+      （archiveTarget 为 null），错误就无处可显、按钮只是重新可点。
+    -->
+    <p v-if="archiveError && archiveTarget === null" class="alert" role="alert">{{ archiveError }}</p>
     <p v-else-if="projects.length === 0" class="empty-state">还没有项目，先创建一个。</p>
 
     <template v-else>
