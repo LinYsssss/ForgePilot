@@ -446,7 +446,7 @@ img, svg { max-width: 100%; height: auto; }
     <div class="fact"><dt>前端</dt><dd>34<small>个文件</small></dd></div>
     <div class="fact"><dt>数据表</dt><dd>20<small>／10 迁移</small></dd></div>
     <div class="fact"><dt>API 端点</dt><dd>60</dd></div>
-    <div class="fact"><dt>后端测试</dt><dd>338<small>零跳过</small></dd></div>
+    <div class="fact"><dt>后端测试</dt><dd>全绿<small>零跳过</small></dd></div>
     <div class="fact"><dt>前端测试</dt><dd>42</dd></div>
   </dl>
 </header>
@@ -742,7 +742,7 @@ docker compose -p fp-demo up --detach --wait backend frontend</code></pre>
   <h2><span class="h-num">05</span>后端代码地图</h2>
 
   <p>
-    <code>backend/src/main/java/com/forgepilot/</code> 下 177 个类，下表列出其中的主要类，不求穷尽。
+    <code>backend/src/main/java/com/forgepilot/</code> 下按包组织，下表列出其中的主要类，不求穷尽。
     每包先给职责，再逐文件说明。
   </p>
   <p class="lb-key"><span class="lb"></span> 标记<strong>承重文件</strong>：改动它们会影响不变量、哈希稳定性或授权边界，动前先读它自己的 javadoc。</p>
@@ -1047,7 +1047,7 @@ docker compose -p fp-demo up --detach --wait backend frontend</code></pre>
 <!-- ═══════════════════ 06 ═══════════════════ -->
 <section id="s6">
   <h2><span class="h-num">06</span>前端代码地图</h2>
-  <p>Vue 3 + TypeScript + Vite，<code>frontend/src/</code> 下 34 个文件 / 9123 行。无状态管理库、无 UI 组件库、无 HTTP 客户端库——这些都被 lint 明确禁止。</p>
+  <p>Vue 3 + TypeScript + Vite，<code>frontend/src/</code> 下按 feature 组织。无状态管理库、无 UI 组件库、无 HTTP 客户端库——这些都被 lint 明确禁止。</p>
 
   <div class="tw"><table>
     <caption>基础设施与外壳</caption>
@@ -1416,7 +1416,7 @@ python3 evaluation/tools/formal_evaluation.py report \
   <div class="tw"><table>
     <thead><tr><th>范围</th><th class="n">规模</th><th>说明</th></tr></thead>
     <tbody>
-      <tr><td>后端</td><td class="n">338</td><td>54 个测试文件，<strong>零跳过</strong>。</td></tr>
+      <tr><td>后端</td><td class="n">全绿</td><td>Testcontainers 真实 PostgreSQL，<strong>零跳过</strong>。</td></tr>
       <tr><td>前端</td><td class="n">42</td><td>14 个测试文件。</td></tr>
       <tr><td>评测</td><td class="n">18 + 30</td><td>18 个 unittest + <code>score.py --selftest</code> 的 30 项检查。</td></tr>
     </tbody>
@@ -1519,7 +1519,7 @@ python3 evaluation/tools/score.py --selftest</code></pre>
 <footer class="end">
   <p>
     本手册描述的是<strong>当前形态</strong>，不含沿革叙述。数字来自 2026-08-27 的实测：
-    后端 177 个类 / 13,767 行 / 338 测试，前端 34 个文件 / 9,123 行 / 42 测试，20 张表 / 10 条迁移，60 个 API 端点。
+    8 个后端包、20 张表、10 条迁移、6 个一级导航、11 条产品路由。用例数与代码行数逐提交变动，不在此固化。
   </p>
   <p>
     更权威的单一定义处在仓库里：架构与数据模型见 <code>docs/v2/ARCHITECTURE.md</code>，
