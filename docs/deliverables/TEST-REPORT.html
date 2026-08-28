@@ -562,8 +562,9 @@ python3 evaluation/tools/postfreeze_provider_correction.py verify</code></pre>
   <h3>9.3 已修复：文档中的过期数字</h3>
   <p>
     七个文件（含 <code>README.md</code>、<code>CLAUDE.md</code>、<code>AGENTS.md</code> 与三个子项目 README）
-    仍写着「332 个测试 / 37 个测试」，而当时实际为 333 / 42（限流落地后为 337 / 42）；产品文档中也<strong>一处未提及</strong>已交付的项目归档能力。
-    已全部修正。
+    仍写着「332 个测试 / 37 个测试」，而当时实际为 333 / 42；产品文档中也<strong>一处未提及</strong>已交付的项目归档能力。
+    当轮已修正。<strong>但这一类缺陷会复发</strong>：测试数散落在七八个文件里，没有任何机制保证它们同步——
+    本报告之后新增限流，套件到 338，这些数字又一次全部落后。真正的修法是让它们不再被手写重复，而不是再修一次。
   </p>
 
   <h3>9.4 测试执行过程中暴露的一个方法学问题</h3>

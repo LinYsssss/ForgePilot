@@ -55,7 +55,11 @@ web layer.
   insert, keep the CHECK as the last line of defence, and assert the two lists
   agree by walking the whole enum end to end.
 - Migrations are append-only. Never edit or renumber an applied migration; add
-  the next version instead.
+  the next version instead. **This includes their comments.** Flyway records a
+  checksum per file and validates it on every start, so changing one comment byte
+  makes the backend fail to boot against any database that already ran it. The
+  `Dxxx` markers still in V1-V10 cite a decision log that no longer exists; they
+  are stranded on purpose — leave them, and do not go looking for that document.
 - The only `ON DELETE` clause is `pull_request.author_user_id ON DELETE SET
   NULL`, exactly as `ARCHITECTURE.md` §2.3 defines. Everywhere else a hard
   delete is refused by the foreign key until something defines its semantics.

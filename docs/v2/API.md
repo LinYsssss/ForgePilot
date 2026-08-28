@@ -2,6 +2,8 @@
 
 本文是账户、成员目录与 SCM 身份三块的 HTTP 契约。所有写请求使用 Session Cookie + `X-XSRF-TOKEN`；错误体统一为 `{code,message,traceId}`。项目内资源对非成员返回 404，对已知项目但角色不足返回 403。
 
+登录、注册与两个 webhook 端点另有按客户端地址计的限流，超出配额返回 **429** 与 `{"code":"too_many_requests"}`；该响应由过滤器直接写出，不经 MVC。配额见 `.env.example` 的三个 `FORGEPILOT_*_PER_*` 变量。
+
 需求、知识、仓库与审查的接口未在本文逐条列出——它们的行为由 [ARCHITECTURE.md](./ARCHITECTURE.md) 的流程契约与状态机定义，接口形状可直接读对应 `*Controller`。
 
 ## 账户
@@ -25,6 +27,10 @@
 {"userId":12,"username":"lin","displayName":"林工","roles":["DEVELOPER","REVIEWER"]}
 ```
 
+- `POST /api/projects/{projectId}/archive`
+  - 仅 LEADER；成功 204。已归档时返回 409。归档只改 `status`，项目内数据一律保留。
+- `POST /api/projects/{projectId}/unarchive`
+  - 仅 LEADER；成功 204。未归档时返回 409。
 - `GET /api/projects/{projectId}/members`
   - 所有成员可读。
 - `GET /api/projects/{projectId}/members/candidates?q={query}&page=0&size=20`
