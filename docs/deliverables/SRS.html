@@ -465,7 +465,7 @@
       <tr><td class="id">NFR-S9</td><td>公开端点的任何失败不得以堆栈逃逸</td><td>校验完成前的每种失败都答成同一种「无法验证」</td></tr>
       <tr><td class="id">NFR-S10</td><td>模型调用留下审计</td><td>记录的是「一次<strong>尝试</strong>」，重试留两行；超时与失败分开记录</td></tr>
       <tr><td class="id">NFR-S11</td><td>人工决策全部留痕</td><td>Finding 每次流转、PR 关联每次变更、三类资源每次删除均永久记录</td></tr>
-      <tr><td class="id">NFR-S12</td><td>无需认证即可触达且做昂贵工作的端点须限流</td><td>登录 20 次／分、注册 5 次／10 分、webhook 60 次／分，均<strong>按对端地址</strong>；限流装在认证之前，被限的登录不付 BCrypt 代价。<strong>不采信 <code>X-Forwarded-For</code></strong>——它可伪造，采信等于取消限流，代价是代理之后全部客户端共享一份配额</td></tr>
+      <tr><td class="id">NFR-S12</td><td>无需认证即可触达且做昂贵工作的端点须限流</td><td>登录 20 次／分、注册 5 次／10 分、webhook 60 次／分，均<strong>按客户端地址</strong>；限流装在认证之前，被限的登录不付 BCrypt 代价。客户端地址由 <code>server.forward-headers-strategy: native</code> 解析——Tomcat 只信任内网网段的代理，因此依赖「nginx 是唯一入口」这个部署前提</td></tr>
     </tbody>
   </table></div>
 

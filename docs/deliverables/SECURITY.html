@@ -286,10 +286,25 @@
       <code>RateLimiterTest</code> 锁住这一条，以及配额本身与窗口翻转（否则第一个窗口用完就永久拒绝）。
     </p>
   </div>
+  <div class="note">
+    <span class="label">同一条链上装两个限流器，第二个曾整个失效</span>
+    <p>
+      <code>RateLimitFilter</code> 继承 <code>OncePerRequestFilter</code>，而基类默认用<em>类名</em>
+      做「本请求已过此过滤器」的标记。auth 链上装着本类的<strong>两个</strong>实例，第一个打上标记之后，
+      第二个会在每个请求上整个跳过自己——注册限流因此完全失效，而注册照常返回 201，
+      没有任何报错或日志。修法是让标记按实例名区分（覆写
+      <code>getAlreadyFilteredAttributeName()</code>）。这一条现在由 <code>AuthApiTest</code> 里
+      针对注册端点的独立测试锁住：只测登录是发现不了它的。
+    </p>
+  </div>
   <p>
-    <strong>刻意不信任 <code>X-Forwarded-For</code>。</strong>那个头可由调用方任意伪造；一旦采信，
-    攻击者每次请求换一个假地址就能完全绕开限流——那比没有限流更糟，因为它给出了一种「已防护」的错觉。
-    代价见第 10 章残余风险第 4 条。
+    地址取 <code>getRemoteAddr()</code>，而它是否等于真实客户端取决于
+    <code>server.forward-headers-strategy</code>。本部署设为 <code>native</code>：nginx 是唯一入口，
+    会把真实地址追加进 <code>X-Forwarded-For</code>，Tomcat 的 <code>RemoteIpValve</code>
+    <strong>只信任内网网段的代理</strong>并从右往左取第一个非内网地址，因此客户端自己伪造的
+    <code>X-Forwarded-For</code> 拿不到信任。<strong>不开这个开关才是危险的</strong>——那时每个请求都记成
+    nginx 那一个地址，配额变成全体共享，而被丢掉的 webhook 投递不会被 provider 重试。
+    剩下的风险见第 10 章第 4 条。
   </p>
 </section>
 
@@ -654,9 +669,9 @@
       </tr>
       <tr>
         <td class="n">4</td>
-        <td><strong>限流按对端地址计数，代理之后会退化</strong></td>
-        <td>见 2.6。<code>getRemoteAddr()</code> 是唯一可信的对端地址；<code>X-Forwarded-For</code> 可任意伪造，采信它等于取消限流</td>
-        <td>部署在反向代理之后时，<strong>全部客户端共享代理那一个地址的配额</strong>。真正按客户端限流必须配在代理侧</td>
+        <td><strong>限流的可信度取决于「nginx 是唯一入口」这个部署前提</strong></td>
+        <td>见 2.6。<code>forward-headers-strategy: native</code> 让 Tomcat 从 <code>X-Forwarded-For</code> 解析客户端地址，且只信任内网网段的代理</td>
+        <td>若哪天应用端口被直接暴露、绕过 nginx，客户端伪造的 <code>X-Forwarded-For</code> 就会被采信，限流形同虚设。这个前提由部署配置保证，代码无法自证</td>
       </tr>
       <tr>
         <td class="n">5</td>
@@ -693,7 +708,7 @@
 
   <h3>10.1 建议的处置优先级</h3>
   <ol>
-    <li><strong>在反向代理侧按客户端限流（#4）</strong>——应用层已有一道兜底（2.6），但只有代理那一层握有可信的对端地址。不需要改代码。</li>
+    <li><strong>确认应用端口没有绕过 nginx 暴露（#4）</strong>——整套限流的可信度都压在「nginx 是唯一入口」上。Compose 默认把端口绑在 <code>127.0.0.1</code>（<code>FORGEPILOT_BIND_ADDRESS</code>），改动它之前先想清楚这一条。不需要改代码。</li>
     <li><strong>确认部署侧 TLS 配置（#8）</strong>——不需要改代码，但配置错误的后果最严重。</li>
     <li><strong>知识文档分级（#9）</strong>——一个「不参与检索」的标记即可显著降低误发风险。</li>
     <li><strong>密钥轮换与项目级密钥（#2、#3）</strong>——需要迁移与重加密，规模较大，适合作为独立工作。</li>
