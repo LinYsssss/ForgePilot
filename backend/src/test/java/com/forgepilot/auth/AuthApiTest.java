@@ -16,6 +16,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.http.MediaType;
@@ -51,7 +52,17 @@ class AuthApiTest extends PostgresTestBase {
     private static final String NEW_PASSWORD = "rotated-horse-battery-staple";
     private static final String WRONG_PASSWORD = "guessed-horse-battery-staple";
 
+    /** 一个 RFC 5737 文档用地址，只有限流那条测试用它：打满它不会影响本类其他测试。 */
+    private static final String FLOODING_ADDRESS = "203.0.113.7";
+
     private static final AtomicInteger SEQUENCE = new AtomicInteger();
+
+    /** 本类专用的源地址：限流按源地址计数，各测试类分开才不会互相耗尽配额。 */
+    private static final AtomicInteger ADDRESSES = new AtomicInteger();
+
+    /** 从配置读而不是写死：配额调整时本测试跟着走而不是变红。 */
+    @Value("${forgepilot.security.login-attempts-per-minute}")
+    private int loginPermits;
 
     @Autowired
     private WebApplicationContext context;
@@ -179,6 +190,44 @@ class AuthApiTest extends PostgresTestBase {
         assertThat(browser.send(registration(username)).getStatus()).isEqualTo(409);
     }
 
+    /**
+     * 登录限流<strong>装在真实过滤器链里</strong>，并答那个唯一的错误体。
+     * {@code RateLimiterTest} 证明计数逻辑，证明不了装配。
+     *
+     * <p>上界取 {@code 2 * 配额 + 1} 而非恰好 {@code 配额 + 1}：固定窗口的边界是绝对
+     * 时刻，这串请求可能正好跨过它而使配额整份恢复。断言的是「一定会被限、且不会提前
+     * 被限」，而不是一个会偶发翻车的精确次序。
+     */
+    @Test
+    void repeatedLoginAttemptsFromOneAddressAreRateLimited() throws Exception {
+        // 走完整的 SPA 路径，而不是裸发 POST：登录受 CSRF 保护，裸发会在
+        // CsrfFilter 处以 403 结束，根本走不到限流器——那样这条测试只会
+        // 一直绿着，却什么都没验证。
+        Browser attacker = new Browser(FLOODING_ADDRESS);
+        attacker.bootstrap();
+        String username = register(attacker);
+
+        MockHttpServletResponse limited = null;
+        int limitedAt = 0;
+        for (int attempt = 1; attempt <= 2 * loginPermits + 1 && limited == null; attempt++) {
+            MockHttpServletResponse response = attacker.login(username, WRONG_PASSWORD);
+            if (response.getStatus() == 429) {
+                limited = response;
+                limitedAt = attempt;
+            } else {
+                assertThat(response.getStatus())
+                        .as("配额内第 %d 次应由凭据决定，而不是被限流", attempt)
+                        .isEqualTo(401);
+            }
+        }
+
+        assertThat(limited).as("发满两倍配额仍未被限流，说明过滤器没有生效").isNotNull();
+        assertThat(limitedAt).as("被限的次序不可能早于配额本身").isGreaterThan(loginPermits);
+        assertThat(limited.getContentAsString())
+                .contains("\"code\":\"too_many_requests\"")
+                .doesNotContain("password");
+    }
+
     // ------------------------------------------------------------------ helpers
 
     private String register(Browser browser) throws Exception {
@@ -223,7 +272,19 @@ class AuthApiTest extends PostgresTestBase {
 
         private final MockHttpSession session = new MockHttpSession();
 
+        /** 这一个浏览器的源地址；见 {@link AuthApiTest#ADDRESSES}。 */
+        private final String address;
+
         private String csrfToken = "";
+
+        Browser() {
+            this("192.0.2." + (1 + ADDRESSES.incrementAndGet() % 60));
+        }
+
+        /** 指定源地址：限流那条测试要的正是「同一个地址反复尝试」。 */
+        Browser(String address) {
+            this.address = address;
+        }
 
         /** The SPA cold start: 401, but the response hands out the CSRF cookie. */
         MockHttpServletResponse bootstrap() throws Exception {
@@ -272,7 +333,10 @@ class AuthApiTest extends PostgresTestBase {
         }
 
         private MockHttpServletResponse exchange(MockHttpServletRequestBuilder request) throws Exception {
-            request.session(this.session);
+            request.session(this.session).with(raw -> {
+                raw.setRemoteAddr(this.address);
+                return raw;
+            });
             if (StringUtils.hasText(this.csrfToken)) {
                 request.cookie(new Cookie(CSRF_COOKIE, this.csrfToken));
             }

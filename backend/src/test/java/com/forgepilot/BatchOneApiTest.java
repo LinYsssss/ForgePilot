@@ -19,6 +19,7 @@ import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.ResultMatcher;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
+import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 import tools.jackson.databind.JsonNode;
@@ -34,6 +35,11 @@ import tools.jackson.databind.ObjectMapper;
 class BatchOneApiTest extends PostgresTestBase {
 
     private static final AtomicInteger SEQUENCE = new AtomicInteger();
+
+    /** 本类专用的源地址：限流按源地址计数，各测试类分开才不会互相耗尽配额。 */
+    private static final int ADDRESS_BASE = 80;
+
+    private static final AtomicInteger ADDRESSES = new AtomicInteger();
 
     @Autowired
     private WebApplicationContext context;
@@ -309,6 +315,9 @@ class BatchOneApiTest extends PostgresTestBase {
         private static final String PASSWORD = "correct-horse-battery";
 
         private final MockHttpSession session = new MockHttpSession();
+
+        /** 这一个客户端的源地址；见 {@code ADDRESS_BASE}。 */
+        private final String address = "192.0.2." + (ADDRESS_BASE + ADDRESSES.incrementAndGet() % 60);
         private final String username;
         private Cookie csrf;
         private long userId;
@@ -317,16 +326,25 @@ class BatchOneApiTest extends PostgresTestBase {
             this.username = username;
         }
 
+        /** 把本客户端的源地址盖在请求上，让限流按「不同的人」而不是「同一台机器」计数。 */
+        private RequestPostProcessor remoteAddress() {
+            return raw -> {
+                raw.setRemoteAddr(address);
+                return raw;
+            };
+        }
+
         private void bootstrapCsrf() throws Exception {
             // 匿名请求，但它仍然必须把 JS 客户端所需的 token 发出来。
-            csrf = mockMvc.perform(MockMvcRequestBuilders.get("/api/auth/me").session(session))
+            csrf = mockMvc.perform(MockMvcRequestBuilders.get("/api/auth/me")
+                            .session(session).with(remoteAddress()))
                     .andReturn().getResponse().getCookie("XSRF-TOKEN");
             assertThat(csrf).as("GET /api/auth/me must issue the XSRF-TOKEN cookie").isNotNull();
         }
 
         private void login() throws Exception {
             MvcResult result = mockMvc.perform(MockMvcRequestBuilders.post("/api/auth/login")
-                            .session(session)
+                            .session(session).with(remoteAddress())
                             .param("username", username)
                             .param("password", PASSWORD)
                             .cookie(csrf)
@@ -342,12 +360,13 @@ class BatchOneApiTest extends PostgresTestBase {
         }
 
         private JsonNode read(String path) throws Exception {
-            return body(mockMvc.perform(MockMvcRequestBuilders.get(path).session(session))
+            return body(mockMvc.perform(MockMvcRequestBuilders.get(path).session(session).with(remoteAddress()))
                     .andExpect(status().is2xxSuccessful()).andReturn());
         }
 
         private void readExpecting(String path, ResultMatcher expected) throws Exception {
-            mockMvc.perform(MockMvcRequestBuilders.get(path).session(session)).andExpect(expected);
+            mockMvc.perform(MockMvcRequestBuilders.get(path).session(session).with(remoteAddress()))
+                    .andExpect(expected);
         }
 
         private JsonNode post(String path, String payload) throws Exception {
@@ -370,14 +389,14 @@ class BatchOneApiTest extends PostgresTestBase {
 
         private void deleteExpecting(String path, ResultMatcher expected) throws Exception {
             mockMvc.perform(MockMvcRequestBuilders.delete(path)
-                            .session(session)
+                            .session(session).with(remoteAddress())
                             .cookie(csrf)
                             .header("X-XSRF-TOKEN", csrf.getValue()))
                     .andExpect(expected);
         }
 
         private MockHttpServletRequestBuilder write(MockHttpServletRequestBuilder request, String payload) {
-            return request.session(session)
+            return request.session(session).with(remoteAddress())
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(payload)
                     .cookie(csrf)

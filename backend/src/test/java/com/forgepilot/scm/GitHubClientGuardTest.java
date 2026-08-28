@@ -34,6 +34,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.ResultMatcher;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
+import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 import tools.jackson.databind.JsonNode;
@@ -64,6 +65,12 @@ import tools.jackson.databind.ObjectMapper;
 class GitHubClientGuardTest extends ScmTestBase {
 
     private static final String WEBHOOK = "/api/scm/github/webhook";
+
+    /** 本类专用的源地址：限流按源地址计数，各测试类分开才不会互相耗尽配额。 */
+    private static final RequestPostProcessor FROM_PROVIDER = raw -> {
+        raw.setRemoteAddr("192.0.2.243");
+        return raw;
+    };
     private static final AtomicInteger SEQUENCE = new AtomicInteger();
     private static final String BASE_SHA = "1111111111111111111111111111111111111111";
     private static final String HEAD_SHA = "2222222222222222222222222222222222222222";
@@ -279,7 +286,7 @@ class GitHubClientGuardTest extends ScmTestBase {
                  "repository":{"id":"%s","html_url":"%s/octo/repo"},
                  "pull_request":{"number":%d}}"""
                 .formatted(number, fixture.externalId, provider.apiBase(), number);
-        return mockMvc.perform(MockMvcRequestBuilders.post(WEBHOOK)
+        return mockMvc.perform(MockMvcRequestBuilders.post(WEBHOOK).with(FROM_PROVIDER)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body)
                         .header("X-Hub-Signature-256", sign(body, fixture.secret))
