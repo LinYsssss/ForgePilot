@@ -49,6 +49,11 @@ services:
       FORGEPILOT_KNOWLEDGE_EMBEDDING_MODEL: ${FORGEPILOT_KNOWLEDGE_EMBEDDING_MODEL:-}
       FORGEPILOT_KNOWLEDGE_EMBEDDING_VERSION: ${FORGEPILOT_KNOWLEDGE_EMBEDDING_VERSION:-}
       FORGEPILOT_REVIEW_CONCURRENCY: ${FORGEPILOT_REVIEW_CONCURRENCY:-2}
+      # Rate limits. Defaults repeated here for the same reason
+      # FORGEPILOT_REVIEW_CONCURRENCY is: an empty value will not bind to an int.
+      FORGEPILOT_LOGIN_ATTEMPTS_PER_MINUTE: ${FORGEPILOT_LOGIN_ATTEMPTS_PER_MINUTE:-20}
+      FORGEPILOT_REGISTRATIONS_PER_TEN_MINUTES: ${FORGEPILOT_REGISTRATIONS_PER_TEN_MINUTES:-5}
+      FORGEPILOT_WEBHOOK_DELIVERIES_PER_MINUTE: ${FORGEPILOT_WEBHOOK_DELIVERIES_PER_MINUTE:-60}
       # The application declares this with no fallback, so a missing key stops
       # startup rather than silently encrypting with a weak default. The value
       # here is local/CI only and is never a real key, exactly as with the

@@ -2,10 +2,14 @@ package com.forgepilot.auth;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.time.Clock;
 
 import com.forgepilot.common.ApiError;
+import com.forgepilot.common.RateLimitFilter;
+import com.forgepilot.common.RateLimiter;
 import jakarta.servlet.DispatcherType;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication.Type;
 import org.springframework.context.annotation.Bean;
@@ -21,6 +25,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.intercept.AuthorizationFilter;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import tools.jackson.databind.ObjectMapper;
 
 /**
@@ -46,6 +51,15 @@ class SecurityConfig {
     private static final ApiError FORBIDDEN =
             new ApiError("forbidden", "The request was rejected.", "");
 
+    static final String LOGIN_PATH = "/api/auth/login";
+    static final String REGISTER_PATH = "/api/auth/register";
+
+    /**
+     * 单个窗口内最多跟踪多少个客户端地址。它给限流表的内存封了顶；
+     * 超出之后对新地址 fail-open，理由见 {@link RateLimiter}。
+     */
+    private static final int MAX_TRACKED_CLIENTS = 10_000;
+
     /** 口令哈希使用 Spring Security 默认的 BCrypt。 */
     @Bean
     PasswordEncoder passwordEncoder() {
@@ -59,11 +73,24 @@ class SecurityConfig {
     @Bean
     @ConditionalOnWebApplication(type = Type.SERVLET)
     SecurityFilterChain apiSecurityFilterChain(HttpSecurity http, UserAccountRepository accounts,
-            ObjectMapper json) throws Exception {
+            ObjectMapper json,
+            @Value("${forgepilot.security.login-attempts-per-minute:20}") int loginPermits,
+            @Value("${forgepilot.security.registrations-per-ten-minutes:5}") int registerPermits)
+            throws Exception {
         // SessionVersionFilter 也复用它，使「会话已被吊销」与「压根没有会话」
         // 返回完全相同的响应体。
         AuthenticationEntryPoint unauthenticated = (request, response, exception) ->
                 write(response, json, HttpStatus.UNAUTHORIZED, UNAUTHENTICATED);
+
+        // 这两个是本应用唯一无需认证即可触达、且会做昂贵工作的写端点：登录要算一次
+        // BCrypt，注册要写一行。它们因此是口令枚举与账号洪泛的入口，也是这一层限流
+        // 唯一的目标——已认证成员的正常操作不受影响，否则批量添加成员之类的动作会被误伤。
+        RateLimitFilter loginLimit = new RateLimitFilter(
+                new RateLimiter(Clock.systemUTC(), loginPermits, 60_000L, MAX_TRACKED_CLIENTS),
+                json, (method, path) -> "POST".equals(method) && LOGIN_PATH.equals(path));
+        RateLimitFilter registerLimit = new RateLimitFilter(
+                new RateLimiter(Clock.systemUTC(), registerPermits, 600_000L, MAX_TRACKED_CLIENTS),
+                json, (method, path) -> "POST".equals(method) && REGISTER_PATH.equals(path));
 
         return http
                 .authorizeHttpRequests(requests -> requests
@@ -73,7 +100,7 @@ class SecurityConfig {
                         // 探测什么：下面的 entry point 直接设置状态码而不调用 sendError，
                         // 因此被拒绝的请求本身不会产生 ERROR dispatch。
                         .dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/auth/register").permitAll()
+                        .requestMatchers(HttpMethod.POST, REGISTER_PATH).permitAll()
                         // application.yml 只暴露了 `health`，因此放行整个命名空间
                         // 并不会多暴露任何东西；ActuatorExposureTest 与
                         // scripts/phase1-compose-smoke.sh 要求 /actuator/metrics 必须
@@ -86,7 +113,7 @@ class SecurityConfig {
                 // XOR 处理器也会拒绝原始 cookie 值。
                 .csrf(CsrfConfigurer::spa)
                 .formLogin(login -> login
-                        .loginProcessingUrl("/api/auth/login")
+                        .loginProcessingUrl(LOGIN_PATH)
                         .successHandler((request, response, authentication) -> {
                             AccountPrincipal principal = (AccountPrincipal) authentication.getPrincipal();
                             request.getSession().setAttribute(
@@ -112,6 +139,9 @@ class SecurityConfig {
                 // 登录后不重放任何请求，因此匿名请求无需占用 session。
                 .requestCache(RequestCacheConfigurer::disable)
                 .addFilterBefore(new SessionVersionFilter(accounts, unauthenticated), AuthorizationFilter.class)
+                // 必须在认证之前：限流的目的是让那次 BCrypt 根本不发生。
+                .addFilterBefore(loginLimit, UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(registerLimit, UsernamePasswordAuthenticationFilter.class)
                 .build();
     }
 

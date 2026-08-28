@@ -23,6 +23,15 @@ server:
   port: ${SERVER_PORT:8080}
 
 forgepilot:
+  # Application-layer rate limits. Defence in depth, not the primary control;
+  # RateLimitFilter's javadoc has the why, including why X-Forwarded-For is not
+  # trusted and what that costs behind a proxy.
+  security:
+    login-attempts-per-minute: ${FORGEPILOT_LOGIN_ATTEMPTS_PER_MINUTE:20}
+    registrations-per-ten-minutes: ${FORGEPILOT_REGISTRATIONS_PER_TEN_MINUTES:5}
+    # Generous on purpose: a throttled delivery is a lost delivery, and one push
+    # plus provider retries all land on the same address.
+    webhook-deliveries-per-minute: ${FORGEPILOT_WEBHOOK_DELIVERIES_PER_MINUTE:60}
   ai:
     base-url: ${FORGEPILOT_AI_BASE_URL:}
     api-key: ${FORGEPILOT_AI_API_KEY:}
