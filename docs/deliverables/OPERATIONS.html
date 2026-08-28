@@ -1,0 +1,632 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ForgePilot 运维手册</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=Noto+Serif+SC:wght@600;700&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+  :root {
+    --paper:#fbfbfc; --surface:#f4f5f8; --surface-2:#eceef3;
+    --ink:#16191f; --ink-2:#3b414d; --muted:#5c6472; --subtle:#8891a0;
+    --rule:#e2e5ea; --rule-strong:#cbd1da;
+    --accent:#2c5fd6; --accent-soft:#e8eefb;
+    --danger:#b4232e; --danger-soft:#fbeaec;
+    --warn:#8a5a00; --warn-soft:#fdf3e0;
+    --ok:#1d6b47; --ok-soft:#e6f3ec;
+    --sans:"Noto Sans SC",system-ui,-apple-system,sans-serif;
+    --serif:"Noto Serif SC",Georgia,"Songti SC",serif;
+    --mono:"JetBrains Mono",ui-monospace,Consolas,monospace;
+    --measure:70ch;
+    --s1:.25rem; --s2:.5rem; --s3:.75rem; --s4:1rem;
+    --s5:1.5rem; --s6:2rem; --s7:3rem; --s8:4.5rem;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper:#12141a; --surface:#191c23; --surface-2:#22262f;
+      --ink:#e6e8ec; --ink-2:#c3c8d2; --muted:#99a1b0; --subtle:#737c8c;
+      --rule:#2a2f3a; --rule-strong:#3a4150;
+      --accent:#7ba3f5; --accent-soft:#1a2440;
+      --danger:#f0808c; --danger-soft:#331a1e;
+      --warn:#e0aa55; --warn-soft:#2e2415;
+      --ok:#6cc59a; --ok-soft:#16291f;
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper:#12141a; --surface:#191c23; --surface-2:#22262f;
+    --ink:#e6e8ec; --ink-2:#c3c8d2; --muted:#99a1b0; --subtle:#737c8c;
+    --rule:#2a2f3a; --rule-strong:#3a4150;
+    --accent:#7ba3f5; --accent-soft:#1a2440;
+    --danger:#f0808c; --danger-soft:#331a1e;
+    --warn:#e0aa55; --warn-soft:#2e2415;
+    --ok:#6cc59a; --ok-soft:#16291f;
+  }
+  *,*::before,*::after{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{margin:0;background:var(--paper);color:var(--ink);font:400 16px/1.75 var(--sans);-webkit-font-smoothing:antialiased}
+  .layout{display:grid;grid-template-columns:16rem minmax(0,1fr);align-items:start;gap:var(--s7);max-width:92rem;margin:0 auto;padding:var(--s6) var(--s5) var(--s8)}
+
+  nav.toc{position:sticky;top:var(--s5);max-height:calc(100vh - 3rem);overflow-y:auto;padding-right:var(--s3);border-right:1px solid var(--rule);font-size:.8125rem}
+  nav.toc .brand{font:700 .6875rem/1.4 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--accent);margin-bottom:var(--s4)}
+  nav.toc ol{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:1px}
+  nav.toc a{display:flex;gap:var(--s3);padding:.3rem var(--s2);border-radius:3px;color:var(--muted);text-decoration:none;line-height:1.45}
+  nav.toc a:hover{background:var(--surface);color:var(--ink)}
+  nav.toc a:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+  nav.toc .n{flex:0 0 1.5rem;font:500 .6875rem/1.7 var(--mono);color:var(--subtle);font-variant-numeric:tabular-nums}
+  main{min-width:0;max-width:100%}
+
+  header.mast{padding-bottom:var(--s5);border-bottom:3px solid var(--ink);margin-bottom:var(--s6)}
+  .eyebrow{font:700 .6875rem/1.4 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--accent);margin:0 0 var(--s3)}
+  h1{font:700 clamp(1.875rem,4.2vw,2.75rem)/1.15 var(--serif);margin:0 0 var(--s4);letter-spacing:-.01em;text-wrap:balance}
+  .standfirst{max-width:var(--measure);margin:0;color:var(--ink-2);font-size:1.0625rem;line-height:1.8}
+  .docmeta{display:grid;grid-template-columns:repeat(auto-fit,minmax(9rem,1fr));gap:1px;margin-top:var(--s5);background:var(--rule);border:1px solid var(--rule)}
+  .docmeta > div{background:var(--paper);padding:var(--s3) var(--s4)}
+  .docmeta dt{font:500 .6875rem/1.5 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--subtle)}
+  .docmeta dd{margin:var(--s1) 0 0;font:500 .875rem/1.4 var(--sans)}
+
+  section{margin-top:var(--s8);scroll-margin-top:var(--s4)}
+  section > :first-child{margin-top:0}
+  h2{display:flex;align-items:baseline;gap:var(--s4);font:700 clamp(1.25rem,2.4vw,1.75rem)/1.25 var(--serif);margin:0 0 var(--s4);padding-bottom:var(--s3);border-bottom:1px solid var(--rule-strong);text-wrap:balance}
+  h2 .hn{flex:0 0 auto;font:500 .875rem/1.6 var(--mono);color:var(--accent);font-variant-numeric:tabular-nums}
+  h3{font:700 1.0625rem/1.4 var(--sans);margin:var(--s6) 0 var(--s3)}
+  h4{font:700 .9375rem/1.5 var(--sans);margin:var(--s5) 0 var(--s2);color:var(--ink-2)}
+  p,ul,ol{max-width:var(--measure)}
+  p{margin:0 0 var(--s4)}
+  ul,ol{margin:0 0 var(--s4);padding-left:1.35rem}
+  li{margin-bottom:var(--s2)}
+  a{color:var(--accent);text-underline-offset:2px}
+  a:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:2px}
+  code{font:400 .875em/1.5 var(--mono);background:var(--surface-2);padding:.1em .35em;border-radius:3px;word-break:break-word}
+  pre{margin:0 0 var(--s4);padding:var(--s4);overflow-x:auto;background:var(--surface);border:1px solid var(--rule);border-left:3px solid var(--accent);font:400 .8125rem/1.7 var(--mono)}
+  pre code{background:none;padding:0}
+  pre .c{color:var(--subtle)}
+
+  .tw{overflow-x:auto;margin:0 0 var(--s4);border:1px solid var(--rule)}
+  table{width:100%;border-collapse:collapse;font-size:.8125rem}
+  caption{caption-side:top;text-align:left;padding:var(--s3) var(--s4);background:var(--surface-2);border-bottom:1px solid var(--rule);font:500 .75rem/1.6 var(--mono);color:var(--muted)}
+  th,td{padding:.45rem var(--s4);text-align:left;vertical-align:top;border-bottom:1px solid var(--rule)}
+  thead th{background:var(--surface);font:700 .6875rem/1.6 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);white-space:nowrap}
+  tbody tr:last-child td{border-bottom:0}
+  tbody tr:hover{background:var(--surface)}
+  td.id{font:700 .75rem/1.6 var(--mono);white-space:nowrap;color:var(--accent)}
+  td.f{font:500 .75rem/1.6 var(--mono)}
+  td.n{font-variant-numeric:tabular-nums;white-space:nowrap;text-align:right}
+  .yes{color:var(--ok);font-weight:700}
+  .no{color:var(--subtle)}
+  .cond{color:var(--warn);font-size:.75rem}
+
+  .note{max-width:var(--measure);margin:0 0 var(--s4);padding:var(--s4) var(--s5);background:var(--surface);border-left:3px solid var(--accent)}
+  .note > :last-child{margin-bottom:0}
+  .note .label{display:block;font:700 .6875rem/1.5 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--accent);margin-bottom:var(--s2)}
+  .note.red{background:var(--danger-soft);border-left-color:var(--danger)}
+  .note.red .label{color:var(--danger)}
+  .note.amber{background:var(--warn-soft);border-left-color:var(--warn)}
+  .note.amber .label{color:var(--warn)}
+
+  footer.end{margin-top:var(--s8);padding-top:var(--s5);border-top:3px solid var(--ink);max-width:var(--measure);color:var(--muted);font-size:.875rem}
+
+  @media (max-width:68rem){
+    .layout{grid-template-columns:1fr;gap:var(--s5)}
+    nav.toc{position:static;max-height:none;border-right:0;border-bottom:1px solid var(--rule);padding:0 0 var(--s4)}
+    nav.toc ol{display:grid;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr))}
+  }
+  @media (prefers-reduced-motion:reduce){*{animation-duration:.01ms !important;transition-duration:.01ms !important}}
+  @media print{
+    .layout{grid-template-columns:1fr;padding:0}
+    nav.toc{display:none}
+    section{page-break-inside:avoid}
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+
+<nav class="toc" aria-label="目录">
+  <div class="brand">运维手册</div>
+  <ol>
+    <li><a href="#s1"><span class="n">1</span><span>运行拓扑</span></a></li>
+    <li><a href="#s2"><span class="n">2</span><span>承重的环境变量</span></a></li>
+    <li><a href="#s3"><span class="n">3</span><span>健康检查</span></a></li>
+    <li><a href="#s4"><span class="n">4</span><span>日常操作</span></a></li>
+    <li><a href="#s5"><span class="n">5</span><span>起不来：症状对照</span></a></li>
+    <li><a href="#s6"><span class="n">6</span><span>起来了但不对</span></a></li>
+    <li><a href="#s7"><span class="n">7</span><span>容量与余量</span></a></li>
+    <li><a href="#s8"><span class="n">8</span><span>绝对不要做的事</span></a></li>
+  </ol>
+</nav>
+
+<main>
+
+<header class="mast">
+  <p class="eyebrow">Operations · 2026-08-28</p>
+  <h1>ForgePilot 运维手册</h1>
+  <p class="standfirst">
+    这份文档面向<strong>要把这套东西跑起来、或者半夜发现它挂了</strong>的人。
+    它不解释系统为什么这样设计——那在架构与安全文档里；它只回答三件事：
+    正常长什么样、坏了长什么样、以及每一种「坏了」该怎么办。
+    第 5 章是其中最该先读的一章：本项目的大多数故障不是崩在运行中，而是<strong>压根起不来</strong>，
+    而它们的报错信息常常指向错误的方向。
+  </p>
+  <dl class="docmeta">
+    <div><dt>部署形态</dt><dd>单机 Compose<small>／3 容器</small></dd></div>
+    <div><dt>外部入口</dt><dd>1<small>／cloudflared</small></dd></div>
+    <div><dt>发布端口</dt><dd>全部 127.0.0.1</dd></div>
+    <div><dt>持久化</dt><dd>1 个卷</dd></div>
+    <div><dt>拓扑核对</dt><dd>2026-08-28<small>实测</small></dd></div>
+  </dl>
+</header>
+
+<!-- ══════ 1 ══════ -->
+<section id="s1">
+  <h2><span class="hn">1</span>运行拓扑</h2>
+
+  <p>下面这条链是 2026-08-28 在部署机上实际核对过的，不是设计意图：</p>
+
+<pre><code>公网
+  │  <span class="c">Cloudflare 边缘</span>
+  ▼
+cloudflared            <span class="c">宿主机 systemd 服务，不是容器</span>
+  │  <span class="c">systemctl status cloudflared</span>
+  ▼
+127.0.0.1:18081        <span class="c">docker-proxy，只监听回环</span>
+  ▼
+fp-demo-frontend-1     <span class="c">nginx，容器内 8080</span>
+  │  <span class="c">/          → SPA 静态文件</span>
+  │  <span class="c">/healthz   → 本地返回 200，不经后端</span>
+  │  <span class="c">/api/      → proxy_pass http://backend:8080</span>
+  ▼
+fp-demo-backend-1      <span class="c">Spring Boot，容器内 8080；另发布在 127.0.0.1:18080</span>
+  ▼
+fp-demo-postgres-1     <span class="c">pgvector/pg15，不发布任何端口</span>
+  ▼
+fp-demo_postgres-data  <span class="c">唯一的持久化卷</span></code></pre>
+
+  <h3>1.1 三件值得记住的事</h3>
+  <ul>
+    <li>
+      <strong>没有任何端口对公网开放。</strong>18080 与 18081 都绑在 <code>127.0.0.1</code>
+      （<code>FORGEPILOT_BIND_ADDRESS</code>），外部流量只能从 cloudflared 进来。
+      这不只是加固，还是限流可信的前提——见 3.3 与安全文档残余风险 #4。
+    </li>
+    <li>
+      <strong>cloudflared 不在 Compose 里。</strong>它是宿主机的 systemd 服务。
+      <code>docker compose down</code> 不会停它，重启它也不需要动容器。
+      「站点打不开但三个容器都 healthy」时，第一个要查的就是它。
+    </li>
+    <li>
+      <strong>后端那个 18080 是给运维用的旁路。</strong>业务流量都走 nginx。
+      对比这两个地址的返回，是判断「后端坏了」还是「nginx/前端坏了」最快的办法。
+    </li>
+  </ul>
+</section>
+
+<!-- ══════ 2 ══════ -->
+<section id="s2">
+  <h2><span class="hn">2</span>承重的环境变量</h2>
+
+  <p>
+    全部配置在 <code>.env</code>（不入库）里，样例见 <code>.env.example</code>。
+    下表只列<strong>配错了会出事</strong>的那些；其余变量有合理默认，可以不管。
+  </p>
+
+  <div class="tw"><table>
+    <thead><tr><th>变量</th><th>缺失/配错的后果</th><th>能不能热改</th></tr></thead>
+    <tbody>
+      <tr>
+        <td class="f">FORGEPILOT_DB_PASSWORD</td>
+        <td><strong>无兜底默认值</strong>。缺失时应用起不来，且报错指向错误的方向——见 5.1</td>
+        <td>否，改完要重建容器</td>
+      </tr>
+      <tr>
+        <td class="f">FORGEPILOT_SCM_SECRET_KEY</td>
+        <td><strong>无兜底默认值</strong>。它加密全部仓库令牌与 webhook 密钥；<strong>换掉它等于把已存的凭据全部作废</strong>，且无法解回</td>
+        <td>否。换之前先读 5.2</td>
+      </tr>
+      <tr>
+        <td class="f">FORGEPILOT_BIND_ADDRESS</td>
+        <td>改成 <code>0.0.0.0</code> 会让应用端口绕过 cloudflared 直接暴露，限流随之失去可信来源</td>
+        <td>否</td>
+      </tr>
+      <tr>
+        <td class="f">FORGEPILOT_JAVA_TOOL_OPTIONS</td>
+        <td>这一串是<strong>实测出来的容量包络</strong>，不是偏好。改它会让已记录的容量结论失效</td>
+        <td>否</td>
+      </tr>
+      <tr>
+        <td class="f">FORGEPILOT_AI_*</td>
+        <td>留空则 AI 审查不可用，但<strong>应用照常启动</strong>，其余功能不受影响</td>
+        <td>否，但影响面仅限审查</td>
+      </tr>
+      <tr>
+        <td class="f">FORGEPILOT_*_PER_MINUTE 等三项</td>
+        <td>限流配额。<strong>填 0 会让应用起不来</strong>（没有「关闭」这个取值）；填太小对 webhook 是丢投递</td>
+        <td>否</td>
+      </tr>
+    </tbody>
+  </table></div>
+
+  <div class="note amber">
+    <span class="label">这套栈没有「改配置热生效」这回事</span>
+    <p>
+      所有配置在启动时读入。改 <code>.env</code> 之后必须
+      <code>docker compose up --detach</code>（Compose 会识别环境变化并重建受影响的容器）。
+      只 <code>restart</code> <strong>不会</strong>重读 <code>.env</code>——这是个很容易浪费半小时的陷阱。
+    </p>
+  </div>
+</section>
+
+<!-- ══════ 3 ══════ -->
+<section id="s3">
+  <h2><span class="hn">3</span>健康检查</h2>
+
+  <p>三个容器各有自己的健康检查，它们证明的东西<strong>不一样</strong>，不要混着看：</p>
+
+  <div class="tw"><table>
+    <thead><tr><th>容器</th><th>检查</th><th>它证明了什么</th></tr></thead>
+    <tbody>
+      <tr>
+        <td class="f">postgres</td>
+        <td class="f">pg_isready</td>
+        <td>数据库进程在接受连接。<strong>不</strong>证明迁移跑过、数据没坏</td>
+      </tr>
+      <tr>
+        <td class="f">backend</td>
+        <td class="f">/actuator/health/readiness</td>
+        <td>Spring 上下文起来了、数据源连上了、Flyway 校验通过了。这是真正有信息量的那个</td>
+      </tr>
+      <tr>
+        <td class="f">frontend</td>
+        <td class="f">/healthz</td>
+        <td>nginx 活着。它<strong>由 nginx 本地返回，完全不经过后端</strong>——前端 healthy 时后端可能已经死了</td>
+      </tr>
+    </tbody>
+  </table></div>
+
+  <h3>3.1 手工核对</h3>
+<pre><code><span class="c"># 三个容器的状态与健康</span>
+docker compose -p fp-demo ps
+
+<span class="c"># 后端自身（旁路，不经 nginx）</span>
+curl -s http://127.0.0.1:18080/actuator/health
+
+<span class="c"># 经 nginx 的同一个契约——两者不一致就说明问题在代理这一层</span>
+curl -s http://127.0.0.1:18081/api/actuator/health
+
+<span class="c"># 外部入口</span>
+systemctl status cloudflared</code></pre>
+
+  <h3>3.2 暴露面契约</h3>
+  <p>
+    管理端点<strong>只开 <code>health</code></strong>。<code>/actuator/metrics</code>
+    必须返回 <strong>404</strong>——不是 401、不是 403，而是「根本不存在」。
+    这条由 <code>ActuatorExposureTest</code> 与 <code>scripts/phase1-compose-smoke.sh</code> 双重把关。
+    如果你在排障时发现 metrics 能访问，说明有人开了 <code>capacity</code> profile 或改了暴露配置，
+    <strong>那是个安全问题</strong>：这些端点没有任何认证。
+  </p>
+
+  <h3>3.3 客户端地址是怎么传下来的</h3>
+  <p>
+    nginx 设置 <code>X-Forwarded-For $proxy_add_x_forwarded_for</code>，后端开
+    <code>server.forward-headers-strategy: native</code>，由 Tomcat 的 <code>RemoteIpValve</code> 解析——
+    它<strong>只信任内网网段的代理</strong>，从右往左取第一个非内网地址。
+    真实客户端地址永远排在任何客户端自己伪造的值<strong>右边</strong>，所以伪造无效。
+  </p>
+  <p>
+    这条链决定了限流按<strong>人</strong>计数而不是按<strong>代理</strong>计数。
+    它成立的前提是「cloudflared 是唯一入口」；这个前提由部署配置保证，代码无法自证。
+    动 <code>FORGEPILOT_BIND_ADDRESS</code> 或在 nginx 前面再加一层之前，先回来读这一节。
+  </p>
+</section>
+
+<!-- ══════ 4 ══════ -->
+<section id="s4">
+  <h2><span class="hn">4</span>日常操作</h2>
+
+  <p>下面的命令都假设你在仓库根目录，Compose 项目名是 <code>fp-demo</code>。</p>
+
+  <h3>4.1 升级到新版本</h3>
+<pre><code>git pull
+docker compose -p fp-demo up --build --detach --wait</code></pre>
+  <p>
+    <code>--wait</code> 会阻塞到全部健康检查通过，失败则以非零码退出——
+    所以它是可以直接写进脚本的。<strong>不要</strong>用 <code>--force-recreate</code>
+    去「确保干净」：那会连 postgres 一起重建。
+  </p>
+
+  <h3>4.2 只重启后端</h3>
+<pre><code>docker compose -p fp-demo restart backend</code></pre>
+  <p>注意 <code>restart</code> 不重读 <code>.env</code>（见第 2 章的提示框）。改了配置要用 <code>up --detach</code>。</p>
+
+  <h3>4.3 看日志</h3>
+<pre><code><span class="c"># 跟随后端日志</span>
+docker compose -p fp-demo logs -f backend
+
+<span class="c"># 起不来时看最后一次启动的完整输出</span>
+docker compose -p fp-demo logs --tail 200 backend</code></pre>
+  <p>
+    日志里<strong>不会</strong>出现凭据、令牌、口令或其哈希，也不会出现 provider 的原始报错消息
+    （它可能引用模型回答）。所以「日志里没有细节」有时是设计使然，不是日志级别不够。
+    错误响应里的 <code>traceId</code> 可以直接在日志里搜到对应那一行——
+    这是把「用户看到的」与「日志记录的」对上的唯一手段。
+  </p>
+
+  <h3>4.4 备份与恢复</h3>
+<pre><code><span class="c"># 备份：逻辑导出，跨版本可用</span>
+docker compose -p fp-demo exec -T postgres \
+  pg_dump -U forgepilot forgepilot | gzip > forgepilot-$(date +%F).sql.gz
+
+<span class="c"># 恢复：只往一个空库里灌</span>
+gunzip -c forgepilot-YYYY-MM-DD.sql.gz | \
+  docker compose -p fp-demo exec -T postgres psql -U forgepilot forgepilot</code></pre>
+  <div class="note red">
+    <span class="label">恢复之前先想清楚 Flyway</span>
+    <p>
+      导出里包含 <code>flyway_schema_history</code>。把一份<strong>旧</strong>备份恢复到一个跑着<strong>新</strong>代码的部署上，
+      后端会在启动时发现「库里的迁移记录少于代码里的迁移文件」并尝试补跑——这通常是对的。
+      但反过来（新备份 + 旧代码）会直接以校验失败拒绝启动。
+      恢复前先确认这两边的版本关系。
+    </p>
+  </div>
+
+  <h3>4.5 回滚</h3>
+  <p>
+    <strong>代码可以回滚，数据库迁移不能。</strong>Flyway 迁移是只追加的，没有 down 脚本，
+    <code>clean</code> 也被禁用了。回滚到一个迁移数更少的旧版本，后端会因为
+    库里存在它不认识的迁移记录而拒绝启动。
+  </p>
+  <p>
+    所以可行的回滚只有两种：回到<strong>迁移数相同</strong>的某个版本（纯代码回退），
+    或者回退代码 + 恢复对应时点的数据库备份。没有第三种。
+  </p>
+</section>
+
+<!-- ══════ 5 ══════ -->
+<section id="s5">
+  <h2><span class="hn">5</span>起不来：症状对照</h2>
+
+  <p>
+    这一章按<strong>你实际看到的报错</strong>来组织，而不是按原因。
+    本项目起不来的几种方式，报错信息都不怎么指向真正的原因。
+  </p>
+
+  <h3>5.1 <code>FATAL: password authentication failed</code></h3>
+  <p>
+    <strong>最可能的原因不是密码错了，是密码根本没传进去。</strong>
+    <code>spring.datasource.password</code> 写的是 <code>${FORGEPILOT_DB_PASSWORD}</code>，
+    <strong>没有兜底默认值</strong>——这是有意的，一个默认值就是一把到处都能悄无声息生效的弱密钥。
+    变量缺失时 Spring 把未解析的 <code>${...}</code> 当字面量原样传下去，于是失败发生在
+    数据源初始化阶段，表现为认证失败，而不是「缺少配置项」。
+  </p>
+  <p>
+    <strong>先查</strong> <code>.env</code> 里有没有这一行、Compose 是否读到了它：
+  </p>
+<pre><code>docker compose -p fp-demo config | grep FORGEPILOT_DB_PASSWORD</code></pre>
+  <p>确认之后再去怀疑密码本身是否与卷里那份数据不匹配（换过密码但卷是旧的，也会这样）。</p>
+
+  <h3>5.2 <code>FlywayValidateException</code>／checksum mismatch</h3>
+  <div class="note red">
+    <span class="label">这是本项目最容易踩、也最容易被误判的一条</span>
+    <p>
+      <code>backend/src/main/resources/db/migration/*.sql</code> 里的文件
+      <strong>已经应用过的那些必须逐字节不变</strong>。Flyway 默认在迁移前校验校验和，
+      <strong>改一行注释、改一个空格，都会让后端在已有数据的部署上起不来</strong>。
+      「我只是改了个注释」不是免责理由——校验和是对文件内容算的。
+    </p>
+  </div>
+  <p>处置：把那个迁移文件恢复成与线上库一致的内容。要确认改了哪一个：</p>
+<pre><code>docker compose -p fp-demo exec -T postgres \
+  psql -U forgepilot forgepilot -c \
+  "select version, description, checksum, success from flyway_schema_history order by installed_rank;"</code></pre>
+  <p>
+    需要新增行为时，<strong>永远是加一个新的迁移文件</strong>，不是改老的。
+    这条同时也是评测证据链的要求。
+  </p>
+
+  <h3>5.3 上下文启动失败，报缺少 <code>forgepilot.scm.secret-key</code></h3>
+  <p>
+    同样是「无兜底默认值」的设计：缺了它应用就不启动，而不是用一个弱默认值把所有仓库凭据加密掉。
+    补上 <code>FORGEPILOT_SCM_SECRET_KEY</code> 即可。
+  </p>
+  <div class="note red">
+    <span class="label">但不要「随便补一个」</span>
+    <p>
+      这把密钥加密了库里<strong>全部</strong>仓库访问令牌与 webhook 密钥。
+      换成另一个值，那些密文<strong>永远解不回来了</strong>——系统不会报错，只会在下一次
+      调用 provider 时失败。<strong>本项目不做密钥轮换</strong>（安全文档残余风险 #2）。
+      如果原值确实丢了，唯一的出路是：换新密钥，然后<strong>手工重新配置每一个仓库的凭据</strong>。
+    </p>
+  </div>
+
+  <h3>5.4 起不来，日志里是限流配置的 <code>IllegalArgumentException</code></h3>
+  <p>
+    三个限流配额都必须是<strong>正整数</strong>。想「关掉限流」而填 <code>0</code> 会让应用直接起不来——
+    这是刻意的：没有「关闭」这个取值。要放宽就填一个大数。
+  </p>
+
+  <h3>5.5 后端反复重启，没有明确报错</h3>
+  <p>
+    先看是不是被 OOM 杀了。后端的 <code>mem_limit</code> 是 768 MB，JVM 堆上限 384 MB，
+    宿主机总内存约 4 GB：
+  </p>
+<pre><code>docker inspect fp-demo-backend-1 --format '{{.State.OOMKilled}} {{.State.ExitCode}}'
+dmesg | tail -30 | grep -i "killed process"
+free -m</code></pre>
+  <p>
+    如果确实是内存，<strong>不要直接调大 <code>mem_limit</code> 或堆</strong>：那一串 JVM 参数是实测出来的容量包络，
+    动它会让已记录的容量结论失效。先看是不是有别的东西在抢内存（第 7 章有实测基线），
+    以及 <code>FORGEPILOT_REVIEW_CONCURRENCY</code> 是不是被调高过——受限主机上它应该是 1 或 2。
+  </p>
+</section>
+
+<!-- ══════ 6 ══════ -->
+<section id="s6">
+  <h2><span class="hn">6</span>起来了但不对</h2>
+
+  <h3>6.1 用户报「登录一直失败」，返回 429</h3>
+  <p>
+    限流生效了。三个端点各有配额，都按<strong>客户端地址</strong>计数：
+    登录 20 次／分、注册 5 次／10 分、webhook 60 次／分。
+    响应体是统一错误结构，<code>code</code> 为 <code>too_many_requests</code>。
+  </p>
+  <p>
+    <strong>先判断这是防护生效还是误伤。</strong>如果一整个办公室从同一个出口 IP 访问，
+    20 次／分是共享的——那是误伤，调大 <code>FORGEPILOT_LOGIN_ATTEMPTS_PER_MINUTE</code>。
+    如果是单个地址在刷，那就是它该做的事，不要动。
+  </p>
+  <p>
+    计数在<strong>进程内</strong>，重启后端即清空——这是最快的解除手段，代价是所有会话不受影响但配额全部重置。
+  </p>
+
+  <h3>6.2 webhook 投递不到／PR 没有产生 Review</h3>
+  <p>按这个顺序查，每一步都能把范围砍一半：</p>
+  <ol>
+    <li>provider 侧的投递记录：它有没有发出来，收到了什么状态码。</li>
+    <li>收到 <strong>401</strong> → 签名校验没过。webhook 密钥不匹配，或者 5.3 说的密钥被换过。</li>
+    <li>收到 <strong>429</strong> → 撞了 60 次／分的配额。<strong>两个 provider 都不重试投递，被限就是丢了。</strong>把配额调大。</li>
+    <li>收到 <strong>2xx</strong> 但没有 Review → 投递被接受但认定为无关（仓库未绑定、事件类型不关心、或 PR 变更量超过上限被整体拒绝）。查后端日志里对应的 traceId。</li>
+  </ol>
+
+  <h3>6.3 Review 一直 PENDING</h3>
+  <p>
+    Review 由一个有界线程池执行，并发上限 <code>FORGEPILOT_REVIEW_CONCURRENCY</code>（默认 2），
+    队列 64。队列满时新任务被<strong>拒绝而不是堆积</strong>，被拒的 Review 保持 PENDING，
+    由对账任务捡回来——它每 30 秒跑一次，把超过 600 秒没被认领的 PENDING 重新排队，
+    并回收租约超过 300 秒没续期的任务。
+  </p>
+  <p>
+    所以「PENDING 几分钟」是正常的排队。<strong>超过十分钟仍不动</strong>才需要查：
+    多半是 AI 网关调不通（见 6.4），或者线程池里的任务卡在一个不返回的出站调用上。
+  </p>
+
+  <h3>6.4 AI 审查全部失败</h3>
+  <p>
+    每一次模型调用都在 <code>ai_call_log</code> 留一行，记录的是「一次<strong>尝试</strong>」——
+    重试会留两行，超时和失败分开记录。这是排查这类问题唯一的权威来源：
+  </p>
+<pre><code>docker compose -p fp-demo exec -T postgres \
+  psql -U forgepilot forgepilot -c \
+  "select created_at, status, model from ai_call_log order by id desc limit 20;"</code></pre>
+  <p>
+    全是失败且集中在同一时间点，通常是 <code>FORGEPILOT_AI_*</code> 配置或 provider 侧的问题。
+    注意日志里<strong>不会</strong>有 provider 的原始报错原文（它可能引用模型回答），
+    只有改写后的失败原因。
+  </p>
+
+  <h3>6.5 前端能打开，但所有写操作被拒（403）</h3>
+  <p>
+    <strong>缺失或错误的 CSRF 令牌是 403 的唯一来源。</strong>这个设计让 403 的含义单一：
+    看到 403 就不必怀疑权限，只查令牌。
+  </p>
+  <p>
+    常见成因是浏览器里存着一份过期的 <code>XSRF-TOKEN</code> cookie。
+    让用户硬刷新（清掉站点 cookie 后重新加载）即可。
+    权限不足返回的是 404 或 403 的其他路径，但不来自这一层。
+  </p>
+
+  <h3>6.6 站点打不开，但三个容器都 healthy</h3>
+  <p>问题在容器外面。按这个顺序：</p>
+<pre><code>systemctl status cloudflared          <span class="c"># 隧道进程</span>
+journalctl -u cloudflared --since -1h <span class="c"># 隧道日志</span>
+curl -s http://127.0.0.1:18081/healthz <span class="c"># 本机能不能到 nginx</span></code></pre>
+  <p>
+    最后那条返回 <code>ok</code> 而外部访问不通，就基本可以确定是隧道或 Cloudflare 侧的问题，
+    与这套应用无关。
+  </p>
+</section>
+
+<!-- ══════ 7 ══════ -->
+<section id="s7">
+  <h2><span class="hn">7</span>容量与余量</h2>
+
+  <p>2026-08-28 在部署机上的实测基线。它的用处是：下次觉得「是不是内存不够」时有个对照。</p>
+
+  <div class="tw"><table>
+    <thead><tr><th>容器</th><th>实测占用</th><th>上限</th><th>余量</th></tr></thead>
+    <tbody>
+      <tr><td class="f">fp-demo-backend-1</td><td class="n">398.5 MiB</td><td class="n">768 MiB</td><td class="n">52%</td></tr>
+      <tr><td class="f">fp-demo-postgres-1</td><td class="n">49.3 MiB</td><td class="n">512 MiB</td><td class="n">10%</td></tr>
+      <tr><td class="f">fp-demo-frontend-1</td><td class="n">6.3 MiB</td><td class="n">64 MiB</td><td class="n">10%</td></tr>
+    </tbody>
+  </table></div>
+
+  <p>宿主机：总内存约 3.9 GB，其中可用约 2.1 GB；磁盘 39 GB，已用 47%。</p>
+
+  <div class="note amber">
+    <span class="label">这几个数字不是随便设的</span>
+    <p>
+      JVM 参数串与三个 <code>mem_limit</code> 是一次完整容量测量的结果，
+      在 <code>backend/Dockerfile</code>、<code>compose.yaml</code>、<code>.env.example</code>
+      三处保持<strong>逐字一致</strong>，而且<strong>没有任何自动检查在维护这个一致性</strong>。
+      改任意一处，另外两处要同步改，并且已记录的容量结论作废、需要重跑整套容量协议。
+      核对三处是否一致：
+    </p>
+<pre><code>grep -ho -- '-Xms128m[^"}]*NativeMemoryTracking=summary' \
+  backend/Dockerfile compose.yaml .env.example | sort -u</code></pre>
+    <p>期望输出<strong>恰好一行</strong>。</p>
+  </div>
+
+  <p>
+    数据库连接是另一条容易忽略的界：Hikari 池上限 5，PostgreSQL 侧
+    <code>max_connections=30</code>。审查并发之所以定在 2，一部分原因就是要给 web 层留出连接。
+  </p>
+</section>
+
+<!-- ══════ 8 ══════ -->
+<section id="s8">
+  <h2><span class="hn">8</span>绝对不要做的事</h2>
+
+  <div class="tw"><table>
+    <thead><tr><th>不要</th><th>会发生什么</th></tr></thead>
+    <tbody>
+      <tr>
+        <td class="f">docker compose down --volumes</td>
+        <td><strong>删掉整个数据库。</strong>项目、需求、审查、审计全部消失且不可恢复。这条命令只对一次性的演示项目适用，永远不要指向要保留数据的部署</td>
+      </tr>
+      <tr>
+        <td class="f">改已应用的 Flyway 迁移文件</td>
+        <td>后端在下次启动时以校验和失败拒绝启动。改注释也算。见 5.2</td>
+      </tr>
+      <tr>
+        <td class="f">换 FORGEPILOT_SCM_SECRET_KEY</td>
+        <td>库里所有仓库令牌与 webhook 密钥永久无法解密，且<strong>不会立刻报错</strong>。见 5.3</td>
+      </tr>
+      <tr>
+        <td class="f">改 evaluation/ 下被哈希钉住的 9 个文件</td>
+        <td>评测冻结失效，结论不再可信。其中 <code>contracts/metrics.md</code> 看起来就是一份普通文档，尤其容易误改</td>
+      </tr>
+      <tr>
+        <td class="f">把 FORGEPILOT_BIND_ADDRESS 改成 0.0.0.0</td>
+        <td>应用端口绕过 cloudflared 直接暴露；限流失去可信的地址来源，Actuator 也随之暴露给任何能连到该端口的人</td>
+      </tr>
+      <tr>
+        <td class="f">扩大 Actuator 暴露面</td>
+        <td>这些端点<strong>没有任何认证</strong>。在加上认证之前，暴露面就只能是 <code>health</code></td>
+      </tr>
+      <tr>
+        <td class="f">把 Docker inspect 输出或环境变量转储存档</td>
+        <td>它们含有凭据。复现指南对此有明文规定</td>
+      </tr>
+    </tbody>
+  </table></div>
+</section>
+
+<footer class="end">
+  <p>
+    本文描述 2026-08-28 的部署形态；第 1 章的拓扑与第 7 章的数字均为当日在部署机上实测，
+    不是设计意图的转述。配置项与失败模式对应到代码与测试；
+    健康检查命令取自 <code>compose.yaml</code>。
+  </p>
+  <p>
+    相关文档：架构与运行边界见 <code>docs/v2/ARCHITECTURE.md</code>，
+    防护措施与残余风险见 <code>SECURITY.html</code>，
+    无凭据复现见 <code>docs/v2/DEFENSE-GUIDE.md</code>。
+  </p>
+</footer>
+
+</main>
+
+</div>
+</body>
+</html>
