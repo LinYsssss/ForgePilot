@@ -13,17 +13,22 @@ codes are never reused.
 
 ## Where failures are turned into that body
 
-Two places, because they run at different times:
+Three places, because they run at different times:
 
 | Producer | Covers | File |
 |---|---|---|
 | `common.ApiExceptionHandler` (`@RestControllerAdvice`) | anything thrown from a Controller or Service | `common/ApiExceptionHandler.java` |
 | The security filter chain's entry point and access-denied handler | 401 and 403 | `auth/SecurityConfig.java` |
+| `common.RateLimitFilter` | 429 | `common/RateLimitFilter.java` |
 
-The security answers **cannot** go through the advice: they are produced before
-Spring MVC dispatches, so `@RestControllerAdvice` never sees them. Anything that
-adds a new filter-chain rejection has to write the body itself, or that response
-silently escapes the contract.
+The filter-chain answers **cannot** go through the advice: they are produced
+before Spring MVC dispatches, so `@RestControllerAdvice` never sees them.
+Anything that adds a new filter-chain rejection has to write the body itself, or
+that response silently escapes the contract. `RateLimitFilter` is the worked
+example — it sets the status, content type, charset, and serialises `ApiError`
+itself, and it is wired into two different chains (`auth/SecurityConfig.java`,
+`scm/ScmWebhookSecurityConfig.java`) precisely because neither of them can
+delegate.
 
 ## Raising a failure
 

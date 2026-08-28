@@ -35,7 +35,7 @@ Before planning or changing this repository, read these files completely:
 
 ## Current shape
 
-8 backend top-level packages, 20 business tables across 10 Flyway migrations, `./mvnw -B -ntp verify` green at 333 tests with zero skips, a 6-entry / 11-route frontend with 42 green tests, GitHub and GitLab providers, and a completed three-arm evaluation. Quote these numbers.
+8 backend top-level packages, 20 business tables across 10 Flyway migrations, `./mvnw -B -ntp verify` green at 337 tests with zero skips, a 6-entry / 11-route frontend with 42 green tests, GitHub and GitLab providers, and a completed three-arm evaluation. Quote these numbers.
 
 There is no JDK on this host. Backend builds and tests run through the pinned container path documented in `docs/v2/DEFENSE-GUIDE.md`.
 
