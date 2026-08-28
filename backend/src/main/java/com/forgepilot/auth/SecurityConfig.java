@@ -85,10 +85,10 @@ class SecurityConfig {
         // 这两个是本应用唯一无需认证即可触达、且会做昂贵工作的写端点：登录要算一次
         // BCrypt，注册要写一行。它们因此是口令枚举与账号洪泛的入口，也是这一层限流
         // 唯一的目标——已认证成员的正常操作不受影响，否则批量添加成员之类的动作会被误伤。
-        RateLimitFilter loginLimit = new RateLimitFilter(
+        RateLimitFilter loginLimit = new RateLimitFilter("login",
                 new RateLimiter(Clock.systemUTC(), loginPermits, 60_000L, MAX_TRACKED_CLIENTS),
                 json, (method, path) -> "POST".equals(method) && LOGIN_PATH.equals(path));
-        RateLimitFilter registerLimit = new RateLimitFilter(
+        RateLimitFilter registerLimit = new RateLimitFilter("register",
                 new RateLimiter(Clock.systemUTC(), registerPermits, 600_000L, MAX_TRACKED_CLIENTS),
                 json, (method, path) -> "POST".equals(method) && REGISTER_PATH.equals(path));
 

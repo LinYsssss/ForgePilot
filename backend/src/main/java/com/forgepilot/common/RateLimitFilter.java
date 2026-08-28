@@ -20,28 +20,46 @@ import tools.jackson.databind.ObjectMapper;
  * Spring MVC <strong>之前</strong>，因此永远到不了 {@link ApiExceptionHandler}。
  * 若不在此统一处理，它就会逃出 ARCHITECTURE.md 2.4 规定的唯一错误体结构。
  *
- * <p><strong>刻意不信任 {@code X-Forwarded-For}</strong>：那个头可任意伪造，采信它就等于
- * 每次换个假地址即可绕开，比没有限流更糟——它给出「已防护」的错觉。代价是反向代理之后
- * 全部请求共享代理那一个地址的配额，所以这一层是<strong>纵深防御而非主要手段</strong>：
- * 按真实客户端地址限流应配在代理侧，本层只保证代理没配时登录端点不再完全裸露。
+ * <p>地址取 {@code getRemoteAddr()}，而它是否等于真实客户端取决于
+ * {@code server.forward-headers-strategy}。本部署开了 {@code native}，因为 nginx 是唯一
+ * 入口且会把真实地址追加进 {@code X-Forwarded-For}；Tomcat 的 RemoteIpValve 只信任内网
+ * 网段的代理并从右往左取第一个非内网地址，所以客户端伪造的 XFF 拿不到信任。**不开它**
+ * 才是危险的：那时每个请求都记成 nginx 那一个地址，配额变成全体共享，而丢掉的 webhook
+ * 投递不会被 provider 重试。
+ *
+ * <p>这一层仍是<strong>纵深防御而非主要手段</strong>——真正的流量整形属于代理侧。
  */
 public class RateLimitFilter extends OncePerRequestFilter {
 
     private static final ApiError TOO_MANY =
             new ApiError("too_many_requests", "Too many requests. Try again shortly.", "");
 
+    private final String name;
     private final RateLimiter limiter;
     private final ObjectMapper json;
     private final PathPredicate applies;
 
     /**
+     * @param name    本实例的名字，只用于区分「已过此过滤器」标记，见
+     *                {@link #getAlreadyFilteredAttributeName()}
      * @param applies 判断某个请求是否受本过滤器约束。传入而不是写死，
      *                是因为两条安全过滤器链要限的路径与配额都不同。
      */
-    public RateLimitFilter(RateLimiter limiter, ObjectMapper json, PathPredicate applies) {
+    public RateLimitFilter(String name, RateLimiter limiter, ObjectMapper json, PathPredicate applies) {
+        this.name = name;
         this.limiter = limiter;
         this.json = json;
         this.applies = applies;
+    }
+
+    /**
+     * <strong>必须按实例区分。</strong>基类默认用<em>类名</em>做「本请求已过此过滤器」的标记，
+     * 而同一条链上装着本类的两个实例；第一个标记之后，第二个会在<em>每个</em>请求上整个跳过
+     * 自己，且不留任何痕迹——注册限流曾因此完全失效而注册照常返回 201。
+     */
+    @Override
+    protected String getAlreadyFilteredAttributeName() {
+        return getClass().getName() + "." + name + ".FILTERED";
     }
 
     @Override

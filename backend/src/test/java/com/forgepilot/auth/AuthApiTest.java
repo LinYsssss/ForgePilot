@@ -64,6 +64,9 @@ class AuthApiTest extends PostgresTestBase {
     @Value("${forgepilot.security.login-attempts-per-minute}")
     private int loginPermits;
 
+    @Value("${forgepilot.security.registrations-per-ten-minutes}")
+    private int registerPermits;
+
     @Autowired
     private WebApplicationContext context;
 
@@ -226,6 +229,34 @@ class AuthApiTest extends PostgresTestBase {
         assertThat(limited.getContentAsString())
                 .contains("\"code\":\"too_many_requests\"")
                 .doesNotContain("password");
+    }
+
+    /**
+     * 注册限流也必须真的生效。
+     *
+     * <p>登录那条测试绿着并不能推出这条也绿：两个限流器是<strong>同一个</strong>
+     * {@code OncePerRequestFilter} 子类的两个实例装在同一条链上，而该基类默认按
+     * <em>类名</em>做「本请求已过此过滤器」的标记，于是第二个实例会在每个请求上
+     * 整个跳过自己。这种失效是静默的——注册���常 201，配额形同虚设。
+     */
+    @Test
+    void repeatedRegistrationsFromOneAddressAreRateLimited() throws Exception {
+        Browser flood = new Browser("203.0.113.9");
+        flood.bootstrap();
+
+        MockHttpServletResponse limited = null;
+        for (int attempt = 1; attempt <= 2 * registerPermits + 1 && limited == null; attempt++) {
+            MockHttpServletResponse response = flood.send(registration(nextUsername()));
+            if (response.getStatus() == 429) {
+                limited = response;
+            } else {
+                assertThat(response.getStatus())
+                        .as("配额内第 %d 次应当成功", attempt).isEqualTo(201);
+            }
+        }
+
+        assertThat(limited).as("发满两倍配额仍未被限流，说明这个过滤器没有生效").isNotNull();
+        assertThat(limited.getContentAsString()).contains("\"code\":\"too_many_requests\"");
     }
 
     // ------------------------------------------------------------------ helpers

@@ -44,7 +44,7 @@ class ScmWebhookSecurityConfig {
     SecurityFilterChain scmWebhookFilterChain(HttpSecurity http, ObjectMapper json,
             @Value("${forgepilot.security.webhook-deliveries-per-minute:60}") int permits)
             throws Exception {
-        RateLimitFilter deliveryLimit = new RateLimitFilter(
+        RateLimitFilter deliveryLimit = new RateLimitFilter("webhook",
                 new RateLimiter(Clock.systemUTC(), permits, 60_000L, MAX_TRACKED_CLIENTS),
                 json, (method, path) -> true);
         return http
