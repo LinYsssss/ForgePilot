@@ -21,11 +21,16 @@ spring:
 
 server:
   port: ${SERVER_PORT:8080}
+  # nginx 是部署里的唯一入口，它把真实客户端地址追加进 X-Forwarded-For。不解析它，
+  # getRemoteAddr() 对每个请求都返回 nginx 那一个地址，限流就退化成「整个部署共享一份
+  # 配额」。native 走 Tomcat 的 RemoteIpValve：它只信任内网网段的代理，并从右往左取第一个
+  # 非内网地址，所以客户端自己伪造的 XFF 拿不到信任——nginx 会把真实地址追加在它右边。
+  forward-headers-strategy: native
 
 forgepilot:
-  # Application-layer rate limits. Defence in depth, not the primary control;
-  # RateLimitFilter's javadoc has the why, including why X-Forwarded-For is not
-  # trusted and what that costs behind a proxy.
+  # Application-layer rate limits, counted per client address. See
+  # RateLimitFilter's javadoc; the address comes from the forwarded header that
+  # server.forward-headers-strategy above makes Tomcat resolve.
   security:
     login-attempts-per-minute: ${FORGEPILOT_LOGIN_ATTEMPTS_PER_MINUTE:20}
     registrations-per-ten-minutes: ${FORGEPILOT_REGISTRATIONS_PER_TEN_MINUTES:5}
@@ -51,9 +56,9 @@ forgepilot:
     # The concurrency limit has to sit on corePoolSize: a ThreadPoolExecutor only
     # grows past it once the queue is full, so with a bounded queue maxPoolSize
     # alone is unreachable and with an unbounded one it is never reached at all.
-    # Frozen at 2 by the Phase 6 maximum-budget measurement on a 4.10 GB host
-    # (D012 / D014). Hikari remains the ceiling at five total connections, leaving
-    # capacity for the web tier; tighter deployments may override this down to 1.
+    # Frozen at 2 by the maximum-budget measurement on a 4.10 GB host. Hikari
+    # remains the ceiling at five total connections, leaving capacity for the web
+    # tier; tighter deployments may override this down to 1.
     concurrency: ${FORGEPILOT_REVIEW_CONCURRENCY:2}
     # Bounded, so a backlog is rejected rather than accumulated. A rejected review
     # stays PENDING and reconciliation picks it up.

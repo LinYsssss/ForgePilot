@@ -15,7 +15,7 @@ import java.util.concurrent.atomic.AtomicReference;
  * <p>封顶后 <strong>fail-open</strong>——放过而不是拒绝。反过来写，攻击者用伪造地址
  * 打满表就能让所有人被拒，这道限流本身就成了放大器。
  *
- * <p>本类不负责取 key；见 {@link RateLimitFilter}。
+ * <p>本类不负责取 key；调用方决定按什么维度限流，见 {@link RateLimitFilter}。
  */
 public class RateLimiter {
 
