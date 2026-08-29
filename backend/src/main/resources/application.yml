@@ -28,6 +28,10 @@ server:
   forward-headers-strategy: native
 
 forgepilot:
+  # 本部署对外可达的地址，只用于在通知消息里拼出一个可点的链接。留空则消息里不带链接
+  # ——一个指向 localhost 的链接比没有链接更糟。应用自己无从知道它在反向代理之后
+  # 被暴露成了什么地址，所以这必须由部署方告知。
+  base-url: ${FORGEPILOT_BASE_URL:}
   # Application-layer rate limits, counted per client address. See
   # RateLimitFilter's javadoc; the address comes from the forwarded header that
   # server.forward-headers-strategy above makes Tomcat resolve.

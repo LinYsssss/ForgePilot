@@ -4,6 +4,12 @@ import { useRoute, useRouter } from "vue-router";
 import { parseId, PROJECT_QUERY_KEY } from "../../app/routes";
 import { formatDateTime } from "../../lib/datetime";
 import { apiErrorMessage } from "../../lib/http";
+import {
+  configureNotificationChannel,
+  getNotificationChannel,
+  removeNotificationChannel,
+  type NotificationChannel,
+} from "../notification/api";
 import { hasProjectRole, listProjects, type Project } from "../project/api";
 import {
   listScmRepositories,
@@ -33,6 +39,12 @@ const apiBase = ref(SCM_PROVIDER_DEFAULTS.GITHUB);
 const token = ref("");
 const webhookSecret = ref("");
 const identityApprovalRequired = ref(false);
+const notification = ref<NotificationChannel | null>(null);
+const notifyUrl = ref("");
+const notifySecret = ref("");
+const notifyEnabled = ref(true);
+const notifyPending = ref(false);
+const notifyError = ref<string | null>(null);
 const selected = computed(
   () => projects.value.find((project) => project.id === projectId.value) ?? null,
 );
@@ -58,6 +70,8 @@ async function load(): Promise<void> {
   token.value = "";
   webhookSecret.value = "";
   identityApprovalRequired.value = false;
+  notification.value = null;
+  notifyError.value = null;
   error.value = null;
   if (id === null) return;
   loading.value = true;
@@ -69,10 +83,48 @@ async function load(): Promise<void> {
       apiBase.value = repository.value.apiBase;
       identityApprovalRequired.value = repository.value.identityApprovalRequired;
     }
+    // 通知配置只有 LEADER 读得到，非 LEADER 会拿到 403。那不是错误，是这一块
+    // 不显示——所以它不进上面的 try，也不写 error。
+    notification.value = await getNotificationChannel(id).catch(() => null);
   } catch (failure: unknown) {
     error.value = apiErrorMessage(failure);
   } finally {
     loading.value = false;
+  }
+}
+
+async function saveNotification(): Promise<void> {
+  const id = projectId.value;
+  if (id === null) return;
+  notifyPending.value = true;
+  notifyError.value = null;
+  try {
+    notification.value = await configureNotificationChannel(id, {
+      webhookUrl: notifyUrl.value,
+      secret: notifySecret.value,
+      enabled: notifyEnabled.value,
+    });
+    notifyUrl.value = "";
+    notifySecret.value = "";
+  } catch (failure: unknown) {
+    notifyError.value = apiErrorMessage(failure);
+  } finally {
+    notifyPending.value = false;
+  }
+}
+
+async function dropNotification(): Promise<void> {
+  const id = projectId.value;
+  if (id === null) return;
+  notifyPending.value = true;
+  notifyError.value = null;
+  try {
+    await removeNotificationChannel(id);
+    notification.value = { configured: false, enabled: false, updatedAt: null };
+  } catch (failure: unknown) {
+    notifyError.value = apiErrorMessage(failure);
+  } finally {
+    notifyPending.value = false;
   }
 }
 
@@ -255,17 +307,96 @@ watch(projectId, load, { immediate: true });
           </div>
         </form>
       </section>
+
+      <section
+        v-if="isLeader && notification"
+        class="panel notification-editor"
+        aria-labelledby="notification-title"
+      >
+        <div class="editor-heading">
+          <p class="eyebrow">DingTalk notifications</p>
+          <h2 id="notification-title" class="panel-title">审查完成通知</h2>
+          <p class="field-hint">
+            一次审查跑完后往群里发一条摘要：PR、关联需求、发现条数。
+            <strong>不含</strong> finding 正文与 diff——群成员未必是项目成员。
+          </p>
+          <p class="field-hint">
+            推送失败只记日志，不会影响审查本身。
+          </p>
+        </div>
+        <form class="repository-form" @submit.prevent="saveNotification">
+          <p v-if="notifyError" class="form-error" role="alert">{{ notifyError }}</p>
+          <div class="field repository-span">
+            <label for="notify-url">
+              Webhook 地址{{ notification.configured ? "（重填即替换）" : "" }}
+            </label>
+            <input
+              id="notify-url"
+              v-model="notifyUrl"
+              type="password"
+              autocomplete="off"
+              required
+              maxlength="512"
+              placeholder="https://oapi.dingtalk.com/robot/send?access_token=…"
+            />
+            <p class="field-hint">
+              这个地址本身就是凭据：<code>access_token</code> 就在里面。只写，不回显。
+            </p>
+          </div>
+          <div class="field repository-span">
+            <label for="notify-secret">加签密钥</label>
+            <input
+              id="notify-secret"
+              v-model="notifySecret"
+              type="password"
+              autocomplete="off"
+              required
+              maxlength="256"
+            />
+            <p class="field-hint">
+              机器人安全设置里选「加签」，把那串 <code>SEC…</code> 填这里。
+              只有加签能在地址泄露后仍然拦住伪造。
+            </p>
+          </div>
+          <label class="checkbox-field">
+            <input v-model="notifyEnabled" type="checkbox" />
+            <span>启用推送</span>
+          </label>
+          <dl v-if="notification.configured" class="meta-list">
+            <div><dt>状态</dt><dd>{{ notification.enabled ? "已启用" : "已停用" }}</dd></div>
+            <div v-if="notification.updatedAt">
+              <dt>更新时间</dt><dd>{{ formatDateTime(notification.updatedAt) }}</dd>
+            </div>
+          </dl>
+          <div class="form-actions repository-actions">
+            <button class="button button-primary" :disabled="notifyPending">
+              {{ notifyPending ? "正在保存…" : notification.configured ? "替换凭据" : "保存" }}
+            </button>
+            <button
+              v-if="notification.configured"
+              type="button"
+              class="button button-danger"
+              :disabled="notifyPending"
+              @click="dropNotification"
+            >
+              移除
+            </button>
+          </div>
+        </form>
+      </section>
     </template>
   </section>
 </template>
 
 <style scoped>
 .repository-current,
+.notification-editor,
 .repository-editor {
   border-color: var(--fp-color-border-accent);
 }
 
-.repository-editor {
+.repository-editor,
+.notification-editor {
   display: grid;
   align-items: start;
   gap: var(--fp-space-8);

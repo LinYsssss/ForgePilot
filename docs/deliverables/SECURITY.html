@@ -153,7 +153,7 @@
     <div><dt>安全需求</dt><dd>11 条<small>（NFR-S）</small></dd></div>
     <div><dt>专项测试</dt><dd>8 个类</dd></div>
     <div><dt>公开端点</dt><dd>2<small>／webhook</small></dd></div>
-    <div><dt>秘密类型</dt><dd>3</dd></div>
+    <div><dt>秘密类型</dt><dd>4</dd></div>
     <div><dt>残余风险</dt><dd>9 条<small>已记录</small></dd></div>
   </dl>
 </header>
@@ -170,6 +170,7 @@
       <tr><td>仓库访问令牌</td><td><strong>攻击者获得目标代码仓库的读写权</strong></td><td>AES-256-GCM 密文</td></tr>
       <tr><td>Webhook 签名密钥</td><td>攻击者可伪造投递，注入虚假 PR 状态</td><td>AES-256-GCM 密文</td></tr>
       <tr><td>一次性个人 Token</td><td>攻击者获得该用户的 provider 身份读取权</td><td><strong>从不存储</strong></td></tr>
+      <tr><td>钉钉机器人 Webhook 与加签密钥</td><td>攻击者可向项目群伪造消息</td><td>AES-256-GCM 密文</td></tr>
       <tr><td>需求、知识文档、diff</td><td>项目内容外泄</td><td>明文（业务数据）</td></tr>
       <tr><td>评测冻结证据</td><td>实验结论不可信</td><td>内容哈希钉住</td></tr>
     </tbody>
@@ -634,6 +635,7 @@
       <tr><td class="f">其余 57 个 API 端点</td><td>会话 + CSRF</td><td>单一授权入口 · 项目隔离复合键 · 404/403 不可区分</td><td class="f">ProjectAuthorizationTest · BatchOneApiTest</td></tr>
       <tr><td class="f">出站至 provider</td><td>—</td><td>协议白名单 · 主机白名单 · 内网地址拒绝 · 每次重校验</td><td class="f">OutboundUrlPolicyTest · GitHubClientGuardTest</td></tr>
       <tr><td class="f">出站至模型服务</td><td>—</td><td>单一出口 · 凭据掩码 · 预算裁剪 · 输出逐项核验</td><td class="f">PromptSanitizerTest · ReviewOutputValidatorTest</td></tr>
+      <tr><td class="f">出站至钉钉</td><td>—</td><td>origin 钉死在 <code>oapi.dingtalk.com</code> · 加签 · 只发计数不发正文 · 失败不影响审查</td><td class="f">DingTalkSenderTest · NotificationChannelTest</td></tr>
       <tr><td class="f">文件上传</td><td>会话 + LEADER</td><td>入库前四道校验 · 5 MB 上限 · 类型限定</td><td class="f">KnowledgeGuardTest</td></tr>
       <tr><td class="f">GET /actuator/health</td><td>无</td><td>只暴露 health，其余端点返回 404</td><td class="f">ActuatorExposureTest</td></tr>
       <tr><td class="f">PostgreSQL</td><td>—</td><td>不对外暴露端口 · Flyway 禁 clean · <code>ddl-auto=validate</code></td><td class="f">FoundationDatabaseTest</td></tr>

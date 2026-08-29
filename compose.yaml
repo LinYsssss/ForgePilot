@@ -49,6 +49,10 @@ services:
       FORGEPILOT_KNOWLEDGE_EMBEDDING_MODEL: ${FORGEPILOT_KNOWLEDGE_EMBEDDING_MODEL:-}
       FORGEPILOT_KNOWLEDGE_EMBEDDING_VERSION: ${FORGEPILOT_KNOWLEDGE_EMBEDDING_VERSION:-}
       FORGEPILOT_REVIEW_CONCURRENCY: ${FORGEPILOT_REVIEW_CONCURRENCY:-2}
+      # Only used to build a clickable link inside notification messages. Empty
+      # means the message carries no link, which is better than one pointing at a
+      # loopback address nobody else can open.
+      FORGEPILOT_BASE_URL: ${FORGEPILOT_BASE_URL:-}
       # Rate limits. Defaults repeated here for the same reason
       # FORGEPILOT_REVIEW_CONCURRENCY is: an empty value will not bind to an int.
       FORGEPILOT_LOGIN_ATTEMPTS_PER_MINUTE: ${FORGEPILOT_LOGIN_ATTEMPTS_PER_MINUTE:-20}

@@ -9,7 +9,7 @@ ForgePilot 是围绕需求驱动 Pull Request 审查建设的轻量级 AI 研发
 | 文档 | 权威内容 | 使用时机 |
 |---|---|---|
 | [PRD.md](./PRD.md) | 产品定位、角色权限、范围、业务状态与产品规则 | 判断做什么、谁能做 |
-| [ARCHITECTURE.md](./ARCHITECTURE.md) | 模块边界、20 张表、数据库约束、流程契约与运行边界 | 判断怎么实现、不能越过什么边界 |
+| [ARCHITECTURE.md](./ARCHITECTURE.md) | 模块边界、21 张表、数据库约束、流程契约与运行边界 | 判断怎么实现、不能越过什么边界 |
 | [API.md](./API.md) | 账户、成员目录与 SCM 身份接口契约 | 联调身份与成员管理 |
 | [DEFENSE-GUIDE.md](./DEFENSE-GUIDE.md) | 无凭据条件下的部署、构建、评测复现与演示步骤 | 复现实验或准备演示 |
 
@@ -32,7 +32,7 @@ ForgePilot 是围绕需求驱动 Pull Request 审查建设的轻量级 AI 研发
 ## 不可违反的总边界
 
 - 后端是模块化单体，顶层包仅为 `common/auth/project/requirement/scm/knowledge/ai/review`。
-- 数据模型为 20 张表，Finding 内聚于 `review`，只有一个 Review Engine。
+- 数据模型为 21 张表，Finding 内聚于 `review`，只有一个 Review Engine。
 - `scm` 发布 `PullRequestChanged` 事件但不依赖 `review`；AI 不直接改变业务状态或代码。
 - 禁止 Agent、Patch、MQ/Outbox、第二 AI runtime、本地 clone/Git、第二 Review Pipeline、代码向量库和额外一级菜单。
 - PostgreSQL 15+ 与 pgvector 是业务事实源；所有项目内引用和查询必须保持 `project_id` 隔离。

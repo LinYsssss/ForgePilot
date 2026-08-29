@@ -29,7 +29,7 @@ web layer.
 
 - Migration files live in `backend/src/main/resources/db/migration` and follow
   the naming rule in `ARCHITECTURE.md` §2.4.
-- Ten migrations, `V1`–`V10`, produce the current twenty business tables.
+- Eleven migrations, `V1`–`V11`, produce the current twenty-one business tables.
   `V1__foundation.sql` contains only `CREATE EXTENSION IF NOT EXISTS vector`;
   `V2`–`V6` create the core model; `V7`, `V9` and `V10` add columns, and `V8`
   and `V10` add the role/identity/binding and deletion-ledger tables.

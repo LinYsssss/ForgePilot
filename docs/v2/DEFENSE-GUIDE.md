@@ -12,7 +12,7 @@ cp .env.example .env
 
 Before using any real repository, replace the database password and `FORGEPILOT_SCM_SECRET_KEY` in the ignored `.env`. Chat and embedding values may remain blank for an empty-stack or deterministic-rescore demonstration. Never paste a provider credential into a command line, log, screenshot, or tracked file.
 
-The automated cold-start proof creates a unique Compose project, builds both application images, creates a brand-new PostgreSQL volume, waits for all three health checks, verifies the reverse proxy, pgvector, Flyway, and the exact twenty business tables, then removes only that temporary project and volume:
+The automated cold-start proof creates a unique Compose project, builds both application images, creates a brand-new PostgreSQL volume, waits for all three health checks, verifies the reverse proxy, pgvector, Flyway, and the exact twenty-one business tables, then removes only that temporary project and volume:
 
 ```bash
 FORGEPILOT_BACKEND_PORT=28080 \

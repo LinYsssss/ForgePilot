@@ -32,7 +32,7 @@ are enforced:
 
 | Test method | Blocks |
 |---|---|
-| `topLevelPackagesAreExplicitlyAllowlisted` | Any production class outside the eight allowed packages, including the nine forbidden names. |
+| `topLevelPackagesAreExplicitlyAllowlisted` | Any production class outside the nine allowed packages, including the nine forbidden names. |
 | `featureSlicesAreFreeOfCycles` | Cyclic dependencies between top-level packages. |
 | `scmCannotDependOnReview` | A compile-time `scm -> review` dependency. |
 | `crossFeatureRepositoriesAreNotInjectedDirectly` | Any class depending on another feature's `*Repository`. |
@@ -190,7 +190,7 @@ find backend/src/main/java/com/forgepilot -mindepth 1 -maxdepth 1 -type d -print
 # No forbidden production package. Expect no match.
 grep -rEn '^package com\.forgepilot\.(agent|patch|mq|rag|repo|pullrequest|context|assistant|finding)\b' backend/src/main/java
 
-# Exactly twenty business tables. This number tracks ARCHITECTURE.md 2.1 and is
+# Exactly twenty-one business tables. This number tracks ARCHITECTURE.md 2.1 and is
 # not a ceiling of its own: a new table needs a business fact plus a documented
 # reason. Update both places together or the check silently stops meaning
 # anything.

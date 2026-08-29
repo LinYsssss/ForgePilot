@@ -129,15 +129,15 @@ query_postgres() {
 postgres_15_or_newer="$(query_postgres "select current_setting('server_version_num')::integer >= 150000;")"
 vector_version="$(query_postgres "select extversion from pg_extension where extname = 'vector';")"
 vector_distance="$(query_postgres "select '[1,2,3]'::vector <-> '[1,2,4]'::vector;")"
-flyway_head="$(query_postgres "select success from flyway_schema_history where version = '10';")"
+flyway_head="$(query_postgres "select success from flyway_schema_history where version = '11';")"
 migration_count="$(query_postgres "select count(*) from flyway_schema_history where version is not null;")"
 failed_migrations="$(query_postgres "select count(*) from flyway_schema_history where success is false;")"
 application_tables="$(query_postgres "select string_agg(table_name, ',' order by table_name collate \"C\") from information_schema.tables where table_schema = 'public' and table_type = 'BASE TABLE' and table_name <> 'flyway_schema_history';")"
 
-# All migrations create exactly these twenty business tables. An extra table
+# All migrations create exactly these twenty-one business tables. An extra table
 # means something was added without a migration reaching this check. Sorted with
 # the C collation so the comparison does not depend on the container's locale.
-expected_tables='acceptance_criterion,ai_call_log,finding,finding_event,knowledge_chunk,knowledge_document,project,project_deletion_record,project_member,project_member_role,project_member_scm_binding,pull_request,pull_request_requirement_event,requirement,requirement_attachment,requirement_revision,review,scm_identity,scm_repository,user_account'
+expected_tables='acceptance_criterion,ai_call_log,finding,finding_event,knowledge_chunk,knowledge_document,project,project_deletion_record,project_member,project_member_role,project_member_scm_binding,project_notification_channel,pull_request,pull_request_requirement_event,requirement,requirement_attachment,requirement_revision,review,scm_identity,scm_repository,user_account'
 
 [[ "$postgres_15_or_newer" == "t" ]] || {
   printf 'PostgreSQL server is older than 15.\n' >&2
@@ -147,8 +147,8 @@ expected_tables='acceptance_criterion,ai_call_log,finding,finding_event,knowledg
   printf 'pgvector extension contract failed.\n' >&2
   exit 1
 }
-[[ "$flyway_head" == "t" && "$migration_count" == "10" ]] || {
-  printf 'Flyway did not apply exactly ten successful versioned migrations through V10.\n' >&2
+[[ "$flyway_head" == "t" && "$migration_count" == "11" ]] || {
+  printf 'Flyway did not apply exactly eleven successful versioned migrations through V11.\n' >&2
   exit 1
 }
 [[ "$failed_migrations" == "0" ]] || {

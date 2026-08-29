@@ -23,10 +23,21 @@ com.forgepilot
 ├── scm           # Repository、PR、Webhook、GitHub/GitLab provider
 ├── knowledge     # Document、Chunk、ingestion、search
 ├── ai            # provider-neutral chat/embed gateway
-└── review        # Review Engine、Finding、人工决策
+├── review        # Review Engine、Finding、人工决策
+└── notification  # 项目通知渠道配置，以及审查完成后的对外推送
 ```
 
-只有这 8 个顶层包。**禁止**出现 `agent/patch/mq/rag/repo/pullrequest/context/assistant/finding` 顶层包。
+只有这 9 个顶层包。**禁止**出现 `agent/patch/mq/rag/repo/pullrequest/context/assistant/finding` 顶层包。
+
+`notification` 之所以不能并进 `review`：`review` 的契约是「唯一的 Review Engine 及其人工决策
+闭环」，而通知是一条**尽力而为的旁路**——它没有投递保证，失败只记日志，不得影响审查的任何状态。
+把一个出站 HTTP 集成放进那个包，等于让一个聊天机器人的可用性成为代码审查闭环的一部分。
+它靠监听 `ReviewCompleted` 取得触发，因此 `review` 对它没有任何编译期依赖。
+
+`notification -> scm` 这条边只为一件事存在：`ScmSecretCipher`。本部署只有一把静态加密密钥
+（`FORGEPILOT_SCM_SECRET_KEY`），它保护着线上已存的仓库凭据。为了一张更整齐的依赖图去重命名
+那个变量，或者在通知侧另起一套加密，都比这条边更糟。出现第三个使用者时，才是把它提升到
+`common` 的时机。
 
 不强制四层：每个 feature 只建实际需要的类，不为目录对称创建空的 `domain/application/infrastructure/web`。
 仅两处例外允许子包——`scm.github` / `scm.gitlab`（provider 协议差异）、`ai.openai`（外部协议）。
@@ -73,7 +84,7 @@ common, project, scm, knowledge, requirement, ai  ←  review
 ### 1.4 ArchUnit 强制项
 
 1. 顶层包 cycle = 0。
-2. 顶层包必须在上列 8 个名字之内；禁止包名（`agent/patch/mq/rag/repo/pullrequest/context/assistant/finding`）不得出现。
+2. 顶层包必须在上列 9 个名字之内；禁止包名（`agent/patch/mq/rag/repo/pullrequest/context/assistant/finding`）不得出现。
 3. `scm` 的编译期依赖不含 `review`。
 4. 跨 feature 不直接注入对方 `*Repository`。
 5. Controller 不直连跨模块 Repository。
@@ -85,7 +96,7 @@ common, project, scm, knowledge, requirement, ai  ←  review
 
 ## 2. 数据模型
 
-### 2.1 20 张表（唯一定义处）
+### 2.1 21 张表（唯一定义处）
 
 | 表 | 核心职责 | 关键约束 |
 |---|---|---|
@@ -109,6 +120,7 @@ common, project, scm, knowledge, requirement, ai  ←  review
 | `finding_event` | Finding 人工状态与指派审计 | project_id、finding_id（复合 FK）、actor_id（→ `user_account`）、action、from/to、comment、created_at |
 | `ai_call_log` | 评测与故障定位 | project_id、review_id、requirement_id、requirement_revision_id（三者均可空且使用含 project_id 的复合 FK）、use_case、model、token、latency、status、error |
 | `project_deletion_record` | 三类删除的可追溯留痕 | project_id、resource_type（`KNOWLEDGE_DOCUMENT/PROJECT_MEMBER/REQUIREMENT` 封闭 CHECK 词表）、resource_id（**故意无外键**：硬删之后没有可指向的目标，见）、actor_user_id（→ `user_account`）、detail、created_at；`project_id` 与 `actor_user_id` 均有外键，项目隔离靠前者 |
+| `project_notification_channel` | 项目的对外通知渠道与其凭据 | project_id（→ `project`）、channel（`DINGTALK` 封闭 CHECK 词表）、encrypted_webhook_url、encrypted_secret（二者均为 AES-256-GCM 密文，与 `scm_repository` 同一把密钥、同一个 cipher，且**永不回显**——钉钉机器人的 `access_token` 就写在 URL 里，拿到 URL 即等于拿到发消息的权限）、enabled、created_at/updated_at；`(project_id, channel)` unique |
 
 **不建**：`scm_connection`（并入 `scm_repository`）、`review_task/report/issue`、`review_decision`（Decision 在 `review` 行上且只写一次）、`webhook_delivery`、通用 `audit_event`（多态 entity_id 无法被 2.3 的复合外键约束）、任何 vector 影子表。`audit_event` 这一条有且仅有一个例外：`project_deletion_record`。它记录的是**删除**，被引对象按定义已经不存在，因此那条理由不适用——不是没加外键，是没有可加外键的目标；能约束的 `project_id` 与 `actor_user_id` 都约束了，`resource_type` 是三值封闭词表。这不放宽禁令：任何针对**存活**实体的多态审计表仍然不建。执行恢复不另建任务表，使用 Review 上的 attempt/token/lease fencing 元数据。
 新增表必须有已发生的业务事实，并能说明现有模型为何无法表达它。表数量是复杂度提醒，不是为守数字而把两个领域事实塞进一张表的理由。

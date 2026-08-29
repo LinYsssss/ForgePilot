@@ -22,7 +22,8 @@ class FoundationDatabaseTest extends PostgresTestBase {
             "knowledge_chunk", "knowledge_document", "project", "project_deletion_record",
             "project_member", "project_member_role", "project_member_scm_binding", "pull_request",
             "pull_request_requirement_event", "requirement", "requirement_attachment",
-            "requirement_revision", "review", "scm_identity", "scm_repository", "user_account");
+            "project_notification_channel", "requirement_revision", "review", "scm_identity",
+            "scm_repository", "user_account");
 
     @Autowired
     private JdbcTemplate jdbc;
@@ -61,7 +62,7 @@ class FoundationDatabaseTest extends PostgresTestBase {
                 .containsExactly("1:foundation", "2:auth project", "3:requirement",
                         "4:knowledge ai", "5:scm", "6:review", "7:pull request title",
                         "8:member roles and scm identities", "9:finding explanation",
-                        "10:resource removal");
+                        "10:resource removal", "11:notification channel");
         assertThat(history).allSatisfy(row -> assertThat(row.get("success")).isEqualTo(true));
     }
 

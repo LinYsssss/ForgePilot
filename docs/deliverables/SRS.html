@@ -180,7 +180,7 @@
     <thead><tr><th>文档</th><th>权威内容</th></tr></thead>
     <tbody>
       <tr><td class="f">docs/v2/PRD.md</td><td>产品定位、角色权限表、业务状态机、关键产品规则 P1–P11</td></tr>
-      <tr><td class="f">docs/v2/ARCHITECTURE.md</td><td>模块边界、20 张表、数据库约束、流程契约、运行边界实测值</td></tr>
+      <tr><td class="f">docs/v2/ARCHITECTURE.md</td><td>模块边界、21 张表、数据库约束、流程契约、运行边界实测值</td></tr>
       <tr><td class="f">docs/v2/API.md</td><td>接口契约</td></tr>
       <tr><td class="f">docs/v2/DEFENSE-GUIDE.md</td><td>无凭据部署与评测复现步骤</td></tr>
       <tr><td class="f">frontend/MANUAL-ACCEPTANCE.md</td><td>无法自动化的人工验收项</td></tr>
@@ -249,7 +249,7 @@
     <li><strong>模块依赖单向无环</strong>，由 ArchUnit 在每次构建时强制。</li>
     <li><strong>每个项目内引用都携带 <code>project_id</code></strong>，不存在「先按裸 id 查再检查项目」的读路径。</li>
     <li><strong>只有一个 Review Engine</strong>，只有一个 AI 网关出口。</li>
-    <li><strong>数据模型 20 张表</strong>；新增表需要业务事实与记录在案的理由。</li>
+    <li><strong>数据模型 21 张表</strong>；新增表需要业务事实与记录在案的理由。</li>
     <li><strong>Flyway 迁移只追加</strong>，已应用的迁移逐字节不可变。</li>
   </ul>
 </section>

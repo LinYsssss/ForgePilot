@@ -5,6 +5,7 @@ import java.util.UUID;
 
 import com.forgepilot.common.ApiException;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Service;
@@ -42,14 +43,17 @@ public class ReviewExecutor {
     private final ReviewPipeline pipeline;
     private final TransactionTemplate ownTransaction;
     private final TransactionTemplate finishingTransaction;
+    private final ApplicationEventPublisher publisher;
     private final int leaseSeconds;
 
     ReviewExecutor(@Qualifier("reviewWorkerPool") ThreadPoolTaskExecutor pool, ReviewClaimRepository claims,
             ReviewPipeline pipeline, PlatformTransactionManager transactions,
+            ApplicationEventPublisher publisher,
             @Value("${forgepilot.review.lease-seconds}") int leaseSeconds) {
         this.pool = pool;
         this.claims = claims;
         this.pipeline = pipeline;
+        this.publisher = publisher;
         // 抢占与续租各用自己的事务，因为 now() 在事务开始时就被冻结了：
         // 在一个长事务里写下的租约，会按该事务已经运行的时长整体缩短，
         // 而一个被缩短的续租，就是一个可能被抢占的续租。
@@ -146,13 +150,21 @@ public class ReviewExecutor {
             return;
         }
 
-        finishingTransaction.executeWithoutResult(status -> {
+        Boolean committed = finishingTransaction.execute(status -> {
             pipeline.store(claim, report.get());
             if (!complete(claim)) {
                 // 租约在分析与本次写入之间丢失了。报告不得比它所属的 Review 活得更久：
                 // 这个 attempt 已不再拥有那一行，而另一个 attempt 正在产出它自己的结果。
                 status.setRollbackOnly();
+                return false;
             }
+            return true;
         });
+
+        // 发布点在事务**之外**，且只在它确实提交之后。放进事务里会让一个失去租约、
+        // 随后整体回滚的 attempt 也把事件发出去——那就是为一次从未发生的完成发通知。
+        if (Boolean.TRUE.equals(committed)) {
+            publisher.publishEvent(new ReviewCompleted(projectId, reviewId));
+        }
     }
 }
