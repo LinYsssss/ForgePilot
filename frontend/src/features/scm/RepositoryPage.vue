@@ -42,6 +42,7 @@ const identityApprovalRequired = ref(false);
 const notification = ref<NotificationChannel | null>(null);
 const notifyUrl = ref("");
 const notifySecret = ref("");
+const notifyKeyword = ref("");
 const notifyEnabled = ref(true);
 const notifyPending = ref(false);
 const notifyError = ref<string | null>(null);
@@ -86,6 +87,8 @@ async function load(): Promise<void> {
     // 通知配置只有 LEADER 读得到，非 LEADER 会拿到 403。那不是错误，是这一块
     // 不显示——所以它不进上面的 try，也不写 error。
     notification.value = await getNotificationChannel(id).catch(() => null);
+    // 关键词不是凭据，读得回来就回填，免得每次改配置都要重打一遍。
+    notifyKeyword.value = notification.value?.keyword ?? "";
   } catch (failure: unknown) {
     error.value = apiErrorMessage(failure);
   } finally {
@@ -102,6 +105,7 @@ async function saveNotification(): Promise<void> {
     notification.value = await configureNotificationChannel(id, {
       webhookUrl: notifyUrl.value,
       secret: notifySecret.value,
+      keyword: notifyKeyword.value,
       enabled: notifyEnabled.value,
     });
     notifyUrl.value = "";
@@ -120,7 +124,8 @@ async function dropNotification(): Promise<void> {
   notifyError.value = null;
   try {
     await removeNotificationChannel(id);
-    notification.value = { configured: false, enabled: false, signed: false, updatedAt: null };
+    notification.value = { configured: false, enabled: false, signed: false, keyword: null, updatedAt: null };
+    notifyKeyword.value = "";
   } catch (failure: unknown) {
     notifyError.value = apiErrorMessage(failure);
   } finally {
@@ -362,6 +367,15 @@ watch(projectId, load, { immediate: true });
               任何拿到它的人都能往这个群发消息，而它会经过浏览器历史、截图和剪贴板。
             </p>
           </div>
+          <div class="field repository-span">
+            <label for="notify-keyword">自定义关键词（可留空）</label>
+            <input id="notify-keyword" v-model="notifyKeyword" maxlength="64" />
+            <p class="field-hint">
+              机器人安全设置里如果勾的是「自定义关键词」，把那个词填这里，它会被拼进消息标题。
+              <strong>不填就收不到消息</strong>——钉钉会丢掉不含关键词的消息，
+              而且丢弃时仍然返回成功，没有任何报错。
+            </p>
+          </div>
           <label class="checkbox-field">
             <input v-model="notifyEnabled" type="checkbox" />
             <span>启用推送</span>
@@ -371,6 +385,10 @@ watch(projectId, load, { immediate: true });
             <div>
               <dt>加签</dt>
               <dd>{{ notification.signed ? "已开启" : "未开启（仅靠地址保密）" }}</dd>
+            </div>
+            <div>
+              <dt>关键词</dt>
+              <dd>{{ notification.keyword ?? "未设置" }}</dd>
             </div>
             <div v-if="notification.updatedAt">
               <dt>更新时间</dt><dd>{{ formatDateTime(notification.updatedAt) }}</dd>

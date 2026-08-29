@@ -126,12 +126,44 @@ class DingTalkSenderTest {
     @Test
     void anUnsignedChannelSendsTheUrlUntouched() {
         Credentials unsigned = new Credentials(
-                "https://oapi.dingtalk.com/robot/send?access_token=x", null);
+                "https://oapi.dingtalk.com/robot/send?access_token=x", null, null);
 
         assertThat(unsigned.signed()).isFalse();
-        assertThat(new Credentials("https://oapi.dingtalk.com/robot/send", "   ").signed())
+        assertThat(new Credentials("https://oapi.dingtalk.com/robot/send", "   ", null).signed())
                 .as("全空白等同于没配").isFalse();
-        assertThat(new Credentials("https://oapi.dingtalk.com/robot/send", "SECx").signed()).isTrue();
+        assertThat(new Credentials("https://oapi.dingtalk.com/robot/send", "SECx", null).signed()).isTrue();
+    }
+
+    /**
+     * 钉钉<strong>不用状态码报告应用层的拒绝</strong>：关键词不匹配、签名不对、token 失效，
+     * 全都答 HTTP 200，真正的结果在响应体的 {@code errcode} 里。
+     *
+     * <p>只看状态码，每一次拒收都会被当成成功——消息从没进群，而系统坚称发出去了。
+     * 这个故障没有任何日志、没有任何红色，只有「群里什么都没有」。
+     */
+    @Test
+    void aTwoHundredWithAnErrorCodeIsNotSuccess() {
+        assertThat(DingTalkSender.accepted("{\"errcode\":0,\"errmsg\":\"ok\"}")).isTrue();
+        assertThat(DingTalkSender.accepted("{\"errcode\": 0, \"errmsg\": \"ok\"}"))
+                .as("空格不该改变判定").isTrue();
+        assertThat(DingTalkSender.accepted(
+                "{\"errcode\":310000,\"errmsg\":\"keywords not in content\"}"))
+                .as("关键词不匹配是失败，尽管 HTTP 是 200").isFalse();
+        assertThat(DingTalkSender.accepted("{\"errcode\":300001,\"errmsg\":\"token is not exist\"}"))
+                .isFalse();
+    }
+
+    /**
+     * 认不出的响应体判为<strong>失败</strong>。
+     *
+     * <p>形状不认识说明对面不是我们以为的那个接口，此时报成功是最坏的答案：
+     * 它把「不知道」记成了「已送达」。
+     */
+    @Test
+    void anUnrecognisableResponseIsNotSuccess() {
+        assertThat(DingTalkSender.accepted(null)).isFalse();
+        assertThat(DingTalkSender.accepted("")).isFalse();
+        assertThat(DingTalkSender.accepted("<html>502 Bad Gateway</html>")).isFalse();
     }
 
     // ------------------------------------------------------------------- 出站
@@ -153,7 +185,7 @@ class DingTalkSenderTest {
                 .build();
         DingTalkSender sender = new DingTalkSender(FIXED, viaDeadProxy);
         Credentials credentials = new Credentials(
-                "https://oapi.dingtalk.com/robot/send?access_token=x", "SECx");
+                "https://oapi.dingtalk.com/robot/send?access_token=x", "SECx", null);
 
         assertThat(sender.send(credentials, "标题", "正文")).isFalse();
     }

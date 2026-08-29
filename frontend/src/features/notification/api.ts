@@ -15,6 +15,11 @@ export interface NotificationChannel {
    * webhook URL 的人都能往群里发消息，界面若不说，配置的人就不知道自己停在哪一档。
    */
   signed: boolean;
+  /**
+   * 机器人「自定义关键词」安全设置里那个词。不是凭据，所以照常读得回来——
+   * 它是「消息为什么没到」最常见的原因，而配错了从消息本身完全看不出来。
+   */
+  keyword: string | null;
   updatedAt: string | null;
 }
 
@@ -34,7 +39,7 @@ export function getNotificationChannel(projectId: number): Promise<NotificationC
  */
 export function configureNotificationChannel(
   projectId: number,
-  input: { webhookUrl: string; secret: string; enabled: boolean },
+  input: { webhookUrl: string; secret: string; keyword: string; enabled: boolean },
 ): Promise<NotificationChannel> {
   return requestJson<NotificationChannel>(channelPath(projectId), {
     method: "PUT",

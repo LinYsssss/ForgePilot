@@ -46,8 +46,9 @@ public class NotificationChannelService {
         access.requireRole(projectId, actorId, ProjectRole.LEADER);
         return channels.findByProjectIdAndChannel(projectId, NotificationChannelType.DINGTALK)
                 .map(channel -> new NotificationViews.ChannelView(true, channel.isEnabled(),
-                        channel.getEncryptedSecret() != null, channel.getUpdatedAt()))
-                .orElseGet(() -> new NotificationViews.ChannelView(false, false, false, null));
+                        channel.getEncryptedSecret() != null, channel.getKeyword(),
+                        channel.getUpdatedAt()))
+                .orElseGet(() -> new NotificationViews.ChannelView(false, false, false, null, null));
     }
 
     /**
@@ -57,7 +58,7 @@ public class NotificationChannelService {
      * 可言，调用方无从知道自己没填的那一半现在是什么。
      */
     public NotificationViews.ChannelView configure(long projectId, long actorId, String webhookUrl,
-            String secret, boolean enabled) {
+            String secret, String keyword, boolean enabled) {
         access.requireRole(projectId, actorId, ProjectRole.LEADER);
         requireDingTalkUrl(webhookUrl);
 
@@ -70,11 +71,13 @@ public class NotificationChannelService {
                 .orElseGet(() -> new NotificationChannel(projectId, NotificationChannelType.DINGTALK,
                         encryptedUrl, encryptedSecret));
         channel.replaceCredentials(encryptedUrl, encryptedSecret);
+        channel.useKeyword(keyword == null || keyword.isBlank() ? null : keyword.strip());
         channel.enable(enabled);
         channels.save(channel);
 
         return new NotificationViews.ChannelView(true, channel.isEnabled(),
-                channel.getEncryptedSecret() != null, channel.getUpdatedAt());
+                channel.getEncryptedSecret() != null, channel.getKeyword(),
+                channel.getUpdatedAt());
     }
 
     public void remove(long projectId, long actorId) {
@@ -90,7 +93,8 @@ public class NotificationChannelService {
                 .map(channel -> new Credentials(cipher.decrypt(channel.getEncryptedWebhookUrl()),
                         channel.getEncryptedSecret() == null
                                 ? null
-                                : cipher.decrypt(channel.getEncryptedSecret())));
+                                : cipher.decrypt(channel.getEncryptedSecret()),
+                        channel.getKeyword()));
     }
 
     /**
@@ -109,10 +113,14 @@ public class NotificationChannelService {
      *
      * <p>{@code secret} 为 {@code null} 表示这个渠道不加签——此时防护只剩 URL 本身的保密性。
      */
-    record Credentials(String webhookUrl, String secret) {
+    record Credentials(String webhookUrl, String secret, String keyword) {
 
         boolean signed() {
             return secret != null && !secret.isBlank();
+        }
+
+        boolean hasKeyword() {
+            return keyword != null && !keyword.isBlank();
         }
     }
 }

@@ -49,14 +49,21 @@ class ReviewCompletedListener {
         try {
             Optional<Credentials> credentials = channels.credentialsOf(event.projectId());
             if (credentials.isEmpty()) {
+                // 记一行而不是静默返回：没有它，「没配渠道」与「发出去了」在日志里长得一模一样，
+                // 而这正是排查「消息没到」时最先要排除的分支。
+                log.info("Project {} has no enabled notification channel; skipping review {}",
+                        event.projectId(), event.reviewId());
                 return;
             }
             Optional<ReviewFacts> found = facts.factsOf(event.projectId(), event.reviewId());
             if (found.isEmpty()) {
+                log.warn("Review {} of project {} vanished before it could be announced",
+                        event.reviewId(), event.projectId());
                 return;
             }
             ReviewFacts review = found.get();
-            if (!sender.send(credentials.get(), title(review), text(review, event.reviewId()))) {
+            Credentials channel = credentials.get();
+            if (!sender.send(channel, title(channel, review), text(channel, review, event.reviewId()))) {
                 log.warn("DingTalk refused the notification for review {} of project {}",
                         event.reviewId(), event.projectId());
             }
@@ -68,17 +75,25 @@ class ReviewCompletedListener {
         }
     }
 
-    private static String title(ReviewFacts review) {
-        return "代码审查完成：#%d".formatted(review.pullRequestNumber());
+    /**
+     * 关键词必须出现在<strong>消息内容</strong>里。机器人若配了「自定义关键词」安全设置，
+     * 不含那个词的消息会被钉钉丢弃——而它丢弃时仍然答 HTTP 200，所以少了这一步的表现
+     * 是「一切正常但群里什么都没有」。放在最前面，一眼可见。
+     */
+    private static String title(Credentials channel, ReviewFacts review) {
+        String base = "代码审查完成：#%d".formatted(review.pullRequestNumber());
+        return channel.hasKeyword() ? channel.keyword() + " " + base : base;
     }
 
     /**
      * 只放计数与标题。finding 正文与 patch 片段<strong>不进消息</strong>：能看到群消息的人
      * 不一定是这个项目的成员，而这条消息一旦发出就不再受本系统的权限模型约束。
      */
-    private String text(ReviewFacts review, long reviewId) {
+    private String text(Credentials channel, ReviewFacts review, long reviewId) {
         StringBuilder text = new StringBuilder()
-                .append("### 代码审查完成\n\n")
+                // 标题同样进正文：钉钉按内容匹配关键词，而 markdown 的 title 字段
+                // 是否计入匹配没有明确保证，两处都放才稳妥。
+                .append("### ").append(title(channel, review)).append("\n\n")
                 .append("**项目**：").append(review.projectName()).append("\n\n")
                 .append("**PR**：#").append(review.pullRequestNumber())
                 .append(' ').append(review.pullRequestTitle()).append("\n\n");

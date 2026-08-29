@@ -129,7 +129,7 @@ query_postgres() {
 postgres_15_or_newer="$(query_postgres "select current_setting('server_version_num')::integer >= 150000;")"
 vector_version="$(query_postgres "select extversion from pg_extension where extname = 'vector';")"
 vector_distance="$(query_postgres "select '[1,2,3]'::vector <-> '[1,2,4]'::vector;")"
-flyway_head="$(query_postgres "select success from flyway_schema_history where version = '12';")"
+flyway_head="$(query_postgres "select success from flyway_schema_history where version = '13';")"
 migration_count="$(query_postgres "select count(*) from flyway_schema_history where version is not null;")"
 failed_migrations="$(query_postgres "select count(*) from flyway_schema_history where success is false;")"
 application_tables="$(query_postgres "select string_agg(table_name, ',' order by table_name collate \"C\") from information_schema.tables where table_schema = 'public' and table_type = 'BASE TABLE' and table_name <> 'flyway_schema_history';")"
@@ -147,8 +147,8 @@ expected_tables='acceptance_criterion,ai_call_log,finding,finding_event,knowledg
   printf 'pgvector extension contract failed.\n' >&2
   exit 1
 }
-[[ "$flyway_head" == "t" && "$migration_count" == "12" ]] || {
-  printf 'Flyway did not apply exactly twelve successful versioned migrations through V12.\n' >&2
+[[ "$flyway_head" == "t" && "$migration_count" == "13" ]] || {
+  printf 'Flyway did not apply exactly thirteen successful versioned migrations through V13.\n' >&2
   exit 1
 }
 [[ "$failed_migrations" == "0" ]] || {

@@ -21,6 +21,7 @@ final class NotificationViews {
      * 事实：不加签时，任何拿到那个 webhook URL 的人都能往群里发消息，而界面若不说，
      * 配置的人就无从知道自己停在了哪一档。
      */
-    record ChannelView(boolean configured, boolean enabled, boolean signed, Instant updatedAt) {
+    record ChannelView(boolean configured, boolean enabled, boolean signed, String keyword,
+            Instant updatedAt) {
     }
 }

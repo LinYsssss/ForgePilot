@@ -12,10 +12,14 @@ import java.security.NoSuchAlgorithmException;
 import java.time.Clock;
 import java.time.Duration;
 import java.util.Base64;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 /**
@@ -35,7 +39,16 @@ import org.springframework.stereotype.Component;
 @Component
 class DingTalkSender {
 
+    private static final Logger log = LoggerFactory.getLogger(DingTalkSender.class);
+
     private static final Duration TIMEOUT = Duration.ofSeconds(10);
+
+    /**
+     * 钉钉<strong>不用状态码报告应用层的拒绝</strong>：关键词不匹配、签名不对、token 失效，
+     * 全都答 HTTP 200，把真正的结果放在响应体的 {@code errcode} 里。只看状态码会把每一次
+     * 拒收都当成成功——消息从没进群，而系统坚称发出去了。
+     */
+    private static final Pattern ERRCODE = Pattern.compile("\"errcode\"\\s*:\\s*(-?\\d+)");
 
     private final HttpClient http;
     private final Clock clock;
@@ -85,13 +98,46 @@ class DingTalkSender {
                 .build();
         try {
             HttpResponse<String> response = http.send(request, HttpResponse.BodyHandlers.ofString());
-            return response.statusCode() / 100 == 2;
+            if (response.statusCode() / 100 != 2) {
+                log.warn("DingTalk answered HTTP {}", response.statusCode());
+                return false;
+            }
+            if (accepted(response.body())) {
+                return true;
+            }
+            // 这条日志是排查这类问题的唯一线索，因此必须带上钉钉自己的说法。
+            // 响应体里只有 errcode 与 errmsg，不含任何凭据。
+            log.warn("DingTalk took the request but refused the message: {}", excerpt(response.body()));
+            return false;
         } catch (IOException failure) {
+            log.warn("DingTalk was unreachable: {}", failure.getMessage());
             return false;
         } catch (InterruptedException interrupted) {
             Thread.currentThread().interrupt();
             return false;
         }
+    }
+
+    /**
+     * 只有 {@code errcode} 为 0 才算送达。
+     *
+     * <p>读不到 {@code errcode} 时判为<strong>失败</strong>而不是成功：一个形状不认识的
+     * 响应，说明对面不是我们以为的那个接口，此时报成功是最坏的答案。
+     */
+    static boolean accepted(String body) {
+        if (body == null) {
+            return false;
+        }
+        Matcher matcher = ERRCODE.matcher(body);
+        return matcher.find() && "0".equals(matcher.group(1));
+    }
+
+    private static String excerpt(String body) {
+        if (body == null) {
+            return "(empty response)";
+        }
+        String trimmed = body.strip();
+        return trimmed.length() <= 200 ? trimmed : trimmed.substring(0, 200) + "…";
     }
 
     private String signedTarget(NotificationChannelService.Credentials credentials) {

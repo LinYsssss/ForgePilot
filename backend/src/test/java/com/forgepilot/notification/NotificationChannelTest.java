@@ -117,6 +117,21 @@ class NotificationChannelTest extends PostgresTestBase {
                 .andExpect(jsonPath("$.signed").value(true));
     }
 
+    /**
+     * 关键词不是凭据，因此<strong>照常回显</strong>。
+     *
+     * <p>它是「消息为什么没到」最常见的原因，而配错了又无法从消息本身看出来——
+     * 读不回来的话，配置者只能靠反复重配去猜。
+     */
+    @Test
+    void theKeywordIsReadableBecauseItIsNotACredential() throws Exception {
+        Scenario scenario = new Scenario();
+
+        mockMvc.perform(configure(scenario, WEBHOOK, SECRET, true))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.keyword").value("审查"));
+    }
+
     /** 非钉钉地址被拒，且拒绝发生在落盘之前。 */
     @Test
     void aNonDingTalkUrlIsRefusedBeforeAnythingIsStored() throws Exception {
@@ -167,7 +182,7 @@ class NotificationChannelTest extends PostgresTestBase {
     // ----------------------------------------------------------------- helpers
 
     private static String payload(String url, String secret, boolean enabled) {
-        return "{\"webhookUrl\":\"%s\",\"secret\":\"%s\",\"enabled\":%s}"
+        return "{\"webhookUrl\":\"%s\",\"secret\":\"%s\",\"keyword\":\"审查\",\"enabled\":%s}"
                 .formatted(url, secret, enabled);
     }
 

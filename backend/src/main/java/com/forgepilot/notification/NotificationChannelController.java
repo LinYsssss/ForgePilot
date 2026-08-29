@@ -44,7 +44,7 @@ class NotificationChannelController {
     NotificationViews.ChannelView configure(@PathVariable long projectId,
             @Valid @RequestBody ConfigureRequest request, Principal principal) {
         return channels.configure(projectId, userIdOf(principal), request.webhookUrl(),
-                request.secret(), request.enabled());
+                request.secret(), request.keyword(), request.enabled());
     }
 
     @DeleteMapping
@@ -70,6 +70,7 @@ class NotificationChannelController {
     record ConfigureRequest(
             @NotBlank @Size(max = 512) String webhookUrl,
             @Size(max = 256) String secret,
+            @Size(max = 64) String keyword,
             boolean enabled) {
     }
 }

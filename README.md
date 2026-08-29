@@ -43,7 +43,7 @@ ForgePilot 是一个面向软件研发流程的轻量级 AI 研发协作与代�
 ## 仓库结构
 
 ```text
-backend/       Spring Boot 模块化单体，9 个业务包 / 21 张表 / 12 个 Flyway 迁移
+backend/       Spring Boot 模块化单体，9 个业务包 / 21 张表 / 13 个 Flyway 迁移
 frontend/      Vue 3 + TypeScript + Vite 前端，6 个一级导航 / 11 条产品路由
 evaluation/    评测工具链、确定性打分器与冻结配置
 docs/v2/       产品与架构的唯一事实源

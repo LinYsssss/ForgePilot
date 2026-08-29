@@ -42,6 +42,15 @@ public class NotificationChannel {
     @Column(name = "encrypted_secret")
     private String encryptedSecret;
 
+    /**
+     * 机器人「自定义关键词」安全设置里配的那个词。{@code null} 表示不需要。
+     *
+     * <p>它<strong>不是凭据</strong>，因此不加密、也照常返回给配置者——配错了必须能看出来，
+     * 否则就只能靠「消息没到」来猜。
+     */
+    @Column(name = "keyword", length = 64)
+    private String keyword;
+
     @Column(name = "enabled", nullable = false)
     private boolean enabled;
 
@@ -81,6 +90,10 @@ public class NotificationChannel {
         this.enabled = enabled;
     }
 
+    void useKeyword(String keyword) {
+        this.keyword = keyword;
+    }
+
     public Long getId() {
         return id;
     }
@@ -99,6 +112,10 @@ public class NotificationChannel {
 
     String getEncryptedSecret() {
         return encryptedSecret;
+    }
+
+    String getKeyword() {
+        return keyword;
     }
 
     public boolean isEnabled() {
