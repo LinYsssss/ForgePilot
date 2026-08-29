@@ -25,6 +25,9 @@ import org.springframework.stereotype.Component;
  * {@code secret}，HmacSHA256 之后 Base64，再做一次 URL 编码，最后与 {@code timestamp}
  * 一并作为查询参数附在 webhook URL 后面。
  *
+ * <p>渠道<strong>可以不加签</strong>：此时 URL 原样使用，不附任何加签参数。那一档的防护
+ * 只剩 URL 本身的保密性，代价记在 SECURITY.md 的残余风险里。
+ *
  * <p><strong>本类不抛异常。</strong>推送失败返回 {@code false} 并记一行日志，
  * 不重试、不上报。理由写在 {@code package-info}：通知是旁路，让它的失败影响到审查，
  * 就是把一个聊天机器人的可用性变成代码审查的前置条件。
@@ -68,11 +71,11 @@ class DingTalkSender {
         // 与 GitHubClient 每次调用都重跑 OutboundUrlPolicy 是同一个理由。
         NotificationChannelService.requireDingTalkUrl(credentials.webhookUrl());
 
-        long timestamp = clock.millis();
-        URI target = URI.create(credentials.webhookUrl()
-                + (credentials.webhookUrl().contains("?") ? "&" : "?")
-                + "timestamp=" + timestamp
-                + "&sign=" + sign(timestamp, credentials.secret()));
+        // 没配密钥就完全不附加签参数。附一个用空串算出来的 sign 更糟：它看着像模像样，
+        // 却必然被钉钉拒收，而那个失败只在真实推送时才暴露。
+        URI target = URI.create(credentials.signed()
+                ? signedTarget(credentials)
+                : credentials.webhookUrl());
 
         HttpRequest request = HttpRequest.newBuilder(target)
                 .timeout(TIMEOUT)
@@ -89,6 +92,14 @@ class DingTalkSender {
             Thread.currentThread().interrupt();
             return false;
         }
+    }
+
+    private String signedTarget(NotificationChannelService.Credentials credentials) {
+        long timestamp = clock.millis();
+        return credentials.webhookUrl()
+                + (credentials.webhookUrl().contains("?") ? "&" : "?")
+                + "timestamp=" + timestamp
+                + "&sign=" + sign(timestamp, credentials.secret());
     }
 
     /** 钉钉规定的待签串与编码顺序：HmacSHA256 -> Base64 -> URL 编码。 */

@@ -525,7 +525,25 @@ free -m</code></pre>
     权限不足返回的是 404 或 403 的其他路径，但不来自这一层。
   </p>
 
-  <h3>6.6 站点打不开，但三个容器都 healthy</h3>
+  <h3>6.6 审查跑完了，钉钉没收到消息</h3>
+  <p>
+    通知是<strong>尽力而为的旁路</strong>：失败只在后端日志里留一行，不重试、不改审查状态。
+    所以「审查正常、消息没到」是一种预期内的组合，不是系统故障。按这个顺序查：
+  </p>
+  <ol>
+    <li><strong>渠道配了吗、开着吗</strong>——「仓库接入」页那张卡；<code>enabled</code> 为假就什么都不发。</li>
+    <li><strong>日志里有没有那一行</strong>：<code>docker compose -p fp-demo logs backend | grep -i dingtalk</code>。
+        有 <code>refused</code> 说明发出去了但钉钉没收——多半是加签不匹配或机器人被移出群。</li>
+    <li><strong>没加签的渠道</strong>还要看机器人的「自定义关键词」：勾了关键词的话，消息里必须含那个词，
+        而本系统发出的文案是固定的。这种情况下钉钉会拒收，而卡片上「加签：未开启」正是提示。</li>
+    <li><strong>换过 <code>FORGEPILOT_SCM_SECRET_KEY</code></strong>的话，存的凭据已经解不开了——见 5.3。</li>
+  </ol>
+  <p>
+    消息里没有可点链接，是因为 <code>FORGEPILOT_BASE_URL</code> 没配。留空是有意的默认：
+    一个指向 <code>127.0.0.1</code> 的链接比没有链接更糟。
+  </p>
+
+  <h3>6.7 站点打不开，但三个容器都 healthy</h3>
   <p>问题在容器外面。按这个顺序：</p>
 <pre><code>systemctl status cloudflared          <span class="c"># 隧道进程</span>
 journalctl -u cloudflared --since -1h <span class="c"># 隧道日志</span>

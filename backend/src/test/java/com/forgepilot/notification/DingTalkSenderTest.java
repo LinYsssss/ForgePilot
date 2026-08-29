@@ -117,6 +117,23 @@ class DingTalkSenderTest {
         assertThat(body).endsWith("}}");
     }
 
+    /**
+     * 没配密钥时<strong>完全不附加签参数</strong>。
+     *
+     * <p>另一种写法是用空串算一个 sign 附上去。那个签名看着像模像样，却必然被钉钉拒收，
+     * 而这个失败只在真实推送时才暴露——本地一切正常。
+     */
+    @Test
+    void anUnsignedChannelSendsTheUrlUntouched() {
+        Credentials unsigned = new Credentials(
+                "https://oapi.dingtalk.com/robot/send?access_token=x", null);
+
+        assertThat(unsigned.signed()).isFalse();
+        assertThat(new Credentials("https://oapi.dingtalk.com/robot/send", "   ").signed())
+                .as("全空白等同于没配").isFalse();
+        assertThat(new Credentials("https://oapi.dingtalk.com/robot/send", "SECx").signed()).isTrue();
+    }
+
     // ------------------------------------------------------------------- 出站
 
     /**

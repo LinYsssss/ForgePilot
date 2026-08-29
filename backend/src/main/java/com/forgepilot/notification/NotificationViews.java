@@ -14,7 +14,13 @@ final class NotificationViews {
     private NotificationViews() {
     }
 
-    /** {@code updatedAt} 为 null 当且仅当 {@code configured} 为 false。 */
-    record ChannelView(boolean configured, boolean enabled, Instant updatedAt) {
+    /**
+     * {@code updatedAt} 为 null 当且仅当 {@code configured} 为 false。
+     *
+     * <p>{@code signed} 说的是这个渠道有没有配加签密钥。它不是凭据，而是一个必须被看见的
+     * 事实：不加签时，任何拿到那个 webhook URL 的人都能往群里发消息，而界面若不说，
+     * 配置的人就无从知道自己停在了哪一档。
+     */
+    record ChannelView(boolean configured, boolean enabled, boolean signed, Instant updatedAt) {
     }
 }

@@ -38,7 +38,8 @@ public class NotificationChannel {
     @Column(name = "encrypted_webhook_url", nullable = false)
     private String encryptedWebhookUrl;
 
-    @Column(name = "encrypted_secret", nullable = false)
+    /** {@code null} 表示这个渠道<strong>不加签</strong>，与「密钥是空串」不是一回事。 */
+    @Column(name = "encrypted_secret")
     private String encryptedSecret;
 
     @Column(name = "enabled", nullable = false)
@@ -67,6 +68,9 @@ public class NotificationChannel {
     /**
      * 换一组凭据。两个值一起换，不提供只换其中一个的路径：URL 与加签密钥出自钉钉后台的
      * 同一次配置，分开更新会留下一组对不上的组合，而那种失败只会在下一次推送时才暴露。
+     *
+     * <p>{@code encryptedSecret} 传 {@code null} 表示这个渠道不加签。它必须能被显式地
+     * 从「有」改成「没有」——否则一个曾经配过密钥的渠道，就再也回不到不加签那一档。
      */
     void replaceCredentials(String encryptedWebhookUrl, String encryptedSecret) {
         this.encryptedWebhookUrl = encryptedWebhookUrl;

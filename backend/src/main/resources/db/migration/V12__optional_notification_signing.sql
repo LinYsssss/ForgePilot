@@ -1,0 +1,21 @@
+-- V11 made the DingTalk signing secret mandatory, on the reasoning that of the
+-- three protections a robot can carry -- a keyword, an IP allowlist, a signature
+-- -- only the signature survives the webhook URL leaking. That reasoning still
+-- holds. What did not hold is the assumption that every operator can turn signing
+-- on: DingTalk offers those settings when a robot is created, and in the clients
+-- people actually have, an existing robot's security settings cannot always be
+-- changed afterwards. A required column that an operator cannot satisfy does not
+-- produce a safer deployment; it produces no deployment.
+--
+-- So signing becomes optional and the column becomes nullable. NULL means "this
+-- channel is not signed", which is a different statement from "the secret is an
+-- empty string" -- hence a nullable column rather than a sentinel value. The
+-- application refuses to sign with a blank secret rather than sending an
+-- empty-key signature that would look valid to a reader and fail at DingTalk.
+--
+-- The cost is recorded as a residual risk rather than waved away: an unsigned
+-- channel is protected only by the secrecy of its URL, and that URL travels
+-- through browser history, screenshots and clipboards. SECURITY.html says so,
+-- and the configuration form says so at the point where the choice is made.
+
+ALTER TABLE project_notification_channel ALTER COLUMN encrypted_secret DROP NOT NULL;

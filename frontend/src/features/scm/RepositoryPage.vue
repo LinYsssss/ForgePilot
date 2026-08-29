@@ -120,7 +120,7 @@ async function dropNotification(): Promise<void> {
   notifyError.value = null;
   try {
     await removeNotificationChannel(id);
-    notification.value = { configured: false, enabled: false, updatedAt: null };
+    notification.value = { configured: false, enabled: false, signed: false, updatedAt: null };
   } catch (failure: unknown) {
     notifyError.value = apiErrorMessage(failure);
   } finally {
@@ -344,18 +344,22 @@ watch(projectId, load, { immediate: true });
             </p>
           </div>
           <div class="field repository-span">
-            <label for="notify-secret">加签密钥</label>
+            <label for="notify-secret">加签密钥（可留空）</label>
             <input
               id="notify-secret"
               v-model="notifySecret"
               type="password"
               autocomplete="off"
-              required
               maxlength="256"
             />
             <p class="field-hint">
-              机器人安全设置里选「加签」，把那串 <code>SEC…</code> 填这里。
-              只有加签能在地址泄露后仍然拦住伪造。
+              机器人安全设置里勾「加签」会给一串 <code>SEC…</code>，填这里。
+              钉钉这个选项<strong>只在创建机器人时可选</strong>，已建好的往往改不了——
+              改不了就留空。
+            </p>
+            <p class="field-hint">
+              <strong>留空的代价：</strong>防护就只剩上面那个地址的保密性。
+              任何拿到它的人都能往这个群发消息，而它会经过浏览器历史、截图和剪贴板。
             </p>
           </div>
           <label class="checkbox-field">
@@ -364,6 +368,10 @@ watch(projectId, load, { immediate: true });
           </label>
           <dl v-if="notification.configured" class="meta-list">
             <div><dt>状态</dt><dd>{{ notification.enabled ? "已启用" : "已停用" }}</dd></div>
+            <div>
+              <dt>加签</dt>
+              <dd>{{ notification.signed ? "已开启" : "未开启（仅靠地址保密）" }}</dd>
+            </div>
             <div v-if="notification.updatedAt">
               <dt>更新时间</dt><dd>{{ formatDateTime(notification.updatedAt) }}</dd>
             </div>

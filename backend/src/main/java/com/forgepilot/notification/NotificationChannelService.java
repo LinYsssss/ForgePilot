@@ -46,8 +46,8 @@ public class NotificationChannelService {
         access.requireRole(projectId, actorId, ProjectRole.LEADER);
         return channels.findByProjectIdAndChannel(projectId, NotificationChannelType.DINGTALK)
                 .map(channel -> new NotificationViews.ChannelView(true, channel.isEnabled(),
-                        channel.getUpdatedAt()))
-                .orElseGet(() -> new NotificationViews.ChannelView(false, false, null));
+                        channel.getEncryptedSecret() != null, channel.getUpdatedAt()))
+                .orElseGet(() -> new NotificationViews.ChannelView(false, false, false, null));
     }
 
     /**
@@ -62,7 +62,9 @@ public class NotificationChannelService {
         requireDingTalkUrl(webhookUrl);
 
         String encryptedUrl = cipher.encrypt(webhookUrl);
-        String encryptedSecret = cipher.encrypt(secret);
+        // 空白与缺失都当作「不加签」。用一个空串去加签会算出一个看着像样、
+        // 却必然被钉钉拒收的签名——那种失败只在真实推送时才暴露。
+        String encryptedSecret = secret == null || secret.isBlank() ? null : cipher.encrypt(secret);
         NotificationChannel channel = channels
                 .findByProjectIdAndChannel(projectId, NotificationChannelType.DINGTALK)
                 .orElseGet(() -> new NotificationChannel(projectId, NotificationChannelType.DINGTALK,
@@ -71,7 +73,8 @@ public class NotificationChannelService {
         channel.enable(enabled);
         channels.save(channel);
 
-        return new NotificationViews.ChannelView(true, channel.isEnabled(), channel.getUpdatedAt());
+        return new NotificationViews.ChannelView(true, channel.isEnabled(),
+                channel.getEncryptedSecret() != null, channel.getUpdatedAt());
     }
 
     public void remove(long projectId, long actorId) {
@@ -85,7 +88,9 @@ public class NotificationChannelService {
         return channels.findByProjectIdAndChannel(projectId, NotificationChannelType.DINGTALK)
                 .filter(NotificationChannel::isEnabled)
                 .map(channel -> new Credentials(cipher.decrypt(channel.getEncryptedWebhookUrl()),
-                        cipher.decrypt(channel.getEncryptedSecret())));
+                        channel.getEncryptedSecret() == null
+                                ? null
+                                : cipher.decrypt(channel.getEncryptedSecret())));
     }
 
     /**
@@ -99,7 +104,15 @@ public class NotificationChannelService {
         }
     }
 
-    /** 明文的一对凭据，只在进程内从服务传到发送器。 */
+    /**
+     * 明文凭据，只在进程内从服务传到发送器。
+     *
+     * <p>{@code secret} 为 {@code null} 表示这个渠道不加签——此时防护只剩 URL 本身的保密性。
+     */
     record Credentials(String webhookUrl, String secret) {
+
+        boolean signed() {
+            return secret != null && !secret.isBlank();
+        }
     }
 }

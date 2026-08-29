@@ -86,6 +86,37 @@ class NotificationChannelTest extends PostgresTestBase {
         assertThat(stored).doesNotContain("super-secret-token").doesNotContain(SECRET);
     }
 
+    /**
+     * 不填密钥也能配成，且界面能看出它<strong>没加签</strong>。
+     *
+     * <p>钉钉的安全设置只在创建机器人时可选，已存在的机器人在很多客户端里改不了。
+     * 强制要求加签换不来更安全的部署，只会换来无法部署——所以这一档必须走得通，
+     * 同时必须被如实标出来，而不是悄悄降级。
+     */
+    @Test
+    void aChannelWithoutASecretIsAllowedAndReportsItself() throws Exception {
+        Scenario scenario = new Scenario();
+
+        mockMvc.perform(configure(scenario, WEBHOOK, "", true))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.configured").value(true))
+                .andExpect(jsonPath("$.signed").value(false));
+
+        assertThat(jdbc.queryForObject("select encrypted_secret from project_notification_channel "
+                + "where project_id = ?", String.class, scenario.projectId))
+                .as("「没有密钥」存成 NULL，不是空串——两者不是一回事").isNull();
+    }
+
+    /** 配了密钥的渠道如实报告自己加了签。这一条与上一条互为对照，缺一个就只证明了一半。 */
+    @Test
+    void aChannelWithASecretReportsThatItIsSigned() throws Exception {
+        Scenario scenario = new Scenario();
+
+        mockMvc.perform(configure(scenario, WEBHOOK, SECRET, true))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.signed").value(true));
+    }
+
     /** 非钉钉地址被拒，且拒绝发生在落盘之前。 */
     @Test
     void aNonDingTalkUrlIsRefusedBeforeAnythingIsStored() throws Exception {

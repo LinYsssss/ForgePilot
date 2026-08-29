@@ -149,7 +149,7 @@
   <dl class="docmeta">
     <div><dt>系统名称</dt><dd>ForgePilot</dd></div>
     <div><dt>定位</dt><dd>需求驱动的 AI 代码审查平台</dd></div>
-    <div><dt>功能需求</dt><dd>69 条（FR）</dd></div>
+    <div><dt>功能需求</dt><dd>73 条（FR）</dd></div>
     <div><dt>非功能需求</dt><dd>38 条（NFR）</dd></div>
     <div><dt>验证规模</dt><dd>后端 + 前端全绿零跳过</dd></div>
     <div><dt>文档日期</dt><dd>2026-08-27</dd></div>
@@ -417,6 +417,17 @@
       <tr><td class="id">FR-G5</td><td>失败与未运行的 case 保持显式</td><td>工具<strong>绝不</strong>把它们改写成空的成功预测；<code>COMPLETED</code> 且零 finding 是有效空结果</td></tr>
     </tbody>
   </table></div>
+
+  <h3>4.8 通知（FR-H）</h3>
+  <div class="tw"><table>
+    <thead><tr><th>编号</th><th>需求</th><th>验收判据</th></tr></thead>
+    <tbody>
+      <tr><td class="id">FR-H1</td><td>项目可配置一个钉钉通知渠道，审查完成后推送摘要</td><td>只在审查<strong>确已提交</strong>后触发；地址钉死在 <code>oapi.dingtalk.com</code></td></tr>
+      <tr><td class="id">FR-H2</td><td>渠道凭据只写不读</td><td>webhook URL 与加签密钥均为密文存储，任何响应体都不回显；URL 本身按凭据对待（<code>access_token</code> 在其中）</td></tr>
+      <tr><td class="id">FR-H3</td><td>加签可选，且当前档位对配置者可见</td><td>未加签时如实标出「仅靠地址保密」，<strong>不静默降级</strong>；「无密钥」存为 NULL 而非空串</td></tr>
+      <tr><td class="id">FR-H4</td><td>推送失败不影响审查</td><td>不重试、不改审查状态、不向上抛；消息只含计数与标题，<strong>不含</strong> finding 正文与 diff</td></tr>
+    </tbody>
+  </table></div>
 </section>
 
 <!-- ══════ 5 ══════ -->
@@ -629,6 +640,7 @@
       <tr><td class="id">NFR-S9</td><td class="f">GitHubWebhookController</td><td class="f">GitHubWebhookIngestionTest</td></tr>
       <tr><td class="id">NFR-S10</td><td class="f">AiCallLog · AiCallStatus</td><td class="f">AiGatewayTest</td></tr>
       <tr><td class="id">NFR-S12</td><td class="f">RateLimiter · RateLimitFilter · SecurityConfig · ScmWebhookSecurityConfig</td><td class="f">RateLimiterTest · AuthApiTest</td></tr>
+      <tr><td class="id">FR-H1–H4</td><td class="f">NotificationChannelService · DingTalkSender · ReviewCompletedListener · ReviewExecutor</td><td class="f">NotificationChannelTest · DingTalkSenderTest</td></tr>
       <tr><td class="id">NFR-R1</td><td class="f">PullRequestSyncService</td><td class="f">GitHubWebhookIngestionTest · GitLabWebhookIngestionTest</td></tr>
       <tr><td class="id">NFR-R2, R3</td><td class="f">ReviewExecutor · ReviewClaimRepository</td><td class="f">ReviewFencingTest</td></tr>
       <tr><td class="id">NFR-R5</td><td class="f">ApiExceptionHandler</td><td class="f">DatabaseConstraintTest</td></tr>

@@ -1,6 +1,6 @@
 # Backend
 
-ForgePilot 的 Spring Boot 模块化单体：9 个顶层业务包、21 张业务表、11 个 Flyway 迁移。
+ForgePilot 的 Spring Boot 模块化单体：9 个顶层业务包、21 张业务表、12 个 Flyway 迁移。
 完整 `verify` 零失败、零跳过。
 
 本地入口是 `./mvnw`；它使用仓库锁定的 Maven 3.9.16，不要求全局 Maven。分发包 URL 与

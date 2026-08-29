@@ -61,10 +61,15 @@ class NotificationChannelController {
     /**
      * {@code enabled} 是基本类型 boolean，因此缺失即为 false——这是安全的方向：
      * 一个没说清楚要不要开的配置，默认不往外发消息。
+     *
+     * <p>{@code secret} 可以缺失或为空，表示这个渠道不加签。钉钉的三种安全设置只在
+     * <em>创建</em>机器人时可选，已存在的机器人在很多客户端里改不了，因此强制要求加签
+     * 换不来更安全的部署，只会换来无法部署。代价记在 SECURITY.md 的残余风险里，
+     * 配置表单也在做选择的那个位置直说。
      */
     record ConfigureRequest(
             @NotBlank @Size(max = 512) String webhookUrl,
-            @NotBlank @Size(max = 256) String secret,
+            @Size(max = 256) String secret,
             boolean enabled) {
     }
 }

@@ -29,7 +29,7 @@ web layer.
 
 - Migration files live in `backend/src/main/resources/db/migration` and follow
   the naming rule in `ARCHITECTURE.md` §2.4.
-- Eleven migrations, `V1`–`V11`, produce the current twenty-one business tables.
+- Twelve migrations, `V1`–`V12`, produce the current twenty-one business tables.
   `V1__foundation.sql` contains only `CREATE EXTENSION IF NOT EXISTS vector`;
   `V2`–`V6` create the core model; `V7`, `V9` and `V10` add columns, and `V8`
   and `V10` add the role/identity/binding and deletion-ledger tables.
@@ -194,6 +194,40 @@ through direct JDBC and concurrent workers in the `review` test package.
 Testcontainers test pins the same tag. When the image is upgraded, change the
 tag in the test, the tag and digest in `compose.yaml`, and the expected value
 in the smoke script in one change, then re-run both.
+
+## Absent is not empty
+
+Three columns and two view fields now carry this distinction, so it is a
+convention rather than a local choice:
+
+| Absent | Means | Not to be confused with |
+|---|---|---|
+| `project_notification_channel.encrypted_secret` NULL | this channel is not signed | an empty secret, which would produce a real-looking signature that DingTalk always rejects |
+| `RequirementCoverage.verdict` null | the current revision has not been reviewed | `AcVerdict.NOT_FOUND`, which means it *was* reviewed and nothing implements it |
+| `CalibrationBin.interval` null | no samples | `[0, 0]`, which reads as "measured, and it is zero" |
+
+Use NULL, not a sentinel. An empty string, a zero, or a synthetic enum value
+all answer a question that was never asked, and the reader cannot tell the
+difference afterwards. `AcVerdict`'s javadoc makes the same argument for why it
+has no "no verdict" member: the two facts must stay separable in the UI.
+
+The rule extends to the view layer — a JSON field that is `null` for "unknown"
+and a number for "known" is honest; folding the first into `0` is not.
+
+## When a control depends on something you do not control
+
+The DingTalk signing secret was `NOT NULL` for one commit. The reasoning was
+sound -- of the three protections a robot can carry, only a signature survives
+the URL leaking -- but it assumed every operator can switch signing on, and
+DingTalk exposes those settings only while the robot is being created. A
+required credential that an operator cannot obtain does not produce a safer
+deployment; it produces no deployment, or a hand-edited row.
+
+So: make the stronger tier optional, make the **current tier visible** at the
+point where the choice is made, and record the weaker tier as a residual risk.
+`NotificationViews.ChannelView.signed` exists for exactly that -- it is not a
+credential, it is the answer to "which tier am I on", and hiding it would be
+the actual security failure.
 
 ## Common mistakes to avoid
 
