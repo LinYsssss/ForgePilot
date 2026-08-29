@@ -150,8 +150,8 @@
     读起来和「系统没有缺陷」一模一样，而那不是事实。
   </p>
   <dl class="docmeta">
-    <div><dt>后端</dt><dd>333<small>／45 类</small></dd></div>
-    <div><dt>前端</dt><dd>42<small>／14 文件</small></dd></div>
+    <div><dt>后端</dt><dd>364<small>／49 类</small></dd></div>
+    <div><dt>前端</dt><dd>43<small>／15 文件</small></dd></div>
     <div><dt>评测</dt><dd>48<small>项检查</small></dd></div>
     <div><dt>跳过</dt><dd>0</dd></div>
     <div><dt>失败</dt><dd>0</dd></div>
@@ -279,15 +279,25 @@
 <!-- ══════ 4 ══════ -->
 <section id="s4">
   <h2><span class="hn">4</span>后端测试结果</h2>
-  <p><strong>333 个用例，45 个测试类，0 失败，0 错误，0 跳过。</strong>执行时间约 5 分 10 秒（含容器启动）。</p>
+  <p><strong>364 个用例，49 个测试类，0 失败，0 错误，0 跳过。</strong>执行时间约 6 分钟（含容器启动）。</p>
+  <div class="note">
+    <span class="label">这些数字是快照，不是不变量</span>
+    <p>
+      本章全部计数来自 <strong>2026-08-29</strong> 的一次 <code>./mvnw -B -ntp verify</code>。
+      用例数逐提交变动，因此它<strong>不由任何测试钉住</strong>——读到本文时若已过期，以实际执行结果为准。
+      结构性数字（9 个后端包、21 张表、13 条迁移、6 个一级导航、11 条产品路由）则不同：它们由测试断言，
+      改动会让套件变红。9.3 记录了把这两类数字混为一谈曾造成的后果。
+    </p>
+  </div>
 
   <h3>4.1 按包分布</h3>
   <div class="tw"><table>
     <thead><tr><th>包</th><th class="n">类</th><th class="n">用例</th><th>侧重</th></tr></thead>
     <tbody>
-      <tr><td class="f">review</td><td class="n">9</td><td class="n">106</td><td>输出校验、抢占围栏、分批、Finding 血缘与生命周期、决策</td></tr>
+      <tr><td class="f">review</td><td class="n">10</td><td class="n">116</td><td>输出校验、抢占围栏、分批、Finding 血缘与生命周期、决策、覆盖度与校准</td></tr>
       <tr><td class="f">scm</td><td class="n">14</td><td class="n">93</td><td>webhook 认证、provider 权威读取、身份冻结、关联审计</td></tr>
       <tr><td class="f">(根包)</td><td class="n">9</td><td class="n">54</td><td>数据库约束、架构规则、跨切片 HTTP 闭环、迁移升级路径</td></tr>
+      <tr><td class="f">notification</td><td class="n">2</td><td class="n">16</td><td>钉钉 origin 钉死、加签算法、载荷转义、errcode 判定、凭据不回显</td></tr>
       <tr><td class="f">requirement</td><td class="n">4</td><td class="n">30</td><td>修订不可变性、状态机、质量检查、实现建议</td></tr>
       <tr><td class="f">ai</td><td class="n">3</td><td class="n">21</td><td>网关 HTTP 行为、超时与单次重试、Prompt 净化</td></tr>
       <tr><td class="f">knowledge</td><td class="n">3</td><td class="n">17</td><td>入库校验、检索隔离、向量索引论据</td></tr>
@@ -554,6 +564,19 @@ python3 evaluation/tools/postfreeze_provider_correction.py verify</code></pre>
       诊断特征是「<strong>单类运行绿、全量运行红</strong>」——出现该特征时应先用单类运行确认是顺序依赖，
       <strong>不要去改 <code>SecurityConfig</code></strong>。
     </p>
+    <p><strong>2026-08-29 的复现尝试</strong></p>
+    <p>
+      两次尝试<strong>均未复现</strong>：以 <code>-Dsurefire.runOrder=reversealphabetical</code>
+      跑完整套件全绿；当日新增三个测试类（<code>ReviewInsightTest</code>、
+      <code>DingTalkSenderTest</code>、<code>NotificationChannelTest</code>）之后套件仍然全绿——
+      而上面那条「影响」正预测新增测试类可能触发它。
+    </p>
+    <p>
+      三个数据点说明这个缺陷比当时判断的更窄，但<strong>根因依然未定位</strong>。
+      复现不了就不能宣布它消失，也正因如此<strong>没有</strong>为它加任何「以防万一」的处置：
+      给一个复现不了的问题贴 <code>@DirtiesContext</code>，只会多付一个 Spring 上下文，
+      并让下一个人误以为它已被解决。
+    </p>
   </div>
 
   <h3>9.2 已修复：冷启动脚本与当前 schema 不一致</h3>
@@ -563,8 +586,15 @@ python3 evaluation/tools/postfreeze_provider_correction.py verify</code></pre>
   <p>
     七个文件（含 <code>README.md</code>、<code>CLAUDE.md</code>、<code>AGENTS.md</code> 与三个子项目 README）
     仍写着「332 个测试 / 37 个测试」，而当时实际为 333 / 42；产品文档中也<strong>一处未提及</strong>已交付的项目归档能力。
-    当轮已修正。<strong>但这一类缺陷会复发</strong>：测试数散落在七八个文件里，没有任何机制保证它们同步——
-    本报告之后新增限流，套件到 338，这些数字又一次全部落后。真正的修法是让它们不再被手写重复，而不是再修一次。
+    当轮已修正。<strong>但这一类缺陷会复发，而且确实复发了</strong>：本报告之后新增限流（338）、
+    覆盖度与校准（348）、通知（358 → 364），每一次这些手写数字都再度落后，
+    <strong>包括本报告自己</strong>——它在 2026-08-29 被发现仍写着 333。
+  </p>
+  <p>
+    当日的处置不是再改一次数，而是把两类数字分开：<strong>结构性数字</strong>
+    （包数、表数、迁移数、导航数、路由数）由测试断言，改动即变红，可以放心写死；
+    <strong>用例数</strong>不被任何东西钉住，因此第 4 章现在明确标注它是某一次运行的快照，
+    并注明日期与产生它的命令。一个标着日期的数字过期时是诚实的，一个不标日期的数字过期时是错的。
   </p>
 
   <h3>9.4 测试执行过程中暴露的一个方法学问题</h3>
@@ -589,7 +619,7 @@ python3 evaluation/tools/postfreeze_provider_correction.py verify</code></pre>
   <div class="tw"><table>
     <thead><tr><th>门</th><th>结果</th><th>规模</th></tr></thead>
     <tbody>
-      <tr><td class="f">./mvnw -B -ntp verify</td><td><span class="yes">BUILD SUCCESS</span></td><td class="n">333 / 0 失败 / 0 跳过</td></tr>
+      <tr><td class="f">./mvnw -B -ntp verify</td><td><span class="yes">BUILD SUCCESS</span></td><td class="n">364 / 0 失败 / 0 跳过</td></tr>
       <tr><td class="f">npm run lint</td><td><span class="yes">通过</span></td><td class="n">4 条策略</td></tr>
       <tr><td class="f">npm run typecheck</td><td><span class="yes">通过</span></td><td class="n">vue-tsc 严格模式</td></tr>
       <tr><td class="f">npm test -- --run</td><td><span class="yes">通过</span></td><td class="n">42 / 14 文件</td></tr>

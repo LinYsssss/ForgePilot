@@ -528,19 +528,64 @@ free -m</code></pre>
   <h3>6.6 审查跑完了，钉钉没收到消息</h3>
   <p>
     通知是<strong>尽力而为的旁路</strong>：失败只在后端日志里留一行，不重试、不改审查状态。
-    所以「审查正常、消息没到」是一种预期内的组合，不是系统故障。按这个顺序查：
+    所以「审查正常、消息没到」是一种预期内的组合，不是系统故障。
   </p>
-  <ol>
-    <li><strong>渠道配了吗、开着吗</strong>——「仓库接入」页那张卡；<code>enabled</code> 为假就什么都不发。</li>
-    <li><strong>日志里有没有那一行</strong>：<code>docker compose -p fp-demo logs backend | grep -i dingtalk</code>。
-        有 <code>refused</code> 说明发出去了但钉钉没收——多半是加签不匹配或机器人被移出群。</li>
-    <li><strong>没加签的渠道</strong>还要看机器人的「自定义关键词」：勾了关键词的话，消息里必须含那个词，
-        而本系统发出的文案是固定的。这种情况下钉钉会拒收，而卡片上「加签：未开启」正是提示。</li>
-    <li><strong>换过 <code>FORGEPILOT_SCM_SECRET_KEY</code></strong>的话，存的凭据已经解不开了——见 5.3。</li>
-  </ol>
+  <div class="note red">
+    <span class="label">钉钉不用状态码报告拒收</span>
+    <p>
+      关键词不匹配、签名不对、token 失效——<strong>全都答 HTTP 200</strong>，真正的结果放在
+      响应体的 <code>errcode</code> 里。因此排查这类问题<strong>只能看日志</strong>，
+      而不能看「有没有报错」。发送器会把钉钉自己的说法原样记下来：
+    </p>
+<pre><code>docker compose -p fp-demo logs backend | grep -i dingtalk</code></pre>
+  </div>
+  <p>按日志里的那一行对照处理：</p>
+  <div class="tw"><table>
+    <thead><tr><th>日志</th><th>含义</th><th>处置</th></tr></thead>
+    <tbody>
+      <tr>
+        <td class="f">（没有任何 dingtalk 行）</td>
+        <td>钉钉以 <code>errcode:0</code> 收下了</td>
+        <td>消息应该在群里。每一条失败路径都会记日志，所以沉默只剩这一种解释</td>
+      </tr>
+      <tr>
+        <td class="f">errcode:300005<br>token is not exist</td>
+        <td>webhook 地址里的 <code>access_token</code> 在钉钉那边不存在</td>
+        <td><strong>机器人被删过或重建过</strong>——重建会换全新 token。到「仓库接入」页整组重填当前地址</td>
+      </tr>
+      <tr>
+        <td class="f">errcode:310000<br>keywords not in content</td>
+        <td>机器人配了「自定义关键词」，而消息里没有那个词</td>
+        <td>把那个词填进配置卡的「自定义关键词」，它会被拼进消息标题</td>
+      </tr>
+      <tr>
+        <td class="f">errcode:310000<br>sign not match</td>
+        <td>加签密钥不对</td>
+        <td>从机器人安全设置里重新复制 <code>SEC…</code> 并整组重填</td>
+      </tr>
+      <tr>
+        <td class="f">has no enabled notification channel</td>
+        <td>该项目没配渠道，或渠道被停用</td>
+        <td>「仓库接入」页那张卡，勾上「启用推送」</td>
+      </tr>
+      <tr>
+        <td class="f">DingTalk was unreachable</td>
+        <td>出站网络问题</td>
+        <td>查主机到 <code>oapi.dingtalk.com</code> 的连通性</td>
+      </tr>
+    </tbody>
+  </table></div>
+  <div class="note amber">
+    <span class="label">换过加密密钥就都解不开了</span>
+    <p>
+      换过 <code>FORGEPILOT_SCM_SECRET_KEY</code> 的话，已存的 webhook 地址与加签密钥
+      <strong>永久无法解密</strong>，表现同样是消息发不出去——见 5.3。此时必须整组重填。
+    </p>
+  </div>
   <p>
     消息里没有可点链接，是因为 <code>FORGEPILOT_BASE_URL</code> 没配。留空是有意的默认：
-    一个指向 <code>127.0.0.1</code> 的链接比没有链接更糟。
+    一个指向 <code>127.0.0.1</code> 的链接比没有链接更糟。改完记得用
+    <code>up --detach</code> 而不是 <code>restart</code>（第 2 章）。
   </p>
 
   <h3>6.7 站点打不开，但三个容器都 healthy</h3>
