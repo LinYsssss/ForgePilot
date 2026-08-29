@@ -290,3 +290,66 @@ export function getRequirementReviewActivity(
     `${projectPath(projectId)}/requirements/${requirementId}/review-activity`,
   );
 }
+
+/**
+ * 一条验收条件当前的状态。
+ *
+ * `verdict` 为 `null` 表示当前修订**还没有被审查过**，与 `NOT_FOUND`
+ * （审查过了，但 diff 里没有东西实现它）不是一回事，界面上必须分开说。
+ */
+export interface AcCoverage {
+  acKey: string;
+  text: string;
+  verdict: AcVerdict | null;
+  openFindings: number;
+}
+
+export interface RequirementCoverage {
+  requirementId: number;
+  requirementRevisionId: number | null;
+  lastReviewId: number | null;
+  criteria: AcCoverage[];
+}
+
+/** 二项比例的 95% Wilson 区间；`null` 表示样本量为 0，没有区间可言。 */
+export interface Interval {
+  low: number;
+  high: number;
+}
+
+/**
+ * 校准表的一个置信度分箱。
+ *
+ * `confirmedRate` 与 `interval` 在 `adjudicated` 为 0 时都是 `null`：一个没有样本的
+ * 分箱既没有比例也没有区间，显示 0% 会被读成「模型在这一档上从来没对过」。
+ */
+export interface CalibrationBin {
+  confidence: FindingConfidence;
+  adjudicated: number;
+  confirmed: number;
+  confirmedRate: number | null;
+  interval: Interval | null;
+}
+
+/**
+ * `awaitingAdjudication` 与 `withoutConfidence` 让一张空表能说清自己为什么空：
+ * 前者等人裁决，后者是更早的 prompt 版本产出的、本就没有置信度的 finding。
+ */
+export interface ReviewCalibration {
+  bins: CalibrationBin[];
+  awaitingAdjudication: number;
+  withoutConfidence: number;
+}
+
+export function getRequirementCoverage(
+  projectId: number,
+  requirementId: number,
+): Promise<RequirementCoverage> {
+  return requestJson<RequirementCoverage>(
+    `${projectPath(projectId)}/requirements/${requirementId}/coverage`,
+  );
+}
+
+export function getReviewCalibration(projectId: number): Promise<ReviewCalibration> {
+  return requestJson<ReviewCalibration>(`${projectPath(projectId)}/review-calibration`);
+}

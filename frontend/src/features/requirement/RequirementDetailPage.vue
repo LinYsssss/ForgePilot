@@ -8,10 +8,14 @@ import { apiErrorMessage } from "../../lib/http";
 import { useSession } from "../auth/session";
 import { getProject, hasProjectRole, listMembers, type Member, type Project } from "../project/api";
 import {
+  getRequirementCoverage,
   getRequirementReviewActivity,
   type ActivityView,
+  type RequirementCoverage,
 } from "../review/api";
 import {
+  AC_VERDICT_LABELS,
+  AC_VERDICT_TONES,
   PULL_REQUEST_ACTIVITIES,
   PULL_REQUEST_ACTIVITY_LABELS,
   REVIEW_ACTIVITY_LABELS,
@@ -63,6 +67,7 @@ const members = ref<Member[]>([]);
 const detail = ref<RequirementDetail | null>(null);
 const revisions = ref<Revision[]>([]);
 const reviewActivity = ref<ActivityView | null>(null);
+const coverage = ref<RequirementCoverage | null>(null);
 const loading = ref(true);
 const loadError = ref<string | null>(null);
 
@@ -136,6 +141,7 @@ async function load(): Promise<void> {
   detail.value = null;
   revisions.value = [];
   reviewActivity.value = null;
+  coverage.value = null;
   qualityReport.value = null;
   guidance.value = null;
   attachments.value = [];
@@ -146,14 +152,25 @@ async function load(): Promise<void> {
     return;
   }
   try {
-    const [loadedProject, loadedMembers, loadedDetail, loadedRevisions, loadedActivity, loadedAttachments] =
-      await Promise.all([
+    const [
+      loadedProject,
+      loadedMembers,
+      loadedDetail,
+      loadedRevisions,
+      loadedActivity,
+      loadedAttachments,
+      loadedCoverage,
+    ] = await Promise.all([
         getProject(ids.projectId),
         listMembers(ids.projectId),
         getRequirement(ids.projectId, ids.requirementId),
         listRevisions(ids.projectId, ids.requirementId),
         getRequirementReviewActivity(ids.projectId, ids.requirementId),
         listAttachments(ids.projectId, ids.requirementId),
+        // 覆盖度是补充面板，不是本页的主体数据：它失败时这一块不显示，
+      // 而不是把整页拖成加载失败。放进同一个 Promise.all 只为省一次往返，
+      // 因此这里必须先把它的失败吃掉，否则它就有了拖垮整页的权力。
+      getRequirementCoverage(ids.projectId, ids.requirementId).catch(() => null),
       ]);
     if (token !== detailLoadToken) {
       return;
@@ -163,6 +180,7 @@ async function load(): Promise<void> {
     revisions.value = loadedRevisions;
     reviewActivity.value = loadedActivity;
     attachments.value = loadedAttachments;
+    coverage.value = loadedCoverage;
     applyDetail(loadedDetail);
   } catch (failure: unknown) {
     if (token === detailLoadToken) {
@@ -460,6 +478,34 @@ function saveAssignee(): Promise<void> {
             <dd>{{ reviewActivity.counts[state] }}</dd>
           </div>
         </dl>
+      </section>
+
+      <section
+        v-if="coverage && coverage.criteria.length > 0"
+        class="panel coverage-section"
+        aria-labelledby="coverage-title"
+      >
+        <h2 id="coverage-title" class="panel-title">验收条件覆盖度</h2>
+        <p class="field-hint">
+          当前修订的每条验收条件在最近一次审查里的结论。发布新修订后会回到「尚未审查」——
+          旧裁定针对的是另一套验收条件。
+        </p>
+        <ul class="coverage-list">
+          <li v-for="row in coverage.criteria" :key="row.acKey" class="coverage-row">
+            <span class="coverage-key">{{ row.acKey }}</span>
+            <span class="coverage-text">{{ row.text }}</span>
+            <span
+              v-if="row.verdict"
+              :class="['badge', `badge-${AC_VERDICT_TONES[row.verdict]}`]"
+            >
+              {{ AC_VERDICT_LABELS[row.verdict] }}
+            </span>
+            <span v-else class="badge badge-info">尚未审查</span>
+            <span v-if="row.openFindings > 0" class="badge badge-warning">
+              {{ row.openFindings }} 条未决
+            </span>
+          </li>
+        </ul>
       </section>
 
       <section class="panel attachment-section" aria-labelledby="attachment-title">
@@ -823,6 +869,37 @@ function saveAssignee(): Promise<void> {
   margin: var(--fp-space-1) 0 0;
   color: var(--fp-color-accent-inverse);
   font: 800 1.25rem/1 var(--fp-font-mono);
+}
+
+.coverage-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fp-space-2);
+  margin: var(--fp-space-4) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.coverage-row {
+  display: flex;
+  align-items: center;
+  gap: var(--fp-space-3);
+  padding: var(--fp-space-3);
+  border: 0.0625rem solid var(--fp-color-border);
+  border-radius: var(--fp-radius-sm);
+  background: var(--fp-color-canvas-muted);
+}
+
+.coverage-key {
+  flex: 0 0 auto;
+  color: var(--fp-color-text-muted);
+  font: 700 0.75rem/1.4 var(--fp-font-mono);
+}
+
+/* 条文占据剩余宽度，把两个徽章推到行尾对齐。 */
+.coverage-text {
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .requirement-actions {

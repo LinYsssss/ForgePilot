@@ -18,12 +18,14 @@ import { listProjectKnowledge, type KnowledgeDocument } from "../knowledge/api";
 import { listProjects, type Project } from "../project/api";
 import { listRequirements, type RequirementSummary } from "../requirement/api";
 import {
+  getReviewCalibration,
   listProjectReviews,
   listReviewActivity,
   type ActivityView,
   type ProjectReviewRow,
+  type ReviewCalibration,
 } from "../review/api";
-import { REVIEW_ACTIVITY_LABELS } from "../review/labels";
+import { FINDING_CONFIDENCE_LABELS, REVIEW_ACTIVITY_LABELS } from "../review/labels";
 import { listScmRepositories, type ScmRepository } from "../scm/api";
 
 const route = useRoute();
@@ -35,8 +37,17 @@ const activity = ref<Record<string, ActivityView>>({});
 const reviews = ref<ProjectReviewRow[]>([]);
 const knowledge = ref<KnowledgeDocument[]>([]);
 const repositories = ref<ScmRepository[]>([]);
+const calibration = ref<ReviewCalibration | null>(null);
 const loading = ref(false);
 const error = ref<string | null>(null);
+
+/**
+ * 把一个 0..1 的比例格式化成百分比。`null` 是「没有样本」，不是 0%——
+ * 这两件事在校准表上导向相反的结论，因此这里绝不把 null 折成一个数。
+ */
+function percent(value: number | null): string {
+  return value === null ? "—" : `${(value * 100).toFixed(0)}%`;
+}
 
 const selected = computed(
   () => projects.value.find((project) => project.id === projectId.value) ?? null,
@@ -80,18 +91,27 @@ async function load(): Promise<void> {
   reviews.value = [];
   knowledge.value = [];
   repositories.value = [];
+  calibration.value = null;
   error.value = null;
   if (id === null) return;
   loading.value = true;
   try {
-    [requirements.value, activity.value, reviews.value, knowledge.value, repositories.value] =
-      await Promise.all([
-        listRequirements(id),
-        listReviewActivity(id),
-        listProjectReviews(id),
-        listProjectKnowledge(id),
-        listScmRepositories(id),
-      ]);
+    [
+      requirements.value,
+      activity.value,
+      reviews.value,
+      knowledge.value,
+      repositories.value,
+      calibration.value,
+    ] = await Promise.all([
+      listRequirements(id),
+      listReviewActivity(id),
+      listProjectReviews(id),
+      listProjectKnowledge(id),
+      listScmRepositories(id),
+      // 同上：校准卡失败只是它自己不显示，不该让整个工作台变成加载失败。
+      getReviewCalibration(id).catch(() => null),
+    ]);
   } catch (failure: unknown) {
     error.value = apiErrorMessage(failure);
   } finally {
@@ -304,6 +324,47 @@ watch(projectId, load, { immediate: true });
           </section>
         </div>
 
+        <section v-if="calibration" class="panel calibration-panel">
+          <div>
+            <h2 class="panel-title">模型置信度校准</h2>
+            <p class="field-hint">
+              模型自报的把握，对上人工的首次裁决。<strong>它不参与任何自动流转</strong>——
+              这张表是在度量那个自报值，不是开始信任它。区间为 95% Wilson，
+              与正式评测报告同一套口径。
+            </p>
+          </div>
+          <table class="calibration-table">
+            <thead>
+              <tr>
+                <th scope="col">置信度</th>
+                <th scope="col">已裁决</th>
+                <th scope="col">确认</th>
+                <th scope="col">确认率</th>
+                <th scope="col">95% 区间</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="bin in calibration.bins" :key="bin.confidence">
+                <th scope="row">{{ FINDING_CONFIDENCE_LABELS[bin.confidence] }}</th>
+                <td>{{ bin.adjudicated }}</td>
+                <td>{{ bin.confirmed }}</td>
+                <td>{{ percent(bin.confirmedRate) }}</td>
+                <td>
+                  <span v-if="bin.interval">
+                    {{ percent(bin.interval.low) }} – {{ percent(bin.interval.high) }}
+                  </span>
+                  <span v-else class="calibration-empty">样本不足</span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          <p class="field-hint">
+            还有 {{ calibration.awaitingAdjudication }} 条待人工裁决；另有
+            {{ calibration.withoutConfidence }} 条产自更早的 prompt 版本、本就没有置信度，
+            不计入本表。
+          </p>
+        </section>
+
         <section v-if="selected" class="panel shortcuts">
           <div>
             <h2 class="panel-title">项目快捷入口</h2>
@@ -320,6 +381,34 @@ watch(projectId, load, { immediate: true });
   </section>
 </template>
 <style scoped>
+.calibration-table {
+  width: 100%;
+  margin-top: var(--fp-space-4);
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.calibration-table th,
+.calibration-table td {
+  padding: var(--fp-space-2) var(--fp-space-3);
+  text-align: left;
+  border-bottom: 0.0625rem solid var(--fp-color-border);
+}
+
+.calibration-table thead th {
+  color: var(--fp-color-text-muted);
+  font-size: 0.75rem;
+  white-space: nowrap;
+}
+
+.calibration-table td {
+  font-variant-numeric: tabular-nums;
+}
+
+.calibration-empty {
+  color: var(--fp-color-text-muted);
+}
+
 .workspace-hero {
   display: grid;
   align-items: center;
