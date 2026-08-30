@@ -140,13 +140,13 @@ public class ReviewExecutor {
             // 一直停在 RUNNING 直到租约过期，而 reconciliation 随后会重新抢占它、
             // 再次去调用那个同样不可达的 provider——如此循环，永无止境。
             // FAILED 会停下来等人处理，这正是 3.2 里人工重试的用途。
-            fail(claim);
+            failAndPublish(claim);
             return;
         }
         if (report.isEmpty()) {
             // 某个批次即便用掉那一次修复也仍然解析不了，或者综合阶段没能通过校验。
             // 什么都不写：3.4.4 禁止残缺报告，3.5 禁止“成功的空结果”。
-            fail(claim);
+            failAndPublish(claim);
             return;
         }
 
@@ -165,6 +165,12 @@ public class ReviewExecutor {
         // 随后整体回滚的 attempt 也把事件发出去——那就是为一次从未发生的完成发通知。
         if (Boolean.TRUE.equals(committed)) {
             publisher.publishEvent(new ReviewCompleted(projectId, reviewId));
+        }
+    }
+
+    private void failAndPublish(Claim claim) {
+        if (fail(claim)) {
+            publisher.publishEvent(new ReviewFailed(claim.projectId(), claim.reviewId()));
         }
     }
 }

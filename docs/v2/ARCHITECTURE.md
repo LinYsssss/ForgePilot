@@ -24,7 +24,7 @@ com.forgepilot
 ├── knowledge     # Document、Chunk、ingestion、search
 ├── ai            # provider-neutral chat/embed gateway
 ├── review        # Review Engine、Finding、人工决策
-└── notification  # 项目通知渠道配置，以及审查完成后的对外推送
+└── notification  # 项目通知渠道配置，以及审查完成/失败后的对外推送
 ```
 
 只有这 9 个顶层包。**禁止**出现 `agent/patch/mq/rag/repo/pullrequest/context/assistant/finding` 顶层包。
@@ -32,7 +32,7 @@ com.forgepilot
 `notification` 之所以不能并进 `review`：`review` 的契约是「唯一的 Review Engine 及其人工决策
 闭环」，而通知是一条**尽力而为的旁路**——它没有投递保证，失败只记日志，不得影响审查的任何状态。
 把一个出站 HTTP 集成放进那个包，等于让一个聊天机器人的可用性成为代码审查闭环的一部分。
-它靠监听 `ReviewCompleted` 取得触发，因此 `review` 对它没有任何编译期依赖。
+它靠监听 `ReviewCompleted` / `ReviewFailed` 取得触发，因此 `review` 对它没有任何编译期依赖。
 
 `notification -> scm` 这条边只为一件事存在：`ScmSecretCipher`。本部署只有一把静态加密密钥
 （`FORGEPILOT_SCM_SECRET_KEY`），它保护着线上已存的仓库凭据。为了一张更整齐的依赖图去重命名

@@ -525,6 +525,20 @@ python3 evaluation/tools/postfreeze_provider_correction.py verify</code></pre>
     <li><strong>不为覆盖率补测</strong>——本项目不设覆盖率目标；答不上「锁住哪个不变量」的测试不写。</li>
     <li><strong>不测模型输出质量</strong>——那属于评测体系，用固定语料与确定性评分器度量，不属于单元测试。</li>
   </ul>
+
+  <h3>8.4 已知限制：Finding 行号连续性</h3>
+  <div class="note amber">
+    <span class="label">状态：已知 · 暂不改规则</span>
+    <p>
+      <code>finding_key</code> 当前包含 patch 新侧行号。无关插入，甚至空提交导致行号整体移动时，
+      即使 <code>evidence_hash</code> 与代码证据没有变化，同一 Finding 也可能被记录为 <code>NEW</code>，
+      从而无法继承上一轮的 <code>SUPPRESSED</code> 状态，削弱 P10 的自动抑制效果。
+    </p>
+    <p>
+      彻底修正需要调整跨 Review 的 key/hash 规则并处理历史数据，超出本次低成本改动范围；
+      因此这里将它作为已知限制明确记录，不把它误写成已解决的连续性保证。
+    </p>
+  </div>
 </section>
 
 <!-- ══════ 9 ══════ -->

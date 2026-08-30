@@ -12,13 +12,14 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
-/** 项目的钉钉通知配置。三个动作都要求 LEADER，由服务层判定。 */
+/** 项目的钉钉通知配置。所有动作都要求 LEADER，由服务层判定。 */
 @RestController
 @RequestMapping("/api/projects/{projectId}/notifications/dingtalk")
 class NotificationChannelController {
@@ -51,6 +52,11 @@ class NotificationChannelController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     void remove(@PathVariable long projectId, Principal principal) {
         channels.remove(projectId, userIdOf(principal));
+    }
+
+    @PostMapping("/test")
+    NotificationViews.TestResult test(@PathVariable long projectId, Principal principal) {
+        return new NotificationViews.TestResult(channels.sendTest(projectId, userIdOf(principal)));
     }
 
     private long userIdOf(Principal principal) {

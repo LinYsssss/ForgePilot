@@ -7,6 +7,7 @@ import com.forgepilot.project.ProjectAccessService;
 import com.forgepilot.project.ProjectRole;
 import com.forgepilot.scm.ScmSecretCipher;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
@@ -33,12 +34,14 @@ public class NotificationChannelService {
     private final NotificationChannelRepository channels;
     private final ProjectAccessService access;
     private final ScmSecretCipher cipher;
+    private final DingTalkSender sender;
 
     NotificationChannelService(NotificationChannelRepository channels, ProjectAccessService access,
-            ScmSecretCipher cipher) {
+            ScmSecretCipher cipher, DingTalkSender sender) {
         this.channels = channels;
         this.access = access;
         this.cipher = cipher;
+        this.sender = sender;
     }
 
     @Transactional(readOnly = true)
@@ -83,6 +86,17 @@ public class NotificationChannelService {
     public void remove(long projectId, long actorId) {
         access.requireRole(projectId, actorId, ProjectRole.LEADER);
         channels.deleteByProjectIdAndChannel(projectId, NotificationChannelType.DINGTALK);
+    }
+
+    /** Send a fixed diagnostic message without creating a Review or invoking AI. */
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    public boolean sendTest(long projectId, long actorId) {
+        access.requireRole(projectId, actorId, ProjectRole.LEADER);
+        Credentials credentials = credentialsOf(projectId)
+                .orElseThrow(() -> ApiException.conflict("No enabled DingTalk notification channel."));
+        String title = credentials.hasKeyword() ? credentials.keyword() + " ForgePilot 通知测试"
+                : "ForgePilot 通知测试";
+        return sender.send(credentials, title, "### " + title + "\n\n通知配置可用。");
     }
 
     /** 推送路径要用的明文凭据。仅供本包内部使用，绝不经由任何控制器出去。 */

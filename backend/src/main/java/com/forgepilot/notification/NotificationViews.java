@@ -24,4 +24,7 @@ final class NotificationViews {
     record ChannelView(boolean configured, boolean enabled, boolean signed, String keyword,
             Instant updatedAt) {
     }
+
+    record TestResult(boolean sent) {
+    }
 }

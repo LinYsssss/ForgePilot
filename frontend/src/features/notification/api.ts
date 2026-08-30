@@ -50,3 +50,7 @@ export function configureNotificationChannel(
 export function removeNotificationChannel(projectId: number): Promise<void> {
   return requestJson<void>(channelPath(projectId), { method: "DELETE" });
 }
+
+export function sendNotificationTest(projectId: number): Promise<{ sent: boolean }> {
+  return requestJson<{ sent: boolean }>(`${channelPath(projectId)}/test`, { method: "POST" });
+}

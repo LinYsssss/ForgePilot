@@ -8,6 +8,7 @@ import {
   configureNotificationChannel,
   getNotificationChannel,
   removeNotificationChannel,
+  sendNotificationTest,
   type NotificationChannel,
 } from "../notification/api";
 import { hasProjectRole, listProjects, type Project } from "../project/api";
@@ -46,6 +47,7 @@ const notifyKeyword = ref("");
 const notifyEnabled = ref(true);
 const notifyPending = ref(false);
 const notifyError = ref<string | null>(null);
+const notifyTestPending = ref(false);
 const selected = computed(
   () => projects.value.find((project) => project.id === projectId.value) ?? null,
 );
@@ -130,6 +132,21 @@ async function dropNotification(): Promise<void> {
     notifyError.value = apiErrorMessage(failure);
   } finally {
     notifyPending.value = false;
+  }
+}
+
+async function testNotification(): Promise<void> {
+  const id = projectId.value;
+  if (id === null) return;
+  notifyTestPending.value = true;
+  notifyError.value = null;
+  try {
+    const result = await sendNotificationTest(id);
+    notifyError.value = result.sent ? "测试消息已发送。" : "钉钉拒绝了测试消息，请检查日志。";
+  } catch (failure: unknown) {
+    notifyError.value = apiErrorMessage(failure);
+  } finally {
+    notifyTestPending.value = false;
   }
 }
 
@@ -406,6 +423,15 @@ watch(projectId, load, { immediate: true });
               @click="dropNotification"
             >
               移除
+            </button>
+            <button
+              v-if="notification.configured && notification.enabled"
+              type="button"
+              class="button"
+              :disabled="notifyPending || notifyTestPending"
+              @click="testNotification"
+            >
+              {{ notifyTestPending ? "正在发送…" : "发送测试消息" }}
             </button>
           </div>
         </form>
