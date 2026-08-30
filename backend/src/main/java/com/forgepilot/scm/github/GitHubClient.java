@@ -14,9 +14,12 @@ import com.forgepilot.scm.ScmRepository;
 import com.forgepilot.scm.ScmSecretCipher;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
+import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientResponseException;
 import tools.jackson.databind.JsonNode;
 
 /**
@@ -72,34 +75,54 @@ public class GitHubClient {
     }
 
     public void applyDecision(ScmRepository repository, int number, boolean approved) {
-        RestClient client = clientFor(repository);
-        JsonNode pullRequest = client.get()
-                .uri("/repositories/{repository}/pulls/{number}", repository.getExternalId(), number)
-                .retrieve()
-                .body(JsonNode.class);
-        String headRef = required(pullRequest.path("head"), "ref", "head.ref");
-        String defaultBranch = required(pullRequest.path("base").path("repo"), "default_branch",
-                "base.repo.default_branch");
-        if (approved) {
-            client.put()
-                    .uri("/repositories/{repository}/pulls/{number}/merge", repository.getExternalId(), number)
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .body("{\"merge_method\":\"merge\"}")
-                    .retrieve()
-                    .toBodilessEntity();
-        } else {
-            client.patch()
+        try {
+            RestClient client = clientFor(repository);
+            JsonNode pullRequest = client.get()
                     .uri("/repositories/{repository}/pulls/{number}", repository.getExternalId(), number)
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .body("{\"state\":\"closed\"}")
                     .retrieve()
-                    .toBodilessEntity();
+                    .body(JsonNode.class);
+            String headRef = required(pullRequest.path("head"), "ref", "head.ref");
+            String defaultBranch = required(pullRequest.path("base").path("repo"), "default_branch",
+                    "base.repo.default_branch");
+            if (approved) {
+                client.put()
+                        .uri("/repositories/{repository}/pulls/{number}/merge", repository.getExternalId(), number)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .body("{\"merge_method\":\"merge\"}")
+                        .retrieve()
+                        .toBodilessEntity();
+            } else {
+                client.patch()
+                        .uri("/repositories/{repository}/pulls/{number}", repository.getExternalId(), number)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .body("{\"state\":\"closed\"}")
+                        .retrieve()
+                        .toBodilessEntity();
+            }
+            if (!headRef.equals(defaultBranch)) {
+                deleteBranch(client, repository, headRef);
+            }
+        } catch (RestClientResponseException response) {
+            if (approved && (response.getStatusCode().value() == 405
+                    || response.getStatusCode().value() == 409)) {
+                throw ApiException.conflict("GitHub cannot merge this pull request; resolve its conflicts first.");
+            }
+            throw new ApiException(HttpStatus.BAD_GATEWAY, "provider_error",
+                    "GitHub refused the pull request action.");
+        } catch (ResourceAccessException network) {
+            throw new ApiException(HttpStatus.SERVICE_UNAVAILABLE, "provider_unavailable",
+                    "GitHub is temporarily unavailable.");
         }
-        if (!headRef.equals(defaultBranch)) {
+    }
+
+    private void deleteBranch(RestClient client, ScmRepository repository, String branch) {
+        try {
             client.delete()
-                    .uri("/repositories/{repository}/git/refs/heads/{branch}", repository.getExternalId(), headRef)
+                    .uri("/repositories/{repository}/git/refs/heads/{branch}", repository.getExternalId(), branch)
                     .retrieve()
                     .toBodilessEntity();
+        } catch (RestClientResponseException | ResourceAccessException ignored) {
+            // The merge/close already succeeded; leaving the branch is harmless and retryable.
         }
     }
 
