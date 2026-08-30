@@ -2,7 +2,7 @@
 
 本文是**产品权威**：定位、角色、范围、业务状态与产品规则。它描述系统当前提供的能力。
 
-技术规范（模块、20 表、依赖、运行边界）见 [ARCHITECTURE.md](./ARCHITECTURE.md)，本文不复述。
+技术规范（模块、21 表、依赖、运行边界）见 [ARCHITECTURE.md](./ARCHITECTURE.md)，本文不复述。
 
 ---
 
@@ -51,6 +51,7 @@ flowchart LR
 | 验证、标注和撤销自己的 SCM 身份 | ✅ | ✅ | ✅ |
 | 为项目选择自己的兼容 SCM 身份 | ✅ | ✅ | ✅ |
 | 严格项目批准/拒绝成员待审身份绑定 | ✅ | ❌ | ❌ |
+| 配置项目钉钉通知、发送测试消息 | ✅ | ❌ | ❌ |
 | 创建/编辑需求与 AC | ✅ | ❌ | ❌ |
 | 上传 `.txt/.md` 需求文档 | ✅ | ❌ | ❌ |
 | 阅读/下载需求文档、导出结构化需求 | ✅ | ✅ | ✅ |
@@ -81,6 +82,7 @@ flowchart LR
 - Requirement Implementation Guidance：基于 Requirement、AC 与项目知识生成一次性实现清单、相关规则和风险提示，不保存对话。
 - Project Knowledge：上传、切片、Embedding、项目内检索。
 - 六入口产品界面：工作台、项目、研发需求、项目知识、仓库接入、代码审查；工作台只读组合真实业务数据。
+- 项目级钉钉审查完成/失败摘要通知，以及 LEADER 发起的测试消息。
 - Knowledge 与需求附件展示真实切片、Embedding Profile、维度和语义索引状态，不展示原始向量。
 - 唯一 Review Engine：Requirement/AC + Knowledge + PR patch → Finding。
 - Finding 人工生命周期 + PR 的 APPROVE/REQUEST_CHANGES。
@@ -166,6 +168,7 @@ READY 后正文与 AC 锁定；修改由 LEADER 创建新的不可变 Revision �
 
 - **需求状态转换不单独留痕**：`DRAFT→READY`、指派、`CANCELED`、`DONE` 的转换本身不写审计行。这是明确接受的取舍，不是遗漏——§6 P7 的「人工决策全部留痕」因此不覆盖需求状态机。
 - **超限 changed-file 投递不留痕**：整条按 422 拒绝，运维看不到「有 PR 因过大被拒」。
+- **Finding 行号连续性**：`finding_key` 包含 patch 新侧行号；无关插入或空提交造成行号整体移动时，同一证据可能被判为 `NEW`，无法继承上一轮的 `SUPPRESSED`。彻底修正需要调整跨 Review key/hash 规则并处理历史数据，当前作为已知限制保留。
 - **语义检索没有向量索引**，走顺序扫描的精确余弦序。冻结的 Embedding Profile 是 4096 维，超过 pgvector 0.8.6 全部精确索引形态的维度上限，可建的两种形态都是有损预筛，因此选择不建。
 - **浏览器点击闭环、1440/768/390 三档宽度与 `prefers-reduced-motion` 两种模式为人工验收**，未自动化。
 

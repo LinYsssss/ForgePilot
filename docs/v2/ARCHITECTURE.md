@@ -6,7 +6,7 @@
 - 接口契约见 [API.md](./API.md)。
 - 部署、构建与评测复现见 [DEFENSE-GUIDE.md](./DEFENSE-GUIDE.md)。
 
-> **单一事实源纪律**：20 表、依赖规则、状态机、运行边界只在本文定义。其他文档引用本文，不复述。
+> **单一事实源纪律**：21 表、依赖规则、状态机、运行边界只在本文定义。其他文档引用本文，不复述。
 
 ---
 
@@ -33,6 +33,8 @@ com.forgepilot
 闭环」，而通知是一条**尽力而为的旁路**——它没有投递保证，失败只记日志，不得影响审查的任何状态。
 把一个出站 HTTP 集成放进那个包，等于让一个聊天机器人的可用性成为代码审查闭环的一部分。
 它靠监听 `ReviewCompleted` / `ReviewFailed` 取得触发，因此 `review` 对它没有任何编译期依赖。
+LEADER 还可以调用 `POST /api/projects/{projectId}/notifications/dingtalk/test` 发送固定测试消息；
+该动作只使用已启用的已存凭据，自动包含自定义关键词，不创建 Review，也不调用 AI。
 
 `notification -> scm` 这条边只为一件事存在：`ScmSecretCipher`。本部署只有一把静态加密密钥
 （`FORGEPILOT_SCM_SECRET_KEY`），它保护着线上已存的仓库凭据。为了一张更整齐的依赖图去重命名

@@ -235,7 +235,7 @@
   <div class="tw"><table>
     <thead><tr><th>层</th><th>技术</th><th>说明</th></tr></thead>
     <tbody>
-      <tr><td>后端</td><td class="f">Java 21 · Spring Boot 4.1</td><td>模块化单体，8 个顶层业务包</td></tr>
+      <tr><td>后端</td><td class="f">Java 21 · Spring Boot 4.1</td><td>模块化单体，9 个顶层业务包</td></tr>
       <tr><td>数据库</td><td class="f">PostgreSQL 15 + pgvector 0.8.6</td><td>业务事实源；Flyway 管理 schema</td></tr>
       <tr><td>前端</td><td class="f">Vue 3 · TypeScript · Vite</td><td>无状态管理库、无 UI 组件库、无 HTTP 客户端库</td></tr>
       <tr><td>模型服务</td><td class="f">OpenAI 兼容端点</td><td>base URL 由部署配置，代码不硬编码任何 host</td></tr>
@@ -422,10 +422,10 @@
   <div class="tw"><table>
     <thead><tr><th>编号</th><th>需求</th><th>验收判据</th></tr></thead>
     <tbody>
-      <tr><td class="id">FR-H1</td><td>项目可配置一个钉钉通知渠道，审查完成后推送摘要</td><td>只在审查<strong>确已提交</strong>后触发；地址钉死在 <code>oapi.dingtalk.com</code></td></tr>
+      <tr><td class="id">FR-H1</td><td>项目可配置一个钉钉通知渠道，审查完成或失败后推送摘要</td><td>只在 Review 终态<strong>确已提交</strong>后触发；完成与失败分别发送对应摘要；地址钉死在 <code>oapi.dingtalk.com</code></td></tr>
       <tr><td class="id">FR-H2</td><td>渠道凭据只写不读</td><td>webhook URL 与加签密钥均为密文存储，任何响应体都不回显；URL 本身按凭据对待（<code>access_token</code> 在其中）</td></tr>
       <tr><td class="id">FR-H3</td><td>加签可选，且当前档位对配置者可见</td><td>未加签时如实标出「仅靠地址保密」，<strong>不静默降级</strong>；「无密钥」存为 NULL 而非空串</td></tr>
-      <tr><td class="id">FR-H4</td><td>推送失败不影响审查</td><td>不重试、不改审查状态、不向上抛；消息只含计数与标题，<strong>不含</strong> finding 正文与 diff</td></tr>
+      <tr><td class="id">FR-H4</td><td>推送失败不影响审查，并提供配置测试</td><td>自动推送不重试、不改审查状态、不向上抛；消息只含计数与标题，<strong>不含</strong> finding 正文与 diff；LEADER 测试消息不创建 Review、不调用 AI，并带上自定义关键词</td></tr>
     </tbody>
   </table></div>
 </section>
@@ -640,15 +640,15 @@
       <tr><td class="id">NFR-S9</td><td class="f">GitHubWebhookController</td><td class="f">GitHubWebhookIngestionTest</td></tr>
       <tr><td class="id">NFR-S10</td><td class="f">AiCallLog · AiCallStatus</td><td class="f">AiGatewayTest</td></tr>
       <tr><td class="id">NFR-S12</td><td class="f">RateLimiter · RateLimitFilter · SecurityConfig · ScmWebhookSecurityConfig</td><td class="f">RateLimiterTest · AuthApiTest</td></tr>
-      <tr><td class="id">FR-H1–H4</td><td class="f">NotificationChannelService · DingTalkSender · ReviewCompletedListener · ReviewExecutor</td><td class="f">NotificationChannelTest · DingTalkSenderTest</td></tr>
+      <tr><td class="id">FR-H1–H4</td><td class="f">NotificationChannelController · NotificationChannelService · DingTalkSender · ReviewCompletedListener · ReviewFailed · ReviewExecutor</td><td class="f">NotificationChannelTest · DingTalkSenderTest</td></tr>
       <tr><td class="id">NFR-R1</td><td class="f">PullRequestSyncService</td><td class="f">GitHubWebhookIngestionTest · GitLabWebhookIngestionTest</td></tr>
       <tr><td class="id">NFR-R2, R3</td><td class="f">ReviewExecutor · ReviewClaimRepository</td><td class="f">ReviewFencingTest</td></tr>
       <tr><td class="id">NFR-R5</td><td class="f">ApiExceptionHandler</td><td class="f">DatabaseConstraintTest</td></tr>
       <tr><td class="id">NFR-R6</td><td class="f">ProjectRepository · ScmRepositoryService</td><td class="f">DatabaseConstraintTest · ScmIdentityFreezeConcurrencyTest</td></tr>
-      <tr><td class="id">NFR-M1</td><td class="f">（八包结构本身）</td><td class="f">ArchitectureRulesTest</td></tr>
+      <tr><td class="id">NFR-M1</td><td class="f">（九包结构本身）</td><td class="f">ArchitectureRulesTest</td></tr>
       <tr><td class="id">NFR-M2</td><td class="f">（迁移中的约束）</td><td class="f">DatabaseConstraintTest · KnowledgeAndScmConstraintTest</td></tr>
       <tr><td class="id">NFR-M3, M5</td><td class="f">PostgresTestBase</td><td class="f">FoundationDatabaseTest · 全部数据库测试</td></tr>
-      <tr><td class="id">NFR-M4</td><td class="f">db/migration/*.sql</td><td class="f">V8MigrationTest · V9MigrationTest · V10MigrationTest</td></tr>
+      <tr><td class="id">NFR-M4</td><td class="f">db/migration/*.sql</td><td class="f">FoundationDatabaseTest（V1–V13）· V8MigrationTest · V9MigrationTest · V10MigrationTest</td></tr>
       <tr><td class="id">NFR-M6, M7</td><td class="f">frontend/scripts/lint.mjs</td><td class="f">npm run lint</td></tr>
       <tr><td class="id">NFR-C1</td><td class="f">ScmRepository.apiBase · InstanceIdentity</td><td class="f">InstanceIdentityTest · ScmRepositoryApiTest</td></tr>
       <tr><td class="id">NFR-C2</td><td class="f">AiGateway</td><td class="f">AiGatewayConfigurationTest</td></tr>
@@ -725,6 +725,16 @@
     <p>
       当前处置：保留历史类名不改，套件维持全绿。
       本限制记录在此，以免后续新增测试类时被误判为新引入的缺陷。
+    </p>
+  </div>
+
+  <div class="note red">
+    <span class="label">限制 5 · Finding 行号连续性</span>
+    <p>
+      <code>finding_key</code> 当前包含 patch 新侧行号。无关插入，甚至空提交导致行号整体移动时，
+      即使 <code>evidence_hash</code> 与代码证据没有变化，同一 Finding 也可能变成 <code>NEW</code>，
+      无法继承上一轮的 <code>SUPPRESSED</code> 状态。彻底修正需要调整跨 Review key/hash 规则并处理历史数据，
+      当前将它作为已知限制记录。
     </p>
   </div>
 </section>

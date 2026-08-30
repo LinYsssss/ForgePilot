@@ -444,10 +444,10 @@ img, svg { max-width: 100%; height: auto; }
     <div class="fact"><dt>后端</dt><dd>175<small>个类</small></dd></div>
     <div class="fact"><dt>后端代码</dt><dd>13.8k<small>行</small></dd></div>
     <div class="fact"><dt>前端</dt><dd>34<small>个文件</small></dd></div>
-    <div class="fact"><dt>数据表</dt><dd>20<small>／10 迁移</small></dd></div>
-    <div class="fact"><dt>API 端点</dt><dd>60</dd></div>
+    <div class="fact"><dt>数据表</dt><dd>21<small>／13 迁移</small></dd></div>
+    <div class="fact"><dt>API 端点</dt><dd>67</dd></div>
     <div class="fact"><dt>后端测试</dt><dd>全绿<small>零跳过</small></dd></div>
-    <div class="fact"><dt>前端测试</dt><dd>42</dd></div>
+    <div class="fact"><dt>前端测试</dt><dd>43</dd></div>
   </dl>
 </header>
 
@@ -722,7 +722,7 @@ docker compose -p fp-demo up --detach --wait backend frontend</code></pre>
   <ul>
     <li><strong>反向需求只能用只读 facade 或事件。</strong><code>scm</code> 需要问需求存不存在，但不能碰 <code>RequirementRepository</code>，于是有 <code>RequirementDirectory</code>；<code>project</code> 删成员要让三个下游撤销引用，但不能依赖它们，于是用进程内事件 <code>ProjectMemberRemoving</code> 反转方向。</li>
     <li><strong>同时需要自己的表与 PR 推导的逻辑归 <code>review</code>。</strong>反过来会在 ArchUnit 最重要的那条规则面前摆上一个环。所以审查活动状态由 <code>review</code> 而非需求端点提供。</li>
-    <li><strong>旁路能力单独成包。</strong><code>notification</code> 监听 <code>ReviewCompleted</code> 取得触发，因此 <code>review</code> 对它<strong>没有任何编译期依赖</strong>。它没有并进 <code>review</code>，是因为那个包的契约是「唯一的 Review Engine 及其人工决策闭环」，而通知是尽力而为的：失败只记日志，不重试、不改审查状态。把出站 HTTP 放进去，等于让一个聊天机器人的可用性成为代码审查闭环的一部分。它依赖 <code>scm</code> 只为借 <code>ScmSecretCipher</code>——本部署只有一把静态加密密钥。</li>
+    <li><strong>旁路能力单独成包。</strong><code>notification</code> 监听 <code>ReviewCompleted</code> 与 <code>ReviewFailed</code> 取得触发，因此 <code>review</code> 对它<strong>没有任何编译期依赖</strong>。它没有并进 <code>review</code>，是因为那个包的契约是「唯一的 Review Engine 及其人工决策闭环」，而通知是尽力而为的：失败只记日志，不重试、不改审查状态。把出站 HTTP 放进去，等于让一个聊天机器人的可用性成为代码审查闭环的一部分。它依赖 <code>scm</code> 只为借 <code>ScmSecretCipher</code>——本部署只有一把静态加密密钥。</li>
   </ul>
   <div class="note">
     <span class="label">实现期踩过的坑</span>
@@ -748,7 +748,7 @@ docker compose -p fp-demo up --detach --wait backend frontend</code></pre>
     每包先给职责，再逐文件说明。
   </p>
   <p class="lb-key"><span class="lb"></span> 标记<strong>承重文件</strong>：改动它们会影响不变量、哈希稳定性或授权边界，动前先读它自己的 javadoc。</p>
-  <p>每个包还有一个 <code>package-info.java</code>，只承载包级 javadoc，共 8 个，下表不再重复列出。</p>
+  <p>每个包还有一个 <code>package-info.java</code>，只承载包级 javadoc，共 9 个，下表不再重复列出。</p>
 
   <!-- common -->
   <div class="pkg" id="p-common">
@@ -1042,7 +1042,8 @@ docker compose -p fp-demo up --detach --wait backend frontend</code></pre>
         <tr><td class="f">ReviewInsightService</td><td>两个派生视图：<strong>需求覆盖度</strong>把每次审查的逐条 AC 裁定收拢回当前修订；<strong>模型校准</strong>拿人工裁决去度量模型自报的置信度。都不存储，每次现算。</td></tr>
         <tr><td class="f">ReviewInsightRepository</td><td>覆盖度只看<strong>当前修订</strong>——旧修订的裁定针对的是另一套 AC，混进来就是把对不上号的结论摆在一起。校准的标签取自 <code>finding_event</code> 里<strong>首次</strong> <code>OPEN → CONFIRMED|REJECTED</code>，不取当前状态：驳回可以被重开，当前状态会把样本的标签翻过来。</td></tr>
         <tr><td class="f">Wilson</td><td>95% Wilson 区间，公式与常数逐字对应 <code>evaluation/tools/formal_evaluation.py</code>。用 Wilson 而非 Wald，是因为本用途的 n 一开始就很小，而 Wald 在比例贴近 0 或 1 时会给出宽度为零的区间——恰好在最该显出不确定性的时候假装确定。</td></tr>
-        <tr><td class="f">ReviewCompleted</td><td>在事务<strong>提交之后</strong>发布，与 <code>PullRequestChanged</code> 恰好相反：那个必须能连带回滚，这个必须不能。因此它无法为一次没有提交的 Review 发出去。</td></tr>
+        <tr><td class="f">ReviewCompleted</td><td>Review 成功落库后，在事务<strong>提交之后</strong>发布；失败的 Review 使用同样的提交后时机发布 <code>ReviewFailed</code>。两者都不会为未提交的状态触发通知。</td></tr>
+        <tr><td class="f">ReviewFailed</td><td>Review 已持久化为 <code>FAILED</code> 后发布的轻量事件；通知正文只说明未生成可用报告，不携带 provider 原始错误。</td></tr>
         <tr><td class="f">PullRequestActivity</td><td>单个 PR 的派生状态，<strong>六个</strong>取值不是八个。</td></tr>
         <tr><td class="f">RequirementActivity</td><td>单条需求的聚合状态。<code>NO_PR</code> 与 <code>MIXED</code> 属于需求层面，在 PR 层面毫无意义——所以是两个枚举而非共用一个。</td></tr>
       </tbody>
@@ -1054,9 +1055,9 @@ docker compose -p fp-demo up --detach --wait backend frontend</code></pre>
     <div class="tw"><table>
       <thead><tr><th>类</th><th>它做什么，以及为什么这么写</th></tr></thead>
       <tbody>
-        <tr><td class="f">ReviewCompletedListener</td><td>用普通 <code>@EventListener</code> 而非 <code>@TransactionalEventListener</code>：事件本身就在提交之后发布，「确已完成」这个保证在它存在的那一刻已经成立。<strong>本方法不抛异常</strong>，任何失败都在这里终止。</td></tr>
+        <tr><td class="f">ReviewCompletedListener</td><td>用普通 <code>@EventListener</code> 而非 <code>@TransactionalEventListener</code>，同时监听 <code>ReviewCompleted</code> 与 <code>ReviewFailed</code>；事件都在提交之后发布。<strong>本方法不抛异常</strong>，任何通知失败都在这里终止。</td></tr>
         <tr><td class="f">DingTalkSender</td><td>origin <strong>钉死</strong>在 <code>oapi.dingtalk.com/</code>，带结尾斜杠——少了它 <code>oapi.dingtalk.com.evil.com</code> 就能通过前缀比对，而这是本模块唯一的 SSRF 防线。<strong>只看 HTTP 状态码是不够的</strong>：钉钉的关键词不匹配、签名错、token 失效全都答 200，真正的结果在响应体 <code>errcode</code> 里；认不出的响应体判为失败，因为把「不知道」记成「已送达」是最坏的答案。</td></tr>
-        <tr><td class="f">NotificationChannelService</td><td>LEADER 才能配。凭据<strong>只进不出</strong>：webhook URL 里带着 <code>access_token</code>，回显它等于把发消息权限一并交出。加签密钥可空，NULL 表示不加签——与「空串」不是一回事，用空串算出的签名看着像样却必然被拒。</td></tr>
+        <tr><td class="f">NotificationChannelService</td><td>LEADER 才能配或发送测试消息。凭据<strong>只进不出</strong>：webhook URL 里带着 <code>access_token</code>，回显它等于把发消息权限一并交出。加签密钥可空，NULL 表示不加签——与「空串」不是一回事，用空串算出的签名看着像样却必然被拒。测试消息不创建 Review、不调用 AI，并带上已配置的关键词。</td></tr>
         <tr><td class="f">NotificationChannel</td><td><code>keyword</code> 明文存储且照常回显：它不是凭据，而是「消息为什么没到」最常见的原因，读不回来就只能靠反复重配去猜。</td></tr>
         <tr><td class="f">ReviewNotificationRepository</td><td>跨模块取数用朴素 SQL，与 <code>ReviewActivityRepository</code> 同理。<strong>只取计数与标题</strong>，不取 finding 正文与 patch——群聊的可见范围与本系统的权限模型不是一回事。</td></tr>
       </tbody>
@@ -1135,7 +1136,7 @@ docker compose -p fp-demo up --detach --wait backend frontend</code></pre>
 <!-- ═══════════════════ 07 ═══════════════════ -->
 <section id="s7">
   <h2><span class="h-num">07</span>数据模型 21 表</h2>
-  <p>PostgreSQL 15 + pgvector 0.8.6，Flyway 管理，<strong>十条迁移 V1–V10</strong>。<code>ddl-auto</code> 是 <code>validate</code>，Hibernate 只验证从不生成。</p>
+  <p>PostgreSQL 15 + pgvector 0.8.6，Flyway 管理，<strong>十三条迁移 V1–V13</strong>。<code>ddl-auto</code> 是 <code>validate</code>，Hibernate 只验证从不生成。</p>
 
   <div class="tw"><table>
     <thead><tr><th>表</th><th>归属</th><th>作用</th></tr></thead>
@@ -1199,7 +1200,7 @@ docker compose -p fp-demo up --detach --wait backend frontend</code></pre>
 <!-- ═══════════════════ 08 ═══════════════════ -->
 <section id="s8">
   <h2><span class="h-num">08</span>API 端点</h2>
-  <p>60 个端点。写请求都需要 <code>X-XSRF-TOKEN</code>；失败一律是同一个 <code>ApiError</code> 结构。</p>
+  <p>67 个端点。写请求都需要 <code>X-XSRF-TOKEN</code>；失败一律是同一个 <code>ApiError</code> 结构。</p>
 
   <div class="tw"><table>
     <caption>认证 · /api/auth</caption>
@@ -1279,6 +1280,17 @@ docker compose -p fp-demo up --detach --wait backend frontend</code></pre>
   </table></div>
 
   <div class="tw"><table>
+    <caption>项目通知 · /api/projects/{projectId}/notifications/dingtalk</caption>
+    <thead><tr><th>方法</th><th>路径</th><th>说明</th></tr></thead>
+    <tbody>
+      <tr><td><span class="verb get">GET</span></td><td class="f">/api/projects/{projectId}/notifications/dingtalk</td><td>读取渠道配置状态；凭据只返回是否已配置，不回显原值。</td></tr>
+      <tr><td><span class="verb put">PUT</span></td><td class="f">/api/projects/{projectId}/notifications/dingtalk</td><td>LEADER 配置或更新钉钉 Webhook、可选加签密钥与关键词。</td></tr>
+      <tr><td><span class="verb del">DELETE</span></td><td class="f">/api/projects/{projectId}/notifications/dingtalk</td><td>LEADER 删除项目钉钉通知配置。</td></tr>
+      <tr><td><span class="verb post">POST</span></td><td class="f">/api/projects/{projectId}/notifications/dingtalk/test</td><td>LEADER 使用已启用凭据发送测试消息；不创建 Review、不调用 AI。</td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="tw"><table>
     <caption>PR · Review · Finding</caption>
     <thead><tr><th>方法</th><th>路径</th><th>说明</th></tr></thead>
     <tbody>
@@ -1292,7 +1304,10 @@ docker compose -p fp-demo up --detach --wait backend frontend</code></pre>
       <tr><td><span class="verb post">POST</span></td><td class="f">…/findings/{findingId}/status</td><td>Finding 流转，可带备注。</td></tr>
       <tr><td><span class="verb get">GET</span></td><td class="f">…/findings/{findingId}/events</td><td>审计轨迹。项目内任何成员可读。</td></tr>
       <tr><td><span class="verb get">GET</span></td><td class="f">…/review-activity</td><td>项目内全部需求的派生活动。</td></tr>
-      <tr><td><span class="verb post">POST</span></td><td class="f">/api/scm/{github,gitlab}/webhook</td><td>Webhook 接收。<strong>不带 projectId</strong>，靠载荷定位仓库。</td></tr>
+      <tr><td><span class="verb get">GET</span></td><td class="f">…/requirements/{requirementId}/coverage</td><td>当前需求修订的 AC 覆盖度派生视图。</td></tr>
+      <tr><td><span class="verb get">GET</span></td><td class="f">…/review-calibration</td><td>基于人工 Finding 决策的模型置信度校准视图。</td></tr>
+      <tr><td><span class="verb post">POST</span></td><td class="f">/api/scm/github/webhook</td><td>GitHub Webhook 接收。<strong>不带 projectId</strong>，靠载荷定位仓库。</td></tr>
+      <tr><td><span class="verb post">POST</span></td><td class="f">/api/scm/gitlab/webhook</td><td>GitLab Webhook 接收。<strong>不带 projectId</strong>，靠载荷定位仓库。</td></tr>
     </tbody>
   </table></div>
 </section>
@@ -1437,7 +1452,7 @@ python3 evaluation/tools/formal_evaluation.py report \
     <thead><tr><th>范围</th><th class="n">规模</th><th>说明</th></tr></thead>
     <tbody>
       <tr><td>后端</td><td class="n">全绿</td><td>Testcontainers 真实 PostgreSQL，<strong>零跳过</strong>。</td></tr>
-      <tr><td>前端</td><td class="n">42</td><td>14 个测试文件。</td></tr>
+      <tr><td>前端</td><td class="n">43</td><td>15 个测试文件。</td></tr>
       <tr><td>评测</td><td class="n">18 + 30</td><td>18 个 unittest + <code>score.py --selftest</code> 的 30 项检查。</td></tr>
     </tbody>
   </table></div>
@@ -1470,7 +1485,7 @@ python3 evaluation/tools/score.py --selftest</code></pre>
   <h3>几条被测试钉住的形态</h3>
   <ul>
     <li><code>routes.spec.ts</code> 断言锁死导航与路由形态（6 入口 / 11 路由）。</li>
-    <li><code>ArchitectureRulesTest</code> 强制八包依赖单向、无环。</li>
+    <li><code>ArchitectureRulesTest</code> 强制九包依赖单向、无环。</li>
     <li><code>DatabaseConstraintTest</code> 通过 <code>JdbcTemplate</code> <strong>绕到所有应用代码之下</strong>写入，并点名期望的 SQLState（23505 / 23503 / 23514）。<strong>只被服务强制的约束等于没被强制。</strong></li>
     <li><code>KnowledgeVectorIndexTest</code> 把「为什么没有向量索引」写成测试而不是研究笔记——因为这条论据会过期：pgvector 一旦放宽维度上限，该测试就会失败，而那次失败正是「回去重新决策」的信号。</li>
     <li><code>ReviewPipelineIntegrationTest</code> 从 <code>scm</code> 发布的事件出发、断言数据库里的行，中间只替换 provider。它存在的理由是这个项目真实发生过两次的故障形态：每个组件都测过、而没有任何生产代码调用它们。</li>
@@ -1518,7 +1533,7 @@ python3 evaluation/tools/score.py --selftest</code></pre>
       <tr><td class="f">TopK</td><td>「取最相似的前 K 条」。本项目 K = 8，且强制限定在同一项目内。</td></tr>
       <tr><td class="f">facade</td><td>只读的门面类。别的模块只能通过它问问题，碰不到底层仓库，也碰不到内部机制。</td></tr>
       <tr><td class="f">依赖反转</td><td>本该 A 调 B，但依赖方向不允许，于是让 A 广播事件、B 主动来听。编译期的箭头方向就反过来了。</td></tr>
-      <tr><td class="f">ArchUnit</td><td>专门检查架构约束的测试库。本项目用它强制八个包的依赖单向、无环。</td></tr>
+      <tr><td class="f">ArchUnit</td><td>专门检查架构约束的测试库。本项目用它强制九个包的依赖单向、无环。</td></tr>
       <tr><td class="f">进程内事件</td><td>同一个 JVM 里的解耦调用，不经过消息队列。本项目要求它<strong>同步</strong>执行。</td></tr>
       <tr><td class="f">租约 / 围栏</td><td>租约是「我持有这个任务，有效期到某时刻」；围栏是「每次写入都检查我还持有它」。防止过期的 worker 继续写。</td></tr>
       <tr><td class="f">抢占</td><td>多个线程竞争同一个任务，靠一条原子 SQL 保证只有一个成功。</td></tr>

@@ -170,7 +170,7 @@
       <tr><td>后端业务代码</td><td class="n">175 类 / 13,767 行</td><td>单元 + 集成 + 真实数据库 + 架构约束</td></tr>
       <tr><td>前端应用</td><td class="n">34 文件 / 9,123 行</td><td>组件挂载 + 路由 + 请求契约 + 纯函数</td></tr>
       <tr><td>评测工具链</td><td class="n">9 个 Python 工具</td><td>unittest + 自洽性自测</td></tr>
-      <tr><td>数据库 schema</td><td class="n">20 表 / 10 迁移</td><td>真实 PostgreSQL + 迁移升级路径</td></tr>
+      <tr><td>数据库 schema</td><td class="n">21 表 / 13 迁移</td><td>真实 PostgreSQL + 迁移升级路径</td></tr>
       <tr><td>部署</td><td class="n">3 容器</td><td>冷启动脚本自证</td></tr>
     </tbody>
   </table></div>
@@ -352,7 +352,7 @@
 
   <h4>架构规则是可执行的，不是文档约定</h4>
   <p>
-    <code>ArchitectureRulesTest</code> 8 个用例强制八包依赖单向无环、禁止的包名不存在、
+    <code>ArchitectureRulesTest</code> 8 个用例强制九包依赖单向无环、禁止的包名不存在、
     <code>scm</code> 不依赖 <code>review</code>。它导入的是<strong>生产类</strong>，
     所以测试作用域的监听器不会削弱这条规则。
   </p>
@@ -361,7 +361,7 @@
 <!-- ══════ 5 ══════ -->
 <section id="s5">
   <h2><span class="hn">5</span>前端测试结果</h2>
-  <p><strong>42 个用例，14 个测试文件，全部通过。</strong>另有 lint（策略检查）、typecheck（<code>vue-tsc</code>）与 <code>vite build</code> 三道门同时通过。</p>
+  <p><strong>43 个用例，15 个测试文件，全部通过。</strong>另有 lint（策略检查）、typecheck（<code>vue-tsc</code>）与 <code>vite build</code> 三道门同时通过。</p>
 
   <div class="tw"><table>
     <thead><tr><th>测试文件</th><th class="n">用例</th><th>它锁住什么</th></tr></thead>
@@ -380,6 +380,7 @@
       <tr><td class="f">projectArchive.spec.ts</td><td class="n">2</td><td>归档闸门：前缀、大小写、首尾空格<strong>四种退化方向</strong>全部保持禁用</td></tr>
       <tr><td class="f">diff.spec.ts</td><td class="n">2</td><td>unified patch 转展示行与<strong>真实</strong> hunk 行号</td></tr>
       <tr><td class="f">reviewApi.spec.ts</td><td class="n">1</td><td>Review 请求契约</td></tr>
+      <tr><td class="f">calibration.spec.ts</td><td class="n">1</td><td>模型置信度校准视图的请求与响应契约</td></tr>
     </tbody>
   </table></div>
 
@@ -460,8 +461,8 @@ python3 evaluation/tools/postfreeze_provider_correction.py verify</code></pre>
   <ul>
     <li>三个健康检查全部通过，反向代理可达（后端 <code>/actuator/health</code>，经前端代理 <code>/api/actuator/health</code>）。</li>
     <li>PostgreSQL 版本 ≥ 15，<code>vector</code> 扩展已安装，距离运算返回预期值。</li>
-    <li>Flyway <strong>十条</strong>版本化迁移全部成功，最高版本 V10 成功。</li>
-    <li><code>public</code> 中<strong>恰好</strong>这二十张业务表，按 C 排序逐字符比对（不依赖容器 locale）。</li>
+    <li>Flyway <strong>十三条</strong>版本化迁移全部成功，最高版本 V13 成功。</li>
+    <li><code>public</code> 中<strong>恰好</strong>这二十一张业务表，按 C 排序逐字符比对（不依赖容器 locale）。</li>
   </ul>
 
   <div class="note red">
@@ -473,11 +474,11 @@ python3 evaluation/tools/postfreeze_provider_correction.py verify</code></pre>
     <p>
       后果：它是复现指南指定的冷启动证明，也是 CI 每次构建运行两次的作业，
       <strong>对当前 schema 必然失败</strong>。
-      而 <code>FoundationDatabaseTest</code> 里的 20 表清单是正确的，所以 <code>mvnw verify</code> 一直全绿——
+      而 <code>FoundationDatabaseTest</code> 里的表清单是正确的，所以 <code>mvnw verify</code> 一直全绿——
       <strong>后端测试证明不了一个 shell 脚本的期望值</strong>。
     </p>
     <p>
-      已修正并对照运行中的部署逐项核验：迁移数 10、V10 成功、表名字符串与 <code>information_schema</code> 逐字节一致。
+      其后已随通知渠道的 V11–V13 迁移同步更新；当前断言迁移数 13、V13 成功、21 个表的表名字符串与 <code>information_schema</code> 逐字节一致。
       由此形成的规则：<strong>新增建表迁移必须同步三处</strong>——
       <code>FoundationDatabaseTest.EXPECTED_TABLES</code>、脚本的 <code>expected_tables</code>、
       以及同一脚本内的迁移计数与版本成功检查。
@@ -636,11 +637,11 @@ python3 evaluation/tools/postfreeze_provider_correction.py verify</code></pre>
       <tr><td class="f">./mvnw -B -ntp verify</td><td><span class="yes">BUILD SUCCESS</span></td><td class="n">364 / 0 失败 / 0 跳过</td></tr>
       <tr><td class="f">npm run lint</td><td><span class="yes">通过</span></td><td class="n">4 条策略</td></tr>
       <tr><td class="f">npm run typecheck</td><td><span class="yes">通过</span></td><td class="n">vue-tsc 严格模式</td></tr>
-      <tr><td class="f">npm test -- --run</td><td><span class="yes">通过</span></td><td class="n">42 / 14 文件</td></tr>
+      <tr><td class="f">npm test -- --run</td><td><span class="yes">通过</span></td><td class="n">43 / 15 文件</td></tr>
       <tr><td class="f">npm run build</td><td><span class="yes">通过</span></td><td class="n">产物 241.57 kB（gzip 79.17 kB）</td></tr>
       <tr><td class="f">评测 unittest + selftest</td><td><span class="yes">通过</span></td><td class="n">48 项</td></tr>
       <tr><td class="f">verify-freeze + 端点更正</td><td><span class="yes">通过</span></td><td class="n">9 文件哈希核对</td></tr>
-      <tr><td class="f">冷启动脚本</td><td><span class="yes">修复后与运行部署一致</span></td><td class="n">10 迁移 / 20 表</td></tr>
+      <tr><td class="f">冷启动脚本</td><td><span class="yes">修复后与运行部署一致</span></td><td class="n">13 迁移 / 21 表</td></tr>
     </tbody>
   </table></div>
 

@@ -1021,7 +1021,7 @@ sync.apply(repository, github.fetch(repository, pullRequestNumber(payload)));</c
       <tr><td class="f">TopK</td><td>「取最相似的前 K 条」。本项目 K = 8，且强制限定在同一项目内。</td></tr>
       <tr><td class="f">facade</td><td>只读的门面类。别的模块只能通过它问问题，碰不到底层仓库，也碰不到内部机制。</td></tr>
       <tr><td class="f">依赖反转</td><td>本该 A 调 B，但依赖方向不允许，于是让 A 广播事件、B 主动来听。编译期的箭头方向就反过来了。</td></tr>
-      <tr><td class="f">ArchUnit</td><td>专门检查架构约束的测试库。本项目用它强制八个包的依赖单向、无环。</td></tr>
+      <tr><td class="f">ArchUnit</td><td>专门检查架构约束的测试库。本项目用它强制九个包的依赖单向、无环。</td></tr>
       <tr><td class="f">进程内事件</td><td>同一个 JVM 里的解耦调用，不经过消息队列。本项目要求它<strong>同步</strong>执行。</td></tr>
       <tr><td class="f">租约 / 围栏</td><td>租约是「我持有这个任务，有效期到某时刻」；围栏是「每次写入都检查我还持有它」。防止过期的 worker 继续写。</td></tr>
       <tr><td class="f">抢占</td><td>多个线程竞争同一个任务，靠一条原子 SQL 保证只有一个成功。</td></tr>

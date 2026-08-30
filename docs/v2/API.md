@@ -64,6 +64,24 @@
 
 GitHub 默认 `apiBase=https://api.github.com`；GitLab 默认 `https://gitlab.com/api/v4`。自建实例使用其实际 API Base。
 
+## 项目钉钉通知
+
+以下端点均仅限项目 LEADER。Webhook URL 与加签密钥只写不读，任何响应都不会回显它们。
+
+- `GET /api/projects/{projectId}/notifications/dingtalk`
+  - 返回 `{configured,enabled,signed,keyword,updatedAt}`；未配置时为
+    `{configured:false,enabled:false,signed:false,keyword:null,updatedAt:null}`。
+- `PUT /api/projects/{projectId}/notifications/dingtalk`
+  - 请求：`{webhookUrl,secret?,keyword?,enabled}`。
+  - Webhook 必须以 `https://oapi.dingtalk.com/` 开头；`secret` 缺失或空白表示不加签，
+    `enabled` 缺失时为 `false`。
+- `DELETE /api/projects/{projectId}/notifications/dingtalk`
+  - 删除该项目的钉钉通知配置；成功 204。
+- `POST /api/projects/{projectId}/notifications/dingtalk/test`
+  - 使用已启用的已存凭据发送固定测试消息，返回 `{sent:boolean}`。
+  - 不创建 Review、不调用 AI；配置了自定义关键词时，测试消息自动包含该关键词。
+  - 未配置或已停用渠道返回 409。
+
 ## 项目 SCM 身份绑定
 
 - `GET /api/projects/{projectId}/scm/binding-options`

@@ -17,7 +17,7 @@ ForgePilot 是围绕需求驱动 Pull Request 审查建设的轻量级 AI 研发
 
 ## 当前形态
 
-后端 8 个顶层包、20 张业务表、10 个 Flyway 迁移、测试零跳过；前端 6 个一级导航、11 条产品路由（含非一级 `/account`）。
+后端 9 个顶层包、21 张业务表、13 个 Flyway 迁移、测试零跳过；前端 6 个一级导航、11 条产品路由（含非一级 `/account`）。
 
 已交付能力：
 
@@ -27,6 +27,7 @@ ForgePilot 是围绕需求驱动 Pull Request 审查建设的轻量级 AI 研发
 - **knowledge / ai**：pgvector 项目知识库、批量上传与删除、按项目与当前需求隔离的附件检索、可见的真实向量索引元数据、统一 AI 网关、Prompt 净化与调用审计。
 - **scm**：GitHub 与 GitLab 双 Provider、用户自有多 SCM 身份、项目身份绑定与可选 Leader 审批、Webhook 签名校验、PR 同步与需求关联、出站 URL 策略。
 - **review**：单一 Review Engine、分批审查与抢占围栏、Finding 生命周期与跨轮血缘、可读的问题说明与修复建议、分档模型置信度、人工决策闭环、对账调度。
+- **notification**：项目级钉钉审查完成/失败摘要通知，以及 LEADER 发起的测试消息。
 - **evaluation**：三臂对照实验工具链、确定性打分器、配置冻结与一次性 holdout 台账。
 
 ## 不可违反的总边界
