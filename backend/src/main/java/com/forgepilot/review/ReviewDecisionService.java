@@ -14,6 +14,7 @@ import com.forgepilot.review.ReviewViews.ProjectReviewRow;
 import com.forgepilot.review.ReviewViews.FindingView;
 import com.forgepilot.review.ReviewViews.ReviewDetail;
 import com.forgepilot.review.ReviewViews.ReviewSummary;
+import com.forgepilot.scm.PullRequestDecisionActions;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.databind.JsonNode;
@@ -46,14 +47,17 @@ public class ReviewDecisionService {
     private final FindingRepository findings;
     private final DecisionRepository decisions;
     private final ProjectAccessService access;
+    private final PullRequestDecisionActions scmActions;
     private final ObjectMapper json;
 
     ReviewDecisionService(ReviewRepository reviews, FindingRepository findings,
-            DecisionRepository decisions, ProjectAccessService access, ObjectMapper json) {
+            DecisionRepository decisions, ProjectAccessService access, PullRequestDecisionActions scmActions,
+            ObjectMapper json) {
         this.reviews = reviews;
         this.findings = findings;
         this.decisions = decisions;
         this.access = access;
+        this.scmActions = scmActions;
         this.json = json;
     }
 
@@ -101,6 +105,7 @@ public class ReviewDecisionService {
 
         Review decided = reviews.findByProjectIdAndId(projectId, reviewId)
                 .orElseThrow(ApiException::notFound);
+        scmActions.apply(projectId, decided.getPullRequestId(), decision == ReviewDecision.APPROVE);
         return new DecisionResult(decided.getDecision(), decided.getDecisionBy(), decided.getDecisionAt());
     }
 

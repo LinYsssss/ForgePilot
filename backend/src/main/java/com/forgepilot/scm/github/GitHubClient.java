@@ -13,6 +13,7 @@ import com.forgepilot.scm.PullRequestSnapshot;
 import com.forgepilot.scm.ScmRepository;
 import com.forgepilot.scm.ScmSecretCipher;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
@@ -31,7 +32,7 @@ import tools.jackson.databind.JsonNode;
  * slug 不能。
  */
 @Component
-class GitHubClient {
+public class GitHubClient {
 
     private static final int PAGE_SIZE = 100;
     private static final Duration READ_TIMEOUT = Duration.ofSeconds(20);
@@ -40,7 +41,7 @@ class GitHubClient {
     private final ScmSecretCipher cipher;
     private final JdkClientHttpRequestFactory requestFactory = new JdkClientHttpRequestFactory();
 
-    GitHubClient(OutboundUrlPolicy outbound, ScmSecretCipher cipher) {
+    public GitHubClient(OutboundUrlPolicy outbound, ScmSecretCipher cipher) {
         this.outbound = outbound;
         this.cipher = cipher;
         this.requestFactory.setReadTimeout(READ_TIMEOUT);
@@ -68,6 +69,38 @@ class GitHubClient {
                 required(pullRequest.path("user"), "id", "user.id"),
                 required(pullRequest.path("user"), "login", "user.login"),
                 changedFiles(client, externalId, number));
+    }
+
+    public void applyDecision(ScmRepository repository, int number, boolean approved) {
+        RestClient client = clientFor(repository);
+        JsonNode pullRequest = client.get()
+                .uri("/repositories/{repository}/pulls/{number}", repository.getExternalId(), number)
+                .retrieve()
+                .body(JsonNode.class);
+        String headRef = required(pullRequest.path("head"), "ref", "head.ref");
+        String defaultBranch = required(pullRequest.path("base").path("repo"), "default_branch",
+                "base.repo.default_branch");
+        if (approved) {
+            client.put()
+                    .uri("/repositories/{repository}/pulls/{number}/merge", repository.getExternalId(), number)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body("{\"merge_method\":\"merge\"}")
+                    .retrieve()
+                    .toBodilessEntity();
+        } else {
+            client.patch()
+                    .uri("/repositories/{repository}/pulls/{number}", repository.getExternalId(), number)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body("{\"state\":\"closed\"}")
+                    .retrieve()
+                    .toBodilessEntity();
+        }
+        if (!headRef.equals(defaultBranch)) {
+            client.delete()
+                    .uri("/repositories/{repository}/git/refs/heads/{branch}", repository.getExternalId(), headRef)
+                    .retrieve()
+                    .toBodilessEntity();
+        }
     }
 
     private RestClient clientFor(ScmRepository repository) {
