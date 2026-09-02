@@ -1,0 +1,30 @@
+ForgePilot 测试账号（本机保存，切勿提交到任何仓库）
+生成于 2026-09-02
+
+统一密码：Forge!Test2026
+登录地址：https://yasinlin.com
+
+  用户名      显示名      id    预期项目角色
+  ----------  ----------  ----  ------------
+  ysainlin    林养盛       1    LEADER（你自己，密码是你原来的，未改动）
+  dev01       开发一号     4    DEVELOPER
+  dev02       开发二号     5    DEVELOPER
+  dev03       开发三号     6    DEVELOPER
+  dev04       开发四号     7    DEVELOPER
+  dev05       开发五号     8    DEVELOPER
+  rev01       评审一号     9    REVIEWER
+  rev02       评审二号    10    REVIEWER
+  rev03       评审三号    11    REVIEWER
+  rev04       评审四号    12    REVIEWER
+  rev05       评审五号    13    REVIEWER
+
+说明
+- dev01 经真实 POST /api/auth/register 注册；其余 9 个复制了同一条 bcrypt 散列，
+  因此共用同一密码。散列由应用自己生成，格式与登录路径完全兼容（dev05/rev03 已实测登录 200）。
+- 角色是「项目内」概念，不在账号上。上面那列是建议分配，要在各项目的成员页里实际授予。
+- 注册端点限流为 10 分钟 5 次，将来再批量建号需注意。
+
+测试结束后清理：
+  docker exec fp-demo-postgres-1 psql -U forgepilot -d forgepilot \
+    -c "delete from user_account where username <> 'ysainlin';"
+  （需先清空引用这些用户的业务数据，否则外键会拒绝）

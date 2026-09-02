@@ -1,0 +1,8 @@
+{
+  "name": "tenant-user-center-web",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "多租户用户中心前端演示代码",
+  "main": "web/user-admin.js"
+}

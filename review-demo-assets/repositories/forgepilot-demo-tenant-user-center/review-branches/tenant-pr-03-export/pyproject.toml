@@ -1,0 +1,18 @@
+[project]
+name = "tenant-user-center"
+version = "0.1.0"
+description = "多租户用户中心演示仓库，用于 RepoSage 代码审查演示"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.110",
+    "pyjwt>=2.8",
+    "bcrypt>=4.1",
+]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["app"]
+package-dir = { "" = "src" }
