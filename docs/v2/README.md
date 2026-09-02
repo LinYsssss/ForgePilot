@@ -12,8 +12,9 @@ ForgePilot 是围绕需求驱动 Pull Request 审查建设的轻量级 AI 研发
 | [ARCHITECTURE.md](./ARCHITECTURE.md) | 模块边界、21 张表、数据库约束、流程契约与运行边界 | 判断怎么实现、不能越过什么边界 |
 | [API.md](./API.md) | 账户、成员目录与 SCM 身份接口契约 | 联调身份与成员管理 |
 | [DEFENSE-GUIDE.md](./DEFENSE-GUIDE.md) | 无凭据条件下的部署、构建、评测复现与演示步骤 | 复现实验或准备演示 |
+| [TESTING-GUIDE.md](./TESTING-GUIDE.md) | 空库起步的全功能测试流程：账号、项目成员、仓库接入、知识、需求、推送触发 PR、审查与决策，含负向用例与排错 | 逐项验证功能是否按契约工作 |
 
-阅读顺序：本页 → `PRD.md` → `ARCHITECTURE.md`，需要时查 `API.md` 与 `DEFENSE-GUIDE.md`。
+阅读顺序：本页 → `PRD.md` → `ARCHITECTURE.md`，需要时查 `API.md` 与 `DEFENSE-GUIDE.md`。要动手把功能走一遍时用 `TESTING-GUIDE.md`。
 
 ## 当前形态
 
