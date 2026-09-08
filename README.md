@@ -29,7 +29,7 @@ ForgePilot 是一个面向软件研发流程的轻量级 AI 研发协作与代�
 | 知识 | PostgreSQL 15 + pgvector，按 `project_id` 与当前 Requirement 双重硬过滤 |
 | 评测 | 三臂对照实验，holdout 只跑一次 |
 
-验证使用 Testcontainers 真实 PostgreSQL 15 + pgvector。2026-09-08 后端全套执行后修正一处删除审计断言，失败类复核及打包通过；代码审查补充修复后，相关 24 项及打包通过，前端 lint / typecheck / test / build 通过。完整结果及未执行的真实环境验收见 [测试报告](docs/deliverables/TEST-REPORT.html)，问题与改动取舍见 [代码审查记录](.trellis/tasks/09-07-review-collaboration/code-review.md)。
+验证使用 Testcontainers 真实 PostgreSQL 15 + pgvector。2026-09-08 提交 `746e40b` 的 CI 后端全套、前端 lint / typecheck / test / build、评测契约及两次空库启动全部通过。该版本已部署至 [yasinlin.com](https://yasinlin.com)，V14 迁移、数据保留、容器健康和公网资源核对通过。完整结果及待执行的人工验收见 [测试报告](docs/deliverables/TEST-REPORT.html)，问题与改动取舍见 [代码审查记录](.trellis/tasks/archive/2026-09/09-07-review-collaboration/code-review.md)，升级证据见 [部署记录](.trellis/tasks/archive/2026-09/09-07-review-collaboration/deployment.md)。
 
 ## 从这里开始
 

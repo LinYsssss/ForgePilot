@@ -171,7 +171,7 @@
       <tr><td>前端应用</td><td class="n">6 入口 / 11 路由</td><td>组件挂载 + 路由 + 请求契约 + 纯函数</td></tr>
       <tr><td>评测工具链</td><td class="n">9 个 Python 工具</td><td>unittest + 自洽性自测</td></tr>
       <tr><td>数据库 schema</td><td class="n">21 表 / 14 迁移</td><td>真实 PostgreSQL + 迁移升级路径</td></tr>
-      <tr><td>部署</td><td class="n">3 容器</td><td>本轮只同步冷启动脚本断言，未部署或运行冒烟</td></tr>
+      <tr><td>部署</td><td class="n">3 容器</td><td>CI 两次空库启动通过；现有部署保留数据升级至 V14，健康与公网检查通过</td></tr>
     </tbody>
   </table></div>
 
@@ -279,13 +279,13 @@
 <!-- ══════ 4 ══════ -->
 <section id="s4">
   <h2><span class="hn">4</span>后端测试结果</h2>
-  <p><strong>全套执行 379 个用例、50 个测试类，1 个失败、0 错误、0 跳过；修正后失败类 4 个用例复核通过并完成打包。</strong>全套耗时 4 分 35 秒，复核耗时 1 分 58 秒。失败为成员移除的旧审计文案断言未包含新审查人清理项；修正断言并增加 reviewer_id 置空检查，生产逻辑未因此改动。</p>
-  <p>随后代码审查补上开发指派目标角色校验，复用原有终态判断并清理闲置导入；<code>RequirementLifecycleTest</code>、<code>ImplementationGuidanceTest</code>、<code>BatchOneApiTest</code> 共 <strong>24 项通过</strong>，<code>verify</code> 打包通过，耗时 2 分 23 秒，完成于 07:06:12 UTC。页面另修复历史 Review 的负责人归属和重开 Finding 的分组，详见<a href="../../.trellis/tasks/09-07-review-collaboration/code-review.md">代码审查记录</a>。</p>
+  <p><strong>提交 <code>746e40b</code> 的 CI 全套 379 个用例、50 个测试类通过，0 失败、0 错误、0 跳过，打包成功。</strong>结果直接取自 <a href="https://github.com/LinYsssss/ForgePilot/actions/runs/34202968598">2026-09-08 CI 运行</a>日志，后端于 08:10:53 UTC 报告 BUILD SUCCESS。</p>
+  <p>此前本地全套执行发现 1 处成员移除的旧审计文案断言；修正断言并增加 reviewer_id 置空检查后，该类 4 项复核及打包通过。随后代码审查补上开发指派目标角色校验，相关三个测试类共 <strong>24 项通过</strong>，完成于 07:06:12 UTC。页面另修复历史 Review 的负责人归属和重开 Finding 的分组，详见<a href="../../.trellis/tasks/archive/2026-09/09-07-review-collaboration/code-review.md">代码审查记录</a>。这些本地检查保留为修复过程记录，最新全套结果以本次 CI 为准。</p>
   <div class="note">
     <span class="label">这些数字是快照，不是不变量</span>
     <p>
-      本章计数来自 <strong>2026-09-08</strong> 在 <code>eclipse-temurin:21-jdk</code> 中运行的 <code>./mvnw -B -ntp verify</code>，随后执行 <code>./mvnw -B -ntp -Dtest=ResourceRemovalTest verify</code>。
-      按本轮类名单与复核后的报告汇总，379 个用例均有通过结果；<strong>这不是一次全套从头重跑通过的记录</strong>。旧目录中额外的 CoreApiJourneyTest 报告未在本轮执行，已排除。
+      本章计数来自 <strong>2026-09-08 CI</strong> 的 <code>./mvnw -B -ntp verify</code> 完整运行日志，379 项在同一次执行中全部通过。
+      本地全套、失败类复核及受影响类检查是更早的独立记录；未把旧目录中未执行的 CoreApiJourneyTest XML 计入结果。
       用例数逐提交变动，因此它<strong>不由任何测试钉住</strong>——读到本文时若已过期，以实际执行结果为准。
       结构性数字（9 个后端包、21 张表、14 条迁移、6 个一级导航、11 条产品路由）则不同：它们由测试断言，
       改动会让套件变红。9.3 记录了把这两类数字混为一谈曾造成的后果。
@@ -463,13 +463,14 @@ python3 evaluation/tools/postfreeze_provider_correction.py verify</code></pre>
 <!-- ══════ 7 ══════ -->
 <section id="s7">
   <h2><span class="hn">7</span>部署验证</h2>
-  <p><strong>本轮未部署、未运行 Compose 冷启动。</strong>仅同步脚本的 V14 断言；V1–V14 已在真实 PostgreSQL 测试中应用。下面是脚本的验证契约与历史修复记录，不能视为 V14 线上验收。脚本创建独立 Compose 项目与全新临时卷，执行时会断言：</p>
+  <p><strong>提交 <code>746e40b</code> 的 CI 两次全新卷冷启动均通过。</strong>两个独立项目分别于 08:12:04 和 08:12:28 UTC 报告成功，覆盖 V1–V14、21 张业务表及以下脚本契约：</p>
   <ul>
     <li>三个健康检查全部通过，反向代理可达（后端 <code>/actuator/health</code>，经前端代理 <code>/api/actuator/health</code>）。</li>
     <li>PostgreSQL 版本 ≥ 15，<code>vector</code> 扩展已安装，距离运算返回预期值。</li>
     <li>Flyway <strong>十四条</strong>版本化迁移全部成功，最高版本 V14 成功。</li>
     <li><code>public</code> 中<strong>恰好</strong>这二十一张业务表，按 C 排序逐字符比对（不依赖容器 locale）。</li>
   </ul>
+  <p><strong>现有 <code>fp-demo</code> 也已完成保留数据的部署升级。</strong>备份校验后只更新 backend/frontend，原 PostgreSQL 容器和 <code>fp-demo_postgres-data</code> 卷保留；V14 于 08:22:23 UTC 应用。升级前后账号/项目/需求/审查数均为 11/3/2/1，三个容器健康，启动日志无 ERROR。08:52 UTC 使用 curl 核对本机与 <a href="https://yasinlin.com/">公网首页</a>、健康接口均为 HTTP 200，JS/CSS 的 SHA-256 与运行容器一致。镜像、备份和命令见<a href="../../.trellis/tasks/archive/2026-09/09-07-review-collaboration/deployment.md">部署记录</a>。</p>
 
   <div class="note red">
     <span class="label">历史缺陷：冷启动断言未随迁移更新</span>
@@ -639,16 +640,18 @@ python3 evaluation/tools/postfreeze_provider_correction.py verify</code></pre>
   <div class="tw"><table>
     <thead><tr><th>门</th><th>结果</th><th>规模</th></tr></thead>
     <tbody>
-      <tr><td class="f">./mvnw -B -ntp verify</td><td>全套发现 1 处旧断言，已修正</td><td class="n">379 / 1 失败 / 0 错误 / 0 跳过</td></tr>
+      <tr><td class="f">CI ./mvnw -B -ntp verify</td><td><span class="yes">全套及打包 BUILD SUCCESS</span></td><td class="n">379 / 0 失败 / 0 错误 / 0 跳过</td></tr>
       <tr><td class="f">-Dtest=ResourceRemovalTest verify</td><td><span class="yes">复核及打包 BUILD SUCCESS</span></td><td class="n">4 / 0 失败 / 0 错误 / 0 跳过</td></tr>
       <tr><td class="f">-Dtest=RequirementLifecycleTest,ImplementationGuidanceTest,BatchOneApiTest verify</td><td><span class="yes">审查修复后验证及打包 BUILD SUCCESS</span></td><td class="n">24 / 0 失败 / 0 错误 / 0 跳过</td></tr>
       <tr><td class="f">npm run lint</td><td><span class="yes">通过</span></td><td class="n">4 条策略</td></tr>
       <tr><td class="f">npm run typecheck</td><td><span class="yes">通过</span></td><td class="n">vue-tsc 严格模式</td></tr>
       <tr><td class="f">npm test -- --run</td><td><span class="yes">通过</span></td><td class="n">44 / 15 文件</td></tr>
       <tr><td class="f">npm run build</td><td><span class="yes">通过</span></td><td class="n">JS 258.41 kB / CSS 69.00 kB；gzip 84.43 / 12.26 kB</td></tr>
-      <tr><td class="f">评测 unittest + selftest</td><td>历史通过，本轮未重跑</td><td class="n">48 项历史检查</td></tr>
+      <tr><td class="f">评测 unittest</td><td>保留历史通过记录，本轮未重跑该套件</td><td class="n">48 项历史检查</td></tr>
+      <tr><td class="f">CI Evaluation contract</td><td><span class="yes">通过</span></td><td class="n">quick-set / selftest / 合成参考对照 / holdout guard</td></tr>
       <tr><td class="f">verify-freeze + 端点更正</td><td>保留历史证据，本轮未重跑</td><td class="n">冻结资产未修改</td></tr>
-      <tr><td class="f">冷启动脚本</td><td>断言已同步，本轮未执行</td><td class="n">14 迁移 / 21 表</td></tr>
+      <tr><td class="f">冷启动脚本</td><td><span class="yes">CI 两次全新卷启动通过</span></td><td class="n">14 迁移 / 21 表</td></tr>
+      <tr><td class="f">fp-demo 部署</td><td><span class="yes">V14 升级、健康与公网检查通过</span></td><td class="n">3 个健康容器 / 原数据保留</td></tr>
     </tbody>
   </table></div>
 
@@ -688,7 +691,7 @@ python3 evaluation/tools/postfreeze_provider_correction.py verify</code></pre>
 
 <footer class="end">
   <p>
-    当前业务测试取自 2026-09-08 的全套执行、失败类复核及审查修复后的相关检查。日志：<code>/tmp/forgepilot-review-collaboration-verify.log</code>、<code>/tmp/forgepilot-review-collaboration-recheck.log</code>、<code>/tmp/forgepilot-review-collaboration-audit-backend.log</code>、<code>/tmp/forgepilot-review-collaboration-audit-frontend.log</code>；持久摘要见 <code>.trellis/tasks/09-07-review-collaboration/validation.md</code>。历史评测与部署证据保留原口径，本轮未重新执行。
+    最新业务测试及两次冷启动取自提交 <code>746e40b</code> 的 <a href="https://github.com/LinYsssss/ForgePilot/actions/runs/34202968598">2026-09-08 CI</a>。本地失败及复核过程继续保留，持久摘要见 <a href="../../.trellis/tasks/archive/2026-09/09-07-review-collaboration/validation.md">validation.md</a>；本轮线上升级另见 <a href="../../.trellis/tasks/archive/2026-09/09-07-review-collaboration/deployment.md">deployment.md</a>。历史容量、正式评测与 holdout 保留原口径，未重跑。
     未通过项、未覆盖项与已知缺陷均如实记录于第 8、9 章。
   </p>
   <p>

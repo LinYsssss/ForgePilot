@@ -554,7 +554,7 @@ img, svg { max-width: 100%; height: auto; }
     <li>
       <strong>冷启动自证</strong>
       这个脚本会新建一个独立 Compose 项目和全新数据卷，等三个健康检查、校验反向代理、pgvector、
-      Flyway 十四条迁移与<strong>恰好二十一张业务表</strong>，然后只删掉它自己建的那套临时资源。本轮仅同步脚本断言，未执行部署冒烟。
+      Flyway 十四条迁移与<strong>恰好二十一张业务表</strong>，然后只删掉它自己建的那套临时资源。2026-09-08 提交 <code>746e40b</code> 的 CI 已通过两次全新卷冷启动。
       <pre><code>FORGEPILOT_BACKEND_PORT=28080 \
 FORGEPILOT_FRONTEND_PORT=28081 \
 scripts/phase1-compose-smoke.sh forgepilot-phase1-defense-clean</code></pre>
@@ -1460,7 +1460,7 @@ python3 evaluation/tools/formal_evaluation.py report \
   <div class="tw"><table>
     <thead><tr><th>范围</th><th class="n">规模</th><th>说明</th></tr></thead>
     <tbody>
-      <tr><td>后端</td><td class="n">379 / 50 类</td><td>2026-09-08 全套发现 1 处旧审计断言，修正后失败类 4 项复核通过；审查修复后相关 24 项及打包通过，零跳过；未再次重跑全套。</td></tr>
+      <tr><td>后端</td><td class="n">379 / 50 类</td><td>2026-09-08 提交 746e40b 的 CI 全套及打包通过，0 失败、0 错误、0 跳过；此前本地旧断言修复、4 项复核和 24 项审查补充验证保留在测试报告。</td></tr>
       <tr><td>前端</td><td class="n">44 / 15 文件</td><td>2026-09-08 lint、严格类型、测试与构建通过。</td></tr>
       <tr><td>评测</td><td class="n">历史 18 + 30</td><td>沿用原测试记录，本轮未重跑或修改冻结资产；具体限制见 TEST-REPORT.html。</td></tr>
     </tbody>
@@ -1563,7 +1563,7 @@ python3 evaluation/tools/score.py --selftest</code></pre>
 <footer class="end">
   <p>
     本手册已按 2026-09-08 工作树同步：9 个后端包、21 张表、14 条迁移、6 个一级导航、11 条产品路由。
-    源文件/行数仅是当日快照；测试结果见 TEST-REPORT.html。历史容量/评测证据保留原测量日期，本轮未部署或执行真实远端合并。
+    源文件/行数仅是当日快照；测试结果见 TEST-REPORT.html。本轮 CI 与两次冷启动通过，现有部署已保留数据升级至 V14，见<a href="../../.trellis/tasks/archive/2026-09/09-07-review-collaboration/deployment.md">部署记录</a>。历史容量/评测证据保留原测量日期，真实远端合并及钉钉投递未执行。
   </p>
   <p>
     更权威的单一定义处在仓库里：架构与数据模型见 <code>docs/v2/ARCHITECTURE.md</code>，

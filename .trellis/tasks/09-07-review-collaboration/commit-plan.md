@@ -10,7 +10,7 @@ Includes the authorized collaboration changes, the three review fixes, related t
 
 Validation: the original 379-case backend run plus its corrected-class recheck, the post-audit 24-case verification and packaging, frontend lint/typecheck/44 tests/build, HTML/local-link/source-count checks, shell syntax and diff whitespace checks. Full evidence is in `validation.md`; review findings are in `code-review.md`.
 
-The user confirmed commit, push and deployment on 2026-09-08: “按照最新的代码推送部署”. This satisfies `.trellis/workflow.md` §3.4; no additional confirmation is needed. Task archival and journal bookkeeping follow the work commit and are outside this work-commit file list. Deployment results will be recorded after verification.
+The user confirmed commit, push and deployment on 2026-09-08: “按照最新的代码推送部署”. This satisfies `.trellis/workflow.md` §3.4; no additional confirmation is needed. The feature commit is `746e40b9eabaef80b80176f0373f0712eda4d4bb`, now pushed and deployed. Final CI and rollout evidence are recorded in `validation.md` and `deployment.md`. A separate `docs: record review collaboration deployment` work commit synchronizes the task records, README, reproduction guide and affected HTML reports, followed by task archive and journal bookkeeping commits. The file list below is the original feature-commit list and preserves its paths at that time.
 
 ## Backend implementation and migration
 

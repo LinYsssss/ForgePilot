@@ -12,15 +12,15 @@
   "assignee": "LinYsssss",
   "createdAt": "2026-09-07",
   "completedAt": null,
-  "branch": null,
+  "branch": "main",
   "base_branch": "main",
   "worktree_path": null,
-  "commit": null,
+  "commit": "746e40b9eabaef80b80176f0373f0712eda4d4bb",
   "pr_url": null,
   "subtasks": [],
   "children": [],
   "parent": null,
   "relatedFiles": [],
-  "notes": "Implementation, corresponding documentation/HTML and code review completed. Three defects fixed; evidence in validation.md. User authorized commit, push and deployment on 2026-09-08. Roll out to the existing fp-demo stack with its database volume retained, then record verification and archive.",
+  "notes": "Implementation, corresponding documentation/HTML and code review completed; three defects fixed. User-authorized commit 746e40b pushed and deployed on 2026-09-08. All four CI jobs passed, including the full backend/frontend suites and two fresh-volume cold starts. Existing fp-demo data retained; V14, health and public assets verified. Evidence in validation.md and deployment.md. Ready for archive and journal bookkeeping.",
   "meta": {}
 }

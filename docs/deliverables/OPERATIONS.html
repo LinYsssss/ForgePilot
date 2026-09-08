@@ -384,7 +384,7 @@ gunzip -c forgepilot-YYYY-MM-DD.sql.gz | \
     当前为 14 个迁移、21 张业务表。备份后保留现有 PostgreSQL 卷部署应用，让 Flyway 自动应用 V14；
     旧需求的审查人为空，由 LEADER 接手，可再从需求详情指派 REVIEWER/LEADER。
     GitLab 仓库 Token 需 <code>api</code> 及实际合并权限，原来只能读取 MR 的凭据不足以完成“通过并合并”。
-    本轮只完成构建与测试，<strong>未重新部署或重测本手册的历史容量数据</strong>。
+    2026-09-08 已将 <code>746e40b</code> 部署至现有 <code>fp-demo</code>：备份校验后保留原数据库容器和数据卷，只重建前后端；V14、记录数量、三个健康检查及公网资源一致性通过。具体镜像、备份位置和验证见<a href="../../.trellis/tasks/archive/2026-09/09-07-review-collaboration/deployment.md">部署记录</a>。本手册的历史容量数据未重测。
   </p>
 </section>
 

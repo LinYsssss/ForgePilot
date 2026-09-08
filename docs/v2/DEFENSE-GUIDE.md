@@ -25,9 +25,13 @@ Choose two unused loopback ports if those are occupied. For an interactive demon
 The current schema is V14, with 21 business tables. V14 adds only a nullable
 requirement reviewer and its project-member foreign key; existing null assignments
 fall back to LEADER. Upgrade an existing deployment with its database volume retained,
-never with the disposable cold-start cleanup procedure. The 2026-09-08 task verified
-migrations in Testcontainers and updated the smoke assertion to 14; it did not deploy
-the application or rerun the Compose cold start. See the current test report for evidence.
+never with the disposable cold-start cleanup procedure. On 2026-09-08, commit
+`746e40b` passed the full CI suite and two fresh-volume Compose cold starts, then
+was deployed to the existing `fp-demo` stack. V14 applied successfully; the original
+PostgreSQL container, volume and baseline record counts were retained. Container,
+loopback and public health checks passed, and served assets matched the running
+frontend image. See the [deployment record](../../.trellis/tasks/archive/2026-09/09-07-review-collaboration/deployment.md)
+and current test report for the exact evidence and remaining manual checks.
 
 ## 2. Build and test gates
 
