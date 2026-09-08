@@ -394,3 +394,25 @@ Implemented and verified account display names, multi-role project membership, u
 ### Status
 
 [OK] **Completed**
+
+
+## Session 14: Complete review collaboration and deploy V14
+
+**Date**: 2026-09-08
+**Task**: Complete review collaboration and deploy V14
+**Branch**: `main`
+
+### Summary
+
+Completed the minimal reviewer/return/merge/notification/knowledge collaboration changes, fixed three review findings and removed small redundancies. Synchronized contracts, specifications and all corresponding HTML. Commit 746e40b passed all four CI jobs: 379 backend tests, 44 frontend tests and two fresh-volume cold starts. Backed up and upgraded the existing fp-demo stack to V14 with its PostgreSQL container, volume and baseline data retained; container, loopback, public HTTP and asset hashes verified. Recorded rollout evidence in deployment.md. Formal evaluation and holdout were preserved; live SCM/DingTalk operations and browser acceptance remain unexecuted.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `746e40b` | (see git log) |
+| `989403c` | (see git log) |
+
+### Status
+
+[OK] **Completed**
