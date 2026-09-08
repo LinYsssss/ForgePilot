@@ -142,7 +142,7 @@
 <main>
 
 <header class="mast">
-  <p class="eyebrow">Security Design · 2026-08-27</p>
+  <p class="eyebrow">Security Design · 2026-09-08</p>
   <h1>ForgePilot 安全设计说明</h1>
   <p class="standfirst">
     ForgePilot 持有三类高价值秘密：用户口令、代码仓库的访问令牌、以及 webhook 签名密钥。
@@ -154,7 +154,7 @@
     <div><dt>专项测试</dt><dd>8 个类</dd></div>
     <div><dt>公开端点</dt><dd>2<small>／webhook</small></dd></div>
     <div><dt>秘密类型</dt><dd>4</dd></div>
-    <div><dt>残余风险</dt><dd>10 条<small>已记录</small></dd></div>
+    <div><dt>残余风险</dt><dd>11 条<small>已记录</small></dd></div>
   </dl>
 </header>
 
@@ -316,7 +316,7 @@
   <h3>3.1 单一授权入口</h3>
   <p>
     项目内一切操作的授权<strong>只经由 <code>ProjectAccessService</code></strong>
-    （<code>requireMember</code> / <code>requireRole</code>）。其他模块<strong>不允许</strong>自己去读成员表。
+    （<code>requireMember</code> / <code>requireRole</code>）。开发与审查人指派也在服务端校验目标角色，失败不改原指派或状态。角色的最终授权不得由其他模块自行替代；只读投影可查询当前资格以展示有效处理人。
   </p>
   <p>这个约束的价值是可审计性：想知道「哪些操作要求 LEADER」，搜索这一个方法的调用点即可，不必逐个模块排查。</p>
 
@@ -354,6 +354,22 @@
     Finding 的<strong>「认领」只有 DEVELOPER 能做，LEADER 也不能</strong>。
     认领意味着「我来修」，是本人动作。因此系统里<strong>没有「指派 Finding」这个端点</strong>——
     少一个端点，也少一个授权面。
+  </p>
+  <h3>3.6 最终决定与远端合并</h3>
+  <p>
+    最终决定只允许<strong>需求指定且仍有效的 REVIEWER 或 LEADER</strong>；未关联、未指定或审查人失效时由 LEADER 处理。
+    关联需求必须在 <code>IN_DEVELOPMENT</code> 且有仍具 DEVELOPER/LEADER 资格的开发负责人。
+    <code>ReviewDecisionService</code> 保留 PR 行锁、当前输入与一次性写入闸门，详情的 <code>decisionBlockReason</code> 只帮助界面展示，服务端仍逐次检查。
+  </p>
+  <p>
+    人工 APPROVE 先校验远端 head，再把被审查的 SHA 交给 GitHub/GitLab 合并接口并确认结果。
+    REQUEST_CHANGES 要求非空理由且<strong>不写远端</strong>，保留 PR/MR 与分支。
+    合并响应不明时只读核查，无法确认则返回 <code>merge_outcome_unknown</code> 并回滚本地决定；不自动重复远端写入。验证见 <code>ReviewDecisionTest</code>、<code>ScmMergeTest</code>。
+  </p>
+  <h3>3.7 知识原文与指派隔离</h3>
+  <p>
+    公共知识 <code>content/download</code> 同时校验项目成员、项目范围和 <code>PROJECT_KNOWLEDGE</code> 来源。
+    需求附件不能借该接口绕过所属需求检查；失败统一 404。V14 的 <code>(project_id, reviewer_id)</code> 外键保证同项目，成员移除同事务清除开发与审查人引用；已有决定和历史证据保留。
   </p>
 </section>
 
@@ -583,13 +599,14 @@
 <section id="s8">
   <h2><span class="hn">8</span>审计与留痕</h2>
 
-  <h3>8.1 三类永久记录</h3>
+  <h3>8.1 永久记录</h3>
   <div class="tw"><table>
     <thead><tr><th>表</th><th>记录什么</th><th>关键设计</th></tr></thead>
     <tbody>
       <tr><td class="f">ai_call_log</td><td>每一次模型调用<strong>尝试</strong></td><td>重试留<strong>两行</strong>——这是事后审计「确实只重试了一次」的唯一手段；<code>TIMEOUT</code> 与 <code>FAILED</code> 分开记录，以便区分「答得不对」与「根本没答」</td></tr>
       <tr><td class="f">finding_event</td><td>Finding 每一次人工决定</td><td>同时记录操作者<em>意图</em>与机械的 from/to 状态对；<code>actorId</code> 指向 <code>user_account</code> 而非成员关系，成员离开项目不抹掉记录</td></tr>
       <tr><td class="f">pull_request_requirement_event</td><td>PR↔需求关联的每次变更</td><td>与变更本身<strong>同一事务</strong>——关联变了却无审计行、或有审计行却描述了未提交的变更，两者都比没有审计更糟</td></tr>
+      <tr><td class="f">review</td><td>一次性最终决定、操作者、时间与理由</td><td>新退回理由去除首尾空白后非空，备注最多 2000 字；旧空理由仍可读。<code>ReviewDecided</code> 的通知仅在提交后发送，群消息不包含理由、Finding 正文或 patch</td></tr>
     </tbody>
   </table></div>
 
@@ -711,6 +728,12 @@
         <td>钉钉的三种安全设置只在<em>创建</em>机器人时可选，已存在的机器人在多数客户端里改不了。强制要求加签换不来更安全的部署，只会换来无法部署</td>
         <td>未加签的渠道，防护只剩 webhook URL 的保密性——而它会经过浏览器历史、截图与剪贴板。拿到它的人可向该群发任意消息。界面在做这个选择的位置直接标出当前处在哪一档</td>
       </tr>
+      <tr>
+        <td class="n">11</td>
+        <td><strong>远端合并与本地提交不原子</strong></td>
+        <td>按 SHA 合并并验证结果；不明响应只读确认，同 SHA 已合并可供人工重试核验，无补偿任务</td>
+        <td>远端成功而本地提交失败时可能暂时不一致；需要核查远端后补记本地决定，不能把超时当作确定未合并</td>
+      </tr>
     </tbody>
   </table></div>
 
@@ -726,8 +749,8 @@
 
 <footer class="end">
   <p>
-    本文描述 2026-08-27 的实现。全部措施均对应到代码位置与验证它的测试类；
-    第 10 章的十条残余风险为已知的未防护或仅部分缓解项，如实记录。
+    本文描述 2026-09-08 的代码实现。措施对应到实现与测试；真实外部合并、通知和浏览器验收未在本轮执行。
+    第 10 章的十一条残余风险为已知的未防护或仅部分缓解项。
   </p>
   <p>
     配套文档：《ForgePilot 需求规格说明书》（NFR-S1–S11 及其追溯）、《ForgePilot 测试报告》、

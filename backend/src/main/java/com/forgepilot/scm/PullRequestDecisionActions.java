@@ -1,8 +1,6 @@
 package com.forgepilot.scm;
 
-/** Remote action triggered by a completed human review decision. */
+/** Remote merge of the exact commit covered by the human decision. */
 public interface PullRequestDecisionActions {
-
-    /** Applies the decision to the provider PR and removes its head branch. */
-    void apply(long projectId, long pullRequestId, boolean approved);
+    void merge(long projectId, long pullRequestId, String expectedHeadSha);
 }

@@ -25,7 +25,7 @@ import tools.jackson.databind.JsonNode;
 
 /** 读取一份内部自洽的、权威的 merge request 快照。 */
 @Component
-class GitLabClient {
+public class GitLabClient {
 
     private static final int PAGE_SIZE = 100;
     private static final int CONSISTENCY_ATTEMPTS = 2;
@@ -56,6 +56,53 @@ class GitLabClient {
             }
         }
         throw unavailable("GitLab changed the merge request while its diff was being read.");
+    }
+
+    public void merge(ScmRepository repository, int number, String expectedHeadSha) {
+        RestClient client = clientFor(repository);
+        String path = "/projects/" + repository.getExternalId() + "/merge_requests/" + number;
+        try {
+            JsonNode state = client.get().uri(path).retrieve().body(JsonNode.class);
+            requireMergeHead(state, expectedHeadSha);
+            if ("merged".equals(state.path("state").asString())) return;
+            if (!"opened".equals(state.path("state").asString())) {
+                throw ApiException.conflict("GitLab MR 已关闭，不能合并。");
+            }
+            JsonNode result = client.put().uri(path + "/merge")
+                    .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                    .body(java.util.Map.of("sha", expectedHeadSha, "should_remove_source_branch", false))
+                    .retrieve().body(JsonNode.class);
+            if (result == null || !"merged".equals(result.path("state").asString())) {
+                throw ApiException.conflict("GitLab 未完成合并，请检查冲突和仓库合并条件。");
+            }
+            requireMergeHead(result, expectedHeadSha);
+        } catch (RestClientResponseException response) {
+            if (response.getStatusCode().is5xxServerError()) {
+                confirmMerge(client, path, expectedHeadSha);
+                return;
+            }
+            throw ApiException.conflict("GitLab 拒绝合并，请检查提交是否变化、合并权限、冲突及分支保护规则。");
+        } catch (org.springframework.web.client.RestClientException failure) {
+            confirmMerge(client, path, expectedHeadSha);
+        }
+    }
+
+    private static void requireMergeHead(JsonNode state, String expectedHeadSha) {
+        if (state == null || !expectedHeadSha.equals(state.path("sha").asString())) {
+            throw ApiException.conflict("GitLab MR 提交已变化，请同步后重新审查。");
+        }
+    }
+
+    private static void confirmMerge(RestClient client, String path, String expectedHeadSha) {
+        try {
+            JsonNode state = client.get().uri(path).retrieve().body(JsonNode.class);
+            requireMergeHead(state, expectedHeadSha);
+            if ("merged".equals(state.path("state").asString())) return;
+        } catch (org.springframework.web.client.RestClientException unavailable) {
+            // An unavailable confirmation must not become a successful local decision.
+        }
+        throw new ApiException(HttpStatus.SERVICE_UNAVAILABLE, "merge_outcome_unknown",
+                "合并结果尚未确认，请到 GitLab 核对后重试；平台尚未记录通过。");
     }
 
     private RestClient clientFor(ScmRepository repository) {

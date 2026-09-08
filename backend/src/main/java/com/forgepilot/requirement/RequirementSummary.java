@@ -7,12 +7,12 @@ import java.time.Instant;
  * 任何文本：列表在服务端拼装，而不是丢给客户端去拼。
  */
 public record RequirementSummary(long id, String title, RequirementStatus status, Long assigneeId,
-        String assigneeUsername, int currentRevisionSeq, Instant updatedAt) {
+        String assigneeUsername, Long reviewerId, String reviewerName, int currentRevisionSeq, Instant updatedAt) {
 
-    static RequirementSummary of(Requirement requirement, String assigneeUsername) {
+    static RequirementSummary of(Requirement requirement, String assigneeUsername, String reviewerName) {
         RequirementRevision current = requirement.getCurrentRevision();
         return new RequirementSummary(requirement.getId(), current.getTitle(), requirement.getStatus(),
-                requirement.getAssigneeId(), assigneeUsername, current.getSeq(),
+                requirement.getAssigneeId(), assigneeUsername, requirement.getReviewerId(), reviewerName, current.getSeq(),
                 requirement.getUpdatedAt());
     }
 }

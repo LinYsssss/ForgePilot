@@ -9,6 +9,10 @@ import java.util.Objects;
 import com.forgepilot.common.ApiException;
 import com.forgepilot.project.ProjectAccessService;
 import com.forgepilot.project.ProjectRole;
+import com.forgepilot.project.ProjectMember;
+import com.forgepilot.requirement.RequirementDirectory;
+import com.forgepilot.requirement.RequirementStatus;
+import org.springframework.context.ApplicationEventPublisher;
 import com.forgepilot.review.ReviewViews.DecisionResult;
 import com.forgepilot.review.ReviewViews.ProjectReviewRow;
 import com.forgepilot.review.ReviewViews.FindingView;
@@ -49,16 +53,20 @@ public class ReviewDecisionService {
     private final ProjectAccessService access;
     private final PullRequestDecisionActions scmActions;
     private final ObjectMapper json;
+    private final RequirementDirectory requirements;
+    private final ApplicationEventPublisher events;
 
     ReviewDecisionService(ReviewRepository reviews, FindingRepository findings,
             DecisionRepository decisions, ProjectAccessService access, PullRequestDecisionActions scmActions,
-            ObjectMapper json) {
+            ObjectMapper json, RequirementDirectory requirements, ApplicationEventPublisher events) {
         this.reviews = reviews;
         this.findings = findings;
         this.decisions = decisions;
         this.access = access;
         this.scmActions = scmActions;
         this.json = json;
+        this.requirements = requirements;
+        this.events = events;
     }
 
     /**
@@ -95,6 +103,14 @@ public class ReviewDecisionService {
                 .orElseThrow(ApiException::notFound);
 
         checkPreconditions(review, currentHead, currentFingerprint, currentRevisionId);
+        authorizeDecision(projectId, actorId, review.getRequirementId());
+        comment = comment == null ? null : comment.strip();
+        if (decision == ReviewDecision.REQUEST_CHANGES && (comment == null || comment.isEmpty())) {
+            throw ApiException.unprocessable("请填写退回修改的理由。");
+        }
+        if (comment != null && comment.length() > 2000) {
+            throw ApiException.unprocessable("决定备注不能超过 2000 字。");
+        }
 
         int updated = decisions.decideIfStillPending(projectId, reviewId, decision.name(), actorId, comment);
         if (updated != 1) {
@@ -105,8 +121,37 @@ public class ReviewDecisionService {
 
         Review decided = reviews.findByProjectIdAndId(projectId, reviewId)
                 .orElseThrow(ApiException::notFound);
-        scmActions.apply(projectId, decided.getPullRequestId(), decision == ReviewDecision.APPROVE);
+        if (decision == ReviewDecision.APPROVE) {
+            scmActions.merge(projectId, decided.getPullRequestId(), decided.getHeadSha());
+        }
+        events.publishEvent(new ReviewDecided(projectId, reviewId));
         return new DecisionResult(decided.getDecision(), decided.getDecisionBy(), decided.getDecisionAt());
+    }
+
+    private void authorizeDecision(long projectId, long actorId, Long requirementId) {
+        ProjectMember actor = access.requireRole(projectId, actorId, ProjectRole.LEADER, ProjectRole.REVIEWER);
+        RequirementDirectory.DecisionContext context = requirementId == null ? null
+                : requirements.decisionContext(projectId, requirementId).orElseThrow(ApiException::notFound);
+        if (!actor.hasRole(ProjectRole.LEADER)
+                && (context == null || !Objects.equals(context.reviewerId(), actorId))) {
+            throw ApiException.forbidden();
+        }
+        if (context != null) {
+            if (context.status() != RequirementStatus.IN_DEVELOPMENT || context.assigneeId() == null) {
+                throw ApiException.conflict("请先将需求指派给开发负责人并进入开发中，再作最终决定。");
+            }
+            access.requireRole(projectId, context.assigneeId(), ProjectRole.DEVELOPER, ProjectRole.LEADER);
+        }
+    }
+
+    private String decisionBlockReason(long projectId, long actorId, Long requirementId) {
+        try {
+            authorizeDecision(projectId, actorId, requirementId);
+            return null;
+        } catch (ApiException denied) {
+            return denied.getStatus().value() == 403
+                    ? "仅指定审查人和项目负责人可决定；需求还需有有效开发负责人。" : denied.getMessage();
+        }
     }
 
     /** ARCHITECTURE.md 3.1 的六项前置条件，按其原有顺序，使拒绝能够自报家门。 */
@@ -154,6 +199,7 @@ public class ReviewDecisionService {
                 review.getReviewInputFingerprint(), review.getRequirementId(),
                 review.getRequirementRevisionId(), review.getStatus(), review.getDecision(),
                 review.getDecisionBy(), review.getDecisionAt(), review.getDecisionComment(),
+                decisionBlockReason(projectId, actorId, review.getRequirementId()),
                 inputs.matches(review), contextSnapshot(review, summary),
                 summary == null ? null : summary.get("coverage"),
                 summary == null ? null : summary.get("acVerdicts"),
@@ -188,14 +234,16 @@ public class ReviewDecisionService {
     @Transactional(readOnly = true)
     public List<ProjectReviewRow> listForProject(long projectId, long actorId) {
         access.requireMember(projectId, actorId);
-        Map<Long, Integer> numbers = new HashMap<>();
+        Map<Long, Object[]> numbers = new HashMap<>();
         for (Object[] row : decisions.pullRequestNumbers(projectId)) {
-            numbers.put(((Number) row[0]).longValue(), ((Number) row[1]).intValue());
+            numbers.put(((Number) row[0]).longValue(), row);
         }
         Map<Long, PullRequestInputs> inputs = new HashMap<>();
         return reviews.findByProjectIdOrderByCreatedAtDescIdDesc(projectId).stream()
                 .map(review -> new ProjectReviewRow(review.getId(), review.getPullRequestId(),
-                        numbers.getOrDefault(review.getPullRequestId(), 0), review.getHeadSha(),
+                        ((Number) numbers.get(review.getPullRequestId())[1]).intValue(),
+                        (String) numbers.get(review.getPullRequestId())[2],
+                        (String) numbers.get(review.getPullRequestId())[3], review.getHeadSha(),
                         review.getRequirementId(), review.getStatus(), review.getDecision(),
                         inputs.computeIfAbsent(review.getPullRequestId(),
                                 pullRequest -> inputsOf(projectId, pullRequest)).matches(review),

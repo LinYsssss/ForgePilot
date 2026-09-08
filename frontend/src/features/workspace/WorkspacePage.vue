@@ -16,6 +16,7 @@ import { formatDateTime } from "../../lib/datetime";
 import { apiErrorMessage } from "../../lib/http";
 import { listProjectKnowledge, type KnowledgeDocument } from "../knowledge/api";
 import { listProjects, type Project } from "../project/api";
+import { requirementHandler, requirementPhase } from "../requirement/status";
 import { listRequirements, type RequirementSummary } from "../requirement/api";
 import {
   getReviewCalibration,
@@ -291,8 +292,8 @@ watch(projectId, load, { immediate: true });
                   <strong>{{ requirement.title }}</strong>
                 </RouterLink>
                 <p class="muted">
-                  {{ requirement.status }} ·
-                  {{ activity[String(requirement.id)]?.activity ?? "未返回审查活动" }} ·
+                  {{ requirementPhase(requirement.status, activity[String(requirement.id)]?.activity) }} ·
+                  处理人：{{ requirementHandler(requirement.status, activity[String(requirement.id)]?.activity, requirement.assigneeUsername, requirement.reviewerName) }} ·
                   {{ formatDateTime(requirement.updatedAt) }}
                 </p>
               </li>

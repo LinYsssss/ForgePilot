@@ -33,6 +33,11 @@ public interface RequirementRepository extends JpaRepository<Requirement, Long> 
     @EntityGraph(attributePaths = "currentRevision")
     List<Requirement> findByProjectIdAndDeletedAtIsNullOrderByIdAsc(long projectId);
 
+    /** Display eligibility only; decisions still authorize through ProjectAccessService. */
+    @Query(value = "select distinct user_id from project_member_role "
+            + "where project_id = :projectId and role in ('REVIEWER', 'LEADER')", nativeQuery = true)
+    List<Long> eligibleReviewerIds(long projectId);
+
     /**
      * 成员离开项目时释放它的需求指派。批量更新绕过持久化上下文，这在移除事务里是
      * 安全的：此后没有人再读需求实体。
@@ -41,4 +46,8 @@ public interface RequirementRepository extends JpaRepository<Requirement, Long> 
     @Query("update Requirement r set r.assigneeId = null "
             + "where r.projectId = :projectId and r.assigneeId = :userId")
     int clearAssignee(long projectId, long userId);
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("update Requirement r set r.reviewerId = null where r.projectId = :projectId and r.reviewerId = :userId")
+    int clearReviewer(long projectId, long userId);
 }

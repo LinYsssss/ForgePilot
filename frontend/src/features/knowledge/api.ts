@@ -3,7 +3,7 @@ import { requestJson } from "../../lib/http";
 export type KnowledgeSourceType = "PROJECT_KNOWLEDGE" | "REQUIREMENT_ATTACHMENT";
 export type KnowledgeStatus = "PENDING" | "READY" | "FAILED";
 
-/** Read model intentionally exposes index metadata, never text or raw embeddings. */
+/** List model exposes metadata; content is fetched on demand. Raw embeddings never leave the server. */
 export interface KnowledgeDocument {
   id: number;
   projectId: number;
@@ -38,4 +38,14 @@ export function deleteProjectKnowledge(projectId: number, documentId: number): P
   return requestJson<void>(`${projectPath(projectId)}/knowledge/documents/${documentId}`, {
     method: "DELETE",
   });
+}
+
+export interface KnowledgeDocumentContent { documentId: number; title: string; text: string; }
+
+export function getKnowledgeContent(projectId: number, documentId: number): Promise<KnowledgeDocumentContent> {
+  return requestJson<KnowledgeDocumentContent>(`${projectPath(projectId)}/knowledge/documents/${documentId}/content`);
+}
+
+export function knowledgeDownloadUrl(projectId: number, documentId: number): string {
+  return `${projectPath(projectId)}/knowledge/documents/${documentId}/download`;
 }

@@ -142,7 +142,7 @@
 <main>
 
 <header class="mast">
-  <p class="eyebrow">Test Report · 2026-08-27</p>
+  <p class="eyebrow">Test Report · 2026-09-08</p>
   <h1>ForgePilot 测试报告</h1>
   <p class="standfirst">
     本报告汇总 ForgePilot 的测试策略、执行结果与<strong>覆盖不到的部分</strong>。
@@ -150,12 +150,12 @@
     读起来和「系统没有缺陷」一模一样，而那不是事实。
   </p>
   <dl class="docmeta">
-    <div><dt>后端</dt><dd>364<small>／49 类</small></dd></div>
-    <div><dt>前端</dt><dd>43<small>／15 文件</small></dd></div>
-    <div><dt>评测</dt><dd>48<small>项检查</small></dd></div>
+    <div><dt>后端</dt><dd>379<small>／50 类</small></dd></div>
+    <div><dt>前端</dt><dd>44<small>／15 文件</small></dd></div>
+    <div><dt>评测</dt><dd>48<small>项历史检查</small></dd></div>
     <div><dt>跳过</dt><dd>0</dd></div>
-    <div><dt>失败</dt><dd>0</dd></div>
-    <div><dt>人工验收项</dt><dd>105<small>行清单</small></dd></div>
+    <div><dt>审查修复</dt><dd>3<small>处行为问题</small></dd></div>
+    <div><dt>人工验收</dt><dd>待执行</dd></div>
   </dl>
 </header>
 
@@ -167,11 +167,11 @@
   <div class="tw"><table>
     <thead><tr><th>部分</th><th>规模</th><th>测试形态</th></tr></thead>
     <tbody>
-      <tr><td>后端业务代码</td><td class="n">175 类 / 13,767 行</td><td>单元 + 集成 + 真实数据库 + 架构约束</td></tr>
-      <tr><td>前端应用</td><td class="n">34 文件 / 9,123 行</td><td>组件挂载 + 路由 + 请求契约 + 纯函数</td></tr>
+      <tr><td>后端业务代码</td><td class="n">9 个顶层包</td><td>单元 + 集成 + 真实数据库 + 架构约束</td></tr>
+      <tr><td>前端应用</td><td class="n">6 入口 / 11 路由</td><td>组件挂载 + 路由 + 请求契约 + 纯函数</td></tr>
       <tr><td>评测工具链</td><td class="n">9 个 Python 工具</td><td>unittest + 自洽性自测</td></tr>
-      <tr><td>数据库 schema</td><td class="n">21 表 / 13 迁移</td><td>真实 PostgreSQL + 迁移升级路径</td></tr>
-      <tr><td>部署</td><td class="n">3 容器</td><td>冷启动脚本自证</td></tr>
+      <tr><td>数据库 schema</td><td class="n">21 表 / 14 迁移</td><td>真实 PostgreSQL + 迁移升级路径</td></tr>
+      <tr><td>部署</td><td class="n">3 容器</td><td>本轮只同步冷启动脚本断言，未部署或运行冒烟</td></tr>
     </tbody>
   </table></div>
 
@@ -279,13 +279,15 @@
 <!-- ══════ 4 ══════ -->
 <section id="s4">
   <h2><span class="hn">4</span>后端测试结果</h2>
-  <p><strong>364 个用例，49 个测试类，0 失败，0 错误，0 跳过。</strong>执行时间约 6 分钟（含容器启动）。</p>
+  <p><strong>全套执行 379 个用例、50 个测试类，1 个失败、0 错误、0 跳过；修正后失败类 4 个用例复核通过并完成打包。</strong>全套耗时 4 分 35 秒，复核耗时 1 分 58 秒。失败为成员移除的旧审计文案断言未包含新审查人清理项；修正断言并增加 reviewer_id 置空检查，生产逻辑未因此改动。</p>
+  <p>随后代码审查补上开发指派目标角色校验，复用原有终态判断并清理闲置导入；<code>RequirementLifecycleTest</code>、<code>ImplementationGuidanceTest</code>、<code>BatchOneApiTest</code> 共 <strong>24 项通过</strong>，<code>verify</code> 打包通过，耗时 2 分 23 秒，完成于 07:06:12 UTC。页面另修复历史 Review 的负责人归属和重开 Finding 的分组，详见<a href="../../.trellis/tasks/09-07-review-collaboration/code-review.md">代码审查记录</a>。</p>
   <div class="note">
     <span class="label">这些数字是快照，不是不变量</span>
     <p>
-      本章全部计数来自 <strong>2026-08-29</strong> 的一次 <code>./mvnw -B -ntp verify</code>。
+      本章计数来自 <strong>2026-09-08</strong> 在 <code>eclipse-temurin:21-jdk</code> 中运行的 <code>./mvnw -B -ntp verify</code>，随后执行 <code>./mvnw -B -ntp -Dtest=ResourceRemovalTest verify</code>。
+      按本轮类名单与复核后的报告汇总，379 个用例均有通过结果；<strong>这不是一次全套从头重跑通过的记录</strong>。旧目录中额外的 CoreApiJourneyTest 报告未在本轮执行，已排除。
       用例数逐提交变动，因此它<strong>不由任何测试钉住</strong>——读到本文时若已过期，以实际执行结果为准。
-      结构性数字（9 个后端包、21 张表、13 条迁移、6 个一级导航、11 条产品路由）则不同：它们由测试断言，
+      结构性数字（9 个后端包、21 张表、14 条迁移、6 个一级导航、11 条产品路由）则不同：它们由测试断言，
       改动会让套件变红。9.3 记录了把这两类数字混为一谈曾造成的后果。
     </p>
   </div>
@@ -294,19 +296,20 @@
   <div class="tw"><table>
     <thead><tr><th>包</th><th class="n">类</th><th class="n">用例</th><th>侧重</th></tr></thead>
     <tbody>
-      <tr><td class="f">review</td><td class="n">10</td><td class="n">116</td><td>输出校验、抢占围栏、分批、Finding 血缘与生命周期、决策、覆盖度与校准</td></tr>
-      <tr><td class="f">scm</td><td class="n">14</td><td class="n">93</td><td>webhook 认证、provider 权威读取、身份冻结、关联审计</td></tr>
+      <tr><td class="f">review</td><td class="n">10</td><td class="n">119</td><td>输出校验、围栏、Finding 血缘/生命周期、指定审查人决策、覆盖度与校准</td></tr>
+      <tr><td class="f">scm</td><td class="n">15</td><td class="n">101</td><td>webhook、权威读取、身份冻结、关联审计、双 Provider 按 SHA 合并与结果确认</td></tr>
       <tr><td class="f">(根包)</td><td class="n">9</td><td class="n">54</td><td>数据库约束、架构规则、跨切片 HTTP 闭环、迁移升级路径</td></tr>
-      <tr><td class="f">notification</td><td class="n">2</td><td class="n">16</td><td>钉钉 origin 钉死、加签算法、载荷转义、errcode 判定、凭据不回显</td></tr>
-      <tr><td class="f">requirement</td><td class="n">4</td><td class="n">30</td><td>修订不可变性、状态机、质量检查、实现建议</td></tr>
+      <tr><td class="f">notification</td><td class="n">2</td><td class="n">18</td><td>origin、加签、errcode、凭据保护、决定提交后发送与回滚不发送</td></tr>
+      <tr><td class="f">requirement</td><td class="n">4</td><td class="n">31</td><td>不可变修订、状态机、审查人指派、质量检查、实现建议</td></tr>
       <tr><td class="f">ai</td><td class="n">3</td><td class="n">21</td><td>网关 HTTP 行为、超时与单次重试、Prompt 净化</td></tr>
-      <tr><td class="f">knowledge</td><td class="n">3</td><td class="n">17</td><td>入库校验、检索隔离、向量索引论据</td></tr>
-      <tr><td class="f">auth</td><td class="n">2</td><td class="n">8</td><td>认证契约、会话失效、端点暴露面</td></tr>
+      <tr><td class="f">knowledge</td><td class="n">3</td><td class="n">18</td><td>入库、检索/原文隔离、向量索引论据</td></tr>
+      <tr><td class="f">auth</td><td class="n">2</td><td class="n">10</td><td>认证契约、会话失效、端点暴露面</td></tr>
       <tr><td class="f">project</td><td class="n">1</td><td class="n">4</td><td>项目内授权</td></tr>
+      <tr><td class="f">common</td><td class="n">1</td><td class="n">3</td><td>限流配额、窗口与键空间上限</td></tr>
     </tbody>
   </table></div>
 
-  <h3>4.2 用例数最多的十个类</h3>
+  <h3>4.2 部分关键测试类</h3>
   <div class="tw"><table>
     <thead><tr><th>测试类</th><th class="n">用例</th><th>它锁住什么</th></tr></thead>
     <tbody>
@@ -318,7 +321,10 @@
       <tr><td class="f">ReviewEngineTest</td><td class="n">13</td><td>引擎整体行为；直接断言执行器 core size（并发上限 2）</td></tr>
       <tr><td class="f">ReviewActivityTest</td><td class="n">13</td><td>派生活动状态的六值/聚合规则，以及「当前有效」的判定</td></tr>
       <tr><td class="f">GitHubWebhookIngestionTest</td><td class="n">12</td><td>投递认证、乱序丢弃、事件同事务发布</td></tr>
-      <tr><td class="f">ReviewDecisionTest</td><td class="n">12</td><td>一次性裁定、head 闸门、前置条件</td></tr>
+      <tr><td class="f">ReviewDecisionTest</td><td class="n">15</td><td>一次性裁定、head 闸门、指定审查人、生命周期、必填理由、远端失败回滚</td></tr>
+      <tr><td class="f">ScmMergeTest</td><td class="n">8</td><td>双 Provider 的 SHA 条件、合并响应、已合并重试及丢响应后的只读确认</td></tr>
+      <tr><td class="f">NotificationChannelTest</td><td class="n">10</td><td>处理人选择、独立事务可见提交、回滚无消息、投递失败不影响决定</td></tr>
+      <tr><td class="f">RequirementLifecycleTest</td><td class="n">12</td><td>状态/修订、开发与审查人资格、非成员指派拒绝及失败不改变指派/状态</td></tr>
       <tr><td class="f">RequirementQualityTest</td><td class="n">12</td><td>确定性规则 + 恰好一次 AI 调用；DRAFT 编辑使结果失效</td></tr>
     </tbody>
   </table></div>
@@ -361,7 +367,7 @@
 <!-- ══════ 5 ══════ -->
 <section id="s5">
   <h2><span class="hn">5</span>前端测试结果</h2>
-  <p><strong>43 个用例，15 个测试文件，全部通过。</strong>另有 lint（策略检查）、typecheck（<code>vue-tsc</code>）与 <code>vite build</code> 三道门同时通过。</p>
+  <p><strong>2026-09-08 审查修复后：44 个用例，15 个测试文件，全部通过。</strong>本次测试开始于 07:03:30 UTC，耗时 44.24 秒。另有 lint（策略检查）、typecheck（<code>vue-tsc</code>）与 <code>vite build</code> 三道门同时通过。</p>
 
   <div class="tw"><table>
     <thead><tr><th>测试文件</th><th class="n">用例</th><th>它锁住什么</th></tr></thead>
@@ -372,9 +378,9 @@
       <tr><td class="f">scm.spec.ts</td><td class="n">3</td><td>Token 创建页路径推导（自建实例地址变化时入口跟随）</td></tr>
       <tr><td class="f">reviewContext.spec.ts</td><td class="n">3</td><td>对不可变 Review 上下文的<strong>收窄在归属处发生</strong>，视图不做类型断言</td></tr>
       <tr><td class="f">requirementRowActions.spec.ts</td><td class="n">3</td><td>需求行内操作<strong>不放宽</strong>后端门槛：终态无编辑入口、删除仅对已作废</td></tr>
-      <tr><td class="f">requirement.spec.ts</td><td class="n">3</td><td>需求详情的修订、附件与导出</td></tr>
+      <tr><td class="f">requirement.spec.ts</td><td class="n">4</td><td>需求修订、附件/导出、派生阶段只影响开发中需求</td></tr>
       <tr><td class="f">motion.spec.ts</td><td class="n">3</td><td>减动效模式停止运动但不改变内容</td></tr>
-      <tr><td class="f">journey.spec.ts</td><td class="n">3</td><td>审查证据页的四个标记分开呈现；未审查文件被<strong>点名</strong>而非静默丢弃</td></tr>
+      <tr><td class="f">journey.spec.ts</td><td class="n">3</td><td>三角色指派/权限、空理由拦截、退回与新轮次、知识阅读及历史摘录；重开项回主列表，PR 解除关联后保留历史 Review 的负责人归属</td></tr>
       <tr><td class="f">cyberParticles.spec.ts</td><td class="n">3</td><td>粒子模拟纯逻辑（与渲染分离故可测）</td></tr>
       <tr><td class="f">workspace.spec.ts</td><td class="n">2</td><td>默认项目规则<strong>只</strong>在 URL 缺 query 时触发——两个方向写错都有真实后果</td></tr>
       <tr><td class="f">projectArchive.spec.ts</td><td class="n">2</td><td>归档闸门：前缀、大小写、首尾空格<strong>四种退化方向</strong>全部保持禁用</td></tr>
@@ -409,7 +415,7 @@
 <!-- ══════ 6 ══════ -->
 <section id="s6">
   <h2><span class="hn">6</span>评测工具测试</h2>
-  <p>共 <strong>48 项检查</strong>，全部通过。</p>
+  <p>以下为 <strong>48 项检查通过的历史记录</strong>。2026-09-08 本轮未重跑评测工具或正式评测，冻结、holdout 台账和原始输出未改动。</p>
   <div class="tw"><table>
     <thead><tr><th>套件</th><th class="n">检查</th><th>内容</th></tr></thead>
     <tbody>
@@ -457,16 +463,16 @@ python3 evaluation/tools/postfreeze_provider_correction.py verify</code></pre>
 <!-- ══════ 7 ══════ -->
 <section id="s7">
   <h2><span class="hn">7</span>部署验证</h2>
-  <p>冷启动脚本创建独立 Compose 项目与<strong>全新数据卷</strong>，校验完成后只删除它自己创建的临时资源。它断言：</p>
+  <p><strong>本轮未部署、未运行 Compose 冷启动。</strong>仅同步脚本的 V14 断言；V1–V14 已在真实 PostgreSQL 测试中应用。下面是脚本的验证契约与历史修复记录，不能视为 V14 线上验收。脚本创建独立 Compose 项目与全新临时卷，执行时会断言：</p>
   <ul>
     <li>三个健康检查全部通过，反向代理可达（后端 <code>/actuator/health</code>，经前端代理 <code>/api/actuator/health</code>）。</li>
     <li>PostgreSQL 版本 ≥ 15，<code>vector</code> 扩展已安装，距离运算返回预期值。</li>
-    <li>Flyway <strong>十三条</strong>版本化迁移全部成功，最高版本 V13 成功。</li>
+    <li>Flyway <strong>十四条</strong>版本化迁移全部成功，最高版本 V14 成功。</li>
     <li><code>public</code> 中<strong>恰好</strong>这二十一张业务表，按 C 排序逐字符比对（不依赖容器 locale）。</li>
   </ul>
 
   <div class="note red">
-    <span class="label">本次报告期内修复的一个缺陷</span>
+    <span class="label">历史缺陷：冷启动断言未随迁移更新</span>
     <p>
       该脚本此前仍断言「<strong>8 条迁移、到 V8</strong>」与一份<strong>缺少 <code>project_deletion_record</code> 的 19 表清单</strong>——
       V9 与 V10 落地时都漏了同步更新。
@@ -478,7 +484,7 @@ python3 evaluation/tools/postfreeze_provider_correction.py verify</code></pre>
       <strong>后端测试证明不了一个 shell 脚本的期望值</strong>。
     </p>
     <p>
-      其后已随通知渠道的 V11–V13 迁移同步更新；当前断言迁移数 13、V13 成功、21 个表的表名字符串与 <code>information_schema</code> 逐字节一致。
+      其后随通知渠道的 V11–V13 迁移更新；2026-09-08 再同步到 14 条、V14 成功，21 个表的表名字符串不变。
       由此形成的规则：<strong>新增建表迁移必须同步三处</strong>——
       <code>FoundationDatabaseTest.EXPECTED_TABLES</code>、脚本的 <code>expected_tables</code>、
       以及同一脚本内的迁移计数与版本成功检查。
@@ -504,7 +510,7 @@ python3 evaluation/tools/postfreeze_provider_correction.py verify</code></pre>
       <tr><td>浏览器控制台与网络</td><td>需要真实浏览器开发者工具</td><td>确认无新 error、无被静默吞掉的 4xx/5xx</td></tr>
     </tbody>
   </table></div>
-  <p>完整清单为 <code>frontend/MANUAL-ACCEPTANCE.md</code>，共 <strong>105 行</strong>、七个章节，结果写入当前任务的验收记录。</p>
+  <p>完整清单为 <code>frontend/MANUAL-ACCEPTANCE.md</code>，共七个章节；本轮补充了指定审查人、退回/合并、轮次与知识阅读，真实浏览器结果尚待记录。</p>
 
   <h3>8.2 当前尚未完成的人工验收项</h3>
   <div class="note amber">
@@ -513,8 +519,7 @@ python3 evaluation/tools/postfreeze_provider_correction.py verify</code></pre>
       <strong>三档宽度与菜单键盘行为</strong>——前端交互整改的两条验收项。
     </p>
     <p>
-      <strong>本轮新增功能的视觉与交互验收</strong>——成员表角色列对齐、仓库表单字段对齐、
-      归档确认区的复制与恢复往返、需求行内操作的按状态门控。已写入清单，尚未在浏览器中执行。
+      <strong>评审协作的真实环境验收</strong>——指定审查人、原分支退回修复与新轮次、双 Provider 实际合并、钉钉实际投递、知识阅读下载。组件/HTTP stub 验证已完成，真实浏览器和外部服务操作未执行。
     </p>
   </div>
 
@@ -616,7 +621,7 @@ python3 evaluation/tools/postfreeze_provider_correction.py verify</code></pre>
   <div class="note amber">
     <span class="label">把构建输出管进 tail 会掩盖真实的失败</span>
     <p>
-      本轮有两次执行将 Maven 输出通过管道传给 <code>tail</code>。管道的退出码来自<strong>最后一个命令</strong>，
+      早期执行曾两次将 Maven 输出通过管道传给 <code>tail</code>。管道的退出码来自<strong>最后一个命令</strong>，
       因此 <code>tail</code> 的 0 掩盖了 Maven 的 <code>BUILD FAILURE</code>，一次真实失败被误读为通过。
     </p>
     <p>
@@ -634,14 +639,16 @@ python3 evaluation/tools/postfreeze_provider_correction.py verify</code></pre>
   <div class="tw"><table>
     <thead><tr><th>门</th><th>结果</th><th>规模</th></tr></thead>
     <tbody>
-      <tr><td class="f">./mvnw -B -ntp verify</td><td><span class="yes">BUILD SUCCESS</span></td><td class="n">364 / 0 失败 / 0 跳过</td></tr>
+      <tr><td class="f">./mvnw -B -ntp verify</td><td>全套发现 1 处旧断言，已修正</td><td class="n">379 / 1 失败 / 0 错误 / 0 跳过</td></tr>
+      <tr><td class="f">-Dtest=ResourceRemovalTest verify</td><td><span class="yes">复核及打包 BUILD SUCCESS</span></td><td class="n">4 / 0 失败 / 0 错误 / 0 跳过</td></tr>
+      <tr><td class="f">-Dtest=RequirementLifecycleTest,ImplementationGuidanceTest,BatchOneApiTest verify</td><td><span class="yes">审查修复后验证及打包 BUILD SUCCESS</span></td><td class="n">24 / 0 失败 / 0 错误 / 0 跳过</td></tr>
       <tr><td class="f">npm run lint</td><td><span class="yes">通过</span></td><td class="n">4 条策略</td></tr>
       <tr><td class="f">npm run typecheck</td><td><span class="yes">通过</span></td><td class="n">vue-tsc 严格模式</td></tr>
-      <tr><td class="f">npm test -- --run</td><td><span class="yes">通过</span></td><td class="n">43 / 15 文件</td></tr>
-      <tr><td class="f">npm run build</td><td><span class="yes">通过</span></td><td class="n">产物 241.57 kB（gzip 79.17 kB）</td></tr>
-      <tr><td class="f">评测 unittest + selftest</td><td><span class="yes">通过</span></td><td class="n">48 项</td></tr>
-      <tr><td class="f">verify-freeze + 端点更正</td><td><span class="yes">通过</span></td><td class="n">9 文件哈希核对</td></tr>
-      <tr><td class="f">冷启动脚本</td><td><span class="yes">修复后与运行部署一致</span></td><td class="n">13 迁移 / 21 表</td></tr>
+      <tr><td class="f">npm test -- --run</td><td><span class="yes">通过</span></td><td class="n">44 / 15 文件</td></tr>
+      <tr><td class="f">npm run build</td><td><span class="yes">通过</span></td><td class="n">JS 258.41 kB / CSS 69.00 kB；gzip 84.43 / 12.26 kB</td></tr>
+      <tr><td class="f">评测 unittest + selftest</td><td>历史通过，本轮未重跑</td><td class="n">48 项历史检查</td></tr>
+      <tr><td class="f">verify-freeze + 端点更正</td><td>保留历史证据，本轮未重跑</td><td class="n">冻结资产未修改</td></tr>
+      <tr><td class="f">冷启动脚本</td><td>断言已同步，本轮未执行</td><td class="n">14 迁移 / 21 表</td></tr>
     </tbody>
   </table></div>
 
@@ -681,7 +688,7 @@ python3 evaluation/tools/postfreeze_provider_correction.py verify</code></pre>
 
 <footer class="end">
   <p>
-    本报告数据取自 2026-08-27 的实际执行，日志保留于构建输出。
+    当前业务测试取自 2026-09-08 的全套执行、失败类复核及审查修复后的相关检查。日志：<code>/tmp/forgepilot-review-collaboration-verify.log</code>、<code>/tmp/forgepilot-review-collaboration-recheck.log</code>、<code>/tmp/forgepilot-review-collaboration-audit-backend.log</code>、<code>/tmp/forgepilot-review-collaboration-audit-frontend.log</code>；持久摘要见 <code>.trellis/tasks/09-07-review-collaboration/validation.md</code>。历史评测与部署证据保留原口径，本轮未重新执行。
     未通过项、未覆盖项与已知缺陷均如实记录于第 8、9 章。
   </p>
   <p>

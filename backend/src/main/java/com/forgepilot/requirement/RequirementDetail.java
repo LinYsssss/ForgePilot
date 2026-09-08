@@ -3,7 +3,7 @@ package com.forgepilot.requirement;
 import java.time.Instant;
 
 /** API 对外呈现的需求详情，带上它的当前修订。 */
-public record RequirementDetail(long id, RequirementStatus status, Long assigneeId, String assigneeUsername,
+public record RequirementDetail(long id, RequirementStatus status, Long assigneeId, String assigneeUsername, Long reviewerId, String reviewerName,
         Instant createdAt, Instant updatedAt, RevisionView currentRevision) {
 
     /**
@@ -16,8 +16,8 @@ public record RequirementDetail(long id, RequirementStatus status, Long assignee
      * 这里曾放过一个常量 {@code "NO_PR"} 作占位；替换掉的是
      * 那个占位符，而不是这条边界。
      */
-    static RequirementDetail of(Requirement requirement, String assigneeUsername, RevisionView currentRevision) {
+    static RequirementDetail of(Requirement requirement, String assigneeUsername, String reviewerName, RevisionView currentRevision) {
         return new RequirementDetail(requirement.getId(), requirement.getStatus(), requirement.getAssigneeId(),
-                assigneeUsername, requirement.getCreatedAt(), requirement.getUpdatedAt(), currentRevision);
+                assigneeUsername, requirement.getReviewerId(), reviewerName, requirement.getCreatedAt(), requirement.getUpdatedAt(), currentRevision);
     }
 }

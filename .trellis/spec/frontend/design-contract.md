@@ -48,16 +48,30 @@ component change.
   real records and link to workflows, but never invent telemetry or automate work.
 - Contextual AI is deliberately prominent as Requirement Quality, structured
   Knowledge-enhanced Guidance, and the single Review Engine. Knowledge surfaces
-  show real chunk/profile/index metadata and semantic-recall labels, never raw
-  vectors or synthetic scores.
+  prioritize reading and downloading public text; real chunk/profile/index
+  metadata lives in an index disclosure, never raw vectors or synthetic scores.
+  Historical Review excerpts remain visible if current originals are deleted.
 - Requirement detail keeps structured Revision/AC and uploaded Requirement
   documents as two complementary sections. Members may read/download `.txt` and
   `.md`, LEADER alone uploads, and structured content exports to Markdown in the
   browser. V1 renders uploaded Markdown as wrapped source text rather than HTML.
 - Review screens follow `context/index → selected evidence → human decision zone`.
-- Finding lifecycle, AI confidence, Requirement status, Review Decision, and
-  review activity remain separate labels and containers; never merge them into
-  one risk badge or composite score.
+- Finding lifecycle, AI confidence and Review Decision remain separate labels.
+  Only `SUPPRESSED + REJECTED` belongs in the collapsed suppression group;
+  reopening returns the finding to the main list while preserving its lineage.
+  Requirement lifecycle and review activity are independent facts. Shared
+  `requirementPhase()` derives a prominent phase only for `IN_DEVELOPMENT`, with
+  lifecycle still visible; `requirementHandler()` resolves its responsible person.
+- Review decision controls require explicit `decisionBlockReason === null` plus
+  the current/completed/pending and head gates. Only the assigned active REVIEWER
+  or LEADER can decide; reasons are required for returns. Show round, previous
+  return reason, PR/MR number/title and author mapping using existing APIs.
+- Resolve Review handler context through its saved `requirementId`, including
+  when the PR is later unlinked or relinked. These names reflect that requirement's
+  current assignments; the actual decision actor is `decisionBy`.
+- Knowledge content requests are project-scoped and loaded on demand. Use request
+  tokens when project/document selection changes; distinguish a failed metadata
+  load from a deleted original and keep the historical excerpt in either case.
 - Approved route views expose only implemented, role-authorized workflows and
   never manufacture data or actions for a missing endpoint.
 

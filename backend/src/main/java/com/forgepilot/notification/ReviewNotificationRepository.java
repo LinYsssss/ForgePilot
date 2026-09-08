@@ -22,7 +22,15 @@ class ReviewNotificationRepository {
             select p.name             as project_name,
                    pr.external_number as pr_number,
                    pr.title           as pr_title,
-                   rv.requirement_id  as requirement_id,
+                   rv.requirement_id  as requirement_id, rv.decision,
+                   (select u.display_name from user_account u join project_member_role m on m.user_id = u.id
+                     where m.project_id = rv.project_id and m.role = 'LEADER') as leader_name,
+                   (select u.display_name from user_account u where u.id = req.reviewer_id
+                     and exists (select 1 from project_member_role m where m.project_id = rv.project_id
+                       and m.user_id = u.id and m.role in ('LEADER', 'REVIEWER'))) as reviewer_name,
+                   (select u.display_name from user_account u where u.id = req.assignee_id
+                     and exists (select 1 from project_member_role m where m.project_id = rv.project_id
+                       and m.user_id = u.id and m.role in ('LEADER', 'DEVELOPER'))) as developer_name,
                    (select count(*) from finding f
                      where f.project_id = rv.project_id and f.review_id = rv.id) as findings,
                    (select count(*) from finding f
@@ -31,6 +39,8 @@ class ReviewNotificationRepository {
               from review rv
               join pull_request pr on pr.project_id = rv.project_id and pr.id = rv.pull_request_id
               join project p on p.id = rv.project_id
+              left join requirement req on req.project_id = rv.project_id
+                   and req.id = rv.requirement_id and req.deleted_at is null
              where rv.project_id = ? and rv.id = ?
             """;
 
@@ -45,11 +55,13 @@ class ReviewNotificationRepository {
                 (rs, index) -> new ReviewFacts(rs.getString("project_name"),
                         rs.getInt("pr_number"), rs.getString("pr_title"),
                         rs.getObject("requirement_id", Long.class),
-                        rs.getInt("findings"), rs.getInt("open_findings")),
+                        rs.getInt("findings"), rs.getInt("open_findings"), rs.getString("decision"),
+                        rs.getString("leader_name"), rs.getString("reviewer_name"), rs.getString("developer_name")),
                 projectId, reviewId).stream().findFirst();
     }
 
     record ReviewFacts(String projectName, int pullRequestNumber, String pullRequestTitle,
-            Long requirementId, int findings, int openFindings) {
+            Long requirementId, int findings, int openFindings, String decision,
+            String leaderName, String reviewerName, String developerName) {
     }
 }

@@ -2,7 +2,7 @@
 import { computed, ref, watch } from "vue";
 import { RouterLink, useRoute, useRouter } from "vue-router";
 
-import { parseId, requirementsRoute, PROJECT_QUERY_KEY } from "../../app/routes";
+import { parseId, requirementsRoute, reviewDetailRoute, PROJECT_QUERY_KEY } from "../../app/routes";
 import { formatDateTime } from "../../lib/datetime";
 import { apiErrorMessage } from "../../lib/http";
 import { useSession } from "../auth/session";
@@ -10,8 +10,11 @@ import { getProject, hasProjectRole, listMembers, type Member, type Project } fr
 import {
   getRequirementCoverage,
   getRequirementReviewActivity,
+  getReview,
+  listProjectReviews,
   type ActivityView,
   type RequirementCoverage,
+  type ReviewDetail,
 } from "../review/api";
 import {
   AC_VERDICT_LABELS,
@@ -25,6 +28,7 @@ import AcceptanceCriteriaEditor from "./AcceptanceCriteriaEditor.vue";
 import {
   attachmentDownloadUrl,
   assign,
+  assignReviewer,
   checkQuality,
   changeStatus,
   deleteRequirement,
@@ -49,6 +53,8 @@ import {
 import type { KnowledgeDocument } from "../knowledge/api";
 import {
   isTerminal,
+  requirementPhase,
+  requirementHandler,
   REQUIREMENT_STATUS_LABELS,
   REQUIREMENT_STATUS_TONES,
   STATUS_TRANSITIONS,
@@ -68,6 +74,8 @@ const detail = ref<RequirementDetail | null>(null);
 const revisions = ref<Revision[]>([]);
 const reviewActivity = ref<ActivityView | null>(null);
 const coverage = ref<RequirementCoverage | null>(null);
+const returnedReviews = ref<ReviewDetail[]>([]);
+const returnsError = ref<string | null>(null);
 const loading = ref(true);
 const loadError = ref<string | null>(null);
 
@@ -77,6 +85,9 @@ const draftDescription = ref("");
 const draftCriteria = ref<AcceptanceCriterionDraft[]>([]);
 const changeReason = ref("");
 const assigneeSelection = ref<number | null>(null);
+const reviewerSelection = ref<number | null>(null);
+const reviewerCandidates = computed(() => members.value.filter(member => member.roles.includes("REVIEWER") || member.roles.includes("LEADER")));
+const developerCandidates = computed(() => members.value.filter(member => member.roles.includes("DEVELOPER") || member.roles.includes("LEADER")));
 
 const actionError = ref<string | null>(null);
 const actionPending = ref(false);
@@ -125,6 +136,7 @@ function applyDetail(loaded: RequirementDetail): void {
   }
   detail.value = loaded;
   assigneeSelection.value = loaded.assigneeId;
+  reviewerSelection.value = loaded.reviewerName === null ? null : loaded.reviewerId;
   const content = toDraft(loaded.currentRevision);
   draftTitle.value = content.title;
   draftBackground.value = content.background ?? "";
@@ -142,6 +154,8 @@ async function load(): Promise<void> {
   revisions.value = [];
   reviewActivity.value = null;
   coverage.value = null;
+  returnedReviews.value = [];
+  returnsError.value = null;
   qualityReport.value = null;
   guidance.value = null;
   attachments.value = [];
@@ -182,6 +196,18 @@ async function load(): Promise<void> {
     attachments.value = loadedAttachments;
     coverage.value = loadedCoverage;
     applyDetail(loadedDetail);
+    if (loadedActivity.counts.CHANGES_REQUESTED > 0) {
+      try {
+        const reviews = await listProjectReviews(ids.projectId);
+        const returned = await Promise.all(reviews
+          .filter(review => review.requirementId === ids.requirementId && review.isCurrent
+            && review.decision === "REQUEST_CHANGES")
+          .map(review => getReview(ids.projectId, review.id)));
+        if (token === detailLoadToken) returnedReviews.value = returned;
+      } catch (failure: unknown) {
+        if (token === detailLoadToken) returnsError.value = apiErrorMessage(failure);
+      }
+    }
   } catch (failure: unknown) {
     if (token === detailLoadToken) {
       loadError.value = apiErrorMessage(failure);
@@ -368,6 +394,10 @@ function saveAssignee(): Promise<void> {
   }
   return run((ids) => assign(ids.projectId, ids.requirementId, userId));
 }
+
+function saveReviewer(): Promise<void> {
+  return run((ids) => assignReviewer(ids.projectId, ids.requirementId, reviewerSelection.value));
+}
 </script>
 
 <template>
@@ -394,21 +424,42 @@ function saveAssignee(): Promise<void> {
     <p v-else-if="loadError" class="alert" role="alert">{{ loadError }}</p>
 
     <template v-if="detail !== null">
+      <section v-if="returnedReviews.length || returnsError" class="panel returned-reviews" aria-labelledby="returned-reviews-title">
+        <h2 id="returned-reviews-title" class="panel-title">退回修改</h2>
+        <p>请由开发负责人 {{ detail.assigneeUsername ?? "（待指派）" }} 修改原 PR，并提交新代码后复审。</p>
+        <p v-if="returnsError" class="alert" role="alert">退回理由加载失败：{{ returnsError }}</p>
+        <article v-for="review in returnedReviews" :key="review.id">
+          <RouterLink v-if="projectId !== null" :to="reviewDetailRoute(projectId, review.id)">查看审查记录 {{ review.id }}</RouterLink>
+          <p class="muted">{{ members.find(member => member.userId === review.decisionBy)?.displayName ?? `成员 #${review.decisionBy}` }} · {{ review.decisionAt ? formatDateTime(review.decisionAt) : "" }}</p>
+          <p class="decision-reason">{{ review.decisionComment || "未填写理由" }}</p>
+        </article>
+      </section>
       <div class="requirement-overview-grid">
       <div class="panel requirement-overview">
         <h2 class="panel-title">需求概览</h2>
         <dl class="meta-list">
           <div>
-            <dt>需求状态</dt>
+            <dt>当前阶段</dt>
             <dd class="requirement-status">
               <span :class="['badge', `badge-${REQUIREMENT_STATUS_TONES[detail.status]}`]">
-                {{ REQUIREMENT_STATUS_LABELS[detail.status] }}
+                {{ requirementPhase(detail.status, reviewActivity?.activity) }}
               </span>
             </dd>
           </div>
           <div>
-            <dt>负责人</dt>
+            <dt>当前处理人</dt>
+            <dd>{{ requirementHandler(detail.status, reviewActivity?.activity, detail.assigneeUsername, detail.reviewerName) }}</dd>
+          </div>
+          <div>
+            <dt>开发负责人</dt>
             <dd>{{ detail.assigneeUsername ?? "未指派" }}</dd>
+          </div>
+          <div>
+            <dt>审查人</dt>
+            <dd>{{ detail.reviewerName ?? "项目负责人处理" }}</dd>
+          </div>
+          <div>
+            <dt>需求生命周期</dt><dd>{{ REQUIREMENT_STATUS_LABELS[detail.status] }}</dd>
           </div>
           <div>
             <dt>评审活动</dt>
@@ -657,12 +708,23 @@ function saveAssignee(): Promise<void> {
         </div>
         <p class="field-hint">「开发中」只能由首次指派触发，不在状态按钮中提供。</p>
 
-        <form class="inline-form" @submit.prevent="saveAssignee">
+        <form class="inline-form reviewer-form" @submit.prevent="saveReviewer">
           <div class="field">
-            <label for="requirement-assignee">指派给</label>
+            <label for="requirement-reviewer">审查负责人</label>
+            <select id="requirement-reviewer" v-model="reviewerSelection">
+              <option :value="null">未指定，由项目负责人处理</option>
+              <option v-for="member in reviewerCandidates" :key="member.userId" :value="member.userId">{{ member.displayName }}（{{ member.username }}）</option>
+            </select>
+          </div>
+          <button type="submit" class="button button-quiet" :disabled="actionPending">保存审查人</button>
+        </form>
+
+        <form class="inline-form assignee-form" @submit.prevent="saveAssignee">
+          <div class="field">
+            <label for="requirement-assignee">开发负责人</label>
             <select id="requirement-assignee" v-model="assigneeSelection">
               <option :value="null" disabled>请选择成员</option>
-              <option v-for="member in members" :key="member.userId" :value="member.userId">
+              <option v-for="member in developerCandidates" :key="member.userId" :value="member.userId">
                 {{ member.username }}
               </option>
             </select>
@@ -729,6 +791,8 @@ function saveAssignee(): Promise<void> {
 </template>
 
 <style scoped>
+.decision-reason { white-space: pre-wrap; overflow-wrap: anywhere; }
+
 .requirement-overview-grid,
 .requirement-edit-grid,
 .requirement-intelligence-grid {

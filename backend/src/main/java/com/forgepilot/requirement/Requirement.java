@@ -36,6 +36,9 @@ public class Requirement {
     @Column(name = "assignee_id")
     private Long assigneeId;
 
+    @Column(name = "reviewer_id")
+    private Long reviewerId;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 32)
     private RequirementStatus status;
@@ -103,6 +106,10 @@ public class Requirement {
     public Long getAssigneeId() {
         return assigneeId;
     }
+
+    public Long getReviewerId() { return reviewerId; }
+
+    public void setReviewerId(Long reviewerId) { this.reviewerId = reviewerId; }
 
     public RequirementStatus getStatus() {
         return status;

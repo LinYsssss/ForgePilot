@@ -140,7 +140,7 @@
 <main>
 
 <header class="mast">
-  <p class="eyebrow">Operations · 2026-08-28</p>
+  <p class="eyebrow">Operations · 更新 2026-09-08 · 拓扑实测 2026-08-28</p>
   <h1>ForgePilot 运维手册</h1>
   <p class="standfirst">
     这份文档面向<strong>要把这套东西跑起来、或者半夜发现它挂了</strong>的人。
@@ -372,13 +372,19 @@ gunzip -c forgepilot-YYYY-MM-DD.sql.gz | \
 
   <h3>4.5 回滚</h3>
   <p>
-    <strong>代码可以回滚，数据库迁移不能。</strong>Flyway 迁移是只追加的，没有 down 脚本，
-    <code>clean</code> 也被禁用了。回滚到一个迁移数更少的旧版本，后端会因为
-    库里存在它不认识的迁移记录而拒绝启动。
+    <strong>数据库迁移只追加。</strong>Flyway 没有 down 脚本，<code>clean</code> 也被禁用了。
+    回退应用版本前必须验证它与已迁移 schema 的兼容性，不能靠删除历史行或修改已应用 SQL 来让校验通过。
   </p>
   <p>
-    所以可行的回滚只有两种：回到<strong>迁移数相同</strong>的某个版本（纯代码回退），
-    或者回退代码 + 恢复对应时点的数据库备份。没有第三种。
+    本轮 V14 只增加 nullable <code>requirement.reviewer_id</code> 及成员复合外键。
+    可在保留 V14 迁移和可空列的修复版本中回退业务代码；直接切旧版本前先验证兼容性，必要时使用对应备份恢复方案。
+  </p>
+  <h3>4.6 评审协作版本升级</h3>
+  <p>
+    当前为 14 个迁移、21 张业务表。备份后保留现有 PostgreSQL 卷部署应用，让 Flyway 自动应用 V14；
+    旧需求的审查人为空，由 LEADER 接手，可再从需求详情指派 REVIEWER/LEADER。
+    GitLab 仓库 Token 需 <code>api</code> 及实际合并权限，原来只能读取 MR 的凭据不足以完成“通过并合并”。
+    本轮只完成构建与测试，<strong>未重新部署或重测本手册的历史容量数据</strong>。
   </p>
 </section>
 
@@ -516,19 +522,19 @@ free -m</code></pre>
 
   <h3>6.5 前端能打开，但所有写操作被拒（403）</h3>
   <p>
-    <strong>缺失或错误的 CSRF 令牌是 403 的唯一来源。</strong>这个设计让 403 的含义单一：
-    看到 403 就不必怀疑权限，只查令牌。
+    先区分 403 的来源：安全过滤器中的 CSRF 拒绝应检查令牌，业务 API 的 <code>forbidden</code> 还可能表示项目角色、指定审查人或开发负责人资格不满足。
   </p>
   <p>
     常见成因是浏览器里存着一份过期的 <code>XSRF-TOKEN</code> cookie。
     让用户硬刷新（清掉站点 cookie 后重新加载）即可。
-    权限不足返回的是 404 或 403 的其他路径，但不来自这一层。
+    非成员对项目资源的访问返回 404；项目内角色不足返回 403。最终决定还需检查需求是否在开发中。
   </p>
 
-  <h3>6.6 审查跑完了，钉钉没收到消息</h3>
+  <h3>6.6 审查或人工决定完成了，钉钉没收到消息</h3>
   <p>
     通知是<strong>尽力而为的旁路</strong>：失败只在后端日志里留一行，不重试、不改审查状态。
-    所以「审查正常、消息没到」是一种预期内的组合，不是系统故障。
+    AI 完成/失败与人工退回/合并均在相应业务事务提交后发送；人工决定回滚不会发消息。
+    AI 完成显示有效审查人，失败显示 LEADER，退回显示有效开发负责人，合并显示 LEADER；失效人选回退 LEADER。决定理由不会广播到群里。
   </p>
   <div class="note red">
     <span class="label">钉钉不用状态码报告拒收</span>
@@ -545,8 +551,8 @@ free -m</code></pre>
     <tbody>
       <tr>
         <td class="f">（没有任何 dingtalk 行）</td>
-        <td>钉钉以 <code>errcode:0</code> 收下了</td>
-        <td>消息应该在群里。每一条失败路径都会记日志，所以沉默只剩这一种解释</td>
+        <td>单凭没有 dingtalk 日志不能判定投递成功</td>
+        <td>先查是否启用渠道、是否有已提交事件及 Notification/ReviewCompletedListener 日志，再用 LEADER 的测试消息核验渠道</td>
       </tr>
       <tr>
         <td class="f">errcode:300005<br>token is not exist</td>
@@ -584,7 +590,7 @@ free -m</code></pre>
   </div>
   <p>
     消息里没有可点链接，是因为 <code>FORGEPILOT_BASE_URL</code> 没配。留空是有意的默认：
-    一个指向 <code>127.0.0.1</code> 的链接比没有链接更糟。改完记得用
+    请配置实际用户可达的站点地址；链接会带 <code>/reviews/{id}?project={projectId}</code>，保证打开正确项目。改完记得用
     <code>up --detach</code> 而不是 <code>restart</code>（第 2 章）。
   </p>
 
@@ -596,6 +602,16 @@ curl -s http://127.0.0.1:18081/healthz <span class="c"># 本机能不能到 ngin
   <p>
     最后那条返回 <code>ok</code> 而外部访问不通，就基本可以确定是隧道或 Cloudflare 侧的问题，
     与这套应用无关。
+  </p>
+  <h3>6.8 “通过并合并”失败或结果不明</h3>
+  <p>
+    403 先查指定审查人及开发负责人当前角色；409 检查需求状态、Review 是否过期/已决定，以及远端 head、冲突、保护分支和仓库 Token 的实际合并权限。
+    <code>REQUEST_CHANGES</code> 需非空理由，但不会关闭 PR/MR 或删除分支；开发者继续在原分支提交。
+  </p>
+  <p>
+    503 <code>merge_outcome_unknown</code> 表示无法证明远端是否完成合并，本地没有记录通过。先到 Provider 核查被审查的 SHA；
+    已合并且 SHA 一致时，人工重试可只读确认后完成本地记录。不要把超时当作确定未合并，也不要直接改数据库决定字段。
+    远端写入与数据库提交不原子，系统没有补偿任务。
   </p>
 </section>
 
@@ -678,7 +694,7 @@ curl -s http://127.0.0.1:18081/healthz <span class="c"># 本机能不能到 ngin
 <footer class="end">
   <p>
     本文描述 2026-08-28 的部署形态；第 1 章的拓扑与第 7 章的数字均为当日在部署机上实测，
-    不是设计意图的转述。配置项与失败模式对应到代码与测试；
+    不是本轮重新测量。2026-09-08 只同步 V14 与评审协作的配置、失败模式和操作步骤；
     健康检查命令取自 <code>compose.yaml</code>。
   </p>
   <p>

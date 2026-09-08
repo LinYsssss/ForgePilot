@@ -2,7 +2,7 @@
 
 ForgePilot 的 Vue 3 + TypeScript + Vite 前端，覆盖全部对外可用的后端工作流：
 登录、显示名与改密、成员目录与多角色、用户 SCM 多身份、需求与验收条件、需求质量检查与一次性实现建议、项目知识与需求附件、
-GitHub/GitLab 仓库接入、审查发现与结构化证据、Finding 审计与人工决策。
+GitHub/GitLab 仓库接入、指定审查人、审查发现与结构化证据、退回理由与轮次、人工通过合并、项目知识阅读下载。
 
 视觉方向为用户确认的 **Precision Review Console / 精密审查台**：单一深色分层界面、克制的玻璃面板、
 青蓝强调色、紧凑元数据与密集证据工作区，并保留完整动态语言（交互粒子、光球、网格/扫描线、
@@ -19,8 +19,7 @@ npm run test -- --run
 npm run build
 ```
 
-四条命令全部通过，
-产物 JS 236.80 kB、CSS 66.43 kB。
+2026-09-08 审查修复后四条命令全部通过；产物 JS 258.41 kB（gzip 84.43 kB）、CSS 69.00 kB（gzip 12.26 kB）。现有 journey 同时覆盖重开的抑制项回主列表、PR 解除关联后历史 Review 的负责人归属。
 
 ## 信息架构
 
@@ -46,9 +45,10 @@ npm run build
 - AI 能力只出现在三段上下文内：需求详情的质量检查与一次性实现建议、审查详情的 Finding；
   不创建通用 AI/Assistant 入口、聊天框或第二条运行管线。
 - 工作台只在浏览器端组合现有列表 API，是只读总览；不虚构指标、评分或运行状态。
-- 项目知识页展示真实文档/Chunk 数、已嵌入数、向量维度与 Embedding Profile，**不返回也不展示原始向量**。
+- 项目知识页优先展示可读状态与原文阅读/下载，Chunk 数、向量维度与 Embedding Profile 收入“索引详情”；**不返回也不展示原始向量**。知识被删除时，历史审查仍保留当时的证据摘录。
 - AI 置信度、Finding 人工状态、Review Decision、跨轮血缘、需求状态与派生的评审活动，
-  在 UI 上必须是彼此独立的标签，不得合并。
+  是独立事实。需求保留生命周期标签，同时以共享 `requirementPhase()` 展示派生当前阶段、`requirementHandler()` 展示处理人；只对 `IN_DEVELOPMENT` 派生评审/返工阶段。
+- 最终决定按钮同时检查 Review 当前有效性与服务端 `decisionBlockReason === null`；只允许指定有效审查人或 LEADER，退回理由必填。“通过”会合并被审查的 SHA，需求完成仍由 LEADER 单独确认。
 - 仅两个运行时依赖：`vue`、`vue-router`。新增依赖需要举出它能挡住的真实故障。
 
 视觉与动效契约、组件规范和质量门槛定义在 `.trellis/spec/frontend/`，本文件不复述。

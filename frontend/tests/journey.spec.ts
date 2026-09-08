@@ -101,8 +101,11 @@ class FakeServer {
   requirementTitle = "";
   requirementStatus = "DRAFT";
   requirementAssigneeId: number | null = null;
+  requirementReviewerId: number | null = null;
+  knowledgeDeleted = false;
   revisionId = 30;
   criteria: { id: number; acKey: string; sortOrder: number; text: string }[] = [];
+  pullRequestRequirementId: number | null = null;
   pullRequestHead = HEAD_ONE;
   pullRequestFingerprint = "fingerprint-one";
   reviews: ReviewRow[] = [];
@@ -131,6 +134,7 @@ class FakeServer {
   }
 
   seedFirstReview(): void {
+    this.pullRequestRequirementId = this.requirementId;
     this.reviews.push({
       id: 501,
       pullRequestId: 7,
@@ -273,7 +277,7 @@ class FakeServer {
     return (
       review.headSha === this.pullRequestHead &&
       review.reviewInputFingerprint === this.pullRequestFingerprint &&
-      review.requirementRevisionId === this.revisionId
+      review.requirementRevisionId === (this.pullRequestRequirementId === null ? null : this.revisionId)
     );
   }
 }
@@ -336,6 +340,10 @@ function reviewDetail(review: ReviewRow): unknown {
     decisionBy: review.decisionBy,
     decisionAt: review.decisionAt,
     decisionComment: review.decisionComment,
+    decisionBlockReason: (server.role() === "LEADER" ||
+      (server.role() === "REVIEWER" && server.requirementReviewerId === server.session?.id))
+      && (review.requirementId === null || (server.requirementStatus === "IN_DEVELOPMENT"
+        && server.requirementAssigneeId !== null)) ? null : "仅指定审查人和项目负责人可决定。",
     isCurrent: server.isCurrent(review),
     contextSnapshot: {
       requirement:
@@ -421,6 +429,8 @@ function requirementDetail(): unknown {
     assigneeUsername:
       server.members.find((member) => member.userId === server.requirementAssigneeId)
         ?.username ?? null,
+    reviewerId: server.requirementReviewerId,
+    reviewerName: server.members.find((member) => member.userId === server.requirementReviewerId)?.displayName ?? null,
     createdAt: "2026-08-21T02:10:00Z",
     updatedAt: "2026-08-21T02:10:00Z",
     currentRevision: revisionView(),
@@ -554,6 +564,8 @@ function handleRequirement(
               status: server.requirementStatus,
               assigneeId: server.requirementAssigneeId,
               assigneeUsername: null,
+              reviewerId: server.requirementReviewerId,
+              reviewerName: server.members.find((member) => member.userId === server.requirementReviewerId)?.displayName ?? null,
               currentRevisionSeq: 1,
               updatedAt: "2026-08-21T02:10:00Z",
             },
@@ -583,17 +595,7 @@ function handleRequirement(
     return json([revisionView()]);
   }
   if (path === "/api/projects/3/requirements/12/review-activity" && method === "GET") {
-    return json({
-      activity: server.reviews.length === 0 ? "NO_PR" : "REVIEWING",
-      counts: {
-        REVIEW_REQUIRED: 0,
-        FAILED: 0,
-        CHANGES_REQUESTED: 0,
-        REVIEWING: server.reviews.length,
-        PENDING: 0,
-        APPROVED: 0,
-      },
-    });
+    return json(requirementActivity());
   }
   if (path === "/api/projects/3/requirements/12/attachments" && method === "GET") {
     return json([]);
@@ -618,24 +620,29 @@ function handleRequirement(
     }
     return json(requirementDetail());
   }
+  if (path === "/api/projects/3/requirements/12/reviewer" && method === "POST") {
+    const payload = JSON.parse(body ?? "{}") as { userId: number | null };
+    server.requirementReviewerId = payload.userId;
+    return json(requirementDetail());
+  }
   return null;
+}
+
+function requirementActivity(): unknown {
+  const current = server.reviews.find((review) => server.isCurrent(review));
+  const activity = current?.decision === "REQUEST_CHANGES" ? "CHANGES_REQUESTED"
+    : current?.decision === "APPROVE" ? "APPROVED" : current ? "REVIEWING" : "NO_PR";
+  return { activity, counts: {
+    REVIEW_REQUIRED: 0, FAILED: 0, PENDING: 0,
+    CHANGES_REQUESTED: activity === "CHANGES_REQUESTED" ? 1 : 0,
+    REVIEWING: activity === "REVIEWING" ? 1 : 0,
+    APPROVED: activity === "APPROVED" ? 1 : 0,
+  } };
 }
 
 function handleReview(path: string, method: string, body: string | null): Response | null {
   if (path === "/api/projects/3/review-activity" && method === "GET") {
-    return json({
-      "12": {
-        activity: "REVIEWING",
-        counts: {
-          REVIEW_REQUIRED: 0,
-          FAILED: 0,
-          CHANGES_REQUESTED: 0,
-          REVIEWING: 1,
-          PENDING: 0,
-          APPROVED: 0,
-        },
-      },
-    });
+    return json({ "12": requirementActivity() });
   }
   if (path === "/api/projects/3/reviews" && method === "GET") {
     return json(
@@ -643,6 +650,8 @@ function handleReview(path: string, method: string, body: string | null): Respon
         id: review.id,
         pullRequestId: review.pullRequestId,
         pullRequestNumber: 42,
+        pullRequestTitle: "feat: 登录闭环",
+        provider: "GITHUB",
         headSha: review.headSha,
         requirementId: review.requirementId,
         status: review.status,
@@ -658,10 +667,11 @@ function handleReview(path: string, method: string, body: string | null): Respon
       projectId: 3,
       repositoryId: 5,
       externalNumber: 42,
+      title: "feat: 登录闭环",
       baseSha: "0000000000000000000000000000000000000000",
       headSha: server.pullRequestHead,
       reviewInputFingerprint: server.pullRequestFingerprint,
-      requirementId: server.requirementId,
+      requirementId: server.pullRequestRequirementId,
       authorExternalUserId: "gh-2",
       authorUsername: "dev",
       authorUserId: 2,
@@ -689,16 +699,37 @@ function handleReview(path: string, method: string, body: string | null): Respon
   return null;
 }
 
+function handleKnowledge(path: string, method: string): Response | null {
+  if (method !== "GET") return null;
+  if (path === "/api/projects/3/knowledge/documents") {
+    return json(server.knowledgeDeleted ? [] : [{
+      id: 2, projectId: 3, title: "认证规范.md", sourceType: "PROJECT_KNOWLEDGE",
+      sourceRequirementId: null, status: "READY", failureReason: null,
+      chunkCount: 1, embeddedChunkCount: 1, embeddingDimension: 4096,
+      embeddingProvider: "test", embeddingModel: "test", embeddingVersion: "v1",
+      createdAt: "2026-08-21T02:00:00Z", updatedAt: "2026-08-21T02:00:00Z",
+    }]);
+  }
+  if (path === "/api/projects/3/knowledge/documents/2/content") {
+    return server.knowledgeDeleted ? failure(404, "NOT_FOUND", "文档不存在")
+      : json({ documentId: 2, title: "认证规范.md", text: "# 认证规范\n\n认证错误不得泄露账户是否存在。" });
+  }
+  return null;
+}
+
 function decide(reviewId: number, body: string | null): Response {
   const role = server.role();
-  if (role !== "LEADER" && role !== "REVIEWER") {
-    return failure(403, "FORBIDDEN", "只有负责人与评审可以做终局决定");
+  if (role !== "LEADER" && (role !== "REVIEWER" || server.requirementReviewerId !== server.session?.id)) {
+    return failure(403, "FORBIDDEN", "仅指定审查人和项目负责人可决定");
   }
   const review = server.reviews.find((candidate) => candidate.id === reviewId);
   if (review === undefined) {
     return failure(404, "NOT_FOUND", "审查不存在");
   }
   const payload = JSON.parse(body ?? "{}") as { decision: string; comment?: string };
+  if (payload.decision === "REQUEST_CHANGES" && !payload.comment?.trim()) {
+    return failure(422, "INVALID_INPUT", "请填写退回修改的理由。");
+  }
   if (review.status !== "COMPLETED" || review.decision !== "PENDING") {
     return failure(409, "CONFLICT", "这条 Review 不能再被决定");
   }
@@ -776,6 +807,7 @@ function handle(path: string, method: string, body: string | null): Response {
     handleAuth(path, method, body) ??
     handleProject(path, method, body) ??
     handleRequirement(path, method, body) ??
+    handleKnowledge(path, method) ??
     handleReview(path, method, body) ??
     handleFinding(path, method, body);
   if (response === null) {
@@ -911,13 +943,18 @@ describe("three-role journey through the real App and router", () => {
     );
     expect(wrapper.find(".requirement-status").text()).toBe("就绪");
 
+    await wrapper.find("#requirement-reviewer").setValue("3");
+    await wrapper.find(".reviewer-form").trigger("submit");
+    await flushPromises();
+    expect(lastCall("POST", "/api/projects/3/requirements/12/reviewer")?.body).toBe('{"userId":3}');
+
     await wrapper.find("#requirement-assignee").setValue("2");
-    await wrapper.find(".requirement-actions form.inline-form").trigger("submit");
+    await wrapper.find(".assignee-form").trigger("submit");
     await flushPromises();
     expect(lastCall("POST", "/api/projects/3/requirements/12/assignee")?.body).toBe(
       '{"userId":2}',
     );
-    expect(wrapper.find(".requirement-status").text()).toBe("开发中");
+    expect(wrapper.find(".requirement-status").text()).toBe("审查中");
 
     // 7. The review list narrows to the pull request and shows the frozen columns.
     await router.push("/reviews?project=3&pullRequest=7");
@@ -1019,10 +1056,22 @@ describe("three-role journey through the real App and router", () => {
       "继承抑制",
     );
 
+    await router.push("/knowledge?project=3&document=2");
+    await flushPromises();
+    expect(wrapper.get(".document-content").text()).toContain("认证错误不得泄露账户是否存在");
+    expect(wrapper.find('a[href="/api/projects/3/knowledge/documents/2/download"]').exists()).toBe(true);
+
     // 9. REVIEWER confirms the finding.
     await signOut(wrapper);
     expect(router.currentRoute.value.path).toBe("/login");
+    server.requirementReviewerId = null;
     await signInAs(wrapper, "rev");
+    await router.push("/reviews/501?project=3");
+    await flushPromises();
+    expect(wrapper.findAll("[data-decision]")).toHaveLength(0);
+    expect(wrapper.text()).toContain("仅指定审查人和项目负责人可决定");
+    server.requirementReviewerId = 3;
+    await router.push("/reviews?project=3");
     await router.push("/reviews/501?project=3");
     await flushPromises();
 
@@ -1037,6 +1086,15 @@ describe("three-role journey through the real App and router", () => {
     await flushPromises();
     expect(wrapper.findAll(".finding")[0].find(".finding-events").text()).toContain("操作人 rev");
     expect(wrapper.findAll(".finding")[0].find(".finding-events").text()).toContain("证据与 AC-1 一致");
+
+    // Reopening changes the human status, while its inherited lineage stays visible.
+    await wrapper.get('.suppressed-findings [data-action="REOPEN"]').trigger("click");
+    await flushPromises();
+    expect(lastCall("POST", "/api/projects/3/findings/901/status")?.body).toBe('{"status":"OPEN"}');
+    expect(wrapper.find(".suppressed-findings").exists()).toBe(false);
+    const reopened = wrapper.findAll(".finding").find((card) => card.text().includes("发现 901"));
+    expect(reopened?.find(".finding-status").text()).toBe("待确认");
+    expect(reopened?.find(".finding-continuity").text()).toBe("继承抑制");
 
     // 10. DEVELOPER claims it and marks it fixed.
     await signOut(wrapper);
@@ -1076,6 +1134,11 @@ describe("three-role journey through the real App and router", () => {
     await router.push("/reviews/501?project=3");
     await flushPromises();
 
+    await wrapper.find("#decision-comment").setValue("  ");
+    await wrapper.find('[data-decision="REQUEST_CHANGES"]').trigger("click");
+    await flushPromises();
+    expect(lastCall("POST", "/api/projects/3/reviews/501/decision")).toBeUndefined();
+    expect(wrapper.text()).toContain("请填写退回修改的理由");
     await wrapper.find("#decision-comment").setValue("AC-1 还没有覆盖");
     await wrapper.find('[data-decision="REQUEST_CHANGES"]').trigger("click");
     await flushPromises();
@@ -1086,6 +1149,15 @@ describe("three-role journey through the real App and router", () => {
     expect(wrapper.find(".decision-gate").exists()).toBe(true);
     expect(wrapper.find(".decision-gate").text()).toContain("只有新的 head SHA 能解除");
 
+    await signOut(wrapper);
+    await signInAs(wrapper, "dev");
+    await router.push("/requirements/12?project=3");
+    await flushPromises();
+    expect(wrapper.get(".requirement-status").text()).toBe("开发中 · 退回修改");
+    expect(wrapper.get(".returned-reviews").text()).toContain("AC-1 还没有覆盖");
+    await signOut(wrapper);
+    await signInAs(wrapper, "rev");
+
     // 12. A push produces a new Review; the old one stays and goes stale.
     server.pushNewHeadAndReview();
     await router.push("/reviews/502?project=3");
@@ -1093,6 +1165,8 @@ describe("three-role journey through the real App and router", () => {
 
     expect(wrapper.find(".review-current").text()).toBe("当前有效");
     expect(wrapper.find(".decision-gate").exists()).toBe(false);
+    expect(wrapper.get("#review-progress-title").text()).toContain("第 2 轮");
+    expect(wrapper.text()).toContain("上一轮退回理由：AC-1 还没有覆盖");
     await wrapper.find('[data-decision="APPROVE"]').trigger("click");
     await flushPromises();
     expect(lastCall("POST", "/api/projects/3/reviews/502/decision")?.body).toBe(
@@ -1100,10 +1174,16 @@ describe("three-role journey through the real App and router", () => {
     );
     expect(wrapper.find(".review-decision").text()).toBe("已通过");
 
+    server.knowledgeDeleted = true;
+    server.pullRequestRequirementId = null;
     await router.push("/reviews/501?project=3");
     await flushPromises();
     expect(wrapper.find(".review-current").text()).toBe("已过期");
     expect(wrapper.find(".review-stale").exists()).toBe(true);
+    expect(wrapper.get(".pull-request-requirement").text()).toBe("未关联需求");
+    expect(wrapper.get('[aria-labelledby="review-progress-title"]').text()).toContain("审查人：评审者");
+    expect(wrapper.text()).toContain("公共原文不可用");
+    expect(wrapper.text()).toContain("认证错误不得泄露账户是否存在");
 
     // 13. Approving a Review does not move the requirement. A LEADER does that.
     expect(server.requirementStatus).toBe("IN_DEVELOPMENT");
@@ -1138,6 +1218,8 @@ describe("three-role journey through the real App and router", () => {
     server.requirementId = 12;
     server.requirementTitle = "登录闭环";
     server.session = { id: 1, username: "lead", displayName: "负责人" };
+    server.requirementStatus = "IN_DEVELOPMENT";
+    server.requirementAssigneeId = 1;
     server.seedFirstReview();
     calls.length = 0;
     clearSession();

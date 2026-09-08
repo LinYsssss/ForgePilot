@@ -23,6 +23,13 @@ public class RequirementDirectory {
         this.requirements = requirements;
     }
 
+    public java.util.Optional<DecisionContext> decisionContext(long projectId, long requirementId) {
+        return requirements.findByProjectIdAndIdAndDeletedAtIsNull(projectId, requirementId)
+                .map(row -> new DecisionContext(row.getStatus(), row.getAssigneeId(), row.getReviewerId()));
+    }
+
+    public record DecisionContext(RequirementStatus status, Long assigneeId, Long reviewerId) { }
+
     /**
      * 这条需求是否存在<em>于本项目之内</em>。属于别的项目的 id 会得到 false，
      * 正是这一点把跨项目的 {@code REQ-<n>} 变成「没有关联需求」而不是一个错误。

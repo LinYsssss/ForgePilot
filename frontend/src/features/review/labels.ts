@@ -248,3 +248,9 @@ export function availableMoves(
 export function shortSha(sha: string): string {
   return sha.length > 12 ? sha.slice(0, 12) : sha;
 }
+
+export function pullRequestLabel(provider: string | undefined, number: number): string {
+  if (provider === "GITLAB") return `GitLab MR !${number}`;
+  if (provider === "GITHUB") return `GitHub PR #${number}`;
+  return `PR/MR #${number}`;
+}

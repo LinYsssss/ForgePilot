@@ -103,6 +103,14 @@ class RequirementController {
         return requirements.assign(projectId, userIdOf(principal), requirementId, request.userId());
     }
 
+    @PostMapping("/{requirementId}/reviewer")
+    RequirementDetail assignReviewer(@PathVariable long projectId, @PathVariable long requirementId,
+            @RequestBody ReviewerRequest request, Principal principal) {
+        return requirements.assignReviewer(projectId, userIdOf(principal), requirementId, request.userId());
+    }
+
+    record ReviewerRequest(Long userId) { }
+
     @GetMapping("/{requirementId}/attachments")
     List<KnowledgeDocumentView> attachments(@PathVariable long projectId, @PathVariable long requirementId,
             Principal principal) {

@@ -57,6 +57,9 @@ import org.springframework.web.context.WebApplicationContext;
 @SpringBootTest
 class ReviewDecisionTest extends PostgresTestBase {
 
+    @org.springframework.test.context.bean.override.mockito.MockitoBean
+    private com.forgepilot.scm.PullRequestDecisionActions scmActions;
+
     private static final AtomicInteger SEQUENCE = new AtomicInteger();
 
     @Autowired
@@ -94,7 +97,7 @@ class ReviewDecisionTest extends PostgresTestBase {
 
         List<HttpStatus> outcomes = race(
                 () -> decide(scenario, scenario.leader, review, ReviewDecision.APPROVE),
-                () -> decide(scenario, scenario.reviewer, review, ReviewDecision.APPROVE));
+                () -> decide(scenario, scenario.leader, review, ReviewDecision.APPROVE));
 
         // null is the winner: the loser's conditional update matched no row.
         assertThat(outcomes).containsExactlyInAnyOrder(null, HttpStatus.CONFLICT);
@@ -110,7 +113,7 @@ class ReviewDecisionTest extends PostgresTestBase {
 
         List<HttpStatus> outcomes = race(
                 () -> decide(scenario, scenario.leader, review, ReviewDecision.APPROVE),
-                () -> decide(scenario, scenario.reviewer, review, ReviewDecision.REQUEST_CHANGES));
+                () -> decide(scenario, scenario.leader, review, ReviewDecision.REQUEST_CHANGES));
 
         // Both are legal final verdicts, so which one wins is whichever took the
         // pull request lock first. What must never happen is both.
@@ -271,7 +274,7 @@ class ReviewDecisionTest extends PostgresTestBase {
         // 6. The head already carries a REQUEST_CHANGES.
         Scenario blocked = new Scenario();
         long refused = blocked.completedReview("head-1", "fp-1", null, null);
-        assertThat(decide(blocked, blocked.reviewer, refused, ReviewDecision.REQUEST_CHANGES)).isNull();
+        assertThat(decide(blocked, blocked.leader, refused, ReviewDecision.REQUEST_CHANGES)).isNull();
         long second = blocked.completedReview("head-1", "fp-2", null, null);
         blocked.moveTo("head-1", "fp-2");
         assertThat(decide(blocked, blocked.leader, second, ReviewDecision.APPROVE))
@@ -299,7 +302,7 @@ class ReviewDecisionTest extends PostgresTestBase {
     void changesRequestedSticksToTheHeadAndReturnsAfterAForcePushBack() {
         Scenario scenario = new Scenario();
         long onHeadOne = scenario.completedReview("head-1", "fp-1", null, null);
-        assertThat(decide(scenario, scenario.reviewer, onHeadOne, ReviewDecision.REQUEST_CHANGES)).isNull();
+        assertThat(decide(scenario, scenario.leader, onHeadOne, ReviewDecision.REQUEST_CHANGES)).isNull();
 
         // Same head, a different review identity: still blocked.
         long alsoOnHeadOne = scenario.completedReview("head-1", "fp-2", null, null);
@@ -324,7 +327,7 @@ class ReviewDecisionTest extends PostgresTestBase {
     void neitherTheBaseNorTheRequirementNorAReSyncLiftsTheBlock() {
         Scenario scenario = new Scenario();
         long blocking = scenario.completedReview("head-1", "fp-1", null, null);
-        assertThat(decide(scenario, scenario.reviewer, blocking, ReviewDecision.REQUEST_CHANGES)).isNull();
+        assertThat(decide(scenario, scenario.leader, blocking, ReviewDecision.REQUEST_CHANGES)).isNull();
 
         // The base branch moved: same head, new diff fingerprint, new review identity.
         long afterBaseMoved = scenario.completedReview("head-1", "fp-2", null, null);
@@ -443,6 +446,50 @@ class ReviewDecisionTest extends PostgresTestBase {
                 .andExpect(jsonPath("$.decisionComment").value("Ship it."));
     }
 
+    @Test
+    void onlyAssignedReviewerOrLeaderCanDecideAndRejectionNeedsAReason() {
+        Scenario scenario = new Scenario();
+        long requirement = scenario.requirement();
+        scenario.link(requirement);
+        long review = scenario.completedReview("head-1", "fp-1", requirement, scenario.currentRevisionOf(requirement));
+        long other = account("other-reviewer");
+        scenario.member(other, "REVIEWER");
+        assertThat(decide(scenario, other, review, ReviewDecision.REQUEST_CHANGES)).isEqualTo(HttpStatus.FORBIDDEN);
+        assertThat(statusOf(() -> decisions.decide(scenario.projectId, scenario.reviewer, review,
+                ReviewDecision.REQUEST_CHANGES, "  "))).isEqualTo(HttpStatus.UNPROCESSABLE_ENTITY);
+        assertThat(decide(scenario, scenario.reviewer, review, ReviewDecision.REQUEST_CHANGES)).isNull();
+        assertThat(decisions.detail(scenario.projectId, scenario.developer, review).decisionComment())
+                .isEqualTo("Fix the missing validation");
+        org.mockito.Mockito.verifyNoInteractions(scmActions);
+    }
+
+    @Test
+    void unassignedAndRemovedRoleFallBackToLeaderAndDraftCannotBeDecided() {
+        Scenario scenario = new Scenario();
+        long requirement = scenario.requirement();
+        scenario.link(requirement);
+        long review = scenario.completedReview("head-1", "fp-1", requirement, scenario.currentRevisionOf(requirement));
+        jdbc.update("update requirement set reviewer_id = null where id = ?", requirement);
+        assertThat(decide(scenario, scenario.reviewer, review, ReviewDecision.APPROVE)).isEqualTo(HttpStatus.FORBIDDEN);
+        jdbc.update("update requirement set status = 'DRAFT' where id = ?", requirement);
+        assertThat(decide(scenario, scenario.leader, review, ReviewDecision.APPROVE)).isEqualTo(HttpStatus.CONFLICT);
+        jdbc.update("update requirement set status = 'IN_DEVELOPMENT', reviewer_id = ? where id = ?", scenario.reviewer, requirement);
+        jdbc.update("update project_member_role set role = 'DEVELOPER' where project_id = ? and user_id = ?", scenario.projectId, scenario.reviewer);
+        assertThat(decide(scenario, scenario.reviewer, review, ReviewDecision.APPROVE)).isEqualTo(HttpStatus.FORBIDDEN);
+        assertThat(decide(scenario, scenario.leader, review, ReviewDecision.APPROVE)).isNull();
+        org.mockito.Mockito.verify(scmActions).merge(scenario.projectId, scenario.pullRequestId, "head-1");
+    }
+
+    @Test
+    void failedRemoteMergeDoesNotCommitApproval() {
+        Scenario scenario = new Scenario();
+        long review = scenario.completedReview("head-1", "fp-1", null, null);
+        org.mockito.Mockito.doThrow(ApiException.conflict("merge refused")).when(scmActions)
+                .merge(scenario.projectId, scenario.pullRequestId, "head-1");
+        assertThat(decide(scenario, scenario.leader, review, ReviewDecision.APPROVE)).isEqualTo(HttpStatus.CONFLICT);
+        assertThat(decisionOf(review)).isEqualTo("PENDING");
+    }
+
     // ---------------------------------------------------------------- machinery
 
     /**
@@ -519,7 +566,7 @@ class ReviewDecisionTest extends PostgresTestBase {
     }
 
     private HttpStatus decide(Scenario scenario, long actorId, long reviewId, ReviewDecision decision) {
-        return statusOf(() -> decisions.decide(scenario.projectId, actorId, reviewId, decision, null));
+        return statusOf(() -> decisions.decide(scenario.projectId, actorId, reviewId, decision, decision == ReviewDecision.REQUEST_CHANGES ? "Fix the missing validation" : null));
     }
 
     /** The status the API would answer with, or null when the call was allowed to succeed. */
@@ -597,8 +644,8 @@ class ReviewDecisionTest extends PostgresTestBase {
         }
 
         private long requirement() {
-            long requirementId = jdbc.queryForObject("insert into requirement (project_id, status) "
-                    + "values (?, 'READY') returning id", Long.class, projectId);
+            long requirementId = jdbc.queryForObject("insert into requirement (project_id, status, assignee_id, reviewer_id) "
+                    + "values (?, 'IN_DEVELOPMENT', ?, ?) returning id", Long.class, projectId, developer, reviewer);
             publishRevision(requirementId);
             return requirementId;
         }

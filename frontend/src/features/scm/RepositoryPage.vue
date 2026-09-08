@@ -196,6 +196,7 @@ watch(projectId, load, { immediate: true });
     <div class="page-head">
       <p class="eyebrow">SCM integration</p>
       <h1 id="repositories-title">仓库接入</h1>
+      <p class="field-hint">仓库凭据用于读取代码和合并。个人身份需在账户设置验证，再到项目成员页绑定，才能识别本人 PR、修改需求关联和请求审查。</p>
       <p class="lede">
         一个项目接入一个 GitHub 或 GitLab 仓库。凭据仅写入请求，页面和读取接口都不会显示
         token 或 Webhook 密钥。

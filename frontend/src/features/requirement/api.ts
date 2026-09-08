@@ -28,6 +28,8 @@ export interface RequirementSummary {
   status: RequirementStatus;
   assigneeId: number | null;
   assigneeUsername: string | null;
+  reviewerId: number | null;
+  reviewerName: string | null;
   currentRevisionSeq: number;
   updatedAt: string;
 }
@@ -37,6 +39,8 @@ export interface RequirementDetail {
   status: RequirementStatus;
   assigneeId: number | null;
   assigneeUsername: string | null;
+  reviewerId: number | null;
+  reviewerName: string | null;
   createdAt: string;
   updatedAt: string;
   currentRevision: Revision;
@@ -190,6 +194,12 @@ export function changeStatus(
     `${requirementsPath(projectId)}/${requirementId}/status`,
     { method: "POST", body: JSON.stringify({ status }) },
   );
+}
+
+export function assignReviewer(projectId: number, requirementId: number, userId: number | null): Promise<RequirementDetail> {
+  return requestJson<RequirementDetail>(`${requirementsPath(projectId)}/${requirementId}/reviewer`, {
+    method: "POST", body: JSON.stringify({ userId }),
+  });
 }
 
 export function assign(

@@ -1,5 +1,8 @@
 # Error Handling
 
+Review collaboration contracts are recorded in the final scenario below; the
+public HTTP reference is [API.md](../../../docs/v2/API.md).
+
 ## The single body
 
 Every failure the API returns is `common.ApiError`:
@@ -143,3 +146,96 @@ attachments.content(projectId, actorId, requirementId, documentId);
 - Letting a message carry a constraint name, column name, or SQL fragment to the
   caller.
 - Distinguishing "missing" from "forbidden" on any project-scoped read.
+
+## Scenario: assigned review, confirmed merge and public knowledge reading
+
+### 1. Scope / Trigger
+
+V14 adds one nullable reviewer FK. Existing requirement, review, SCM and
+notification paths share authorization and commit boundaries; no new workflow
+or retry subsystem is introduced.
+
+### 2. Signatures
+
+```text
+POST /api/projects/{projectId}/requirements/{id}/reviewer  {userId: number|null}
+POST /api/projects/{projectId}/requirements/{id}/assignee  {userId: number}
+POST /api/projects/{projectId}/reviews/{id}/decision      {decision, comment}
+GET  /api/projects/{projectId}/knowledge/documents/{id}/content|download
+PullRequestDecisionActions.merge(long projectId, long pullRequestId, String expectedHeadSha)
+ReviewDecided(long projectId, long reviewId)
+requirement (project_id, reviewer_id) -> project_member (project_id, user_id)
+```
+
+### 3. Contracts
+
+- Both assignment endpoints require LEADER as the actor. Validate the target
+  through `ProjectAccessService`: DEVELOPER/LEADER for developer assignment,
+  REVIEWER/LEADER for reviewer assignment. A UI candidate filter is insufficient.
+- Requirement views expose `reviewerId` and eligible `reviewerName`; a role change
+  can leave the id populated while the name becomes null. Member removal clears
+  both developer and reviewer assignments in the existing transaction.
+- `RequirementDirectory.DecisionContext` supplies the current assignment and
+  lifecycle. Only the assigned effective REVIEWER or LEADER decides; linked
+  requirements must be `IN_DEVELOPMENT` with an effective DEVELOPER/LEADER.
+  `decisionBlockReason` is a nullable permission/lifecycle explanation, not a
+  replacement for the Review current/completed/pending/head gates.
+- Strip decision comments. New returns require nonempty text; all comments have
+  a 2000-character limit. Historical null comments remain readable.
+- APPROVE validates remote head and sends expected SHA, then requires confirmed
+  merge. REQUEST_CHANGES never writes remotely. Ambiguous merge responses only
+  trigger a read; already-merged same-head retries can finish the local decision.
+- Publish `ReviewDecided` inside the transaction; its listener runs after commit.
+  AI completion/failure events are already published after commit and keep ordinary
+  listeners. Notification failures cannot roll back decisions. Resolve requirement
+  context from `review.requirement_id`, never PR's current association.
+- Optional `FORGEPILOT_BASE_URL` / `forgepilot.base-url` supplies the detail link
+  ending `/reviews/{id}?project={projectId}`; blank means no link. Messages contain
+  responsible names, not decision reasons or source excerpts.
+- Public content returns `{documentId,title,text}`; download is UTF-8 `text/plain`
+  with attachment disposition. Require project membership and
+  `source_type=PROJECT_KNOWLEDGE`; attachment reads keep their owning endpoint.
+
+### 4. Validation & Error Matrix
+
+| Condition | Result |
+|---|---|
+| Missing/cross-project resource or non-member | 404 `not_found` |
+| Unassigned reviewer or invalid required role | 403 `forbidden` |
+| Terminal reviewer assignment, invalid lifecycle/current input, decided head | 409 `conflict` |
+| Empty return reason, comment over 2000, invalid decision | 422 `unprocessable` |
+| Remote head mismatch, closed PR/MR or rejected merge | 409 `conflict`, local rollback |
+| Merge response ambiguous and read cannot confirm same-head merge | 503 `merge_outcome_unknown`, local rollback |
+| Public endpoint requested for an attachment | 404 `not_found` |
+
+### 5. Good / Base / Bad Cases
+
+- Good: assigned reviewer returns with a reason, developer updates the same branch,
+  and a new reviewed head is explicitly approved and confirmed merged.
+- Base: old null reviewer falls back to LEADER; reading history tolerates old null
+  reasons. Deleting an original leaves its frozen Review excerpt intact.
+- Bad: losing the merge response is treated as permission to repeat the write.
+  Remote and DB commit are not atomic; confirm read-only or require manual review.
+
+### 6. Tests Required
+
+Extend `RequirementLifecycleTest` / `ResourceRemovalTest` for role and cleanup
+semantics; `ReviewDecisionTest` for designated authority, lifecycle, reason and
+rollback; `ScmMergeTest` for both providers, expected SHA, merged results and lost
+responses without duplicate writes; `NotificationChannelTest` for commit visibility,
+rollback silence and delivery failure isolation; `KnowledgeServiceTest` for content
+and attachment/project isolation. Reuse the existing frontend journey for assignment,
+return/new-round/approval and knowledge reading. No live repository or group writes.
+
+### 7. Wrong vs Correct
+
+```java
+// Wrong: role-only final authority; remote merge without expected head.
+access.requireRole(projectId, actorId, ProjectRole.REVIEWER);
+
+// Correct: after the PR lock/current-input gates, check current assignment/lifecycle,
+// and pass the reviewed SHA to the provider-owned merge boundary.
+authorizeDecision(projectId, actorId, review.getRequirementId());
+scmActions.merge(projectId, review.getPullRequestId(), review.getHeadSha());
+// Run the merge only for APPROVE; send ReviewDecided notifications after commit.
+```

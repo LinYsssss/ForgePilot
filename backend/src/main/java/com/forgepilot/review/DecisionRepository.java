@@ -85,7 +85,9 @@ interface DecisionRepository extends Repository<Review, Long> {
      * 这份列表是跨 PR 的，否则就会变成每条 review 一次查询。
      */
     @Query(value = """
-            SELECT p.id, p.external_number FROM pull_request p WHERE p.project_id = :projectId
+            SELECT p.id, p.external_number, p.title, s.provider FROM pull_request p
+              JOIN scm_repository s ON s.project_id = p.project_id AND s.id = p.repository_id
+             WHERE p.project_id = :projectId
             """, nativeQuery = true)
     List<Object[]> pullRequestNumbers(@Param("projectId") long projectId);
 

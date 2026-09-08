@@ -35,7 +35,7 @@ Before planning or changing this repository, read these files completely:
 
 ## Current shape
 
-9 backend top-level packages, 21 business tables across 13 Flyway migrations, a 6-entry / 11-route frontend, GitHub and GitLab providers, and a completed three-arm evaluation. `./mvnw -B -ntp verify` and the frontend suite are green with zero skips. Quote the structural counts; they are asserted by tests. Do **not** quote a test-case count from any document — run the suite and read it, or it will be stale.
+9 backend top-level packages, 21 business tables across 14 Flyway migrations, a 6-entry / 11-route frontend, GitHub and GitLab providers, and a completed three-arm evaluation. The latest backend full run, targeted rechecks and frontend gates are recorded in `docs/deliverables/TEST-REPORT.html`. Quote the structural counts; they are asserted by tests. Do **not** quote a test-case count from any document — run the suite and read it, or it will be stale.
 
 There is no JDK on this host. Backend builds and tests run through the pinned container path documented in `docs/v2/DEFENSE-GUIDE.md`.
 
@@ -43,7 +43,7 @@ There is no JDK on this host. Backend builds and tests run through the pinned co
 
 - ForgePilot is a requirement-driven AI R&D collaboration and PR review platform, not Jira, a general chat product, a coding agent, or a full DevOps suite.
 - There is exactly one Review Engine.
-- Backend top-level packages are limited to `common`, `auth`, `project`, `requirement`, `scm`, `knowledge`, `ai`, and `review`.
+- Backend top-level packages are limited to `common`, `auth`, `project`, `requirement`, `scm`, `knowledge`, `ai`, `review`, and `notification`.
 - Agent, Patch, RabbitMQ/Outbox, Risk Model, Sandbox, a second AI runtime, and a second Review pipeline are out of scope.
 - AI may produce requirement checks, one-shot implementation guidance, and review findings; it must not change business state or code automatically.
 - `finding_key`, `evidence_hash` and `basis_hash` must never cover model prose. `explanation`, `suggestion` and `confidence` are the only outputs allowed to move with the model's wording, which is exactly why no hash may see them — a suppression that drifts with wording stops working silently, and the failure only surfaces a round later.

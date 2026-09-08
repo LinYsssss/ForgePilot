@@ -51,6 +51,8 @@ const detail = {
   status: "DRAFT",
   assigneeId: null,
   assigneeUsername: null,
+  reviewerId: null,
+  reviewerName: null,
   createdAt: "2026-08-21T02:10:00Z",
   updatedAt: "2026-08-21T02:10:00Z",
   reviewActivity: "NO_PR",
@@ -249,5 +251,18 @@ describe("requirement detail contract", () => {
     expect(wrapper.get(".quality-report").text()).toContain("v1");
     expect(wrapper.get(".guidance-result").text()).toContain("统一错误语义");
     expect(wrapper.get(".guidance-result").text()).toContain("向量语义召回相似度");
+  });
+});
+
+// Phase is derived; a draft/terminal requirement cannot be relabelled by a PR.
+describe("requirementPhase", () => {
+  it("shows review and rework without changing lifecycle or hiding missing activity", async () => {
+    const { requirementPhase } = await import("../src/features/requirement/status");
+    expect(requirementPhase("IN_DEVELOPMENT", "REVIEWING")).toBe("审查中");
+    expect(requirementPhase("IN_DEVELOPMENT", "CHANGES_REQUESTED")).toBe("开发中 · 退回修改");
+    expect(requirementPhase("IN_DEVELOPMENT", "MIXED")).toBe("多 PR 处理中");
+    expect(requirementPhase("DRAFT", "REVIEWING")).toBe("草稿");
+    expect(requirementPhase("DONE", "REVIEWING")).toBe("已完成");
+    expect(requirementPhase("IN_DEVELOPMENT", null)).toContain("未获取");
   });
 });

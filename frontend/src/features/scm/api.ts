@@ -33,7 +33,7 @@ export const SCM_IDENTITY_TOKEN_SCOPES: Readonly<Record<ScmProvider, string>> = 
 /** 仓库接入 Token 需要读 PR/MR 与 diff、并校验成员仓库权限。 */
 export const SCM_REPOSITORY_TOKEN_SCOPES: Readonly<Record<ScmProvider, string>> = {
   GITHUB: "repo（公开仓库用 public_repo）",
-  GITLAB: "read_api",
+  GITLAB: "api（读取并合并 MR）",
 };
 
 /**
@@ -79,6 +79,7 @@ export interface PullRequest {
   projectId: number;
   repositoryId: number;
   externalNumber: number;
+  title: string;
   baseSha: string;
   headSha: string;
   reviewInputFingerprint: string;

@@ -1,6 +1,7 @@
 package com.forgepilot.scm;
 
 import com.forgepilot.scm.github.GitHubClient;
+import com.forgepilot.scm.gitlab.GitLabClient;
 import org.springframework.stereotype.Service;
 
 /** Minimal bridge from the review decision to the configured SCM provider. */
@@ -10,22 +11,26 @@ class ScmPullRequestDecisionService implements PullRequestDecisionActions {
     private final ScmRepositoryRepository repositories;
     private final PullRequestRepository pullRequests;
     private final GitHubClient github;
+    private final GitLabClient gitlab;
 
     ScmPullRequestDecisionService(ScmRepositoryRepository repositories, PullRequestRepository pullRequests,
-            GitHubClient github) {
+            GitHubClient github, GitLabClient gitlab) {
         this.repositories = repositories;
         this.pullRequests = pullRequests;
         this.github = github;
+        this.gitlab = gitlab;
     }
 
     @Override
-    public void apply(long projectId, long pullRequestId, boolean approved) {
+    public void merge(long projectId, long pullRequestId, String expectedHeadSha) {
         PullRequest pullRequest = pullRequests.findByProjectIdAndId(projectId, pullRequestId)
                 .orElseThrow();
         ScmRepository repository = repositories.findByProjectIdAndId(projectId, pullRequest.getRepositoryId())
                 .orElseThrow();
         if (repository.getProvider() == ScmProvider.GITHUB) {
-            github.applyDecision(repository, pullRequest.getExternalNumber(), approved);
+            github.merge(repository, pullRequest.getExternalNumber(), expectedHeadSha);
+        } else {
+            gitlab.merge(repository, pullRequest.getExternalNumber(), expectedHeadSha);
         }
     }
 }

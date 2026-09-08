@@ -29,6 +29,7 @@ import {
 } from "./api";
 import {
   shortSha,
+  pullRequestLabel,
   PULL_REQUEST_ACTIVITIES,
   PULL_REQUEST_ACTIVITY_LABELS,
   REVIEW_ACTIVITY_LABELS,
@@ -305,7 +306,7 @@ onMounted(async () => {
             <tbody>
               <tr v-for="review in filteredReviews" :key="review.id">
                 <td><RouterLink :to="reviewDetailRoute(projectId, review.id)">审查 {{ review.id }}</RouterLink></td>
-                <td><RouterLink :to="reviewsRoute(projectId, review.pullRequestId)">PR #{{ review.pullRequestNumber }}</RouterLink></td>
+                <td><RouterLink :to="reviewsRoute(projectId, review.pullRequestId)">{{ pullRequestLabel(review.provider, review.pullRequestNumber) }}</RouterLink><p>{{ review.pullRequestTitle }}</p></td>
                 <td><RouterLink v-if="review.requirementId !== null" :to="requirementDetailRoute(projectId, review.requirementId)">{{ requirementTitle(review.requirementId) }}</RouterLink><span v-else>未关联需求</span></td>
                 <td><span :class="['badge', `badge-${REVIEW_STATUS_TONES[review.status]}`]">{{ REVIEW_STATUS_LABELS[review.status] }}</span></td>
                 <td><span :class="['badge', `badge-${REVIEW_DECISION_TONES[review.decision]}`]">{{ REVIEW_DECISION_LABELS[review.decision] }}</span></td>
@@ -350,7 +351,7 @@ onMounted(async () => {
         <p v-if="pullRequestError" class="alert" role="alert">{{ pullRequestError }}</p>
         <template v-if="pullRequest">
           <dl class="meta-list pull-request-head">
-            <div><dt>PR 编号</dt><dd class="pull-request-number">PR #{{ pullRequest.externalNumber }}</dd></div>
+            <div><dt>PR 编号</dt><dd class="pull-request-number">{{ pullRequestLabel(projectReviews.find(item => item.pullRequestId === pullRequest?.id)?.provider, pullRequest.externalNumber) }} · {{ pullRequest.title }}</dd></div>
             <div><dt>当前 head</dt><dd><code :title="pullRequest.headSha">{{ shortSha(pullRequest.headSha) }}</code></dd></div>
             <div><dt>关联需求</dt><dd>{{ requirementTitle(pullRequest.requirementId) }}</dd></div>
             <div><dt>作者</dt><dd>{{ pullRequest.authorUsername ?? "未知" }}</dd></div>
@@ -364,7 +365,7 @@ onMounted(async () => {
           <p v-if="orderedPullRequestReviews.length === 0" class="empty-state">该 PR 还没有 Review。</p>
           <ol v-else class="history-list">
             <li v-for="review in orderedPullRequestReviews" :key="review.id" class="history-row">
-              <RouterLink :to="reviewDetailRoute(projectId, review.id)">审查 {{ review.id }}</RouterLink>
+              <RouterLink :to="reviewDetailRoute(projectId, review.id)">第 {{ pullRequestReviews.findIndex(item => item.id === review.id) + 1 }} 轮 · 审查 {{ review.id }}</RouterLink>
               <code :title="review.headSha">{{ shortSha(review.headSha) }}</code>
               <span :class="['badge', `badge-${REVIEW_STATUS_TONES[review.status]}`]">{{ REVIEW_STATUS_LABELS[review.status] }}</span>
               <span :class="['badge', `badge-${REVIEW_DECISION_TONES[review.decision]}`]">{{ REVIEW_DECISION_LABELS[review.decision] }}</span>

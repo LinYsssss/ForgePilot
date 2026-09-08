@@ -9,26 +9,27 @@ ForgePilot 是一个面向软件研发流程的轻量级 AI 研发协作与代�
 ```text
 项目与成员
 → 需求与验收条件
-→ 指派开发
+→ 指派开发与审查人
 → AI 生成实现建议
 → Pull Request
 → 需求/知识上下文增强审查
-→ 人工通过或打回
-→ 修复与复审
+→ 指定审查人或负责人通过合并 / 填写理由退回
+→ 原分支修复与新一轮复审
+→ 负责人确认需求完成
 ```
 
 ## 当前形态
 
 | 维度 | 事实 |
 |---|---|
-| 后端 | Spring Boot 4.1 模块化单体，9 个顶层业务包，21 张业务表 / 13 个 Flyway 迁移 |
+| 后端 | Spring Boot 4.1 模块化单体，9 个顶层业务包，21 张业务表 / 14 个 Flyway 迁移 |
 | 前端 | Vue 3 + TypeScript + Vite，6 个一级导航 / 11 条产品路由 |
 | SCM | GitHub 与 GitLab 双 Provider；用户多身份、标签与用途、项目绑定与可选 Leader 审批 |
 | AI | 单一 OpenAI-compatible 网关，服务需求质量检查、一次性实现建议与唯一 Review Engine |
 | 知识 | PostgreSQL 15 + pgvector，按 `project_id` 与当前 Requirement 双重硬过滤 |
 | 评测 | 三臂对照实验，holdout 只跑一次 |
 
-验证使用 Testcontainers 真实 PostgreSQL 15 + pgvector：后端测试零跳过，前端 lint / typecheck / test / build 全绿。
+验证使用 Testcontainers 真实 PostgreSQL 15 + pgvector。2026-09-08 后端全套执行后修正一处删除审计断言，失败类复核及打包通过；代码审查补充修复后，相关 24 项及打包通过，前端 lint / typecheck / test / build 通过。完整结果及未执行的真实环境验收见 [测试报告](docs/deliverables/TEST-REPORT.html)，问题与改动取舍见 [代码审查记录](.trellis/tasks/09-07-review-collaboration/code-review.md)。
 
 ## 从这里开始
 
@@ -36,14 +37,14 @@ ForgePilot 是一个面向软件研发流程的轻量级 AI 研发协作与代�
 1. docs/v2/README.md        文档入口与总边界
 2. docs/v2/PRD.md           产品定位、角色权限、范围与业务状态
 3. docs/v2/ARCHITECTURE.md  模块边界、数据模型、流程契约与运行边界
-4. docs/v2/API.md           账户、成员与 SCM 身份接口契约
+4. docs/v2/API.md           账户、成员、SCM 身份与评审协作接口契约
 5. docs/v2/DEFENSE-GUIDE.md 部署、构建闸门与评测复现
 ```
 
 ## 仓库结构
 
 ```text
-backend/       Spring Boot 模块化单体，9 个业务包 / 21 张表 / 13 个 Flyway 迁移
+backend/       Spring Boot 模块化单体，9 个业务包 / 21 张表 / 14 个 Flyway 迁移
 frontend/      Vue 3 + TypeScript + Vite 前端，6 个一级导航 / 11 条产品路由
 evaluation/    评测工具链、确定性打分器与冻结配置
 docs/v2/       产品与架构的唯一事实源

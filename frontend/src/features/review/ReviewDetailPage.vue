@@ -4,6 +4,9 @@ import { RouterLink, useRoute } from "vue-router";
 
 import {
   parseId,
+  projectMembersRoute,
+  reviewDetailRoute,
+  knowledgeDocumentRoute,
   requirementDetailRoute,
   reviewsRoute,
   PROJECT_QUERY_KEY,
@@ -11,6 +14,7 @@ import {
 import { formatDateTime } from "../../lib/datetime";
 import { apiErrorMessage } from "../../lib/http";
 import { getProject, hasProjectRole, listMembers, type Member, type Project } from "../project/api";
+import { listProjectKnowledge } from "../knowledge/api";
 import { listRequirements, type RequirementSummary } from "../requirement/api";
 import { getPullRequest, setPullRequestRequirement, type PullRequest } from "../scm/api";
 import {
@@ -31,6 +35,7 @@ import FindingCard from "./FindingCard.vue";
 import { parseReviewContext } from "./context";
 import {
   shortSha,
+  pullRequestLabel,
   AC_VERDICT_LABELS,
   AC_VERDICT_TONES,
   REVIEW_DECISION_LABELS,
@@ -50,6 +55,13 @@ const requirements = ref<RequirementSummary[]>([]);
 const detail = ref<ReviewDetail | null>(null);
 const pullRequest = ref<PullRequest | null>(null);
 const history = ref<ReviewSummary[]>([]);
+const previousReview = ref<ReviewDetail | null>(null);
+const previousError = ref<string | null>(null);
+const publicDocumentIds = ref<number[]>([]);
+const publicDocumentsError = ref<string | null>(null);
+const round = computed(() => history.value.findIndex(item => item.id === detail.value?.id) + 1);
+const previousSummary = computed(() => round.value > 1 ? history.value[round.value - 2] : null);
+const reviewRequirement = computed(() => requirements.value.find(item => item.id === detail.value?.requirementId));
 
 const loading = ref(true);
 const loadError = ref<string | null>(null);
@@ -76,7 +88,8 @@ let detailLoadToken = 0;
 const roles = computed(() => project.value?.myRoles ?? []);
 const isLeader = computed(() => hasProjectRole(project.value, "LEADER"));
 const canDecide = computed(
-  () => isLeader.value || hasProjectRole(project.value, "REVIEWER"),
+  () => (isLeader.value || hasProjectRole(project.value, "REVIEWER"))
+    && detail.value?.decisionBlockReason === null,
 );
 
 const canEditAssociation = computed(
@@ -125,6 +138,7 @@ const decisionBlockers = computed<string[]>(() => {
     return ["尚未取到 Review 或 PR 数据。"];
   }
   const blockers: string[] = [];
+  if (review.decisionBlockReason) blockers.push(review.decisionBlockReason);
   if (review.status !== "COMPLETED") {
     blockers.push(`执行状态是「${REVIEW_STATUS_LABELS[review.status]}」，只有已完成的 Review 能被决定。`);
   }
@@ -152,10 +166,10 @@ const canSubmitDecision = computed(
 
 const reviewContext = computed(() => parseReviewContext(detail.value?.contextSnapshot));
 const activeFindings = computed(() =>
-  detail.value?.findings.filter((finding) => finding.continuity !== "SUPPRESSED") ?? [],
+  detail.value?.findings.filter((finding) => finding.continuity !== "SUPPRESSED" || finding.status !== "REJECTED") ?? [],
 );
 const suppressedFindings = computed(() =>
-  detail.value?.findings.filter((finding) => finding.continuity === "SUPPRESSED") ?? [],
+  detail.value?.findings.filter((finding) => finding.continuity === "SUPPRESSED" && finding.status === "REJECTED") ?? [],
 );
 const selectedFinding = computed<Finding | null>(() =>
   detail.value?.findings.find((finding) => finding.id === selectedFindingId.value) ?? null,
@@ -198,6 +212,10 @@ async function load(): Promise<void> {
   detail.value = null;
   pullRequest.value = null;
   history.value = [];
+  previousReview.value = null;
+  previousError.value = null;
+  publicDocumentIds.value = [];
+  publicDocumentsError.value = null;
   eventsByFinding.value = {};
   eventsError.value = null;
   findingError.value = null;
@@ -211,12 +229,16 @@ async function load(): Promise<void> {
     return;
   }
   try {
-    const [loadedProject, loadedMembers, loadedRequirements, loadedReview] =
+    const [loadedProject, loadedMembers, loadedRequirements, loadedReview, loadedKnowledge] =
       await Promise.all([
         getProject(ids.projectId),
         listMembers(ids.projectId),
         listRequirements(ids.projectId),
         getReview(ids.projectId, ids.reviewId),
+        listProjectKnowledge(ids.projectId).catch((failure: unknown) => {
+          if (token === detailLoadToken) publicDocumentsError.value = apiErrorMessage(failure);
+          return [];
+        }),
       ]);
     if (token !== detailLoadToken) {
       return;
@@ -225,6 +247,7 @@ async function load(): Promise<void> {
     members.value = loadedMembers;
     requirements.value = loadedRequirements;
     detail.value = loadedReview;
+    publicDocumentIds.value = loadedKnowledge.map(item => item.id);
     selectedPath.value = parseReviewContext(loadedReview.contextSnapshot)?.changedFiles[0]?.path ?? null;
 
     const [loadedPullRequest, loadedHistory] = await Promise.all([
@@ -237,6 +260,15 @@ async function load(): Promise<void> {
     pullRequest.value = loadedPullRequest;
     history.value = loadedHistory;
     associationSelection.value = loadedPullRequest.requirementId;
+    const previous = previousSummary.value;
+    if (previous?.decision === "REQUEST_CHANGES") {
+      try {
+        const loadedPrevious = await getReview(ids.projectId, previous.id);
+        if (token === detailLoadToken) previousReview.value = loadedPrevious;
+      } catch (failure: unknown) {
+        if (token === detailLoadToken) previousError.value = apiErrorMessage(failure);
+      }
+    }
   } catch (failure: unknown) {
     if (token === detailLoadToken) {
       loadError.value = apiErrorMessage(failure);
@@ -284,8 +316,13 @@ async function decide(decision: "APPROVE" | "REQUEST_CHANGES"): Promise<void> {
   if (ids === null) {
     return;
   }
-  decisionPending.value = true;
   decisionError.value = null;
+  if (!canSubmitDecision.value) return;
+  if (decision === "REQUEST_CHANGES" && !decisionComment.value.trim()) {
+    decisionError.value = "请填写退回修改的理由。";
+    return;
+  }
+  decisionPending.value = true;
   try {
     await decideReview(ids.projectId, ids.reviewId, decision, decisionComment.value);
     decisionComment.value = "";
@@ -392,6 +429,19 @@ function eventsErrorFor(findingId: number): string | null {
     <p v-else-if="loadError" class="alert" role="alert">{{ loadError }}</p>
 
     <template v-if="detail !== null">
+      <section class="panel" aria-labelledby="review-progress-title">
+        <h2 id="review-progress-title" class="panel-title">第 {{ round || "—" }} 轮审查 · 平台记录 {{ detail.id }}</h2>
+        <p>审查人：{{ reviewRequirement?.reviewerName ?? "项目负责人处理" }} · 开发负责人：{{ reviewRequirement?.assigneeUsername ?? "未指派" }}</p>
+        <template v-if="detail.decision !== 'PENDING'">
+          <p><strong>{{ REVIEW_DECISION_LABELS[detail.decision] }}</strong> · {{ memberName(detail.decisionBy) ?? "未知成员" }} · {{ detail.decisionAt ? formatDateTime(detail.decisionAt) : "" }}</p>
+          <p class="decision-reason">{{ detail.decisionComment || "未填写理由" }}</p>
+        </template>
+        <template v-if="previousSummary && projectId !== null">
+          <RouterLink :to="reviewDetailRoute(projectId, previousSummary.id)">查看上一轮审查</RouterLink>
+          <p v-if="previousReview" class="decision-reason">上一轮退回理由：{{ previousReview.decisionComment || "未填写理由" }}</p>
+          <p v-if="previousError" class="alert" role="alert">上一轮备注未能加载：{{ previousError }}</p>
+        </template>
+      </section>
       <div class="review-context-grid">
       <section class="panel context-panel" aria-labelledby="review-pull-request-title">
         <h2 id="review-pull-request-title" class="panel-title">所属 PR 与需求关联</h2>
@@ -400,8 +450,14 @@ function eventsErrorFor(findingId: number): string | null {
           <div>
             <dt>PR 编号</dt>
             <dd class="pull-request-number">
-              {{ pullRequest ? `PR #${pullRequest.externalNumber}` : "未取到 PR" }}
+              {{ pullRequest ? pullRequestLabel(reviewContext?.pullRequest.provider, pullRequest.externalNumber) : "未取到 PR" }}
+              <p v-if="pullRequest">{{ pullRequest.title }}</p>
             </dd>
+          </div>
+          <div>
+            <dt>提交作者</dt>
+            <dd>{{ pullRequest?.authorUsername ?? "未知" }} · {{ pullRequest?.authorUserId ? `平台作者已识别：${memberName(pullRequest.authorUserId) ?? pullRequest.authorUserId}` : "平台作者未绑定" }}</dd>
+            <dd v-if="projectId !== null"><RouterLink :to="projectMembersRoute(projectId)">查看项目身份绑定</RouterLink></dd>
           </div>
           <div>
             <dt>PR 当前 head</dt>
@@ -530,10 +586,6 @@ function eventsErrorFor(findingId: number): string | null {
           </div>
         </dl>
 
-        <p v-if="detail.decisionComment" class="muted">
-          决定备注：{{ detail.decisionComment }}
-        </p>
-
         <p v-if="gateBlocked" class="decision-gate" role="status">
           此 head 已有退回：只有新的 head SHA 能解除，改 Base、需求关联、需求版本或重新同步 Diff 都不解除。
         </p>
@@ -598,6 +650,9 @@ function eventsErrorFor(findingId: number): string | null {
                   </div>
                   <p>{{ evidence.excerpt }}</p>
                   <small>来源 {{ evidence.sourceId }} · 文档 {{ evidence.documentId }}</small>
+                  <RouterLink v-if="projectId !== null && publicDocumentIds.includes(evidence.documentId)" :to="knowledgeDocumentRoute(projectId, evidence.documentId)">阅读公共原文</RouterLink>
+                  <span v-else-if="publicDocumentsError" class="field-hint">原文入口暂时无法加载：{{ publicDocumentsError }}</span>
+                  <span v-else class="field-hint">公共原文不可用；可能已删除或为需求附件，以上历史证据仍保留。</span>
                 </li>
               </ol>
             </section>
@@ -756,13 +811,13 @@ function eventsErrorFor(findingId: number): string | null {
         </div>
 
         <p v-if="!canDecide" class="field-hint">
-          只有项目负责人与评审可以做终局决定；开发可以触发重审并修复 Finding。
+          {{ detail.decisionBlockReason ?? "仅指定审查人和项目负责人可以做最终决定。" }}
         </p>
 
         <template v-else>
           <div class="field">
-            <label for="decision-comment">决定备注</label>
-            <textarea id="decision-comment" v-model="decisionComment" rows="3"></textarea>
+            <label for="decision-comment">决定备注（退回修改必填）</label>
+            <textarea id="decision-comment" v-model="decisionComment" rows="3" maxlength="2000" placeholder="请说明需要修改的内容和原因"></textarea>
           </div>
           <div class="form-actions decision-actions">
             <button
@@ -772,7 +827,7 @@ function eventsErrorFor(findingId: number): string | null {
               :disabled="decisionPending || !canSubmitDecision"
               @click="decide('APPROVE')"
             >
-              通过（APPROVE）
+              通过并合并
             </button>
             <button
               type="button"
@@ -781,14 +836,14 @@ function eventsErrorFor(findingId: number): string | null {
               :disabled="decisionPending || !canSubmitDecision"
               @click="decide('REQUEST_CHANGES')"
             >
-              退回（REQUEST_CHANGES）
+              退回修改
             </button>
           </div>
 
           <ul v-if="decisionBlockers.length > 0" class="decision-blockers">
             <li v-for="blocker in decisionBlockers" :key="blocker">{{ blocker }}</li>
           </ul>
-          <p class="field-hint">终局决定只写一次，不可撤销、不可覆盖。</p>
+          <p class="field-hint">通过会合并本轮审过的提交；退回保留 PR 和源分支，开发提交修改后进入下一轮。决定只记录一次。</p>
         </template>
 
         <p v-if="decisionError" class="alert" role="alert">{{ decisionError }}</p>
@@ -805,6 +860,8 @@ function eventsErrorFor(findingId: number): string | null {
 </template>
 
 <style scoped>
+.decision-reason { white-space: pre-wrap; overflow-wrap: anywhere; }
+
 .review-context-grid,
 .review-evidence-grid {
   display: grid;

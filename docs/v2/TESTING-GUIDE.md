@@ -253,26 +253,27 @@ order by pm.project_id, u.username;"
 
 ### B7 成员移除与活权限撤销
 
-**操作**：先让某成员成为**某需求的指派人**、**某 Finding 的处理人**、并**绑定 SCM 身份**，然后移除该成员。
+**操作**：先让某个同时具备开发与审查角色的成员成为**需求开发负责人及审查人**、**某 Finding 的处理人**、并**绑定 SCM 身份**，然后移除该成员。
 
-**预期**：移除成功，且该成员在三处的活权限被同步撤销。
+**预期**：移除成功，且该成员的两类需求指派、Finding 认领与 SCM 绑定被同步撤销。
 
 **验证**：
 
 ```bash
 docker exec fp-demo-postgres-1 psql -U forgepilot -d forgepilot -c "
-select 'requirement.assignee' src, count(*) from requirement where assignee_id = <userId>
-union all select 'finding.assignee', count(*) from finding where assignee_id = <userId>
-union all select 'scm_binding', count(*) from project_member_scm_binding where user_id = <userId>;"
+select 'requirement.assignee' src, count(*) from requirement where project_id = <projectId> and assignee_id = <userId>
+union all select 'requirement.reviewer', count(*) from requirement where project_id = <projectId> and reviewer_id = <userId>
+union all select 'finding.assignee', count(*) from finding where project_id = <projectId> and assignee_id = <userId>
+union all select 'scm_binding', count(*) from project_member_scm_binding where project_id = <projectId> and user_id = <userId>;"
 ```
 
-三项都应为 0。**若移除时报外键错误（23503），说明有一处撤销没生效**——这不是 bug 掩盖，而是外键在证明撤销的完整性。
+四项都应为 0。**若移除时报外键错误（23503），说明有一处撤销没生效**——外键在证明撤销的完整性。
 
 ### B8 跨项目不可见
 
 **操作**：用只属于项目 A 的账号访问项目 B 的任意资源。
 
-**预期**：404 或 403，**不得**返回内容，也不得通过错误信息区分「不存在」与「无权限」以外的额外信息。
+**预期**：404，与不存在资源相同；**不得**返回内容或泄露资源存在性。403 仅用于已知项目内成员的角色不足。
 
 ---
 
@@ -454,11 +455,19 @@ where not exists (select 1 from knowledge_document d
 
 ### D5 向量索引元数据可见
 
-**操作**：查看知识页展示的向量索引信息。
+**操作**：展开知识页的“索引详情”。
 
 **预期**：展示的是**真实**的索引元数据（维度、是否有索引等），不是写死的文案。
 
 > 诚实说明：**语义检索目前没有向量索引**，走顺序扫描的精确余弦序。这是决策不是遗漏——冻结的 Embedding Profile 是 4096 维，超过 pgvector 0.8.6 全部精确索引形态的维度上限，可建的两种形态都是有损预筛。
+
+### D6 公共原文阅读与下载
+
+**操作**：分别用三个角色在项目知识页阅读/下载原文，快速切换项目和文档；再尝试读取跨项目文档或需求附件 ID。
+
+**预期**：合法读取返回完整文本，下载为 UTF-8 文本附件；旧响应不覆盖新选择。公共接口对非成员、跨项目、附件、已删除文档均返回 404，附件需经所属需求访问。删除当前原文后，历史 Review 的摘录仍可读；请求失败与原文删除的提示不同。
+
+**对应端点**：`GET .../knowledge/documents/{id}/content` 返回 `{documentId,title,text}`，`GET .../download` 返回附件；列表不返回全文或向量。
 
 ---
 
@@ -548,7 +557,9 @@ from requirement_revision where requirement_id=<id> order by seq;"
 
 **预期**：**首次指派与 `READY → IN_DEVELOPMENT` 同事务完成**。后续更换负责人**不再改变状态**。
 
-**验证**：指派后 `status` 应为 `IN_DEVELOPMENT`；再换一个负责人，状态保持不变。
+**验证**：指派后 `status` 应为 `IN_DEVELOPMENT`；再换一个 DEVELOPER/LEADER，状态保持不变。直调 API 指派仅 REVIEWER 的成员应返回 403，非成员应返回 404；失败不改变原指派或状态。
+
+**审查人**：LEADER 再从本项目 REVIEWER/LEADER 中选择审查人，调用 `POST .../requirements/{id}/reviewer`，请求 `{userId}`，传 null 可清空。列表/详情返回 `reviewerId/reviewerName`。终态拒绝修改；审查人失去资格时名称为空并由 LEADER 接手，成员移除时 ID 也置空。无有效开发负责人时不能提交最终决定。
 
 ### E8 需求文档附件
 
@@ -878,7 +889,7 @@ order by rv.id;"
 
 **操作**：对一条 `status=REJECTED` 且 `continuity=SUPPRESSED` 的 Finding 执行重开。
 
-**预期**：回到 `OPEN` 并正常显示，但 **`continuity` 仍保留 `SUPPRESSED`**（血缘事实不因当前状态改变而消失），且留审计。
+**预期**：回到 `OPEN` 并从折叠区返回主列表，但 **`continuity` 仍保留 `SUPPRESSED`**（血缘事实不因当前状态改变而消失），且留审计。仅 `SUPPRESSED + REJECTED` 继续折叠。
 
 ### H4 需求版本变更不自动重审
 
@@ -890,14 +901,15 @@ order by rv.id;"
 
 ### H5 终局 Decision 与闸门
 
-**操作**：REVIEWER 或 LEADER 对已 COMPLETED 的 Review 写入 `REQUEST_CHANGES`。
+**操作**：在专用验收 PR/MR 上，由指定且仍有效的 REVIEWER 或 LEADER 对已 COMPLETED、当前有效的 Review 填写理由并提交 `REQUEST_CHANGES`。关联需求须在 `IN_DEVELOPMENT` 且有有效 DEVELOPER/LEADER 负责人。
 
-**预期**：写入成功。然后：
+**预期**：写入成功，需求和 Review 详情显示理由、决定人和时间，远端 PR/MR 与原分支保持可用，需求生命周期不变。另验证未指定 REVIEWER 被拒绝、空白理由返回 422。然后：
 
 1. **再写一次**（任何值）→ 被拒绝。**Decision 只能从 PENDING 写入一次。**
 2. **不推新 head 直接 APPROVE** → 被拒绝。同一 head 出现 `REQUEST_CHANGES` 后，**必须有新的 head SHA 才能再 APPROVE**。
 3. 试图通过**改 Base、改需求关联、改需求版本、重新同步 Diff** 来解闸 → **都解不开**。
-4. 推一个新 commit 后再 APPROVE → 成功。
+4. 在原分支推新 commit，等待新 Review 完成后再 APPROVE → 确认远端合并被审查的 SHA 后成功；页面显示新轮次及上一轮理由，需求仍待 LEADER 确认完成。
+5. 在另一测试 PR/MR 验证远端 head 变化、合并冲突/权限不足 → 不记录本地通过。响应丢失且无法只读确认时返回 503 `merge_outcome_unknown`，人工核查远端后处理，不自动重复写入。GitLab 仓库 Token 需 `api` 和实际合并权限。
 
 **验证**：
 
@@ -926,7 +938,7 @@ from review order by id;"
 
 多 PR 聚合：`FAILED`、`CHANGES_REQUESTED` 依次占优；全部相同返回该状态；全 `APPROVED` 才 `APPROVED`；其余 `MIXED` 并展示各状态计数。
 
-**需求状态与评审活动并列展示，不得合并。**
+**需求生命周期独立保留**；列表、详情和工作台可派生醒目的当前阶段及处理人。仅开发中需求派生评审/返工阶段，DRAFT/READY/DONE/CANCELED 必须保持真实状态。
 
 **对应端点**：`GET /api/projects/{projectId}/requirements/{requirementId}/review-activity`、`GET /api/projects/{projectId}/review-activity`
 
@@ -943,7 +955,7 @@ from review order by id;"
 **预期**：成功。
 
 **关键**：
-- 单个 PR 的 APPROVE **只结束当前 Review**，不代表需求完成；
+- 单个 PR 的 APPROVE **确认合并被审查的 SHA 并结束当前 Review**，不代表需求完成；
 - **AI、Webhook、PR、Review 一律不得推进需求状态**。
 
 > 已知限制：**需求状态转换不单独留痕**。`DRAFT→READY`、指派、`CANCELED`、`DONE` 的转换本身不写审计行，这是明确接受的取舍。
@@ -976,11 +988,11 @@ from project_notification_channel order by id;"
 
 **对应端点**：`POST /api/projects/{projectId}/notifications/dingtalk/test`
 
-### I3 审查完成 / 失败通知
+### I3 AI 完成 / 失败与人工决定通知
 
-**操作**：触发一次成功的 Review 与一次失败的 Review。
+**操作**：在获准使用的测试群中验证一次 AI 成功、AI 失败、人工退回与人工合并。
 
-**预期**：两种都收到摘要通知，且**消息中不含敏感信息**（token、完整 diff）。
+**预期**：提交后尽力发送摘要，分别显示有效审查人、LEADER、有效开发负责人、LEADER；无有效处理人时回退 LEADER。群消息不包含 token、完整 diff、Finding 正文或决定理由。配置 `FORGEPILOT_BASE_URL` 后详情链接携带 `?project=<id>`；留空时不生成链接。事务回滚不发送人工决定通知，投递失败不回滚已提交决定。
 
 ### I4 删除通知渠道
 
@@ -1052,15 +1064,16 @@ select * from project_deletion_record order by id;"
 | 创建/编辑需求与 AC | ✅ | ❌ | ❌ |
 | 上传 `.txt/.md` 需求文档 | ✅ | ❌ | ❌ |
 | 阅读/下载需求文档、导出需求 | ✅ | ✅ | ✅ |
+| 阅读/下载公共知识原文 | ✅ | ✅ | ✅ |
 | 运行需求质量检查 | ✅ | ❌ | ❌ |
-| 需求 DRAFT→READY、指派开发 | ✅ | ❌ | ❌ |
+| 需求 DRAFT→READY、指派开发/审查人 | ✅ | ❌ | ❌ |
 | 生成一次性 AI 实现建议 | ✅ | 仅被指派需求 | ❌ |
 | 修改 PR↔需求关联 | ✅ | 仅本人 PR，且当前 head 无终局 Decision | ❌ |
 | 触发/重试 Review | ✅ | 仅本人 PR | ✅ |
 | Finding 确认 / 拒绝 | ✅ | ❌ | ✅ |
 | **Finding 认领、标记已修复** | **❌** | **✅** | **❌** |
 | Finding 验证通过 / 打回 | ✅ | ❌ | ✅ |
-| Review 终局 APPROVE / REQUEST_CHANGES | ✅ | ❌ | ✅ |
+| Review 终局 APPROVE / REQUEST_CHANGES | ✅ | ❌ | 仅指定有效审查人 |
 | 取消需求 | ✅ | ❌ | ❌ |
 
 > 注意 LEADER 在「Finding 认领、标记已修复」这一行是 **❌**。单角色 LEADER **走不完** Finding 主链，这是设计而非缺陷。
@@ -1129,7 +1142,7 @@ docker restart fp-demo-backend-1
 
 **操作**：改掉 PR 当前关联的需求，然后查看**历史** Review。
 
-**预期**：历史 Review 展示的仍是**它当时**保存的 `requirement_id`、`requirement_revision_id` 与不可变上下文快照，**不得**通过 PR 当前关联反查语义。
+**预期**：历史 Review 展示的仍是**它当时**保存的 `requirement_id`、`requirement_revision_id` 与不可变上下文快照，**不得**通过 PR 当前关联反查语义。顶部负责人取该 Review 所属需求的当前指派，实际决定人取 `decisionBy`；解除关联也不会让历史审查改显示另一需求的负责人。
 
 ---
 

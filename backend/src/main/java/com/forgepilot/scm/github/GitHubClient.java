@@ -17,7 +17,6 @@ import org.springframework.http.MediaType;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
-import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
 import tools.jackson.databind.JsonNode;
@@ -74,56 +73,52 @@ public class GitHubClient {
                 changedFiles(client, externalId, number));
     }
 
-    public void applyDecision(ScmRepository repository, int number, boolean approved) {
+    public void merge(ScmRepository repository, int number, String expectedHeadSha) {
+        RestClient client = clientFor(repository);
+        String path = "/repositories/" + repository.getExternalId() + "/pulls/" + number;
         try {
-            RestClient client = clientFor(repository);
-            JsonNode pullRequest = client.get()
-                    .uri("/repositories/{repository}/pulls/{number}", repository.getExternalId(), number)
-                    .retrieve()
-                    .body(JsonNode.class);
-            String headRef = required(pullRequest.path("head"), "ref", "head.ref");
-            String defaultBranch = required(pullRequest.path("base").path("repo"), "default_branch",
-                    "base.repo.default_branch");
-            if (approved) {
-                client.put()
-                        .uri("/repositories/{repository}/pulls/{number}/merge", repository.getExternalId(), number)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .body("{\"merge_method\":\"merge\"}")
-                        .retrieve()
-                        .toBodilessEntity();
-            } else {
-                client.patch()
-                        .uri("/repositories/{repository}/pulls/{number}", repository.getExternalId(), number)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .body("{\"state\":\"closed\"}")
-                        .retrieve()
-                        .toBodilessEntity();
+            JsonNode state = client.get().uri(path).retrieve().body(JsonNode.class);
+            requireMergeHead(state, expectedHeadSha);
+            if (state.path("merged").asBoolean(false)) return;
+            if (!"open".equals(state.path("state").asString())) {
+                throw ApiException.conflict("GitHub PR 已关闭，不能合并。");
             }
-            if (!headRef.equals(defaultBranch)) {
-                deleteBranch(client, repository, headRef);
+            JsonNode result = client.put().uri(path + "/merge")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(java.util.Map.of("merge_method", "merge", "sha", expectedHeadSha))
+                    .retrieve().body(JsonNode.class);
+            if (result == null || !result.path("merged").asBoolean(false)) {
+                throw ApiException.conflict("GitHub 未完成合并，请检查冲突和仓库合并条件。");
             }
         } catch (RestClientResponseException response) {
-            if (approved && (response.getStatusCode().value() == 405
-                    || response.getStatusCode().value() == 409)) {
-                throw ApiException.conflict("GitHub cannot merge this pull request; resolve its conflicts first.");
+            if (response.getStatusCode().is5xxServerError()) {
+                confirmMerge(client, path, expectedHeadSha);
+                return;
             }
-            throw new ApiException(HttpStatus.BAD_GATEWAY, "provider_error",
-                    "GitHub refused the pull request action.");
-        } catch (ResourceAccessException network) {
-            throw new ApiException(HttpStatus.SERVICE_UNAVAILABLE, "provider_unavailable",
-                    "GitHub is temporarily unavailable.");
+            throw ApiException.conflict("GitHub 拒绝合并，请检查提交是否变化、合并权限、冲突及分支保护规则。");
+        } catch (org.springframework.web.client.RestClientException failure) {
+            // A lost or unreadable response may follow a successful remote merge.
+            confirmMerge(client, path, expectedHeadSha);
         }
     }
 
-    private void deleteBranch(RestClient client, ScmRepository repository, String branch) {
-        try {
-            client.delete()
-                    .uri("/repositories/{repository}/git/refs/heads/{branch}", repository.getExternalId(), branch)
-                    .retrieve()
-                    .toBodilessEntity();
-        } catch (RestClientResponseException | ResourceAccessException ignored) {
-            // The merge/close already succeeded; leaving the branch is harmless and retryable.
+    private static void requireMergeHead(JsonNode state, String expectedHeadSha) {
+        if (state == null || !expectedHeadSha.equals(state.path("head").path("sha").asString())) {
+            throw ApiException.conflict("GitHub PR 提交已变化，请同步后重新审查。");
         }
+    }
+
+    /** Read-only recovery: never repeat a potentially successful merge automatically. */
+    private static void confirmMerge(RestClient client, String path, String expectedHeadSha) {
+        try {
+            JsonNode state = client.get().uri(path).retrieve().body(JsonNode.class);
+            requireMergeHead(state, expectedHeadSha);
+            if (state.path("merged").asBoolean(false)) return;
+        } catch (org.springframework.web.client.RestClientException unavailable) {
+            // Preserve an explicit unknown outcome when the confirming read also fails.
+        }
+        throw new ApiException(HttpStatus.SERVICE_UNAVAILABLE, "merge_outcome_unknown",
+                "合并结果尚未确认，请到 GitHub 核对后重试；平台尚未记录通过。");
     }
 
     private RestClient clientFor(ScmRepository repository) {

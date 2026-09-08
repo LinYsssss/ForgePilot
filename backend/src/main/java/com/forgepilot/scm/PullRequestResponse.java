@@ -11,6 +11,7 @@ record PullRequestResponse(
         Long projectId,
         Long repositoryId,
         Integer externalNumber,
+        String title,
         String baseSha,
         String headSha,
         String reviewInputFingerprint,
@@ -24,7 +25,7 @@ record PullRequestResponse(
 
     static PullRequestResponse of(PullRequest pullRequest, boolean canEditRequirementAssociation) {
         return new PullRequestResponse(pullRequest.getId(), pullRequest.getProjectId(),
-                pullRequest.getRepositoryId(), pullRequest.getExternalNumber(), pullRequest.getBaseSha(),
+                pullRequest.getRepositoryId(), pullRequest.getExternalNumber(), pullRequest.getTitle(), pullRequest.getBaseSha(),
                 pullRequest.getHeadSha(), pullRequest.getReviewInputFingerprint(),
                 pullRequest.getRequirementId(), pullRequest.getAuthorExternalUserId(),
                 pullRequest.getAuthorUsername(), pullRequest.getAuthorUserId(), canEditRequirementAssociation,

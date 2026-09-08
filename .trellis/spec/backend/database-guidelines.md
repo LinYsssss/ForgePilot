@@ -29,15 +29,17 @@ web layer.
 
 - Migration files live in `backend/src/main/resources/db/migration` and follow
   the naming rule in `ARCHITECTURE.md` §2.4.
-- Thirteen migrations, `V1`–`V13`, produce the current twenty-one business tables.
+- Fourteen migrations, `V1`–`V14`, produce the current twenty-one business tables.
   `V1__foundation.sql` contains only `CREATE EXTENSION IF NOT EXISTS vector`;
   `V2`–`V6` create the core model; `V7`, `V9` and `V10` add columns, and `V8`
-  and `V10` add the role/identity/binding and deletion-ledger tables.
+  and `V10` add the role/identity/binding and deletion-ledger tables. `V11`–`V13`
+  own notification storage; `V14` adds nullable `requirement.reviewer_id` and its
+  `(project_id, reviewer_id)` member FK without changing existing rows or roles.
 - **No migration carries seed rows.** The first account is created through
   `POST /api/auth/register`, so no password ever lives in the repository.
 - Flyway derives the history `description` from the file name, and
-  `FoundationDatabaseTest` asserts all ten successful entries plus the exact
-  twenty-table set in `public`. Renaming an applied migration breaks both that
+  `FoundationDatabaseTest` asserts all fourteen successful entries plus the exact
+  twenty-one-table set in `public`. Renaming an applied migration breaks both that
   test and every existing database.
 - **`ALTER TABLE ... ADD CONSTRAINT ... CHECK` validates the rows already in the
   table**, so a CHECK that does not tolerate `NULL` passes every test against a

@@ -83,6 +83,20 @@ class KnowledgeServiceTest extends PostgresTestBase {
     }
 
     @Test
+    void publicReadingAllowsMembersButCannotBypassProjectOrAttachmentScope() {
+        Fixture fixture = new Fixture();
+        Fixture other = new Fixture();
+        long developer = fixture.member(ProjectRole.DEVELOPER);
+        long document = knowledge.createProjectKnowledge(fixture.project, fixture.leader, "规范.md", "项目规范正文");
+        long attachment = knowledge.createRequirementAttachment(fixture.project, fixture.leader, fixture.requirement, "附件.md", "私有范围");
+        assertThat(knowledge.publicContent(fixture.project, developer, document).text()).isEqualTo("项目规范正文");
+        assertThat(statusOf(() -> knowledge.publicContent(other.project, other.leader, document))).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(statusOf(() -> knowledge.publicContent(fixture.project, developer, attachment))).isEqualTo(HttpStatus.NOT_FOUND);
+        knowledge.deleteProjectKnowledge(fixture.project, fixture.leader, document);
+        assertThat(statusOf(() -> knowledge.publicContent(fixture.project, developer, document))).isEqualTo(HttpStatus.NOT_FOUND);
+    }
+
+    @Test
     void promotingCopiesTheDocumentAndLeavesTheOriginalAttachmentAlone() {
         Fixture fixture = new Fixture();
         long attachment = knowledge.createRequirementAttachment(

@@ -1,6 +1,12 @@
 package com.forgepilot.notification;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.clearInvocations;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
@@ -10,23 +16,32 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import java.util.concurrent.atomic.AtomicInteger;
 
 import com.forgepilot.PostgresTestBase;
+import com.forgepilot.review.ReviewCompleted;
+import com.forgepilot.review.ReviewDecision;
+import com.forgepilot.review.ReviewDecisionService;
+import com.forgepilot.scm.PullRequestDecisionActions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * 通知渠道配置端点。锁三条：凭据<strong>只进不出</strong>、只有 LEADER 能碰、
  * 以及 {@link NotificationChannelType} 与 {@code ck_notification_channel_type}
  * 是同一份词表。
  */
-@SpringBootTest
+@SpringBootTest(properties = "forgepilot.base-url=https://forgepilot.example/")
 class NotificationChannelTest extends PostgresTestBase {
 
     private static final AtomicInteger SEQUENCE = new AtomicInteger();
@@ -40,6 +55,21 @@ class NotificationChannelTest extends PostgresTestBase {
 
     @Autowired
     private WebApplicationContext context;
+
+    @Autowired
+    private ApplicationEventPublisher events;
+
+    @Autowired
+    private ReviewDecisionService decisions;
+
+    @Autowired
+    private PlatformTransactionManager transactionManager;
+
+    @MockitoBean
+    private DingTalkSender sender;
+
+    @MockitoBean
+    private PullRequestDecisionActions scmActions;
 
     private MockMvc mockMvc;
 
@@ -179,6 +209,67 @@ class NotificationChannelTest extends PostgresTestBase {
                 .isEqualTo(NotificationChannelType.values().length);
     }
 
+    @Test
+    void completedReviewNamesItsReviewerAndFallsBackWhenTheRoleIsRemoved() throws Exception {
+        Scenario scenario = new Scenario();
+        long reviewId = scenario.completedReview();
+        mockMvc.perform(configure(scenario, WEBHOOK, SECRET, true)).andExpect(status().isOk());
+        when(sender.send(any(), anyString(), anyString())).thenReturn(true);
+
+        events.publishEvent(new ReviewCompleted(scenario.projectId, reviewId));
+        var text = org.mockito.ArgumentCaptor.forClass(String.class);
+        verify(sender).send(any(), anyString(), text.capture());
+        assertThat(text.getValue()).contains("审查", "**处理人**：reviewer display",
+                "https://forgepilot.example/reviews/" + reviewId + "?project=" + scenario.projectId);
+
+        clearInvocations(sender);
+        jdbc.update("update project_member_role set role = 'DEVELOPER' where project_id = ? and user_id = ?",
+                scenario.projectId, scenario.reviewer);
+        events.publishEvent(new ReviewCompleted(scenario.projectId, reviewId));
+        verify(sender).send(any(), anyString(), text.capture());
+        assertThat(text.getValue()).contains("**处理人**：leader display").doesNotContain("reviewer display");
+    }
+
+    @Test
+    void decisionNotifiesOnlyAfterCommitAndDeliveryFailureDoesNotUndoIt() throws Exception {
+        Scenario scenario = new Scenario();
+        long reviewId = scenario.completedReview();
+        mockMvc.perform(configure(scenario, WEBHOOK, SECRET, true)).andExpect(status().isOk());
+        TransactionTemplate transaction = new TransactionTemplate(transactionManager);
+        String reason = "Private return instructions";
+        transaction.executeWithoutResult(status -> {
+            decisions.decide(scenario.projectId, scenario.reviewer, reviewId, ReviewDecision.REQUEST_CHANGES, reason);
+            verifyNoInteractions(sender);
+            status.setRollbackOnly();
+        });
+        verifyNoInteractions(sender);
+
+        TransactionTemplate independentRead = new TransactionTemplate(transactionManager);
+        independentRead.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+        when(sender.send(any(), anyString(), anyString())).thenAnswer(call -> {
+            String committed = independentRead.execute(status -> jdbc.queryForObject(
+                    "select decision from review where id = ?", String.class, reviewId));
+            assertThat(committed).isEqualTo("REQUEST_CHANGES");
+            // The channel refuses delivery, but the already committed decision survives.
+            return false;
+        });
+        decisions.decide(scenario.projectId, scenario.reviewer, reviewId, ReviewDecision.REQUEST_CHANGES, reason);
+        var text = org.mockito.ArgumentCaptor.forClass(String.class);
+        verify(sender).send(any(), anyString(), text.capture());
+        assertThat(text.getValue()).contains("已退回修改", "**处理人**：developer display")
+                .doesNotContain(reason);
+        assertThat(jdbc.queryForObject("select decision_comment from review where id = ?", String.class, reviewId))
+                .isEqualTo(reason);
+        verifyNoInteractions(scmActions);
+
+        clearInvocations(sender);
+        when(sender.send(any(), anyString(), anyString())).thenReturn(true);
+        long second = scenario.completedReview();
+        decisions.decide(scenario.projectId, scenario.leader, second, ReviewDecision.APPROVE, null);
+        verify(sender).send(any(), anyString(), text.capture());
+        assertThat(text.getValue()).contains("已通过并合并", "**处理人**：leader display");
+    }
+
     // ----------------------------------------------------------------- helpers
 
     private static String payload(String url, String secret, boolean enabled) {
@@ -197,8 +288,8 @@ class NotificationChannelTest extends PostgresTestBase {
 
     private long account(String role) {
         return jdbc.queryForObject("insert into user_account (username, display_name, password_hash) "
-                + "values (?, 'Test User', 'bcrypt-placeholder') returning id", Long.class,
-                "notify-" + role + "-" + SEQUENCE.incrementAndGet());
+                + "values (?, ?, 'bcrypt-placeholder') returning id", Long.class,
+                "notify-" + role + "-" + SEQUENCE.incrementAndGet(), role + " display");
     }
 
     private String usernameOf(long userId) {
@@ -211,6 +302,7 @@ class NotificationChannelTest extends PostgresTestBase {
 
         private final long leader = account("leader");
         private final long developer = account("developer");
+        private final long reviewer = account("reviewer");
         private final String leaderName = usernameOf(leader);
         private final String developerName = usernameOf(developer);
         private final long projectId;
@@ -221,6 +313,30 @@ class NotificationChannelTest extends PostgresTestBase {
                     "notify-" + SEQUENCE.incrementAndGet(), leader);
             member(leader, "LEADER");
             member(developer, "DEVELOPER");
+            member(reviewer, "REVIEWER");
+        }
+
+        private long completedReview() {
+            long requirementId = jdbc.queryForObject("insert into requirement (project_id, status, assignee_id, reviewer_id) "
+                    + "values (?, 'IN_DEVELOPMENT', ?, ?) returning id", Long.class, projectId, developer, reviewer);
+            long revisionId = jdbc.queryForObject("insert into requirement_revision (project_id, requirement_id, seq, title, created_by) "
+                    + "values (?, ?, 1, 'Review notifications', ?) returning id", Long.class, projectId, requirementId, leader);
+            jdbc.update("update requirement set current_revision_id = ? where id = ?", revisionId, requirementId);
+            Long repositoryId = jdbc.query("select id from scm_repository where project_id = ?",
+                    (rs, row) -> rs.getLong(1), projectId).stream().findFirst().orElse(null);
+            if (repositoryId == null) {
+                repositoryId = jdbc.queryForObject("insert into scm_repository (project_id, provider, instance_identity, external_id, "
+                        + "api_base, encrypted_token, encrypted_secret) values (?, 'GITHUB', 'github.com', ?, "
+                        + "'https://api.github.com', 'unused', 'unused') returning id", Long.class,
+                        projectId, "notification-repo-" + projectId);
+            }
+            long pullRequestId = jdbc.queryForObject("insert into pull_request (project_id, repository_id, external_number, "
+                    + "base_sha, head_sha, review_input_fingerprint, changed_files, requirement_id, author_external_user_id, author_username) "
+                    + "values (?, ?, ?, 'base', 'head', 'fingerprint', '[]'::jsonb, ?, 'external-developer', 'developer') returning id", Long.class,
+                    projectId, repositoryId, SEQUENCE.incrementAndGet(), requirementId);
+            return jdbc.queryForObject("insert into review (project_id, pull_request_id, head_sha, review_input_fingerprint, "
+                    + "requirement_id, requirement_revision_id, status) values (?, ?, 'head', 'fingerprint', ?, ?, 'COMPLETED') "
+                    + "returning id", Long.class, projectId, pullRequestId, requirementId, revisionId);
         }
 
         private void member(long userId, String role) {

@@ -76,6 +76,10 @@ export function knowledgeRoute(projectId: number): RouteLocationRaw {
   return { name: "knowledge", query: { [PROJECT_QUERY_KEY]: String(projectId) } };
 }
 
+export function knowledgeDocumentRoute(projectId: number, documentId: number): RouteLocationRaw {
+  return { name: "knowledge", query: { [PROJECT_QUERY_KEY]: String(projectId), document: String(documentId) } };
+}
+
 export function repositoriesRoute(projectId: number): RouteLocationRaw {
   return { name: "repositories", query: { [PROJECT_QUERY_KEY]: String(projectId) } };
 }

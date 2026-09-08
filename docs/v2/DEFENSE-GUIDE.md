@@ -22,6 +22,13 @@ scripts/phase1-compose-smoke.sh forgepilot-phase1-defense-clean
 
 Choose two unused loopback ports if those are occupied. For an interactive demonstration, use `docker compose up --build --detach --wait`, then open the configured frontend loopback address. The backend health contract is `/actuator/health`; through the frontend proxy it is `/api/actuator/health`.
 
+The current schema is V14, with 21 business tables. V14 adds only a nullable
+requirement reviewer and its project-member foreign key; existing null assignments
+fall back to LEADER. Upgrade an existing deployment with its database volume retained,
+never with the disposable cold-start cleanup procedure. The 2026-09-08 task verified
+migrations in Testcontainers and updated the smoke assertion to 14; it did not deploy
+the application or rerun the Compose cold start. See the current test report for evidence.
+
 ## 2. Build and test gates
 
 The backend requires Java 21. On a host without a JDK, use the pinned container path:
@@ -61,10 +68,15 @@ The last guard is for a source checkout. A machine holding the ignored post-free
 
 Use three disposable accounts and one disposable project. The signed-in shell has six top-level entries — Workspace, Projects, Requirements, Project Knowledge, Repository Integration, Reviews — in one centered top application bar.
 
-1. A LEADER creates the project and requirement, adds DEVELOPER and REVIEWER members, uploads project knowledge on **Project Knowledge**, and configures either GitHub or GitLab on **Repository Integration** (`/repositories`; the legacy `/projects/:id/settings` path redirects there). Tokens and webhook secrets are write-only.
+1. A LEADER creates the project and requirement, adds DEVELOPER and REVIEWER members, assigns the developer and reviewer, uploads project knowledge on **Project Knowledge**, and configures either GitHub or GitLab on **Repository Integration** (`/repositories`; the legacy `/projects/:id/settings` path redirects there). Tokens and webhook secrets are write-only. GitLab's repository token needs `api` and actual merge permission.
 2. A merge/pull request webhook authenticates the untouched body, triggers an authoritative provider read, links `REQ-<id>` when present, and creates the shared PENDING Review.
-3. The DEVELOPER claims and marks a confirmed Finding fixed. The REVIEWER verifies or sends it back. The LEADER or REVIEWER records the one-time Review Decision.
-4. Show that a new head/revision makes the previous Review historical, while the requirement status remains under human control.
+3. The assigned REVIEWER or LEADER returns the completed Review with a reason. Show it on the requirement and Review pages; the PR/MR and original branch remain open for developer updates. Other REVIEWER members can handle findings but cannot make this final decision.
+4. The DEVELOPER fixes the code and updates the same branch. Show the new round, previous return reason and author mapping, then explicitly approve a dedicated disposable PR/MR: this merges the reviewed SHA. The requirement must be in development with a valid developer, and DONE remains a separate LEADER action.
+5. Read/download public knowledge as a member. Show the distinction between its current original and a historical Review excerpt. If a test DingTalk channel is enabled, demonstrate after-commit AI/decision notifications with responsible names and `/reviews/{id}?project={projectId}` links; configure `FORGEPILOT_BASE_URL` for links.
+
+These are manual acceptance steps, not claims of a live merge or notification in
+the 2026-09-08 validation. On `merge_outcome_unknown`, verify the remote merge state
+before deciding how to retry; no background compensation is provided.
 
 One thing to state honestly if asked during the walkthrough: semantic knowledge retrieval runs without a vector index. That is a deliberate choice, not an oversight — the frozen 4096-dimension embedding profile exceeds every exact index form pgvector 0.8.6 offers, and the two buildable forms are lossy pre-filters that would need a rerank stage. At MVP corpus scale the sequential scan returns the exact cosine ordering, which `KnowledgeVectorIndexTest` demonstrates at the frozen dimension. None of this affects the recorded evaluation, whose runner builds its own context and never calls the running application's retrieval path.
 

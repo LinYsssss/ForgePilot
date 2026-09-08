@@ -134,6 +134,7 @@ export interface ReviewDetail {
   decisionBy: number | null;
   decisionAt: string | null;
   decisionComment: string | null;
+  decisionBlockReason: string | null;
   /** 每次读取时把身份与 PR 比对后现算得出。 */
   isCurrent: boolean;
   contextSnapshot: unknown;
@@ -161,6 +162,8 @@ export interface ProjectReviewRow {
   id: number;
   pullRequestId: number;
   pullRequestNumber: number;
+  pullRequestTitle: string;
+  provider: string;
   headSha: string;
   requirementId: number | null;
   status: ReviewStatus;

@@ -26,5 +26,6 @@ class RemovedMemberAssignmentListener {
     void releaseAssignmentsInTheSameTransaction(ProjectMemberRemoving event) {
         event.revoked("requirement assignments",
                 requirements.clearAssignee(event.projectId(), event.userId()));
+        event.revoked("requirement reviewers", requirements.clearReviewer(event.projectId(), event.userId()));
     }
 }

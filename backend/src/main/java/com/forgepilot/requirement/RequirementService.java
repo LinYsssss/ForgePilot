@@ -71,8 +71,10 @@ public class RequirementService {
         access.requireMember(projectId, actorId);
         List<Requirement> rows = requirements.findByProjectIdAndDeletedAtIsNullOrderByIdAsc(projectId);
         Map<Long, String> usernames = usernames(rows.stream().map(Requirement::getAssigneeId));
+        Map<Long, String> reviewerNames = reviewerNames(projectId, rows.stream().map(Requirement::getReviewerId));
         return rows.stream()
-                .map(row -> RequirementSummary.of(row, usernames.get(row.getAssigneeId())))
+                .map(row -> RequirementSummary.of(row, usernames.get(row.getAssigneeId()),
+                        reviewerNames.get(row.getReviewerId())))
                 .toList();
     }
 
@@ -176,11 +178,24 @@ public class RequirementService {
         return detail(requirement, requirement.getCurrentRevision());
     }
 
+    /** Reviewer assignment does not advance the requirement lifecycle. */
+    @Transactional
+    public RequirementDetail assignReviewer(long projectId, long actorId, long requirementId, Long reviewerId) {
+        access.requireRole(projectId, actorId, ProjectRole.LEADER);
+        Requirement requirement = require(projectId, requirementId);
+        if (isTerminal(requirement.getStatus())) {
+            throw ApiException.conflict("A terminal requirement cannot be reassigned.");
+        }
+        if (reviewerId != null) {
+            access.requireRole(projectId, reviewerId, ProjectRole.REVIEWER, ProjectRole.LEADER);
+        }
+        requirement.setReviewerId(reviewerId);
+        return detail(requirement, requirement.getCurrentRevision());
+    }
+
     /**
-     * 进入 IN_DEVELOPMENT 的唯一入口（API.md）。指派被限制在「确有工作
-     * 存在」的那两个状态里，因此 READY 的需求必定还没有被指派人，
-     * 这里也就恰好是首次指派；此后的重新指派会看到 IN_DEVELOPMENT 并不动状态。
-     * 「被指派人是本项目成员」由复合外键证明，而不是在这里检查。
+     * 进入 IN_DEVELOPMENT 的唯一入口（API.md）。首次指派与 READY → IN_DEVELOPMENT
+     * 同事务完成；后续指派不改变状态。复合外键约束项目成员归属。
      */
     @Transactional
     public RequirementDetail assign(long projectId, long actorId, long requirementId, long assigneeId) {
@@ -190,6 +205,7 @@ public class RequirementService {
                 && requirement.getStatus() != RequirementStatus.IN_DEVELOPMENT) {
             throw ApiException.conflict("Only a READY or IN_DEVELOPMENT requirement can be assigned.");
         }
+        access.requireRole(projectId, assigneeId, ProjectRole.DEVELOPER, ProjectRole.LEADER);
         requirement.setAssigneeId(assigneeId);
         if (requirement.getStatus() == RequirementStatus.READY) {
             requirement.setStatus(RequirementStatus.IN_DEVELOPMENT);
@@ -323,7 +339,15 @@ public class RequirementService {
         Map<Long, String> usernames =
                 usernames(Stream.of(requirement.getAssigneeId(), revision.getCreatedBy()));
         return RequirementDetail.of(requirement, usernames.get(requirement.getAssigneeId()),
+                reviewerNames(requirement.getProjectId(), Stream.of(requirement.getReviewerId()))
+                        .get(requirement.getReviewerId()),
                 RevisionView.of(revision, usernames.get(revision.getCreatedBy()), acceptanceCriteria));
+    }
+
+    private Map<Long, String> reviewerNames(long projectId, Stream<Long> userIds) {
+        var eligible = new java.util.HashSet<>(requirements.eligibleReviewerIds(projectId));
+        return users.byIds(userIds.filter(Objects::nonNull).filter(eligible::contains).distinct().toList()).stream()
+                .collect(Collectors.toMap(AccountView::id, AccountView::displayName));
     }
 
     /** 对响应中提到的所有账号做一次批量读取，因此没有任何路径会循环访问用户目录。 */

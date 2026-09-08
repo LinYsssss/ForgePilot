@@ -184,7 +184,7 @@ Run from the repository root. Expected results are stated per command.
 ```bash
 cd backend && ./mvnw -B -ntp verify   # ArchUnit + real-database test must pass
 
-# Exactly the eight allowed top-level production packages.
+# Exactly the nine allowed top-level production packages.
 find backend/src/main/java/com/forgepilot -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | sort
 
 # No forbidden production package. Expect no match.

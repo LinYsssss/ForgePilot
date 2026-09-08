@@ -18,7 +18,7 @@
 
 ## 2. 主流程
 
-> 负责人创建并指派带 AC 的需求，开发者获得一次性 AI 实现建议并提交关联 PR；ForgePilot 结合需求、项目知识与 Diff 生成可核验 Finding，Reviewer 据此退回或通过，开发者修复后复审，最终由 LEADER 确认需求完成。
+> 负责人创建带 AC 的需求并指派开发与审查人，开发者获得一次性 AI 实现建议并提交关联 PR；ForgePilot 结合需求、项目知识与 Diff 生成可核验 Finding，指定审查人或 LEADER 填写理由退回，开发者在原分支修复后复审；人工通过会合并被审查的 SHA，最终由 LEADER 确认需求完成。
 
 ```mermaid
 flowchart LR
@@ -30,10 +30,10 @@ flowchart LR
     REQ --> REV
     KB --> REV
     REV --> FIND["Finding + AC/代码/知识证据"]
-    FIND --> HUMAN["Reviewer 人工判断"]
-    HUMAN -->|REQUEST_CHANGES| FIX["开发修复并更新 PR"]
+    FIND --> HUMAN["指定审查人或 LEADER 人工判断"]
+    HUMAN -->|REQUEST_CHANGES + 理由| FIX["开发修复并更新原 PR 分支"]
     FIX --> REV
-    HUMAN -->|APPROVE| REVIEW_DONE["当前 PR Review 完成"]
+    HUMAN -->|APPROVE| REVIEW_DONE["确认合并被审查的 SHA"]
     REVIEW_DONE --> LEADER["LEADER 确认全部研发工作完成"]
     LEADER --> DONE["需求完成"]
 ```
@@ -55,18 +55,21 @@ flowchart LR
 | 创建/编辑需求与 AC | ✅ | ❌ | ❌ |
 | 上传 `.txt/.md` 需求文档 | ✅ | ❌ | ❌ |
 | 阅读/下载需求文档、导出结构化需求 | ✅ | ✅ | ✅ |
+| 阅读/下载公共项目知识原文 | ✅ | ✅ | ✅ |
 | 运行需求质量检查 | ✅ | ❌ | ❌ |
-| 需求 DRAFT → READY、指派开发 | ✅ | ❌ | ❌ |
+| 需求 DRAFT → READY、指派开发与审查人 | ✅ | ❌ | ❌ |
 | 生成当前需求的一次性 AI 实现建议 | ✅ | 仅被指派需求 | ❌ |
 | 修改 PR↔需求关联 | ✅ | 仅本人 PR，且当前 head 尚无任何人工终局 Decision | ❌ |
 | 触发/重试 Review（含版本过期后的重审） | ✅ | 仅本人 PR | ✅ |
 | Finding 确认 / 拒绝 | ✅ | ❌ | ✅ |
 | Finding 认领、标记已修复 | ❌ | ✅ | ❌ |
 | Finding 验证通过 / 打回 | ✅ | ❌ | ✅ |
-| Review 终局 APPROVE / REQUEST_CHANGES | ✅ | ❌ | ✅ |
+| Review 终局 APPROVE / REQUEST_CHANGES | ✅ | ❌ | 仅需求指定且角色仍有效的审查人 |
 | 取消需求 | ✅ | ❌ | ❌ |
 
 跨项目一律不可见、不可操作。
+
+审查人由 LEADER 从本项目 REVIEWER/LEADER 中选择，可清空；未指定、已移除或失去资格时由 LEADER 处理，未关联需求的 Review 也仅 LEADER 可决定。关联需求必须处于 `IN_DEVELOPMENT`，且开发负责人仍具有 DEVELOPER/LEADER 角色，才能作新决定；LEADER 同样受这些状态约束。其他 REVIEWER 仍可处理 Finding，不能代替指定审查人作最终决定。
 
 ## 4. MVP 范围
 
@@ -74,16 +77,16 @@ flowchart LR
 
 - 带显示名、用户名和平台 ID 的最小账户；成员目录支持搜索、原子批量添加与三角色任意非空组合。
 - 每个账户可验证多个 GitHub/GitLab 身份并填写标签和用途；每个项目成员同时最多一个活动绑定。
-- Requirement、AC、指派与简化状态机。
+- Requirement、AC、开发/审查人指派与简化状态机；移除成员时清除两类指派。
 - 一个项目一个活动 GitHub/GitLab 仓库；PR/MR 与 Requirement 关联。
 - Requirement 附件复用 Project Knowledge 文档，不做双份解析；首版只允许 LEADER 上传 `.txt/.md`，所有项目成员可阅读和下载。
 - Requirement 详情并列结构化 Revision 与需求文档；结构化内容可导出 Markdown，两者不自动同步或映射。
 - Requirement Quality Check：确定性规则 + 一次结构化 AI 分析。
 - Requirement Implementation Guidance：基于 Requirement、AC 与项目知识生成一次性实现清单、相关规则和风险提示，不保存对话。
-- Project Knowledge：上传、切片、Embedding、项目内检索。
+- Project Knowledge：上传、切片、Embedding、项目内检索、按需阅读与下载公共知识原文；需求附件仍经所属需求入口读取。
 - 六入口产品界面：工作台、项目、研发需求、项目知识、仓库接入、代码审查；工作台只读组合真实业务数据。
-- 项目级钉钉审查完成/失败摘要通知，以及 LEADER 发起的测试消息。
-- Knowledge 与需求附件展示真实切片、Embedding Profile、维度和语义索引状态，不展示原始向量。
+- 项目级钉钉通知：AI 完成交给有效审查人，失败交给 LEADER，人工退回交给有效开发负责人，合并交给 LEADER；处理人无效时回退 LEADER。消息含项目详情链接，不广播退回理由，LEADER 可发测试消息。
+- Knowledge 优先展示阅读状态，真实切片、Embedding Profile、维度和语义索引状态收进索引详情，不展示原始向量；历史证据摘录不因文档删除而消失。
 - 唯一 Review Engine：Requirement/AC + Knowledge + PR patch → Finding。
 - Finding 人工生命周期 + PR 的 APPROVE/REQUEST_CHANGES。
 - 修复后按新 head SHA 产生新 Review，保留前后结果。
@@ -125,7 +128,7 @@ DRAFT → READY → IN_DEVELOPMENT → DONE
 | 当前 Review 为 PENDING | `PENDING` |
 | 当前 Review 的 Decision 为 `APPROVE` | `APPROVED` |
 
-Requirement 没有关联 PR 时为 `NO_PR`。多 PR 聚合先让 `FAILED`、`CHANGES_REQUESTED` 两类风险状态依次占优；否则全部子状态相同就返回该状态，全部 `APPROVED` 才返回 `APPROVED`，其余组合返回 `MIXED` 并在 UI 展示各状态计数。需求状态与评审活动并列展示，不得合并。
+Requirement 没有关联 PR 时为 `NO_PR`。多 PR 聚合先让 `FAILED`、`CHANGES_REQUESTED` 两类风险状态依次占优；否则全部子状态相同就返回该状态，全部 `APPROVED` 才返回 `APPROVED`，其余组合返回 `MIXED` 并在 UI 展示各状态计数。生命周期与活动保持独立事实；列表、详情和工作台可由两者派生一个醒目的“当前阶段”，同时保留生命周期。仅 `IN_DEVELOPMENT` 派生评审/返工阶段，草稿、待开发及终态不得被活动覆盖。
 
 READY 后正文与 AC 锁定；修改由 LEADER 创建新的不可变 Revision 并填写变更原因，旧 AC 永久保留。DRAFT 阶段的 Revision 1 可原地编辑，`DRAFT → READY` 同事务冻结——"不可变"指**已发布的 Revision**。需求版本变更**不自动重审**，关联 PR 显示"审查已过期"，由人工按上表权限触发。需求质量检查结果归属具体 Revision，DRAFT 期间正文一改即失效。
 
@@ -146,6 +149,10 @@ READY 后正文与 AC 锁定；修改由 LEADER 创建新的不可变 Revision �
 `PENDING | APPROVE | REQUEST_CHANGES`。**AI 置信度、Finding 状态、Review Decision 三者不互相替代**，UI 上必须分开呈现。置信度真实记录，但只分 `HIGH/MEDIUM/LOW` 三档而非数值，且不参与任何自动门禁或状态流转——它是未经校准的模型自报把握，不是质量保证。
 终局 Decision 只能从 `PENDING` **写入一次**，目标 Review 必须已完成，且 head、Diff fingerprint 与需求版本均等于 PR 当前值；同一 head 出现 REQUEST_CHANGES 后必须有新 head SHA 才能再次 APPROVE——**改 Base、需求关联、需求版本或重新同步 Diff 都不能解除该闸门**。并发 APPROVE/REQUEST_CHANGES 只有一个请求可以成功。
 
+新 `REQUEST_CHANGES` 必须填写去除首尾空白后非空的理由，备注最多 2000 字；旧数据中的空理由仍可读取。退回不关闭 PR/MR、不删除分支、不改变需求生命周期，开发者沿原分支提交新 head 后产生新一轮。需求与审查详情展示退回人、时间和理由；审查详情还展示轮次、上一轮及上一轮退回理由。
+
+`APPROVE` 由人工明确发起，只有 Provider 确认已合并被审查的 SHA 后才提交本地通过决定。远端拒绝或结果无法确认时不记录通过；远端已成功而本地提交失败时允许核验同一 SHA 的已合并状态后重试。GitHub PR 与 GitLab MR 都遵循此契约。
+
 ## 6. 关键产品规则
 
 | # | 规则 | 依据 |
@@ -158,7 +165,7 @@ READY 后正文与 AC 锁定；修改由 LEADER 创建新的不可变 Revision �
 | P6 | AI 返回非法结构时 Review 判定失败，**绝不生成"成功空报告"** | ARCHITECTURE §3.5 |
 | P7 | 人工决策全部留痕（actor、时间、备注），可追溯 | ARCHITECTURE §2.1 |
 | P8 | Review 保存审查时的 requirement_id、requirement_revision_id 与不可变上下文快照；历史结果不得通过 PR 当前关联反查语义 | ARCHITECTURE §2.1/3.5 |
-| P9 | 单个 PR APPROVE 只结束当前 Review；Requirement DONE 必须由 LEADER 在确认全部关联工作完成后执行 | §6 P2 |
+| P9 | 单个 PR APPROVE 确认合并被审查的 SHA 并结束当前 Review；Requirement DONE 必须由 LEADER 在确认全部关联工作完成后执行 | §6 P2 |
 | P10 | 上一轮已驳回且源码证据与权威判定依据均未变的 Finding，本轮自动抑制、不要求重复驳回；抑制不跨 PR，且不得自动认定"本轮未报告 = 已修复" | ARCHITECTURE §3.6 |
 | P11 | "本人 PR" 按 Provider + 实例 + 稳定外部用户 ID 与成员当前活动绑定判定，**禁止按用户名授权**；身份由本人用一次性 Token 向 Provider 验证，Token 不落库；项目默认自动生效，可由 LEADER 开启严格审批 | ARCHITECTURE §2.1 |
 
@@ -171,6 +178,7 @@ READY 后正文与 AC 锁定；修改由 LEADER 创建新的不可变 Revision �
 - **Finding 行号连续性**：`finding_key` 包含 patch 新侧行号；无关插入或空提交造成行号整体移动时，同一证据可能被判为 `NEW`，无法继承上一轮的 `SUPPRESSED`。彻底修正需要调整跨 Review key/hash 规则并处理历史数据，当前作为已知限制保留。
 - **语义检索没有向量索引**，走顺序扫描的精确余弦序。冻结的 Embedding Profile 是 4096 维，超过 pgvector 0.8.6 全部精确索引形态的维度上限，可建的两种形态都是有损预筛，因此选择不建。
 - **浏览器点击闭环、1440/768/390 三档宽度与 `prefers-reduced-motion` 两种模式为人工验收**，未自动化。
+- **远端合并与本地数据库无法原子提交**。合并响应不明时仅做只读确认，仍无法确认则返回 `merge_outcome_unknown`，由人工核查远端后处理；没有补偿任务或消息投递保证。
 
 - 进程内 Review 执行**不提供**消息队列级持久性；系统必须在 PR 同步事务内先持久化 PENDING，提交后才启动执行器，并通过轻量 reconciliation 恢复已落库但未执行/停滞的任务。每次执行使用 attempt/token fencing，过期 Worker 不得覆盖新结果；reconciliation 不得补建缺失 Review。
 - 一个项目一个仓库是 MVP 约束；出现真实多仓库需求后再设计。

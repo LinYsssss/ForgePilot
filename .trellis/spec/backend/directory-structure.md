@@ -38,7 +38,7 @@ deployment files are not imported by application code.
 
 ## Package organization
 
-The eight allowed top-level packages and the rule against building empty
+The nine allowed top-level packages and the rule against building empty
 `domain/application/infrastructure/web` trees for symmetry are defined in
 `ARCHITECTURE.md` §1.1. This repository realizes that rule as follows:
 

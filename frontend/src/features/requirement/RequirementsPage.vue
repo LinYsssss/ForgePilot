@@ -28,6 +28,8 @@ import {
 } from "./api";
 import {
   isTerminal,
+  requirementPhase,
+  requirementHandler,
   REQUIREMENT_STATUS_LABELS,
   REQUIREMENT_STATUSES,
   REQUIREMENT_STATUS_TONES,
@@ -285,16 +287,24 @@ async function removeRequirement(item: RequirementSummary): Promise<void> {
 
           <dl class="meta-list requirement-meta">
             <div>
-              <dt>需求状态</dt>
+              <dt>当前阶段</dt>
               <dd class="requirement-status">
                 <span :class="['badge', `badge-${REQUIREMENT_STATUS_TONES[item.status]}`]">
-                  {{ REQUIREMENT_STATUS_LABELS[item.status] }}
+                  {{ requirementPhase(item.status, activity[String(item.id)]?.activity) }}
                 </span>
               </dd>
             </div>
             <div>
-              <dt>负责人</dt>
+              <dt>当前处理人</dt>
+              <dd>{{ requirementHandler(item.status, activity[String(item.id)]?.activity, item.assigneeUsername, item.reviewerName) }}</dd>
+            </div>
+            <div>
+              <dt>开发负责人</dt>
               <dd>{{ item.assigneeUsername ?? "未指派" }}</dd>
+            </div>
+            <div>
+              <dt>审查人</dt>
+              <dd>{{ item.reviewerName ?? "项目负责人处理" }}</dd>
             </div>
             <div>
               <dt>评审活动</dt>

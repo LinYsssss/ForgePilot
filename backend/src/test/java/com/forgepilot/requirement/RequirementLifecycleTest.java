@@ -194,16 +194,27 @@ class RequirementLifecycleTest extends PostgresTestBase {
         Team team = team();
         long requirementId = readyRequirement(team, "Login", "A wrong password is rejected");
 
+        assertThat(statusOf(() -> requirements.assign(team.projectId(), team.leader(), requirementId,
+                team.reviewer()))).isEqualTo(HttpStatus.FORBIDDEN);
+        long outsider = account();
+        assertThat(statusOf(() -> requirements.assign(team.projectId(), team.leader(), requirementId,
+                outsider))).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(storedStatusOf(requirementId)).isEqualTo(RequirementStatus.READY);
+
         RequirementDetail assigned = requirements.assign(team.projectId(), team.leader(), requirementId,
                 team.developer());
         assertThat(assigned.status()).isEqualTo(RequirementStatus.IN_DEVELOPMENT);
         assertThat(assigned.assigneeId()).isEqualTo(team.developer());
         assertThat(assigned.assigneeUsername()).isEqualTo(usernameOf(team.developer()));
 
+        assertThat(statusOf(() -> requirements.assign(team.projectId(), team.leader(), requirementId,
+                team.reviewer()))).isEqualTo(HttpStatus.FORBIDDEN);
+        assertThat(requirements.get(team.projectId(), team.leader(), requirementId).assigneeId())
+                .isEqualTo(team.developer());
         RequirementDetail reassigned = requirements.assign(team.projectId(), team.leader(), requirementId,
-                team.reviewer());
+                team.leader());
         assertThat(reassigned.status()).isEqualTo(RequirementStatus.IN_DEVELOPMENT);
-        assertThat(reassigned.assigneeId()).isEqualTo(team.reviewer());
+        assertThat(reassigned.assigneeId()).isEqualTo(team.leader());
     }
 
     @Test
@@ -326,6 +337,24 @@ class RequirementLifecycleTest extends PostgresTestBase {
                 new ProjectMemberService.BatchMember(developer, java.util.Set.of(ProjectRole.DEVELOPER)),
                 new ProjectMemberService.BatchMember(reviewer, java.util.Set.of(ProjectRole.REVIEWER))));
         return new Team(projectId, leader, developer, reviewer);
+    }
+
+    @Test
+    void reviewerAssignmentIsScopedAndReleasedWhenMemberLeaves() {
+        Team team = team();
+        Team other = team();
+        long requirement = create(team, "Review ownership", "AC").id();
+        assertThat(requirements.assignReviewer(team.projectId(), team.leader(), requirement, team.reviewer()).reviewerId())
+                .isEqualTo(team.reviewer());
+        assertThat(statusOf(() -> requirements.assignReviewer(team.projectId(), team.leader(), requirement, other.reviewer())))
+                .isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(statusOf(() -> requirements.assignReviewer(team.projectId(), team.leader(), requirement, team.developer())))
+                .isEqualTo(HttpStatus.FORBIDDEN);
+        members.updateRoles(team.projectId(), team.leader(), team.reviewer(), java.util.Set.of(ProjectRole.DEVELOPER));
+        assertThat(requirements.get(team.projectId(), team.leader(), requirement).reviewerName()).isNull();
+        assertThat(requirements.list(team.projectId(), team.leader()).getFirst().reviewerName()).isNull();
+        members.remove(team.projectId(), team.leader(), team.reviewer());
+        assertThat(requirements.get(team.projectId(), team.leader(), requirement).reviewerId()).isNull();
     }
 
     private RequirementDetail create(Team team, String title, String... criteria) {

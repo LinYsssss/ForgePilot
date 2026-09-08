@@ -43,6 +43,7 @@ class ResourceRemovalTest extends PostgresTestBase {
     @Test
     void removingAMemberRevokesLivePermissionsAndKeepsEveryAccomplishedFact() {
         Fixture fixture = new Fixture();
+        jdbc.update("update requirement set reviewer_id = ? where id = ?", fixture.developer, fixture.requirement);
 
         members.remove(fixture.project, fixture.leader, fixture.developer);
 
@@ -55,6 +56,8 @@ class ResourceRemovalTest extends PostgresTestBase {
 
         // 活权限：指派与项目绑定。
         assertThat(jdbc.queryForObject("select assignee_id from requirement where id = ?",
+                Long.class, fixture.requirement)).isNull();
+        assertThat(jdbc.queryForObject("select reviewer_id from requirement where id = ?",
                 Long.class, fixture.requirement)).isNull();
         assertThat(jdbc.queryForObject("select assignee_id from finding where id = ?",
                 Long.class, fixture.finding)).isNull();
@@ -89,7 +92,7 @@ class ResourceRemovalTest extends PostgresTestBase {
                     assertThat(record.getResourceId()).isEqualTo(fixture.developer);
                     assertThat(record.getActorUserId()).isEqualTo(fixture.leader);
                     assertThat(record.getDetail()).isEqualTo(
-                            "roles: 1; requirement assignments: 1; finding assignments: 1; scm bindings: 1");
+                            "roles: 1; requirement assignments: 1; requirement reviewers: 1; finding assignments: 1; scm bindings: 1");
                 });
 
         // 重复移除得到 404——硬删之下这就是明确结果（AC14）。

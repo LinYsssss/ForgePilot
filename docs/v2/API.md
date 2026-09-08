@@ -1,10 +1,10 @@
-# 账户、成员目录与 SCM 身份 API
+# 账户、成员、SCM 身份与评审协作 API
 
-本文是账户、成员目录与 SCM 身份三块的 HTTP 契约。所有写请求使用 Session Cookie + `X-XSRF-TOKEN`；错误体统一为 `{code,message,traceId}`。项目内资源对非成员返回 404，对已知项目但角色不足返回 403。
+本文定义账户、成员目录、SCM 身份及评审协作的 HTTP 契约。所有写请求使用 Session Cookie + `X-XSRF-TOKEN`；错误体统一为 `{code,message,traceId}`。项目内资源对非成员返回 404，对已知项目但角色不足返回 403。
 
 登录、注册与两个 webhook 端点另有按客户端地址计的限流，超出配额返回 **429** 与 `{"code":"too_many_requests"}`；该响应由过滤器直接写出，不经 MVC。配额见 `.env.example` 的三个 `FORGEPILOT_*_PER_*` 变量。
 
-需求、知识、仓库与审查的接口未在本文逐条列出——它们的行为由 [ARCHITECTURE.md](./ARCHITECTURE.md) 的流程契约与状态机定义，接口形状可直接读对应 `*Controller`。
+下文列出本轮变更涉及的需求、知识与审查端点；其余端点的行为见 [ARCHITECTURE.md](./ARCHITECTURE.md) 与对应 `*Controller`。
 
 ## 账户
 
@@ -46,7 +46,7 @@
 - `POST /api/projects/{projectId}/members/leader-transfer`
   - 请求：`{"targetUserId":12,"confirmed":true}`；成功 204。
 - `DELETE /api/projects/{projectId}/members/{userId}`
-  - 仅 LEADER；成功 204。硬删成员关系，并在同一事务里撤销角色集合、需求指派、Finding 认领与本项目 SCM 绑定。
+  - 仅 LEADER；成功 204。硬删成员关系，并在同一事务里撤销角色集合、需求开发/审查人指派、Finding 认领与本项目 SCM 绑定。
   - 唯一 LEADER 返回 409（先做负责人转移）；重复移除返回 404；跨项目与不存在同答 404。
   - `pull_request` 的两列不可变作者快照、`pull_request_requirement_event`、Finding 血缘与审计不受影响；`author_user_id` 按预设置空。用户自有 `scm_identity` 与平台账号不受影响。
 
@@ -67,6 +67,8 @@ GitHub 默认 `apiBase=https://api.github.com`；GitLab 默认 `https://gitlab.c
 ## 项目钉钉通知
 
 以下端点均仅限项目 LEADER。Webhook URL 与加签密钥只写不读，任何响应都不会回显它们。
+
+业务通知在事务提交后尽力发送：AI 完成→有效审查人，AI 失败→LEADER，退回→有效开发负责人，合并→LEADER；无有效处理人时回退 LEADER。消息包含处理人显示名，不包含决定理由。配置 `FORGEPILOT_BASE_URL`（Spring 属性 `forgepilot.base-url`）后链接为 `/reviews/{id}?project={projectId}`；留空时不生成链接。发送失败不影响已提交决定。
 
 - `GET /api/projects/{projectId}/notifications/dingtalk`
   - 返回 `{configured,enabled,signed,keyword,updatedAt}`；未配置时为
@@ -112,6 +114,55 @@ GitHub 默认 `apiBase=https://api.github.com`；GitLab 默认 `https://gitlab.c
 ## PR 作者映射
 
 远端 PR 保存的 `authorExternalUserId/authorUsername` 是不可变快照。`authorUserId` 是可重算投影：只有 Provider、实例、稳定外部用户 ID 与当前活动绑定一致时才有值。撤销、替换或审批绑定会重算项目内既有 PR；任何“本人 PR”授权均按稳定 ID 判断，不按用户名。
+
+## 需求审查人
+
+- `POST /api/projects/{projectId}/requirements/{requirementId}/reviewer`
+  - 请求：`{"userId":12}`；`{"userId":null}` 清空指派。
+  - 仅 LEADER；目标须为本项目 REVIEWER/LEADER。`DONE` / `CANCELED` 返回 409。
+  - 成功 200，返回更新后的 `RequirementDetail`；不改变生命周期或创建 Revision。
+- 需求列表与详情新增 `reviewerId: number|null`、`reviewerName: string|null`。
+  - 名称仅在该成员仍有 REVIEWER/LEADER 资格时返回；因此保留历史引用时 `reviewerId` 有值但 `reviewerName` 可以为 null。
+  - 未指定或失效由 LEADER 接手；移除成员时引用置空。
+
+开发指派继续使用 `POST .../requirements/{id}/assignee` 和非空 `userId`，服务端校验目标必须是本项目 DEVELOPER/LEADER：无资格成员返回 403，非成员返回 404，失败不改变原指派或需求状态。两类指派各自独立。
+
+## Review 最终决定与历史
+
+- `POST /api/projects/{projectId}/reviews/{reviewId}/decision`
+  - 请求：`{"decision":"REQUEST_CHANGES","comment":"请补齐权限校验"}`，或 `{"decision":"APPROVE","comment":null}`。
+  - 成功 200：`{decision,decisionBy,decisionAt}`；详情保留 `decisionComment`。
+  - 仅指定且仍有效的 REVIEWER 或 LEADER；未关联需求、未指定审查人时仅 LEADER。
+  - 关联需求须处于 `IN_DEVELOPMENT` 且开发负责人仍有 DEVELOPER/LEADER 资格。Review 必须已完成、当前有效、未决定，且同 head 无既有退回。
+  - 新退回理由去除首尾空白后必须非空；任意决定备注最多 2000 字。历史空备注仍能读取。
+  - `REQUEST_CHANGES` 不调用远端写接口，保留 PR/MR 与分支。`APPROVE` 合并被审查的 SHA，Provider 确认合并后才提交本地决定；不会把需求改为 `DONE`。
+- `GET /api/projects/{projectId}/reviews/{reviewId}`
+  - 新增 `decisionBlockReason: string|null`，仅表示调用人权限和需求状态限制。
+  - 前端仅在该字段显式为 null，且 `isCurrent=true`、`status=COMPLETED`、`decision=PENDING`、无 head 退回闸门时展示决定按钮。
+- `GET /api/projects/{projectId}/pull-requests/{pullRequestId}/reviews`
+  - 返回现有 `{id,headSha,requirementRevisionId,status,decision,isCurrent,createdAt}[]`，按创建时间、ID 从旧到新排序。
+  - UI 从该序列推导轮次，按需读取上一轮详情中的退回理由，不增加轮次字段或历史表。
+- 项目审查列表包含 `provider`、`pullRequestNumber`、`pullRequestTitle`；PR 详情包含 `title` 及原有作者映射字段，用于区分远端 PR/MR 与内部记录 ID。
+
+| 情况 | HTTP / code | 处理 |
+|---|---|---|
+| 非成员、跨项目或资源不存在 | 404 / `not_found` | 不泄露资源存在性 |
+| 非指定审查人、无相应角色；开发负责人失去所需角色 | 403 / `forbidden` | 由 LEADER 调整角色/指派 |
+| 非终局 decision、空退回理由、备注超长 | 422 / `unprocessable` | 修改请求 |
+| 需求状态不允许、Review 过期/未完成/已决定、同 head 已退回 | 409 / `conflict` | 纠正状态或更新 head 后重新审查 |
+| 远端 head 变化、关闭、拒绝合并或响应明确未合并 | 409 / `conflict` | 检查冲突、保护分支与仓库 Token 权限；同步后重审 |
+| 远端响应丢失/无法读取，且只读确认仍不能证明已合并同 SHA | 503 / `merge_outcome_unknown` | 本地决定回滚；人工核查远端，不能按失败自动重复写入 |
+
+远端合并与数据库提交不是原子操作。已合并同 SHA 的人工重试可补上本地决定；这不是撤销/改判接口。GitLab 仓库 Token 需要 `api` 与实际合并权限，个人身份核验 Token 的只读要求不变。
+
+## 公共知识原文
+
+- `GET /api/projects/{projectId}/knowledge/documents/{documentId}/content`
+  - 成功 200：`{documentId,title,text}`，返回现有存储文本。
+- `GET /api/projects/{projectId}/knowledge/documents/{documentId}/download`
+  - 成功 200：UTF-8 `text/plain`；`Content-Disposition: attachment` 使用文档标题作为文件名。
+
+均允许所有项目成员读取，但文档必须属于当前项目且为 `PROJECT_KNOWLEDGE`。需求附件、跨项目、非成员、已删除或不存在均返回 404；附件必须经所属需求的 `attachments/{documentId}/content|download` 访问。知识列表仍只返回元数据，向量始终不返回。历史 Review 的证据摘录不依赖当前原文是否存在。
 
 ## 资源删除
 

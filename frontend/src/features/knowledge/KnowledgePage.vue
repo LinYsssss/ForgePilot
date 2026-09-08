@@ -1,13 +1,16 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from "vue";
-import { useRoute, useRouter } from "vue-router";
+import { RouterLink, useRoute, useRouter } from "vue-router";
 
-import { parseId, PROJECT_QUERY_KEY } from "../../app/routes";
+import { parseId, knowledgeDocumentRoute, knowledgeRoute, PROJECT_QUERY_KEY } from "../../app/routes";
 import { formatDateTime } from "../../lib/datetime";
 import { apiErrorMessage } from "../../lib/http";
 import { hasProjectRole, listProjects, type Project } from "../project/api";
 import {
   deleteProjectKnowledge,
+  getKnowledgeContent,
+  knowledgeDownloadUrl,
+  type KnowledgeDocumentContent,
   listProjectKnowledge,
   uploadProjectKnowledge,
   type KnowledgeDocument,
@@ -18,6 +21,27 @@ const router = useRouter();
 const projectId = computed(() => parseId(route.query[PROJECT_QUERY_KEY]));
 const projects = ref<Project[]>([]);
 const documents = ref<KnowledgeDocument[]>([]);
+const selectedDocumentId = computed(() => parseId(route.query.document));
+const content = ref<KnowledgeDocumentContent | null>(null);
+const contentPending = ref(false);
+const contentError = ref<string | null>(null);
+let contentToken = 0;
+watch([projectId, selectedDocumentId], async ([project, document]) => {
+  const token = ++contentToken;
+  content.value = null;
+  contentError.value = null;
+  contentPending.value = false;
+  if (project === null || document === null) return;
+  contentPending.value = true;
+  try {
+    const loaded = await getKnowledgeContent(project, document);
+    if (token === contentToken) content.value = loaded;
+  } catch (failure: unknown) {
+    if (token === contentToken) contentError.value = apiErrorMessage(failure);
+  } finally {
+    if (token === contentToken) contentPending.value = false;
+  }
+}, { immediate: true });
 const loading = ref(false);
 const error = ref<string | null>(null);
 const files = ref<File[]>([]);
@@ -26,21 +50,15 @@ const uploadError = ref<string | null>(null);
 /** 逐文件结果：批量上传是 N 次独立调用，因此每个文件各有自己的成败。 */
 const uploadResults = ref<Array<{ name: string; error: string | null }>>([]);
 const deletePending = ref(false);
+let listToken = 0;
 const selectedProject = computed(
   () => projects.value.find((project) => project.id === projectId.value) ?? null,
 );
 const isLeader = computed(() => hasProjectRole(selectedProject.value, "LEADER"));
 const summary = computed(() => ({
   ready: documents.value.filter((document) => document.status === "READY").length,
-  chunks: documents.value.reduce((total, document) => total + document.chunkCount, 0),
-  embedded: documents.value.reduce((total, document) => total + document.embeddedChunkCount, 0),
-  dimensions: [
-    ...new Set(
-      documents.value
-        .map((document) => document.embeddingDimension)
-        .filter((value): value is number => value !== null),
-    ),
-  ],
+  pending: documents.value.filter((document) => document.status === "PENDING").length,
+  failed: documents.value.filter((document) => document.status === "FAILED").length,
 }));
 
 function selectProject(event: Event): void {
@@ -51,17 +69,20 @@ function selectProject(event: Event): void {
 }
 
 async function load(): Promise<void> {
+  const token = ++listToken;
   const id = projectId.value;
   documents.value = [];
   error.value = null;
+  loading.value = false;
   if (id === null) return;
   loading.value = true;
   try {
-    documents.value = await listProjectKnowledge(id);
+    const loaded = await listProjectKnowledge(id);
+    if (token === listToken) documents.value = loaded;
   } catch (failure: unknown) {
-    error.value = apiErrorMessage(failure);
+    if (token === listToken) error.value = apiErrorMessage(failure);
   } finally {
-    loading.value = false;
+    if (token === listToken) loading.value = false;
   }
 }
 
@@ -106,6 +127,7 @@ async function remove(document: KnowledgeDocument): Promise<void> {
   error.value = null;
   try {
     await deleteProjectKnowledge(id, document.id);
+    if (selectedDocumentId.value === document.id) await router.replace(knowledgeRoute(id));
     await load();
   } catch (failure: unknown) {
     error.value = apiErrorMessage(failure);
@@ -131,13 +153,12 @@ watch(projectId, load, { immediate: true });
         <p class="eyebrow">Semantic project context</p>
         <h1 id="knowledge-title">项目知识</h1>
         <p class="lede">
-          文本和 Markdown 被切片并生成 Embedding；当前检索使用精确余弦顺序扫描，不建立向量索引，
-          也不暴露原始向量。
+          阅读项目规范与参考文档。处理完成的文档会用于 AI 审查和实现建议，可从审查引用回到原文核对。
         </p>
       </div>
-      <div class="vector-visual" aria-label="向量检索处理流程">
-        <span>Document</span><i aria-hidden="true">→</i><span>Chunk</span><i aria-hidden="true">→</i
-        ><strong>Vector</strong>
+      <div class="vector-visual" aria-label="项目知识的用途">
+        <span>项目文档</span><i aria-hidden="true">→</i><span>相关规范</span><i aria-hidden="true">→</i
+        ><strong>审查依据</strong>
       </div>
     </div>
     <section class="panel project-selector">
@@ -155,19 +176,30 @@ watch(projectId, load, { immediate: true });
         </select>
       </div>
     </section>
-    <p v-if="projectId === null" class="empty-state">选择一个项目以查看语义知识检索。</p>
+    <section v-if="projectId !== null && selectedDocumentId !== null" class="panel" aria-labelledby="document-reader-title">
+      <h2 id="document-reader-title" class="panel-title">{{ content?.title ?? "阅读项目文档" }}</h2>
+      <RouterLink :to="knowledgeRoute(projectId)">关闭阅读</RouterLink>
+      <p v-if="contentPending" class="muted">正在读取文档…</p>
+      <p v-if="contentError" class="alert" role="alert">{{ contentError }} 公共原文可能已删除或不可访问；需求附件请从对应需求页阅读，历史审查证据仍保留。</p>
+      <template v-if="content">
+        <a class="button button-quiet" :href="knowledgeDownloadUrl(projectId, content.documentId)">下载</a>
+        <pre class="document-content">{{ content.text }}</pre>
+      </template>
+    </section>
+
+    <p v-if="projectId === null" class="empty-state">选择一个项目以阅读项目知识。</p>
     <template v-else>
       <p v-if="error" class="alert" role="alert">{{ error }}</p>
-      <section class="knowledge-summary" aria-label="语义检索汇总">
+      <section class="knowledge-summary" aria-label="文档处理状态">
         <div class="panel"><strong>{{ documents.length }}</strong><span>知识文档</span></div>
         <div class="panel">
-          <strong>{{ summary.ready }}/{{ documents.length }}</strong><span>Embedding 已就绪</span>
+          <strong>{{ summary.ready }}</strong><span>可用于审查</span>
         </div>
         <div class="panel vector-metric">
-          <strong>{{ summary.embedded }}/{{ summary.chunks }}</strong><span>Embedding Chunk</span>
+          <strong>{{ summary.pending }}</strong><span>正在处理</span>
         </div>
         <div class="panel vector-metric">
-          <strong>{{ summary.dimensions.join(" / ") || "—" }}</strong><span>向量维度</span>
+          <strong>{{ summary.failed }}</strong><span>处理失败</span>
         </div>
       </section>
       <section v-if="isLeader" class="panel upload-panel" aria-labelledby="knowledge-upload-title">
@@ -208,14 +240,13 @@ watch(projectId, load, { immediate: true });
           </li>
         </ul>
       </section>
-      <p v-else-if="selectedProject" class="empty-state">你可查看项目知识及其检索状态；只有负责人可以上传。</p>
+      <p v-else-if="selectedProject" class="empty-state">你可阅读和下载项目知识；只有负责人可以上传。</p>
       <section class="panel knowledge-index" aria-labelledby="knowledge-list-title">
         <div class="index-head">
           <div>
-            <p class="eyebrow">Vector retrieval profile</p>
+            <p class="eyebrow">Project documents</p>
             <h2 id="knowledge-list-title" class="panel-title">公共知识文档</h2>
           </div>
-          <span class="badge badge-info">无向量索引 · 顺序扫描</span>
         </div>
         <p v-if="loading" class="muted">正在加载知识文档…</p>
         <p v-else-if="documents.length === 0" class="empty-state">该项目还没有公共知识文档。</p>
@@ -233,10 +264,17 @@ watch(projectId, load, { immediate: true });
                       : 'badge-warning'
                 "
               >
-                {{ document.status }}
+                {{ document.status === "READY" ? "可用于审查" : document.status === "FAILED" ? "处理失败" : "正在处理" }}
               </span>
             </div>
-            <dl class="meta-list">
+            <div v-if="projectId !== null" class="record-actions">
+              <RouterLink class="button button-quiet" :to="knowledgeDocumentRoute(projectId, document.id)">阅读</RouterLink>
+              <a class="button button-quiet" :href="knowledgeDownloadUrl(projectId, document.id)">下载</a>
+            </div>
+            <details>
+              <summary>索引详情</summary>
+              <p class="field-hint">文档分片用于召回相关规范；当前使用精确向量检索，尚未建立数据库向量索引。</p>
+              <dl class="meta-list">
               <div><dt>Chunk / 向量</dt><dd>{{ document.chunkCount }} / {{ document.embeddedChunkCount }}</dd></div>
               <div><dt>向量维度</dt><dd>{{ document.embeddingDimension ?? "未就绪" }}</dd></div>
               <div>
@@ -250,7 +288,8 @@ watch(projectId, load, { immediate: true });
                 </dd>
               </div>
               <div><dt>更新时间</dt><dd>{{ formatDateTime(document.updatedAt) }}</dd></div>
-            </dl>
+              </dl>
+            </details>
             <p v-if="document.failureReason" class="alert" role="alert">
               {{ document.failureReason }}
             </p>
@@ -274,6 +313,8 @@ watch(projectId, load, { immediate: true });
 </template>
 
 <style scoped>
+.document-content { max-height: 30rem; overflow: auto; white-space: pre-wrap; word-break: break-word; }
+
 .knowledge-summary { display: grid; gap: var(--fp-space-4); grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .knowledge-summary .panel { display: grid; gap: var(--fp-space-2); margin-bottom: var(--fp-space-6); }
 .knowledge-summary strong { color: var(--fp-color-accent-inverse); font: 800 1.5rem/1 var(--fp-font-mono); }

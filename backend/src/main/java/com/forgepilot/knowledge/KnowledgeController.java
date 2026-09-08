@@ -1,6 +1,11 @@
 package com.forgepilot.knowledge;
 
 import java.security.Principal;
+import java.nio.charset.StandardCharsets;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import java.util.List;
 
 import com.forgepilot.auth.AccountView;
@@ -19,7 +24,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
-/** 项目知识的可见用户流程；原文与向量只进入入库/检索，不出现在响应中。 */
+/** Project knowledge metadata and member-only public document reading. Raw vectors never leave storage. */
 @RestController
 @RequestMapping("/api/projects/{projectId}/knowledge/documents")
 class KnowledgeController {
@@ -35,6 +40,23 @@ class KnowledgeController {
     @GetMapping
     List<KnowledgeDocumentView> list(@PathVariable long projectId, Principal principal) {
         return knowledge.listProjectKnowledge(projectId, userIdOf(principal));
+    }
+
+    @GetMapping("/{documentId}/content")
+    KnowledgeService.DocumentContent content(@PathVariable long projectId, @PathVariable long documentId,
+            Principal principal) {
+        return knowledge.publicContent(projectId, userIdOf(principal), documentId);
+    }
+
+    @GetMapping("/{documentId}/download")
+    ResponseEntity<byte[]> download(@PathVariable long projectId, @PathVariable long documentId,
+            Principal principal) {
+        KnowledgeService.DocumentContent document = knowledge.publicContent(projectId, userIdOf(principal), documentId);
+        return ResponseEntity.ok()
+                .contentType(new MediaType("text", "plain", StandardCharsets.UTF_8))
+                .header(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition.attachment()
+                        .filename(document.title(), StandardCharsets.UTF_8).build().toString())
+                .body(document.text().getBytes(StandardCharsets.UTF_8));
     }
 
     @PostMapping

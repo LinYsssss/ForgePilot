@@ -132,10 +132,10 @@
 <div class="wrap">
 
 <header class="top">
-  <p class="eyebrow">ForgePilot 代码走查 · 面向会编程但不熟这套技术栈的读者</p>
+  <p class="eyebrow">ForgePilot 代码走查 · 2026-09-08 · 面向会编程但不熟这套技术栈的读者</p>
   <h1>跟着一次 PR 走完 ForgePilot</h1>
   <p class="standfirst">
-    ForgePilot 后端有 175 个类。想读懂它，从「第一个类」开始读是没用的——因为你不知道谁调用谁。
+    ForgePilot 后端按九个包组织。从一次真实调用进入，更容易看清谁调用谁。
     这份文档换一个办法：<strong>拿一次真实的 pull request，从它敲开服务器的那一瞬间，一路跟到审查结果落进数据库</strong>。
     途中经过哪个类就讲那个类，贴的是仓库里的真实代码。走完这 12 站，你就摸清了这个系统的主干。
   </p>
@@ -984,8 +984,32 @@ sync.apply(repository, github.fetch(repository, pullRequestNumber(payload)));</c
   <p>
     状态变成 <code>COMPLETED</code>，页面上能看到：每条验收条件的裁定、findings、覆盖清单（含哪些文件没被审查）、
     以及审查时的完整上下文快照。<strong>接下来全是人的事</strong>——
-    开发认领并修复、评审复核、负责人记录那次一次性的 Decision。
+    指定审查人或 LEADER 填理由退回、开发在原分支修复、新 head 产生新一轮、人工通过并确认合并。
     AI 到此为止，它不推进任何状态。
+  </p>
+  <h4>从 AI 报告到人的决定</h4>
+  <p>
+    LEADER 在需求上分别指派开发负责人和审查人；服务端分别校验目标的 DEVELOPER/LEADER 与 REVIEWER/LEADER 资格。未指定或审查人失效时由 LEADER 接手。
+    <code>ReviewDecisionService</code> 锁住 PR，检查 Review 当前有效、已完成且未决定，再经 <code>RequirementDirectory.DecisionContext</code> 检查指定人、需求开发中状态和有效开发负责人。
+    详情中的 <code>decisionBlockReason</code> 让界面解释阻碍，最终授权仍由服务端执行。
+  </p>
+  <p>
+    退回理由去除首尾空白后必须非空，最多 2000 字，原 PR/MR 与分支保持可用。页面复用现有历史接口展示轮次和上次理由。
+    历史 Review 按保存的需求 ID 读取该需求的当前指派；PR 解除或更换关联不会改写历史归属。Finding 重开到 OPEN 后回主列表，保留 SUPPRESSED 血缘，只有仍被拒绝的抑制项继续折叠。
+    通过则进入 SCM 门面；下面是完成本地条件更新后的真实代码节选：
+  </p>
+<pre><code>if (decision == ReviewDecision.APPROVE) {
+    scmActions.merge(projectId, decided.getPullRequestId(), decided.getHeadSha());
+}
+events.publishEvent(new ReviewDecided(projectId, reviewId));</code></pre>
+  <p>
+    <code>ScmPullRequestDecisionService</code> 选择 GitHub/GitLab，两者都先核对远端 head、提交 expected SHA、确认真实合并。
+    响应丢失时只读核验，无法确认则以 <code>merge_outcome_unknown</code> 回滚本地决定；远端与数据库无法原子提交，同 SHA 已合并可以在人工重试时确认。
+    退回不进入远端写路径，需求 DONE 仍由 LEADER 单独确认。
+  </p>
+  <p>
+    <code>ReviewDecided</code> 在事务内发布，通知监听器使用 <code>@TransactionalEventListener</code> 提交后发送；AI 完成/失败事件本来就在提交后发布，仍用普通监听器。
+    消息只发摘要、处理人和带项目参数的详情链接，失败不回滚业务。知识证据始终来自审查快照；成员可以另读当前公共原文，文档被删除时历史摘录仍在。
   </p>
 </div>
 
@@ -1041,11 +1065,11 @@ sync.apply(repository, github.fetch(repository, pullRequestNumber(payload)));</c
 
 <footer class="end">
   <p>
-    这份走查覆盖的是<strong>主干</strong>：一次 PR 从到达到审查完成。它没有覆盖需求管理、
-    知识库入库与检索、成员与 SCM 身份绑定、以及人工闭环的那半边。
+    这份走查覆盖<strong>主干</strong>：一次 PR 从到达到审查完成，并说明人工决定、按 SHA 合并和提交后通知的边界。
+    需求管理、知识入库、成员与 SCM 身份绑定的完整操作另见使用手册。
   </p>
   <p>
-    那些内容和全部 175 个后端类、34 个前端文件的逐一说明，在
+    这些操作与主要后端类、前端文件的说明，在
     <strong>《ForgePilot 使用与代码手册》</strong>里。两份文档配套：这一份用来<strong>学</strong>，那一份用来<strong>查</strong>。
   </p>
 </footer>

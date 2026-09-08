@@ -103,6 +103,15 @@ public class KnowledgeService {
     }
 
     @Transactional(readOnly = true)
+    public DocumentContent publicContent(long projectId, long actorId, long documentId) {
+        access.requireMember(projectId, actorId);
+        KnowledgeDocument document = documents.findByProjectIdAndId(projectId, documentId)
+                .filter(row -> row.getSourceType() == KnowledgeSourceType.PROJECT_KNOWLEDGE)
+                .orElseThrow(ApiException::notFound);
+        return new DocumentContent(document.getId(), document.getTitle(), document.getText());
+    }
+
+    @Transactional(readOnly = true)
     public List<KnowledgeDocumentView> documents(long projectId, long actorId,
             List<Long> documentIds) {
         access.requireMember(projectId, actorId);

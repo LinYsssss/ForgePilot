@@ -24,7 +24,7 @@ com.forgepilot
 ├── knowledge     # Document、Chunk、ingestion、search
 ├── ai            # provider-neutral chat/embed gateway
 ├── review        # Review Engine、Finding、人工决策
-└── notification  # 项目通知渠道配置，以及审查完成/失败后的对外推送
+└── notification  # 项目通知渠道配置，以及 AI 完成/失败、人工决定后的对外推送
 ```
 
 只有这 9 个顶层包。**禁止**出现 `agent/patch/mq/rag/repo/pullrequest/context/assistant/finding` 顶层包。
@@ -108,7 +108,7 @@ common, project, scm, knowledge, requirement, ai  ←  review
 | `project_member_role` | 成员角色集合 | `(project_id,user_id,role)` primary key；角色限定为 LEADER/DEVELOPER/REVIEWER；`UNIQUE(project_id) WHERE role='LEADER'` 保证至多一个 Leader，Service 保证至少一个 |
 | `scm_identity` | 用户全局 SCM 多身份 | 归属 `user_account`；Provider、规范化实例、稳定外部用户 ID、当前用户名、标签、用途、验证状态/方式/时间；一次性 Token 身份的 `(provider,instance_identity,external_user_id)` 全局 unique；Token 不设列、不落库 |
 | `project_member_scm_binding` | 项目成员选择身份的状态与历史 | 复合 FK 同时约束项目成员、身份所有者和项目仓库；每成员每项目最多一个 ACTIVE、一个 PENDING_APPROVAL；记录仓库访问级别、核验时间与审批人/时间 |
-| `requirement` | 需求稳定身份、指派、状态 | project_id、assignee_id（nullable，复合 FK 指向 project_member）、status、current_revision_id（可空，回填；复合 FK `(project_id,id,current_revision_id)` 指向自身 Revision）；`UNIQUE(project_id,id)` |
+| `requirement` | 需求稳定身份、开发/审查人指派、状态 | project_id、assignee_id / reviewer_id（均 nullable，各以复合 FK 指向 project_member）、status、current_revision_id（可空，回填；复合 FK `(project_id,id,current_revision_id)` 指向自身 Revision）；`UNIQUE(project_id,id)` |
 | `requirement_revision` | 不可变需求正文版本与该版本的质量结果 | project_id、requirement_id、seq、title/background/description、created_by、change_reason、created_at、quality_json/quality_version/quality_checked_at；`(requirement_id,seq)` unique；`UNIQUE(project_id,id)`、`UNIQUE(project_id,requirement_id,id)` |
 | `acceptance_criterion` | AC，归属具体 revision | project_id、requirement_revision_id、`ac_key`（稳定不可变业务身份）、`sort_order`（仅显示）、text；`(requirement_revision_id,ac_key)` unique；`UNIQUE(project_id,id)`、`UNIQUE(project_id,requirement_revision_id,id)` |
 | `knowledge_document` | 项目知识与需求附件共用内容 | project_id、source_type、source_requirement_id、text、status、model/version；附件类型与归属必须匹配；`UNIQUE(project_id,id)`、`UNIQUE(project_id,id,source_requirement_id)` |
@@ -166,6 +166,8 @@ erDiagram
 ```text
 requirement.assignee
   (project_id, assignee_id) -> project_member(project_id, user_id)
+requirement.reviewer
+  (project_id, reviewer_id) -> project_member(project_id, user_id)
 
 project_member_role
   (project_id, user_id) -> project_member(project_id, user_id)
@@ -261,7 +263,7 @@ CHECK (
 | 资源 | 策略 | 连带处理 |
 |---|---|---|
 | 知识文档 | 硬删 | 同事务显式删 `knowledge_chunk`（含 embedding）。**应用层级联，不加第二条 `ON DELETE`**；被引为需求附件（`source_type='REQUIREMENT_ATTACHMENT'`）时拒绝，附件关系是需求侧的事实 |
-| 项目成员 | 硬删 `project_member` | 先由 `ProjectMemberRemoving` 事件让 `requirement` / `review` / `scm` 各自置空指派、认领并删除项目绑定，再删成员行；`project_member_role` 随 `@ElementCollection` 消失，`pull_request.author_user_id` 由那条唯一的 `ON DELETE SET NULL` 置空。唯一 `LEADER` 由服务端拒绝 |
+| 项目成员 | 硬删 `project_member` | 先由 `ProjectMemberRemoving` 事件让 `requirement` / `review` / `scm` 各自置空开发与审查人指派、Finding 认领并删除项目绑定，再删成员行；`project_member_role` 随 `@ElementCollection` 消失，`pull_request.author_user_id` 由那条唯一的 `ON DELETE SET NULL` 置空。唯一 `LEADER` 由服务端拒绝 |
 | 已作废需求 | 软删（`deleted_at` + `deleted_by`） | 只有 `CANCELED` 可进入；行保留，因此 `ai_call_log` 与 `pull_request_requirement_event` 的审计与既成事实完好。产品面的每一处读取都过滤 `deleted_at IS NULL` |
 
 三类删除的留痕统一写 `project_deletion_record`，而**不写在被删对象自身**——两类是硬删，写进去会随之消失。重复删除一律 404：被删对象已离开产品面，答案与「不存在」一致。
@@ -331,7 +333,19 @@ Decision 是一次性人工终局事实，只允许 `PENDING → APPROVE | REQUE
 5. `review.requirement_revision_id IS NOT DISTINCT FROM pull_request` 当前关联需求版本（NULL 亦须相等）；
 6. 该 `head_sha` 上不存在任何 `REQUEST_CHANGES`（否则只能靠新 head 解除）。
 
-条件更新影响行数必须为 1，否则按并发冲突返回 409。Review 增加 CHECK：`decision=PENDING` 时 `decision_by/at/comment` 均为空；终局时 actor/time 必须非空（comment 可按产品规则选填）。MVP 不支持撤销或改判；未来若确有需求再新增审计模型与决策记录。
+条件更新影响行数必须为 1，否则按并发冲突返回 409。Review 的 CHECK 保持兼容历史数据：`decision=PENDING` 时 `decision_by/at/comment` 均为空；终局时 actor/time 必须非空。新请求的退回理由由服务层要求去除首尾空白后非空，所有备注最多 2000 字；历史空理由仍可读取。MVP 不支持撤销或改判。
+
+最终决定还须通过 `RequirementDirectory.DecisionContext` 检查：调用人是 LEADER 或需求当前指定且仍有 REVIEWER 角色的成员；未关联、未指定或审查人失效时仅 LEADER 可决定。关联需求须处于 `IN_DEVELOPMENT`，开发负责人仍是本项目 DEVELOPER/LEADER；该要求同样约束 LEADER。详情的 `decisionBlockReason` 表达权限/需求状态阻碍，前端再结合 `isCurrent`、执行状态、既有决定与 head 闸门决定是否展示按钮。
+
+`REQUEST_CHANGES` 仅写本地决定，保留远端 PR/MR 和分支。`APPROVE` 在同一数据库事务内调用 `scm.PullRequestDecisionActions.merge(projectId, pullRequestId, expectedHeadSha)`，SCM 门面选择 Provider，`scm` 仍不依赖 `review`。两端先读取远端 head，再把被审查的 SHA 交给合并接口作并发条件，并验证真实合并结果；GitLab 使用 `should_remove_source_branch=false`。响应丢失、不可解析或 5xx 后只读确认，不自动重复合并写入；仍不明时返回 503 `merge_outcome_unknown` 并回滚本地决定。已合并且 head 匹配的人工重试可完成本地记录。远端写入与数据库不能原子提交，因此远端已合并、本地回滚的窗口仍需人工核查，没有新增补偿系统。
+
+V14 只增加 nullable `requirement.reviewer_id` 和项目成员复合外键；当前共 14 个迁移、21 张业务表。旧需求保持空审查人并由 LEADER 接手。角色变化无需改写历史引用：查询与决策按当前角色判定有效性，失去资格的 `reviewerId` 可保留但 `reviewerName` 返回 null；成员移除则在原清理事务内置空该引用。
+
+### 人工决定通知
+
+`ReviewDecided(projectId, reviewId)` 在决定事务内发布，由现有通知监听器的 `@TransactionalEventListener` 在提交后处理；回滚不发送。AI 的 `ReviewCompleted` / `ReviewFailed` 已在提交回调中发布，仍由普通 `@EventListener` 消费。三者都复用现有 sender，失败只记录受控日志，不能回滚已提交业务事实。
+
+通知从 `review.requirement_id` 读取审查当时关联需求，再解析当前有效处理人：AI 完成→审查人，AI 失败→LEADER，退回→开发负责人，合并→LEADER；无有效处理人时回退 LEADER。群消息含显示名及 `${forgepilot.base-url}/reviews/{id}?project={projectId}`，不含决定理由，不新增个人 @ 配置或投递保证。
 
 ### 3.2 执行状态机
 
@@ -444,6 +458,7 @@ Requirement、文档、PR 标题、代码注释**全部是不可信数据**，�
 
 ## 5. Knowledge
 
+- 公共原文通过 `GET .../knowledge/documents/{id}/content|download` 按需读取：成员身份、`project_id` 和 `source_type=PROJECT_KNOWLEDGE` 同时满足才返回。content 为 `{documentId,title,text}`，download 为 UTF-8 `text/plain` 附件；列表仍只返回元数据。需求附件只能通过所属需求入口读，不能借公共接口绕过归属检查。历史审查保存的摘录与当前原文分开呈现，删除原文不抹掉历史证据。
 - 一个部署一个 Embedding provider/model/dimension；**部署配置不得改变 schema**。
 - `knowledge_chunk.embedding` 是唯一向量存储，pgvector **无维度 `vector`**；无 JSON 双写、无第二 vector 表、无运行时 DDL。
 - 初始化迁移 `V1__foundation.sql` 只启用 `vector` 扩展；`V4__knowledge_ai.sql` 建列时不绑定模型维度、不建向量索引。
@@ -482,7 +497,9 @@ Requirement、文档、PR 标题、代码注释**全部是不可信数据**，�
 同一页面只使用一种可见 Logo：已登录 Shell 使用横版 Logo，登录页只使用应用图标，应用图标同时作为 favicon；不得在登录页并排堆放两份 Logo。
 普通用户不获得手工向量查询调试台；项目成员只读查看文档状态、失败原因与真实向量索引元数据，LEADER 执行上传和提升。
 一次性实现建议位于 Requirement 详情页，不创建 Assistant 一级菜单或 Conversation 页面。
-AI 置信度、Finding 人工状态、Review Decision 在 UI 上必须明确分开呈现；需求状态与派生的评审活动同样是两个正交维度，不得合并为一个标签。置信度真实落库，但只记 `HIGH/MEDIUM/LOW` 三档而非数值——模型自报的把握未经校准，精确数字会暗示它校准过；它不进任何 hash，也不参与任何自动门禁或状态流转。Finding 的展示层次为「问题说明 → 代码证据 → 修复建议」，其中说明与建议是模型自己的话、证据是逐字引用，二者在界面上必须可区分，`finding_key` 与两个 hash 收进可核验性折叠区而不作为主要阅读内容。
+AI 置信度、Finding 人工状态、Review Decision 在 UI 上必须明确分开呈现；需求生命周期与评审活动保持两个独立事实，`requirementPhase()` 仅对 `IN_DEVELOPMENT` 派生醒目的当前阶段，并保留生命周期标签，`requirementHandler()` 复用同一判定展示处理人。置信度真实落库，但只记 `HIGH/MEDIUM/LOW` 三档而非数值——模型自报的把握未经校准，精确数字会暗示它校准过；它不进任何 hash，也不参与任何自动门禁或状态流转。Finding 的展示层次为「问题说明 → 代码证据 → 修复建议」，其中说明与建议是模型自己的话、证据是逐字引用，二者在界面上必须可区分，`finding_key` 与两个 hash 收进可核验性折叠区而不作为主要阅读内容。
+
+审查详情复用 PR 历史与上一轮详情展示轮次、上次退回理由和当前决定；需求详情按当前退回活动读取对应理由。PR/MR 的远端编号、标题、作者账号与平台成员映射分别展示。知识页以阅读/下载为主要动作，索引元数据收入折叠详情；公共原文请求失败与原文已删除分别提示，已有历史摘录仍可阅读。切换项目或文档时用请求序号防止旧响应覆盖当前内容。
 
 视觉与动效契约（设计令牌、组件规范、动效基线、`prefers-reduced-motion`、设计漂移检查）定义在 `.trellis/spec/frontend/`，不在本文重复。页面按纵向切片随各 Phase 交付，不集中堆到最后一个 Phase。
 
