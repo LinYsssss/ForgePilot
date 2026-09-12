@@ -58,8 +58,10 @@ formal evaluation assets were retained.
 
 Browser login as the existing developer and reviewer succeeded after deployment.
 Both saw an empty review list for project 1, with no JavaScript page errors.
-The owner account does not use the shared test password; valid owner login
-information was requested before continuing the privileged setup for 15 new PRs.
+The user's supplied owner credentials were subsequently used successfully in the
+real browser UI. Owner, developer, and reviewer login are all verified; project
+preparation and the sequential 15-PR exercise are complete. The final report is
+[live-review-exercise.md](live-review-exercise.md).
 
 ## Local operational evidence
 
@@ -71,5 +73,31 @@ information was requested before continuing the privileged setup for 15 new PRs.
 - `/tmp/forgepilot-sequential-pr-20260912/evidence/clean-reviews-rev01.png`
 
 Browser authentication cookies and all credentials remain in private local
-files outside Git. The 15-PR exercise will be recorded separately from the
-automated regression tests and the immutable formal evaluation.
+files outside Git. The 15-PR exercise is recorded separately from the automated
+regression tests and the immutable formal evaluation.
+
+## Post-exercise verification
+
+At `2026-09-12T05:59:17.783Z`, read-only database checks confirmed:
+
+- 15 COMPLETED reviews, five per project; zero PENDING/RUNNING reviews.
+- 15 REQUEST_CHANGES decisions by `rev01`; all requirements remain IN_DEVELOPMENT.
+- 55 findings claimed by `dev01`, two rejected, and exactly 112 finding events.
+- Zero current-input or immutable-snapshot mismatches; 12 READY knowledge documents.
+- Schema remains V14. Public and loopback health returned HTTP 200/UP; the
+  deployed JavaScript still has the verified SHA-256 recorded above.
+
+The final browser audit also verified all 15 PR heads, requirement versions,
+decisions, finding states, and successful GitHub webhook deliveries. Exact
+delivery IDs are stored as strings in [live-review-results.json](live-review-results.json).
+
+A second private custom-format backup preserves the completed exercise:
+
+`/root/forgepilot-backups/review-sequential-complete-20260912T055915Z/database.dump`
+
+- Directory mode 0700, file mode 0600; 431,683 bytes.
+- SHA-256: `5f6aea6ebb730e0acbf9c1a7e373f92973428cb26b70eed544b3077713d981c6`.
+- `pg_restore --list --file=/dev/null` exited 0.
+
+The source branches intentionally contain defects. Their remote PRs remain open
+for implementation work; the exercise did not mark unimplemented fixes as done.

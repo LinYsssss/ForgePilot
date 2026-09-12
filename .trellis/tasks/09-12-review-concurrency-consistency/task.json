@@ -21,11 +21,15 @@
   "children": [],
   "parent": null,
   "relatedFiles": [],
-  "notes": "Fix commit 3d002116ea1f9bdc086e83f6cbcc929d1da60ae2 is pushed, deployed, and green in CI. Prior review chain was backed up and cleared. The 15-case browser exercise is prepared; awaiting valid owner login information after the shared test password returned HTTP 401. No new PR reviews have started; do not archive or mark complete.",
+  "notes": "The four fixes are pushed and deployed. Prior review records were backed up and cleared. The supplied owner, developer, and reviewer credentials worked in the real public UI. All 15 sequential PR exercises completed: 55 confirmed findings claimed by dev01, two rejected findings, 15 REQUEST_CHANGES decisions, and 112 verified finding events. Final browser, GitHub, database, health, and backup checks passed. Operational work is complete and ready for archival; credentials remain private.",
   "meta": {
     "implementation_status": "deployed",
     "verification": "validation.md",
     "deployment": "deployment.md",
-    "exercise_status": "prepared_waiting_for_leader_login"
+    "exercise_status": "completed",
+    "exercise_workdir": "/tmp/forgepilot-sequential-pr-20260912",
+    "exercise_report": "live-review-exercise.md",
+    "exercise_results": "live-review-results.json",
+    "exercise_verified_at": "2026-09-12T05:59:17.783Z"
   }
 }

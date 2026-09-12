@@ -6,7 +6,7 @@ requirements and 65 concrete acceptance criteria based on the existing archived
 review materials. This is a fresh application workflow exercise, independent of
 the immutable formal evaluation.
 
-## Planned sequence
+## Executed sequence
 
 | Order | Project | Scenario |
 |---|---|---|
@@ -50,26 +50,33 @@ The existing archived branches contain deliberate defects. Decisions must follow
 the actual evidence; this exercise does not authorize merging those defects into
 the demo main branches.
 
-## Preparation completed; execution pending
+## Completed and audited
 
 - Pushed and deployed the fix; prior review records are backed up and cleared.
-- Developer `dev01` and reviewer `rev01` browser login succeeded, each observing
-  an empty review list without JavaScript errors.
+- Owner `ysainlin`, developer `dev01`, and reviewer `rev01` logged into the real
+  public browser UI using the supplied credentials. The initial review list was
+  empty before this exercise.
 - All 15 case sources exist and their acceptance criteria are distinct. Fourteen
   existing remote review branches contain only their intended source file and
-  review material. The deleted first mall branch can be restored under a fresh
-  branch name from verified commit `1338abc40f4e5c0738c51a8640b3207fbbf2c5dc`,
-  whose two changed files match the archive byte for byte.
+  review material. The deleted first mall branch was restored as
+  `review/20260912-mall-pr-01-shipping-validation` from verified commit
+  `1338abc40f4e5c0738c51a8640b3207fbbf2c5dc`, whose two changed files match the
+  archive byte for byte.
 - Temporary browser drivers are prepared in
   `/tmp/forgepilot-sequential-pr-20260912/`: `prepare.mjs`, `run-case.mjs`, and
   `adjudicate.mjs`. Syntax checks pass. Playwright 1.58.2 and Chromium are installed
   outside the application repository.
-- No new requirement, PR, or review has been created yet. The current owner
-  `ysainlin` does not accept the shared test password (HTTP 401). A valid owner
-  login or private credential-file path was requested. Do not reset that owner's
-  password, fabricate a session, or change role grants to bypass this prerequisite.
+- Project memberships, missing repository connections, and signed GitHub hooks
+  were configured. All 12 project specification documents are READY.
+- All 15 cases completed AI review, explicit reviewer adjudication,
+  REQUEST_CHANGES, and developer claims before the next case started. The reviewer
+  confirmed 55 findings and rejected two; exactly 112 finding events were verified.
+- Final browser and database checks found five current reviews per project,
+  matching PR heads and frozen requirement versions, and no pending/running
+  review jobs. Every real GitHub opened delivery was successful.
+- [Results, PR/review links, recovery notes, and interpretation limits](live-review-exercise.md)
+  and [machine-readable evidence](live-review-results.json) record the completed run.
 
-The driver reads an owner password from `FORGEPR_LEADER_PASSWORD_FILE`, or from
-`/root/forgepilot-demo-docs/leader-password.txt`. Credential contents and browser
-storage state must remain private and outside Git. Complete this plan after the
-owner login prerequisite is supplied; the task remains in progress.
+The driver reads the supplied credentials from a private local file. Credential
+contents and browser storage state remain outside Git. A verified post-exercise
+database backup preserves the new records; see [deployment.md](deployment.md).

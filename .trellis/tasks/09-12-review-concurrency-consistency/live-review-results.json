@@ -1,0 +1,5226 @@
+{
+  "completedAt": "2026-09-12T05:57:56.252Z",
+  "cases": [
+    {
+      "sequence": 1,
+      "projectId": 1,
+      "repo": "forgepilot-demo-mall-order-service",
+      "title": "仓库发货前置校验",
+      "startedAt": "2026-09-12T04:14:13.716Z",
+      "phase": "decided",
+      "requirementId": 3,
+      "requirementRevisionId": 4,
+      "pullRequestNumber": 7,
+      "pullRequestUrl": "https://github.com/LinYsssss/forgepilot-demo-mall-order-service/pull/7",
+      "prCreatedAt": "2026-09-12T04:16:18.975Z",
+      "reviewId": 2,
+      "pullRequestId": 2,
+      "headSha": "1338abc40f4e5c0738c51a8640b3207fbbf2c5dc",
+      "baseSha": "78caedf2e78e33f18cb6b51b045b5141650cfdb6",
+      "findingCount": 4,
+      "reviewCompletedAt": "2026-09-12T04:17:16.325Z",
+      "decision": "REQUEST_CHANGES",
+      "decisionAt": "2026-09-12T04:19:36.677377Z",
+      "confirmed": 4,
+      "rejected": 0,
+      "finishedAt": "2026-09-12T04:20:13.864Z",
+      "model": "gpt-5.6-luna",
+      "promptVersion": "review-2",
+      "executionAttempt": 1,
+      "reviewInputFingerprint": "498a58bae43ff4fbfb09eb6704aaff69102e061f6dca73e9bab036206c93a57d",
+      "coverage": {
+        "files": [
+          {
+            "path": "review-materials/PR-01.md",
+            "patchTruncated": false
+          },
+          {
+            "path": "src/main/java/com/example/mall/service/WarehouseShipmentService.java",
+            "patchTruncated": false
+          }
+        ],
+        "truncated": false,
+        "notReviewed": []
+      },
+      "acVerdicts": [
+        {
+          "acId": 28,
+          "acKey": "AC-1",
+          "verdict": "COVERED"
+        },
+        {
+          "acId": 29,
+          "acKey": "AC-2",
+          "verdict": "AT_RISK"
+        },
+        {
+          "acId": 30,
+          "acKey": "AC-3",
+          "verdict": "NOT_FOUND"
+        },
+        {
+          "acId": 31,
+          "acKey": "AC-4",
+          "verdict": "AT_RISK"
+        },
+        {
+          "acId": 32,
+          "acKey": "AC-5",
+          "verdict": "AT_RISK"
+        }
+      ],
+      "findings": [
+        {
+          "id": 8,
+          "findingType": "REQUIREMENT",
+          "path": "src/main/java/com/example/mall/service/WarehouseShipmentService.java",
+          "line": 10,
+          "evidence": "if (order == null || !\"WAIT_SHIP\".equals(order.getStatus())) return false;",
+          "category": "REQUIREMENT_GAP",
+          "explanation": "The implementation checks the order status but does not check the independent payment status. An unpaid order in WAIT_SHIP could therefore be shipped.",
+          "suggestion": "Add an explicit pay_status == PAID validation before allowing shipment, while retaining the WAIT_SHIP check.",
+          "confidence": "HIGH",
+          "status": "IN_PROGRESS",
+          "continuity": "NEW",
+          "requirementId": 3,
+          "requirementRevisionId": 4,
+          "acId": 29,
+          "acKey": "AC-2",
+          "assigneeId": 4,
+          "carriedFromFindingId": null,
+          "findingKey": "e452cb3b237df6cf34486851e82614eebbf6005494387bb3489f058171697e1d",
+          "evidenceHash": "4d7c17a6e72e7a93ea1995c46548e32d69cefeea7ff2bc6d7c3188e2f63559fc",
+          "basisHash": "b7ae4ce21f029aa27f9e03e5b317687b91143c7e13f9e0b11fd0c2202d8991f9"
+        },
+        {
+          "id": 9,
+          "findingType": "REQUIREMENT",
+          "path": "src/main/java/com/example/mall/service/WarehouseShipmentService.java",
+          "line": 10,
+          "evidence": "if (order == null || !\"WAIT_SHIP\".equals(order.getStatus())) return false;",
+          "category": "REQUIREMENT_GAP",
+          "explanation": "The shown validation does not check that the receiver address or telephone is present and valid, so incomplete delivery information may not be rejected.",
+          "suggestion": "Validate both receiver_address and receiver_phone for completeness before performing the shipment.",
+          "confidence": "HIGH",
+          "status": "IN_PROGRESS",
+          "continuity": "NEW",
+          "requirementId": 3,
+          "requirementRevisionId": 4,
+          "acId": 30,
+          "acKey": "AC-3",
+          "assigneeId": 4,
+          "carriedFromFindingId": null,
+          "findingKey": "6b2a957bed389d99ea21412d587253f134c6e714768cab1b05c275ff585002e2",
+          "evidenceHash": "4d7c17a6e72e7a93ea1995c46548e32d69cefeea7ff2bc6d7c3188e2f63559fc",
+          "basisHash": "a3f22168ed0cb3b7183ef54f7902679262e2737da3c9b1c7fbec732fbee6d560"
+        },
+        {
+          "id": 10,
+          "findingType": "REQUIREMENT",
+          "path": "src/main/java/com/example/mall/service/WarehouseShipmentService.java",
+          "line": 11,
+          "evidence": "orders.updateStatus(orderId, \"SHIPPED\");",
+          "category": "REQUIREMENT_GAP",
+          "explanation": "The status update is unconditional and does not include WAIT_SHIP as an original-status condition. Concurrent or repeated requests could therefore both proceed without database-enforced idempotency.",
+          "suggestion": "Use a conditional update requiring the current status to be WAIT_SHIP and treat an update count of zero as already processed or otherwise rejected.",
+          "confidence": "HIGH",
+          "status": "IN_PROGRESS",
+          "continuity": "NEW",
+          "requirementId": 3,
+          "requirementRevisionId": 4,
+          "acId": 31,
+          "acKey": "AC-4",
+          "assigneeId": 4,
+          "carriedFromFindingId": null,
+          "findingKey": "c4d8be225a7a59cd93e696dae5f9bea892e40580b46a3a9a05a3ff64eababe4f",
+          "evidenceHash": "46fdcc6340fee592ecec49fd56840e1b284aef946cbe276ea696d6b92ab05839",
+          "basisHash": "10929d2916eb6847f5f81104dd10ef4941cc17edf4fa6d723fd328bbf8a8b069"
+        },
+        {
+          "id": 11,
+          "findingType": "REQUIREMENT",
+          "path": "src/main/java/com/example/mall/service/WarehouseShipmentService.java",
+          "line": 8,
+          "evidence": "public boolean ship(Long orderId, Long operatorId) {",
+          "category": "REQUIREMENT_GAP",
+          "explanation": "The method accepts an operator identifier, but the shown code does not demonstrate that it rejects a null operator or records an audit fact containing the order, operator, and shipment time.",
+          "suggestion": "Reject null operatorId values and write an audit record with order_id, operator_id, the SHIP action, and the shipment timestamp.",
+          "confidence": "HIGH",
+          "status": "IN_PROGRESS",
+          "continuity": "NEW",
+          "requirementId": 3,
+          "requirementRevisionId": 4,
+          "acId": 32,
+          "acKey": "AC-5",
+          "assigneeId": 4,
+          "carriedFromFindingId": null,
+          "findingKey": "624f7d9306b149c0aabb5f4f1e233ece8beff7ee1c2365f6f75184c7a1ccf3cd",
+          "evidenceHash": "ed779441e3c700e255893bb66f6a89e136b307e0c539dbf92d3cb05a8423bc3c",
+          "basisHash": "7a5ce7860f686f6e24322faf81381b6911e7ff3d81d9564a29fd1fed03937cc4"
+        }
+      ],
+      "humanAdjudication": {
+        "findings": [
+          {
+            "id": 8,
+            "status": "CONFIRMED",
+            "comment": "演练核验：发货路径仅检查订单存在和 WAIT_SHIP，没有检查独立的 payStatus；未支付但处于待发货状态的订单仍可进入状态更新，违反 AC-2。"
+          },
+          {
+            "id": 9,
+            "status": "CONFIRMED",
+            "comment": "演练核验：发货前没有读取或校验 receiverAddress、receiverPhone，收货资料缺失仍可进入更新路径，违反 AC-3。"
+          },
+          {
+            "id": 10,
+            "status": "CONFIRMED",
+            "comment": "演练核验：先读状态再调用 updateStatus，所示更新路径没有原状态条件及影响行数校验，两个并发请求可同时越过前置检查，不能满足 AC-4 的一次有效发货要求。"
+          },
+          {
+            "id": 11,
+            "status": "CONFIRMED",
+            "comment": "演练核验：operatorId 参数没有被校验或使用，方法也未记录订单、操作人和发货时间的审计事实，违反 AC-5。"
+          }
+        ],
+        "returnComment": "退回修改：补齐已支付检查、完整收货资料校验、带 WAIT_SHIP 原状态条件的幂等更新，以及操作人校验和发货审计。当前提交未满足 AC-2 至 AC-5；请修复后推送新提交再复审。"
+      },
+      "events": [
+        {
+          "findingId": 8,
+          "events": [
+            {
+              "id": 7,
+              "actorId": 9,
+              "action": "CONFIRM",
+              "fromStatus": "OPEN",
+              "toStatus": "CONFIRMED",
+              "comment": "演练核验：发货路径仅检查订单存在和 WAIT_SHIP，没有检查独立的 payStatus；未支付但处于待发货状态的订单仍可进入状态更新，违反 AC-2。",
+              "createdAt": "2026-09-12T04:19:18.836233Z"
+            },
+            {
+              "id": 11,
+              "actorId": 4,
+              "action": "CLAIM",
+              "fromStatus": "CONFIRMED",
+              "toStatus": "IN_PROGRESS",
+              "comment": "演练开发认领：已阅读审查依据，后续按建议提交修复；当前尚未标记修复完成。",
+              "createdAt": "2026-09-12T04:19:55.269126Z"
+            }
+          ]
+        },
+        {
+          "findingId": 9,
+          "events": [
+            {
+              "id": 8,
+              "actorId": 9,
+              "action": "CONFIRM",
+              "fromStatus": "OPEN",
+              "toStatus": "CONFIRMED",
+              "comment": "演练核验：发货前没有读取或校验 receiverAddress、receiverPhone，收货资料缺失仍可进入更新路径，违反 AC-3。",
+              "createdAt": "2026-09-12T04:19:25.899386Z"
+            },
+            {
+              "id": 12,
+              "actorId": 4,
+              "action": "CLAIM",
+              "fromStatus": "CONFIRMED",
+              "toStatus": "IN_PROGRESS",
+              "comment": "演练开发认领：已阅读审查依据，后续按建议提交修复；当前尚未标记修复完成。",
+              "createdAt": "2026-09-12T04:19:58.421916Z"
+            }
+          ]
+        },
+        {
+          "findingId": 10,
+          "events": [
+            {
+              "id": 9,
+              "actorId": 9,
+              "action": "CONFIRM",
+              "fromStatus": "OPEN",
+              "toStatus": "CONFIRMED",
+              "comment": "演练核验：先读状态再调用 updateStatus，所示更新路径没有原状态条件及影响行数校验，两个并发请求可同时越过前置检查，不能满足 AC-4 的一次有效发货要求。",
+              "createdAt": "2026-09-12T04:19:31.071377Z"
+            },
+            {
+              "id": 13,
+              "actorId": 4,
+              "action": "CLAIM",
+              "fromStatus": "CONFIRMED",
+              "toStatus": "IN_PROGRESS",
+              "comment": "演练开发认领：已阅读审查依据，后续按建议提交修复；当前尚未标记修复完成。",
+              "createdAt": "2026-09-12T04:20:05.026716Z"
+            }
+          ]
+        },
+        {
+          "findingId": 11,
+          "events": [
+            {
+              "id": 10,
+              "actorId": 9,
+              "action": "CONFIRM",
+              "fromStatus": "OPEN",
+              "toStatus": "CONFIRMED",
+              "comment": "演练核验：operatorId 参数没有被校验或使用，方法也未记录订单、操作人和发货时间的审计事实，违反 AC-5。",
+              "createdAt": "2026-09-12T04:19:34.392733Z"
+            },
+            {
+              "id": 14,
+              "actorId": 4,
+              "action": "CLAIM",
+              "fromStatus": "CONFIRMED",
+              "toStatus": "IN_PROGRESS",
+              "comment": "演练开发认领：已阅读审查依据，后续按建议提交修复；当前尚未标记修复完成。",
+              "createdAt": "2026-09-12T04:20:09.461054Z"
+            }
+          ]
+        }
+      ],
+      "snapshotVerification": {
+        "headSha": "1338abc40f4e5c0738c51a8640b3207fbbf2c5dc",
+        "baseSha": "78caedf2e78e33f18cb6b51b045b5141650cfdb6",
+        "requirementRevisionId": 4,
+        "changedFileCount": 2,
+        "allPatchesMatch": true,
+        "coverage": {
+          "files": [
+            {
+              "path": "review-materials/PR-01.md",
+              "patchTruncated": false
+            },
+            {
+              "path": "src/main/java/com/example/mall/service/WarehouseShipmentService.java",
+              "patchTruncated": false
+            }
+          ],
+          "truncated": false,
+          "notReviewed": []
+        },
+        "checkedAt": "2026-09-12T04:17:16.327Z"
+      }
+    },
+    {
+      "sequence": 2,
+      "projectId": 1,
+      "repo": "forgepilot-demo-mall-order-service",
+      "title": "管理端强制发货授权与审计",
+      "startedAt": "2026-09-12T04:21:53.807Z",
+      "phase": "decided",
+      "requirementId": 4,
+      "requirementRevisionId": 5,
+      "pullRequestNumber": 8,
+      "pullRequestUrl": "https://github.com/LinYsssss/forgepilot-demo-mall-order-service/pull/8",
+      "prCreatedAt": "2026-09-12T04:22:20.830Z",
+      "reviewId": 3,
+      "pullRequestId": 3,
+      "headSha": "016a14e165cdaee0afb22d2afaa07f85bd027218",
+      "baseSha": "78caedf2e78e33f18cb6b51b045b5141650cfdb6",
+      "findingCount": 3,
+      "reviewCompletedAt": "2026-09-12T04:24:22.817Z",
+      "decision": "REQUEST_CHANGES",
+      "decisionAt": "2026-09-12T04:26:24.603150Z",
+      "confirmed": 3,
+      "rejected": 0,
+      "finishedAt": "2026-09-12T04:27:01.488Z",
+      "model": "gpt-5.6-luna",
+      "promptVersion": "review-2",
+      "executionAttempt": 1,
+      "reviewInputFingerprint": "80d622261d9e05803e44a5091b2d53d156a63547199869108038f5864feda174",
+      "coverage": {
+        "files": [
+          {
+            "path": "review-materials/PR-02.md",
+            "patchTruncated": false
+          },
+          {
+            "path": "src/main/java/com/example/mall/controller/AdminOrderOverrideService.java",
+            "patchTruncated": false
+          }
+        ],
+        "truncated": false,
+        "notReviewed": []
+      },
+      "acVerdicts": [
+        {
+          "acId": 33,
+          "acKey": "AC-1",
+          "verdict": "AT_RISK"
+        },
+        {
+          "acId": 34,
+          "acKey": "AC-2",
+          "verdict": "COVERED"
+        },
+        {
+          "acId": 35,
+          "acKey": "AC-3",
+          "verdict": "AT_RISK"
+        },
+        {
+          "acId": 36,
+          "acKey": "AC-4",
+          "verdict": "AT_RISK"
+        }
+      ],
+      "findings": [
+        {
+          "id": 12,
+          "findingType": "REQUIREMENT",
+          "path": "src/main/java/com/example/mall/controller/AdminOrderOverrideService.java",
+          "line": 9,
+          "evidence": "public void forceShip(Long orderId, Long operatorId, String role) {\n        if (operatorId == null) throw new IllegalArgumentException(\"operator required\");\n        orders.shipOrder(orderId);",
+          "category": "REQUIREMENT_GAP",
+          "explanation": "The method accepts a role but does not validate that it is ADMIN or reject other roles. A non-admin caller could therefore reach the force-shipping operation unless authorization is enforced elsewhere, which is not demonstrated here.",
+          "suggestion": "Explicitly require the ADMIN role before invoking the shipping service and return an authorization failure for other roles.",
+          "confidence": "HIGH",
+          "status": "IN_PROGRESS",
+          "continuity": "NEW",
+          "requirementId": 4,
+          "requirementRevisionId": 5,
+          "acId": 33,
+          "acKey": "AC-1",
+          "assigneeId": 4,
+          "carriedFromFindingId": null,
+          "findingKey": "11de86f6132e0abbd70261ef515c485d08b7a24255ef69372f9518f4743e38f8",
+          "evidenceHash": "d862457a675c13e7450d2861cede48ccf3606bf960ec80342b437ec2c0f6ecd5",
+          "basisHash": "51a195c6c093250fef47412216d1fae439da3dff502966a37b4192be2f998124"
+        },
+        {
+          "id": 13,
+          "findingType": "REQUIREMENT",
+          "path": "src/main/java/com/example/mall/controller/AdminOrderOverrideService.java",
+          "line": 11,
+          "evidence": "orders.shipOrder(orderId);",
+          "category": "REQUIREMENT_GAP",
+          "explanation": "The force-shipping method delegates to the shipping service, but the reviewed change does not demonstrate that the delegated path separately verifies pay_status = PAID. Because payment status is independent from order status, the required protection cannot be confirmed from this change.",
+          "suggestion": "Ensure the forced-shipping path performs an explicit paid-status check before any state change, including when it delegates to the order service.",
+          "confidence": "MEDIUM",
+          "status": "IN_PROGRESS",
+          "continuity": "NEW",
+          "requirementId": 4,
+          "requirementRevisionId": 5,
+          "acId": 35,
+          "acKey": "AC-3",
+          "assigneeId": 4,
+          "carriedFromFindingId": null,
+          "findingKey": "ddd9e48bb97455ee127a9ec0e52f7882db4fcd9af75cf99a077a6d42582abcee",
+          "evidenceHash": "f667cced7a3dcdc81b4ecccf78c2c43d7eae7eec64b6f6857d2f51407009e5ab",
+          "basisHash": "5d2e44bc62bcbe31502f03df6f1450dd12b620e69e2ce406e262dc83feb17196"
+        },
+        {
+          "id": 14,
+          "findingType": "REQUIREMENT",
+          "path": "src/main/java/com/example/mall/controller/AdminOrderOverrideService.java",
+          "line": 11,
+          "evidence": "orders.shipOrder(orderId);",
+          "category": "REQUIREMENT_GAP",
+          "explanation": "The reviewed force-shipping path shows only a shipping-service call and does not demonstrate writing a FORCE_SHIP audit event with the operator and order identifier. It also does not establish that sensitive receiver data is excluded from audit output.",
+          "suggestion": "After a successful force shipment, write a FORCE_SHIP audit record containing the operator and order identifier while explicitly excluding receiver phone, address, and other sensitive fields.",
+          "confidence": "HIGH",
+          "status": "IN_PROGRESS",
+          "continuity": "NEW",
+          "requirementId": 4,
+          "requirementRevisionId": 5,
+          "acId": 36,
+          "acKey": "AC-4",
+          "assigneeId": 4,
+          "carriedFromFindingId": null,
+          "findingKey": "720a21976b7a4f84449e829290013744ced84b4065b4f8a2052d97c5983e761b",
+          "evidenceHash": "f667cced7a3dcdc81b4ecccf78c2c43d7eae7eec64b6f6857d2f51407009e5ab",
+          "basisHash": "2605a32b134bd8a6befccca552b5fa1782d52725ba02cb7885c0b1ad85ae21f5"
+        }
+      ],
+      "humanAdjudication": {
+        "findings": [
+          {
+            "id": 12,
+            "status": "CONFIRMED",
+            "comment": "演练核验：role 参数完全未使用，方法仅拒绝空 operatorId，非 ADMIN 角色仍可到达 shipOrder，违反 AC-1。"
+          },
+          {
+            "id": 13,
+            "status": "CONFIRMED",
+            "comment": "演练核验：已进一步检查 main 中 OrderService.shipOrder，它直接设置 SHIPPED 且未校验支付状态；委托调用没有补足 PAID 前置条件，违反 AC-3。"
+          },
+          {
+            "id": 14,
+            "status": "CONFIRMED",
+            "comment": "演练核验：强制发货入口及被调用的 shipOrder 均无 FORCE_SHIP 审计写入，operatorId 只用于非空判断，未形成操作人与订单的审计事实，违反 AC-4。"
+          }
+        ],
+        "returnComment": "退回修改：在强制发货路径落实 ADMIN 授权和 PAID 校验，并在成功后记录不含收货敏感数据的 FORCE_SHIP 审计。操作人非空校验已实现，但不足以满足其余验收条件；请提交修复后复审。"
+      },
+      "events": [
+        {
+          "findingId": 12,
+          "events": [
+            {
+              "id": 15,
+              "actorId": 9,
+              "action": "CONFIRM",
+              "fromStatus": "OPEN",
+              "toStatus": "CONFIRMED",
+              "comment": "演练核验：role 参数完全未使用，方法仅拒绝空 operatorId，非 ADMIN 角色仍可到达 shipOrder，违反 AC-1。",
+              "createdAt": "2026-09-12T04:26:07.237809Z"
+            },
+            {
+              "id": 18,
+              "actorId": 4,
+              "action": "CLAIM",
+              "fromStatus": "CONFIRMED",
+              "toStatus": "IN_PROGRESS",
+              "comment": "演练开发认领：已阅读审查依据，后续按建议提交修复；当前尚未标记修复完成。",
+              "createdAt": "2026-09-12T04:26:41.738471Z"
+            }
+          ]
+        },
+        {
+          "findingId": 13,
+          "events": [
+            {
+              "id": 16,
+              "actorId": 9,
+              "action": "CONFIRM",
+              "fromStatus": "OPEN",
+              "toStatus": "CONFIRMED",
+              "comment": "演练核验：已进一步检查 main 中 OrderService.shipOrder，它直接设置 SHIPPED 且未校验支付状态；委托调用没有补足 PAID 前置条件，违反 AC-3。",
+              "createdAt": "2026-09-12T04:26:12.790999Z"
+            },
+            {
+              "id": 19,
+              "actorId": 4,
+              "action": "CLAIM",
+              "fromStatus": "CONFIRMED",
+              "toStatus": "IN_PROGRESS",
+              "comment": "演练开发认领：已阅读审查依据，后续按建议提交修复；当前尚未标记修复完成。",
+              "createdAt": "2026-09-12T04:26:47.519980Z"
+            }
+          ]
+        },
+        {
+          "findingId": 14,
+          "events": [
+            {
+              "id": 17,
+              "actorId": 9,
+              "action": "CONFIRM",
+              "fromStatus": "OPEN",
+              "toStatus": "CONFIRMED",
+              "comment": "演练核验：强制发货入口及被调用的 shipOrder 均无 FORCE_SHIP 审计写入，operatorId 只用于非空判断，未形成操作人与订单的审计事实，违反 AC-4。",
+              "createdAt": "2026-09-12T04:26:18.797912Z"
+            },
+            {
+              "id": 20,
+              "actorId": 4,
+              "action": "CLAIM",
+              "fromStatus": "CONFIRMED",
+              "toStatus": "IN_PROGRESS",
+              "comment": "演练开发认领：已阅读审查依据，后续按建议提交修复；当前尚未标记修复完成。",
+              "createdAt": "2026-09-12T04:26:55.417116Z"
+            }
+          ]
+        }
+      ],
+      "snapshotVerification": {
+        "headSha": "016a14e165cdaee0afb22d2afaa07f85bd027218",
+        "baseSha": "78caedf2e78e33f18cb6b51b045b5141650cfdb6",
+        "requirementRevisionId": 5,
+        "changedFileCount": 2,
+        "allPatchesMatch": true,
+        "coverage": {
+          "files": [
+            {
+              "path": "review-materials/PR-02.md",
+              "patchTruncated": false
+            },
+            {
+              "path": "src/main/java/com/example/mall/controller/AdminOrderOverrideService.java",
+              "patchTruncated": false
+            }
+          ],
+          "truncated": false,
+          "notReviewed": []
+        },
+        "checkedAt": "2026-09-12T04:24:22.819Z"
+      }
+    },
+    {
+      "sequence": 3,
+      "projectId": 1,
+      "repo": "forgepilot-demo-mall-order-service",
+      "title": "订单搜索参数绑定与数据保护",
+      "startedAt": "2026-09-12T04:28:31.267Z",
+      "phase": "decided",
+      "requirementId": 5,
+      "requirementRevisionId": 6,
+      "pullRequestNumber": 9,
+      "pullRequestUrl": "https://github.com/LinYsssss/forgepilot-demo-mall-order-service/pull/9",
+      "prCreatedAt": "2026-09-12T04:29:09.112Z",
+      "reviewId": 4,
+      "pullRequestId": 4,
+      "headSha": "4adc6d950e0236c4a4bb6d5397a8c806d3afe19c",
+      "baseSha": "78caedf2e78e33f18cb6b51b045b5141650cfdb6",
+      "findingCount": 4,
+      "reviewCompletedAt": "2026-09-12T04:30:17.140Z",
+      "decision": "REQUEST_CHANGES",
+      "decisionAt": "2026-09-12T04:32:25.638112Z",
+      "confirmed": 4,
+      "rejected": 0,
+      "finishedAt": "2026-09-12T04:32:56.560Z",
+      "model": "gpt-5.6-luna",
+      "promptVersion": "review-2",
+      "executionAttempt": 1,
+      "reviewInputFingerprint": "2a6cb58bf3290b4b79a0be6e0c2a7ae32d76d5cbbef0d743627d0bdb0646b280",
+      "coverage": {
+        "files": [
+          {
+            "path": "review-materials/PR-03.md",
+            "patchTruncated": false
+          },
+          {
+            "path": "src/main/java/com/example/mall/service/OrderSearchService.java",
+            "patchTruncated": false
+          }
+        ],
+        "truncated": false,
+        "notReviewed": []
+      },
+      "acVerdicts": [
+        {
+          "acId": 37,
+          "acKey": "AC-1",
+          "verdict": "AT_RISK"
+        },
+        {
+          "acId": 38,
+          "acKey": "AC-2",
+          "verdict": "AT_RISK"
+        },
+        {
+          "acId": 39,
+          "acKey": "AC-3",
+          "verdict": "AT_RISK"
+        },
+        {
+          "acId": 40,
+          "acKey": "AC-4",
+          "verdict": "AT_RISK"
+        }
+      ],
+      "findings": [
+        {
+          "id": 15,
+          "findingType": "REQUIREMENT",
+          "path": "src/main/java/com/example/mall/service/OrderSearchService.java",
+          "line": 7,
+          "evidence": "return \"select * from orders where receiver_phone like '%\" + keyword + \"%' order by \" + sort;",
+          "category": "REQUIREMENT_GAP",
+          "explanation": "搜索关键字和排序值都通过字符串拼接进入 SQL，包含单引号或 SQL 片段的关键字可能改变查询结构，未满足参数绑定要求。",
+          "suggestion": "使用参数绑定传递关键字，并确保通配符拼接不会将用户输入作为 SQL 代码解析。",
+          "confidence": "HIGH",
+          "status": "IN_PROGRESS",
+          "continuity": "NEW",
+          "requirementId": 5,
+          "requirementRevisionId": 6,
+          "acId": 37,
+          "acKey": "AC-1",
+          "assigneeId": 4,
+          "carriedFromFindingId": null,
+          "findingKey": "206844f076e764f2e667c9a5e98a62fdac2d2e226ba4cb28478bb0f16d1b6868",
+          "evidenceHash": "214fec3b0105e3a75dcf67efce3ab6108d4a7fd08ea732ab2a33f2032954b901",
+          "basisHash": "0cb3fe0bed64cc13099e96d511de585185c0e5d757a7bcbc7d5aba434cf21395"
+        },
+        {
+          "id": 16,
+          "findingType": "REQUIREMENT",
+          "path": "src/main/java/com/example/mall/service/OrderSearchService.java",
+          "line": 7,
+          "evidence": "return \"select * from orders where receiver_phone like '%\" + keyword + \"%' order by \" + sort;",
+          "category": "REQUIREMENT_GAP",
+          "explanation": "排序值直接拼接到 ORDER BY，未见排序字段和方向映射到固定白名单，任意用户输入可能改变查询结构。",
+          "suggestion": "将客户端排序字段和方向分别映射到明确的服务端白名单值，禁止直接拼接原始输入。",
+          "confidence": "HIGH",
+          "status": "IN_PROGRESS",
+          "continuity": "NEW",
+          "requirementId": 5,
+          "requirementRevisionId": 6,
+          "acId": 38,
+          "acKey": "AC-2",
+          "assigneeId": 4,
+          "carriedFromFindingId": null,
+          "findingKey": "6b193c4cde753a10bbd0e734602aa553214c0a48d428c07d69ac66022d39a842",
+          "evidenceHash": "214fec3b0105e3a75dcf67efce3ab6108d4a7fd08ea732ab2a33f2032954b901",
+          "basisHash": "9907c2fc2957114a2fa30dc8530d9c543013fcf4933f689e09241adf7790ae78"
+        },
+        {
+          "id": 17,
+          "findingType": "REQUIREMENT",
+          "path": "src/main/java/com/example/mall/service/OrderSearchService.java",
+          "line": 6,
+          "evidence": "if (keyword == null || keyword.isBlank()) return \"select id, status from orders order by created_at desc\";\n        return \"select * from orders where receiver_phone like '%\" + keyword + \"%' order by \" + sort;",
+          "category": "REQUIREMENT_GAP",
+          "explanation": "空关键字分支和非空关键字分支都没有 deleted_at 过滤条件，因此逻辑删除订单可能出现在搜索结果中。",
+          "suggestion": "在两条查询路径中统一增加排除逻辑删除订单的条件，并通过参数绑定传递相关参数。",
+          "confidence": "HIGH",
+          "status": "IN_PROGRESS",
+          "continuity": "NEW",
+          "requirementId": 5,
+          "requirementRevisionId": 6,
+          "acId": 39,
+          "acKey": "AC-3",
+          "assigneeId": 4,
+          "carriedFromFindingId": null,
+          "findingKey": "ce2584d449d7187da3aff9054dac41b350d7e309dca2e9b00d394f4fa37afdde",
+          "evidenceHash": "25813544d58dc5cbdbef111aaaee3d0f3f128b563f431eeafad11739c9647a7e",
+          "basisHash": "c37001890fa099327ccf3c2737eb020de353f0d1ea56945d84e56071a393002b"
+        },
+        {
+          "id": 18,
+          "findingType": "REQUIREMENT",
+          "path": "src/main/java/com/example/mall/service/OrderSearchService.java",
+          "line": 7,
+          "evidence": "return \"select * from orders where receiver_phone like '%\" + keyword + \"%' order by \" + sort;",
+          "category": "REQUIREMENT_GAP",
+          "explanation": "查询使用 select *，未限制返回字段，也未见手机号和收货地址脱敏处理，可能直接返回完整敏感信息。",
+          "suggestion": "明确列出搜索所需字段，并在查询映射或响应组装阶段对手机号和收货地址进行脱敏。",
+          "confidence": "HIGH",
+          "status": "IN_PROGRESS",
+          "continuity": "NEW",
+          "requirementId": 5,
+          "requirementRevisionId": 6,
+          "acId": 40,
+          "acKey": "AC-4",
+          "assigneeId": 4,
+          "carriedFromFindingId": null,
+          "findingKey": "26fead010c65b9f99090e47f5bda23676ccaed70a667836c41f84a9f5cfe607d",
+          "evidenceHash": "214fec3b0105e3a75dcf67efce3ab6108d4a7fd08ea732ab2a33f2032954b901",
+          "basisHash": "502de2d6289bac670f7ca166184df421836ece809085c6b7ee42cb81aa64b392"
+        }
+      ],
+      "humanAdjudication": {
+        "findings": [
+          {
+            "id": 15,
+            "status": "CONFIRMED",
+            "comment": "演练核验：keyword 被直接插入带引号的 LIKE 表达式，输入单引号可结束原字符串；方法只返回拼接后的 SQL，未提供绑定参数，违反 AC-1。"
+          },
+          {
+            "id": 16,
+            "status": "CONFIRMED",
+            "comment": "演练核验：sort 原样进入 ORDER BY，没有字段和方向白名单；此问题与搜索值参数绑定分别对应 AC-2 和 AC-1，需要分别处理。"
+          },
+          {
+            "id": 17,
+            "status": "CONFIRMED",
+            "comment": "演练核验：空关键字查询与带关键字查询均无 deleted_at 条件，逻辑删除过滤没有落实到任何分支，违反 AC-3。"
+          },
+          {
+            "id": 18,
+            "status": "CONFIRMED",
+            "comment": "演练核验：非空关键字分支使用 select *，会选择 orders 中 receiver_phone、receiver_address 等完整字段，所示实现没有安全投影或脱敏步骤，违反 AC-4。"
+          }
+        ],
+        "returnComment": "退回修改：将关键字改为绑定参数，排序使用字段与方向白名单，两条查询路径均排除逻辑删除订单，并限制返回字段、落实收货信息脱敏。请完成 AC-1 至 AC-4 后提交新版本复审。"
+      },
+      "events": [
+        {
+          "findingId": 15,
+          "events": [
+            {
+              "id": 21,
+              "actorId": 9,
+              "action": "CONFIRM",
+              "fromStatus": "OPEN",
+              "toStatus": "CONFIRMED",
+              "comment": "演练核验：keyword 被直接插入带引号的 LIKE 表达式，输入单引号可结束原字符串；方法只返回拼接后的 SQL，未提供绑定参数，违反 AC-1。",
+              "createdAt": "2026-09-12T04:32:00.136024Z"
+            },
+            {
+              "id": 25,
+              "actorId": 4,
+              "action": "CLAIM",
+              "fromStatus": "CONFIRMED",
+              "toStatus": "IN_PROGRESS",
+              "comment": "演练开发认领：已阅读审查依据，后续按建议提交修复；当前尚未标记修复完成。",
+              "createdAt": "2026-09-12T04:32:38.508913Z"
+            }
+          ]
+        },
+        {
+          "findingId": 16,
+          "events": [
+            {
+              "id": 22,
+              "actorId": 9,
+              "action": "CONFIRM",
+              "fromStatus": "OPEN",
+              "toStatus": "CONFIRMED",
+              "comment": "演练核验：sort 原样进入 ORDER BY，没有字段和方向白名单；此问题与搜索值参数绑定分别对应 AC-2 和 AC-1，需要分别处理。",
+              "createdAt": "2026-09-12T04:32:06.384893Z"
+            },
+            {
+              "id": 26,
+              "actorId": 4,
+              "action": "CLAIM",
+              "fromStatus": "CONFIRMED",
+              "toStatus": "IN_PROGRESS",
+              "comment": "演练开发认领：已阅读审查依据，后续按建议提交修复；当前尚未标记修复完成。",
+              "createdAt": "2026-09-12T04:32:44.036241Z"
+            }
+          ]
+        },
+        {
+          "findingId": 17,
+          "events": [
+            {
+              "id": 23,
+              "actorId": 9,
+              "action": "CONFIRM",
+              "fromStatus": "OPEN",
+              "toStatus": "CONFIRMED",
+              "comment": "演练核验：空关键字查询与带关键字查询均无 deleted_at 条件，逻辑删除过滤没有落实到任何分支，违反 AC-3。",
+              "createdAt": "2026-09-12T04:32:13.078270Z"
+            },
+            {
+              "id": 27,
+              "actorId": 4,
+              "action": "CLAIM",
+              "fromStatus": "CONFIRMED",
+              "toStatus": "IN_PROGRESS",
+              "comment": "演练开发认领：已阅读审查依据，后续按建议提交修复；当前尚未标记修复完成。",
+              "createdAt": "2026-09-12T04:32:48.429291Z"
+            }
+          ]
+        },
+        {
+          "findingId": 18,
+          "events": [
+            {
+              "id": 24,
+              "actorId": 9,
+              "action": "CONFIRM",
+              "fromStatus": "OPEN",
+              "toStatus": "CONFIRMED",
+              "comment": "演练核验：非空关键字分支使用 select *，会选择 orders 中 receiver_phone、receiver_address 等完整字段，所示实现没有安全投影或脱敏步骤，违反 AC-4。",
+              "createdAt": "2026-09-12T04:32:20.369286Z"
+            },
+            {
+              "id": 28,
+              "actorId": 4,
+              "action": "CLAIM",
+              "fromStatus": "CONFIRMED",
+              "toStatus": "IN_PROGRESS",
+              "comment": "演练开发认领：已阅读审查依据，后续按建议提交修复；当前尚未标记修复完成。",
+              "createdAt": "2026-09-12T04:32:52.386120Z"
+            }
+          ]
+        }
+      ],
+      "snapshotVerification": {
+        "headSha": "4adc6d950e0236c4a4bb6d5397a8c806d3afe19c",
+        "baseSha": "78caedf2e78e33f18cb6b51b045b5141650cfdb6",
+        "requirementRevisionId": 6,
+        "changedFileCount": 2,
+        "allPatchesMatch": true,
+        "coverage": {
+          "files": [
+            {
+              "path": "review-materials/PR-03.md",
+              "patchTruncated": false
+            },
+            {
+              "path": "src/main/java/com/example/mall/service/OrderSearchService.java",
+              "patchTruncated": false
+            }
+          ],
+          "truncated": false,
+          "notReviewed": []
+        },
+        "checkedAt": "2026-09-12T04:30:17.141Z"
+      }
+    },
+    {
+      "sequence": 4,
+      "projectId": 1,
+      "repo": "forgepilot-demo-mall-order-service",
+      "title": "大促批量发货权限与幂等",
+      "startedAt": "2026-09-12T04:33:29.674Z",
+      "phase": "decided",
+      "requirementId": 6,
+      "requirementRevisionId": 7,
+      "pullRequestNumber": 10,
+      "pullRequestUrl": "https://github.com/LinYsssss/forgepilot-demo-mall-order-service/pull/10",
+      "prCreatedAt": "2026-09-12T04:34:04.720Z",
+      "reviewId": 5,
+      "pullRequestId": 5,
+      "headSha": "e97794d291adb9f523a09023c8396d75a190b129",
+      "baseSha": "78caedf2e78e33f18cb6b51b045b5141650cfdb6",
+      "findingCount": 5,
+      "reviewCompletedAt": "2026-09-12T04:35:18.106Z",
+      "decision": "REQUEST_CHANGES",
+      "decisionAt": "2026-09-12T04:36:38.102366Z",
+      "confirmed": 5,
+      "rejected": 0,
+      "finishedAt": "2026-09-12T04:37:05.974Z",
+      "model": "gpt-5.6-luna",
+      "promptVersion": "review-2",
+      "executionAttempt": 1,
+      "reviewInputFingerprint": "283c25d36d21775de8b85b984bbfa36883170fcaed2675a8204fb6da4e15f9b9",
+      "coverage": {
+        "files": [
+          {
+            "path": "review-materials/PR-04.md",
+            "patchTruncated": false
+          },
+          {
+            "path": "src/main/java/com/example/mall/service/PromotionDispatchJob.java",
+            "patchTruncated": false
+          }
+        ],
+        "truncated": false,
+        "notReviewed": []
+      },
+      "acVerdicts": [
+        {
+          "acId": 41,
+          "acKey": "AC-1",
+          "verdict": "AT_RISK"
+        },
+        {
+          "acId": 42,
+          "acKey": "AC-2",
+          "verdict": "AT_RISK"
+        },
+        {
+          "acId": 43,
+          "acKey": "AC-3",
+          "verdict": "AT_RISK"
+        },
+        {
+          "acId": 44,
+          "acKey": "AC-4",
+          "verdict": "AT_RISK"
+        },
+        {
+          "acId": 45,
+          "acKey": "AC-5",
+          "verdict": "AT_RISK"
+        }
+      ],
+      "findings": [
+        {
+          "id": 19,
+          "findingType": "REQUIREMENT",
+          "path": "src/main/java/com/example/mall/service/PromotionDispatchJob.java",
+          "line": 10,
+          "evidence": "public int dispatch(List<Long> orderIds, Long operatorId) {",
+          "category": "SECURITY",
+          "explanation": "The batch entry point accepts an operator identifier but the shown implementation does not demonstrate that it is non-null or that the operator has the required operational permission.",
+          "suggestion": "Validate the operator identifier and enforce the required operations role before processing any order.",
+          "confidence": "HIGH",
+          "status": "IN_PROGRESS",
+          "continuity": "NEW",
+          "requirementId": 6,
+          "requirementRevisionId": 7,
+          "acId": 41,
+          "acKey": "AC-1",
+          "assigneeId": 4,
+          "carriedFromFindingId": null,
+          "findingKey": "a83837326042b1bb75b7d5a222cdd4cd7609c0ed522e89f97cce57ad88b4b7e9",
+          "evidenceHash": "9e7ecd15c9f95409955a741905e2258f2ae6ad32d1049f9f1a259661802af699",
+          "basisHash": "2510943096f8fdaec79d6bf5abccd5e34e589bb393513336edf8c665241f2da2"
+        },
+        {
+          "id": 20,
+          "findingType": "REQUIREMENT",
+          "path": "src/main/java/com/example/mall/service/PromotionDispatchJob.java",
+          "line": 11,
+          "evidence": "for (Long id : orderIds) orders.updateStatus(id, \"SHIPPED\");",
+          "category": "CORRECTNESS",
+          "explanation": "Each order is sent directly to the shipped state without shown checks for existence, logical deletion, payment status, or WAIT_SHIP status. This can ship invalid or unpaid orders.",
+          "suggestion": "Load or conditionally update each order only when it exists, is not deleted, has PAID payment status, and is in WAIT_SHIP.",
+          "confidence": "HIGH",
+          "status": "IN_PROGRESS",
+          "continuity": "NEW",
+          "requirementId": 6,
+          "requirementRevisionId": 7,
+          "acId": 42,
+          "acKey": "AC-2",
+          "assigneeId": 4,
+          "carriedFromFindingId": null,
+          "findingKey": "74c13935902dc895690ea1e3ca3509db1d3c650043fe9258bb37d18f20e97e6c",
+          "evidenceHash": "561d1ba5b566628f43d2a1de627cc93711d845bbb06a6e1c6ec43bdb09d69ba9",
+          "basisHash": "935705cb50e72a91fd2c6ebb60dd063ee0ea49d0c0638ee5cc73cd1adb3e7ed7"
+        },
+        {
+          "id": 21,
+          "findingType": "REQUIREMENT",
+          "path": "src/main/java/com/example/mall/service/PromotionDispatchJob.java",
+          "line": 12,
+          "evidence": "return orderIds.size();",
+          "category": "CORRECTNESS",
+          "explanation": "The method returns the number of requested IDs rather than the number of successful conditional updates, so the reported shipment count can include orders that were not actually shipped.",
+          "suggestion": "Accumulate and return the affected-row count from updates that require WAIT_SHIP as a condition.",
+          "confidence": "HIGH",
+          "status": "IN_PROGRESS",
+          "continuity": "NEW",
+          "requirementId": 6,
+          "requirementRevisionId": 7,
+          "acId": 43,
+          "acKey": "AC-3",
+          "assigneeId": 4,
+          "carriedFromFindingId": null,
+          "findingKey": "dd96a051da30139a3e2bca6f531dd908f9a4d394b861b29888479a75506da3ec",
+          "evidenceHash": "9a465be7f7f61982bd1fd94207a189aaf62bc1af5ad4272182e8c411b8b92dad",
+          "basisHash": "75161d7fca6c25e796c0783ea3d97b94c9d7bc1b818125e06868eecc5f1d2225"
+        },
+        {
+          "id": 22,
+          "findingType": "REQUIREMENT",
+          "path": "src/main/java/com/example/mall/service/PromotionDispatchJob.java",
+          "line": 11,
+          "evidence": "for (Long id : orderIds) orders.updateStatus(id, \"SHIPPED\");",
+          "category": "CONCURRENCY",
+          "explanation": "The shown loop provides no demonstrated deduplication or conditional idempotency for repeated order IDs or retried batches. A retry can therefore report and process the same batch without a reliable once-only guard.",
+          "suggestion": "Use a WAIT_SHIP conditional update with affected-row handling and add batch or item idempotency protection for retries and duplicate IDs.",
+          "confidence": "HIGH",
+          "status": "IN_PROGRESS",
+          "continuity": "NEW",
+          "requirementId": 6,
+          "requirementRevisionId": 7,
+          "acId": 44,
+          "acKey": "AC-4",
+          "assigneeId": 4,
+          "carriedFromFindingId": null,
+          "findingKey": "1307b53edad7d4ae0d2a612f76e244f2b35f0a75356c32b745228ea2f9995070",
+          "evidenceHash": "561d1ba5b566628f43d2a1de627cc93711d845bbb06a6e1c6ec43bdb09d69ba9",
+          "basisHash": "8197e30b0d421c7ddc2c7f7f35b92366d9ced0451c1b4a1775082519867d93f5"
+        },
+        {
+          "id": 23,
+          "findingType": "REQUIREMENT",
+          "path": "src/main/java/com/example/mall/service/PromotionDispatchJob.java",
+          "line": 11,
+          "evidence": "for (Long id : orderIds) orders.updateStatus(id, \"SHIPPED\");",
+          "category": "ERROR_HANDLING",
+          "explanation": "The batch is implemented as a sequence of individual updates, with no shown transaction boundary, failure handling, or re-entrant compensation. A failure after earlier updates can leave a partially processed batch without a demonstrated recovery path.",
+          "suggestion": "Wrap the batch in an explicit transaction where appropriate, or persist progress and provide a re-entrant compensation or retry mechanism that safely resumes incomplete work.",
+          "confidence": "HIGH",
+          "status": "IN_PROGRESS",
+          "continuity": "NEW",
+          "requirementId": 6,
+          "requirementRevisionId": 7,
+          "acId": 45,
+          "acKey": "AC-5",
+          "assigneeId": 4,
+          "carriedFromFindingId": null,
+          "findingKey": "fab1e45e4a02567ae3bd1c6c807c51338be76e27427f6cc855a97930bab669e8",
+          "evidenceHash": "561d1ba5b566628f43d2a1de627cc93711d845bbb06a6e1c6ec43bdb09d69ba9",
+          "basisHash": "baaf4a2dc9cec1fb6df63aa132e5effcd5c59e95f5c77a9a127fbb727205f9a1"
+        }
+      ],
+      "humanAdjudication": {
+        "findings": [
+          {
+            "id": 19,
+            "status": "CONFIRMED",
+            "comment": "演练核验：operatorId 在整个 dispatch 方法中未被校验或使用，也没有运营权限检查，调用者可直接进入批量更新路径，违反 AC-1。"
+          },
+          {
+            "id": 20,
+            "status": "CONFIRMED",
+            "comment": "演练核验：循环直接对每个 ID 调用 SHIPPED 更新，没有订单存在、PAID、WAIT_SHIP 的逐单检查，违反 AC-2。"
+          },
+          {
+            "id": 21,
+            "status": "CONFIRMED",
+            "comment": "演练核验：返回值直接取 orderIds.size，而非满足原状态条件且成功更新的数量；重复或未成功处理的 ID 会被计入结果，违反 AC-3。"
+          },
+          {
+            "id": 22,
+            "status": "CONFIRMED",
+            "comment": "演练核验：重复 ID 会执行多次相同更新，整批重试也没有条件更新或批次幂等边界；未满足 AC-4 的重复发货保护。"
+          },
+          {
+            "id": 23,
+            "status": "CONFIRMED",
+            "comment": "演练核验：批次由逐条调用组成，类中没有事务边界、进度持久化或补偿逻辑；中途异常没有可验证的整体回滚或安全续跑方案，违反 AC-5。"
+          }
+        ],
+        "returnComment": "退回修改：补齐操作权限、订单支付和状态校验，以条件更新的成功数返回结果，并实现重复项与批次重试幂等，以及明确的事务或可重入补偿。当前五项验收条件均存在实质缺口，请修复后复审。"
+      },
+      "events": [
+        {
+          "findingId": 19,
+          "events": [
+            {
+              "id": 29,
+              "actorId": 9,
+              "action": "CONFIRM",
+              "fromStatus": "OPEN",
+              "toStatus": "CONFIRMED",
+              "comment": "演练核验：operatorId 在整个 dispatch 方法中未被校验或使用，也没有运营权限检查，调用者可直接进入批量更新路径，违反 AC-1。",
+              "createdAt": "2026-09-12T04:36:15.087878Z"
+            },
+            {
+              "id": 34,
+              "actorId": 4,
+              "action": "CLAIM",
+              "fromStatus": "CONFIRMED",
+              "toStatus": "IN_PROGRESS",
+              "comment": "演练开发认领：已阅读审查依据，后续按建议提交修复；当前尚未标记修复完成。",
+              "createdAt": "2026-09-12T04:36:49.914040Z"
+            }
+          ]
+        },
+        {
+          "findingId": 20,
+          "events": [
+            {
+              "id": 30,
+              "actorId": 9,
+              "action": "CONFIRM",
+              "fromStatus": "OPEN",
+              "toStatus": "CONFIRMED",
+              "comment": "演练核验：循环直接对每个 ID 调用 SHIPPED 更新，没有订单存在、PAID、WAIT_SHIP 的逐单检查，违反 AC-2。",
+              "createdAt": "2026-09-12T04:36:20.539857Z"
+            },
+            {
+              "id": 35,
+              "actorId": 4,
+              "action": "CLAIM",
+              "fromStatus": "CONFIRMED",
+              "toStatus": "IN_PROGRESS",
+              "comment": "演练开发认领：已阅读审查依据，后续按建议提交修复；当前尚未标记修复完成。",
+              "createdAt": "2026-09-12T04:36:52.849677Z"
+            }
+          ]
+        },
+        {
+          "findingId": 21,
+          "events": [
+            {
+              "id": 31,
+              "actorId": 9,
+              "action": "CONFIRM",
+              "fromStatus": "OPEN",
+              "toStatus": "CONFIRMED",
+              "comment": "演练核验：返回值直接取 orderIds.size，而非满足原状态条件且成功更新的数量；重复或未成功处理的 ID 会被计入结果，违反 AC-3。",
+              "createdAt": "2026-09-12T04:36:24.695468Z"
+            },
+            {
+              "id": 36,
+              "actorId": 4,
+              "action": "CLAIM",
+              "fromStatus": "CONFIRMED",
+              "toStatus": "IN_PROGRESS",
+              "comment": "演练开发认领：已阅读审查依据，后续按建议提交修复；当前尚未标记修复完成。",
+              "createdAt": "2026-09-12T04:36:54.124589Z"
+            }
+          ]
+        },
+        {
+          "findingId": 22,
+          "events": [
+            {
+              "id": 32,
+              "actorId": 9,
+              "action": "CONFIRM",
+              "fromStatus": "OPEN",
+              "toStatus": "CONFIRMED",
+              "comment": "演练核验：重复 ID 会执行多次相同更新，整批重试也没有条件更新或批次幂等边界；未满足 AC-4 的重复发货保护。",
+              "createdAt": "2026-09-12T04:36:29.707981Z"
+            },
+            {
+              "id": 37,
+              "actorId": 4,
+              "action": "CLAIM",
+              "fromStatus": "CONFIRMED",
+              "toStatus": "IN_PROGRESS",
+              "comment": "演练开发认领：已阅读审查依据，后续按建议提交修复；当前尚未标记修复完成。",
+              "createdAt": "2026-09-12T04:36:57.872436Z"
+            }
+          ]
+        },
+        {
+          "findingId": 23,
+          "events": [
+            {
+              "id": 33,
+              "actorId": 9,
+              "action": "CONFIRM",
+              "fromStatus": "OPEN",
+              "toStatus": "CONFIRMED",
+              "comment": "演练核验：批次由逐条调用组成，类中没有事务边界、进度持久化或补偿逻辑；中途异常没有可验证的整体回滚或安全续跑方案，违反 AC-5。",
+              "createdAt": "2026-09-12T04:36:34.451449Z"
+            },
+            {
+              "id": 38,
+              "actorId": 4,
+              "action": "CLAIM",
+              "fromStatus": "CONFIRMED",
+              "toStatus": "IN_PROGRESS",
+              "comment": "演练开发认领：已阅读审查依据，后续按建议提交修复；当前尚未标记修复完成。",
+              "createdAt": "2026-09-12T04:37:01.476102Z"
+            }
+          ]
+        }
+      ],
+      "snapshotVerification": {
+        "headSha": "e97794d291adb9f523a09023c8396d75a190b129",
+        "baseSha": "78caedf2e78e33f18cb6b51b045b5141650cfdb6",
+        "requirementRevisionId": 7,
+        "changedFileCount": 2,
+        "allPatchesMatch": true,
+        "coverage": {
+          "files": [
+            {
+              "path": "review-materials/PR-04.md",
+              "patchTruncated": false
+            },
+            {
+              "path": "src/main/java/com/example/mall/service/PromotionDispatchJob.java",
+              "patchTruncated": false
+            }
+          ],
+          "truncated": false,
+          "notReviewed": []
+        },
+        "checkedAt": "2026-09-12T04:35:18.109Z"
+      }
+    },
+    {
+      "sequence": 5,
+      "projectId": 1,
+      "repo": "forgepilot-demo-mall-order-service",
+      "title": "用户订单详情归属校验与脱敏",
+      "startedAt": "2026-09-12T04:37:46.736Z",
+      "phase": "decided",
+      "requirementId": 7,
+      "requirementRevisionId": 8,
+      "pullRequestNumber": 11,
+      "pullRequestUrl": "https://github.com/LinYsssss/forgepilot-demo-mall-order-service/pull/11",
+      "prCreatedAt": "2026-09-12T04:38:20.184Z",
+      "reviewId": 6,
+      "pullRequestId": 6,
+      "headSha": "603d8c4460b087497cfec215ecd441baae5fc7e2",
+      "baseSha": "78caedf2e78e33f18cb6b51b045b5141650cfdb6",
+      "findingCount": 3,
+      "reviewCompletedAt": "2026-09-12T04:39:37.072Z",
+      "decision": "REQUEST_CHANGES",
+      "decisionAt": "2026-09-12T04:43:31.909807Z",
+      "confirmed": 3,
+      "rejected": 0,
+      "finishedAt": "2026-09-12T04:44:05.275Z",
+      "model": "gpt-5.6-luna",
+      "promptVersion": "review-2",
+      "executionAttempt": 1,
+      "reviewInputFingerprint": "0ddb8b07983caab6ed2c3c463dfc8ef609293a082f3a218b63afbf9ffe5fcc79",
+      "coverage": {
+        "files": [
+          {
+            "path": "review-materials/PR-05.md",
+            "patchTruncated": false
+          },
+          {
+            "path": "src/main/java/com/example/mall/service/CustomerOrderQueryService.java",
+            "patchTruncated": false
+          }
+        ],
+        "truncated": false,
+        "notReviewed": []
+      },
+      "acVerdicts": [
+        {
+          "acId": 46,
+          "acKey": "AC-1",
+          "verdict": "AT_RISK"
+        },
+        {
+          "acId": 47,
+          "acKey": "AC-2",
+          "verdict": "AT_RISK"
+        },
+        {
+          "acId": 48,
+          "acKey": "AC-3",
+          "verdict": "AT_RISK"
+        },
+        {
+          "acId": 49,
+          "acKey": "AC-4",
+          "verdict": "AT_RISK"
+        }
+      ],
+      "findings": [
+        {
+          "id": 24,
+          "findingType": "REQUIREMENT",
+          "path": "src/main/java/com/example/mall/service/CustomerOrderQueryService.java",
+          "line": 10,
+          "evidence": "public Order detail(Long orderId, Long currentUserId) { return orders.selectById(orderId); }",
+          "category": "REQUIREMENT_GAP",
+          "explanation": "The method accepts the current user ID but never compares it with the order owner. A user can therefore retrieve an order by ID without an ownership check, and the implementation does not establish the required 403 response or prevent the order body from being returned for another user.",
+          "suggestion": "Load the order and compare its owner ID with the authenticated user ID before returning it. Map an ownership mismatch to 403 without returning the order contents.",
+          "confidence": "HIGH",
+          "status": "IN_PROGRESS",
+          "continuity": "NEW",
+          "requirementId": 7,
+          "requirementRevisionId": 8,
+          "acId": 46,
+          "acKey": "AC-1",
+          "assigneeId": 4,
+          "carriedFromFindingId": null,
+          "findingKey": "8da8e732fa35de649eedc839fffb35df671666e0381f29a68eda473ec18f5c89",
+          "evidenceHash": "63e792d2ba47293a831d552ddf1c8f60ac5646584e888f3267c9cfc0009fbc25",
+          "basisHash": "6aaf72fb85365a44ef201dbca0013cd6f25aea1fb8205ea23ddaca798ab1128e"
+        },
+        {
+          "id": 25,
+          "findingType": "REQUIREMENT",
+          "path": "src/main/java/com/example/mall/service/CustomerOrderQueryService.java",
+          "line": 10,
+          "evidence": "public Order detail(Long orderId, Long currentUserId) { return orders.selectById(orderId); }",
+          "category": "ERROR_HANDLING",
+          "explanation": "The implementation directly returns the result of the lookup and contains no visible handling for a missing order. The reviewed change does not demonstrate that a missing order is converted to a 404 response.",
+          "suggestion": "Handle a null or absent lookup result explicitly and map it to the service's 404 response behavior.",
+          "confidence": "HIGH",
+          "status": "IN_PROGRESS",
+          "continuity": "NEW",
+          "requirementId": 7,
+          "requirementRevisionId": 8,
+          "acId": 47,
+          "acKey": "AC-2",
+          "assigneeId": 4,
+          "carriedFromFindingId": null,
+          "findingKey": "06ff6115171ebcdfd51f52c907c6572473c6c478d5bc02934e5e5f65c735d479",
+          "evidenceHash": "63e792d2ba47293a831d552ddf1c8f60ac5646584e888f3267c9cfc0009fbc25",
+          "basisHash": "781f9e5668b72564bfa842a7600053bb6868467149192a273a382b50282fe787"
+        },
+        {
+          "id": 26,
+          "findingType": "REQUIREMENT",
+          "path": "src/main/java/com/example/mall/service/CustomerOrderQueryService.java",
+          "line": 10,
+          "evidence": "public Order detail(Long orderId, Long currentUserId) { return orders.selectById(orderId); }",
+          "category": "SECURITY",
+          "explanation": "The method returns the complete Order entity directly rather than a security view or DTO. This does not demonstrate masking of the receiver phone and address and may expose sensitive fields in the response.",
+          "suggestion": "Return a dedicated response DTO or security view that masks the phone number and delivery address, instead of returning the full Order entity.",
+          "confidence": "HIGH",
+          "status": "IN_PROGRESS",
+          "continuity": "NEW",
+          "requirementId": 7,
+          "requirementRevisionId": 8,
+          "acId": 49,
+          "acKey": "AC-4",
+          "assigneeId": 4,
+          "carriedFromFindingId": null,
+          "findingKey": "cf63f898da9cadea666bd865694f9ba4b35f7813c0a4d395016de4238339fec7",
+          "evidenceHash": "63e792d2ba47293a831d552ddf1c8f60ac5646584e888f3267c9cfc0009fbc25",
+          "basisHash": "1938e8db1fc862d388983ae98cc0aa19b4d7761f902704052d9a7a8c18139654"
+        }
+      ],
+      "humanAdjudication": {
+        "findings": [
+          {
+            "id": 24,
+            "status": "CONFIRMED",
+            "comment": "演练核验：currentUserId 未参与任何判断，查询仅按 orderId 返回；没有订单归属比较，也没有越权时阻止返回正文并映射 403 的路径，违反 AC-1 和 AC-3。"
+          },
+          {
+            "id": 25,
+            "status": "CONFIRMED",
+            "comment": "演练核验：唯一返回路径直接透传 selectById 结果，提交中未实现空结果的显式处理或 404 映射，AC-2 尚未落实。"
+          },
+          {
+            "id": 26,
+            "status": "CONFIRMED",
+            "comment": "演练核验：返回类型及实际返回值均为完整 Order。已核对实体包含 receiverPhone 和 receiverAddress，未经过脱敏 DTO 或安全投影，违反 AC-4。"
+          }
+        ],
+        "returnComment": "退回修改：从认证上下文取得用户并校验订单归属；分别实现不存在时 404、越权时 403 且不返回正文；返回脱敏后的订单详情 DTO。请补齐访问边界和敏感字段保护后复审。"
+      },
+      "events": [
+        {
+          "findingId": 24,
+          "events": [
+            {
+              "id": 39,
+              "actorId": 9,
+              "action": "CONFIRM",
+              "fromStatus": "OPEN",
+              "toStatus": "CONFIRMED",
+              "comment": "演练核验：currentUserId 未参与任何判断，查询仅按 orderId 返回；没有订单归属比较，也没有越权时阻止返回正文并映射 403 的路径，违反 AC-1 和 AC-3。",
+              "createdAt": "2026-09-12T04:40:37.243219Z"
+            },
+            {
+              "id": 42,
+              "actorId": 4,
+              "action": "CLAIM",
+              "fromStatus": "CONFIRMED",
+              "toStatus": "IN_PROGRESS",
+              "comment": "演练开发认领：已阅读审查依据，后续按建议提交修复；当前尚未标记修复完成。",
+              "createdAt": "2026-09-12T04:43:45.392962Z"
+            }
+          ]
+        },
+        {
+          "findingId": 25,
+          "events": [
+            {
+              "id": 40,
+              "actorId": 9,
+              "action": "CONFIRM",
+              "fromStatus": "OPEN",
+              "toStatus": "CONFIRMED",
+              "comment": "演练核验：唯一返回路径直接透传 selectById 结果，提交中未实现空结果的显式处理或 404 映射，AC-2 尚未落实。",
+              "createdAt": "2026-09-12T04:43:25.698680Z"
+            },
+            {
+              "id": 43,
+              "actorId": 4,
+              "action": "CLAIM",
+              "fromStatus": "CONFIRMED",
+              "toStatus": "IN_PROGRESS",
+              "comment": "演练开发认领：已阅读审查依据，后续按建议提交修复；当前尚未标记修复完成。",
+              "createdAt": "2026-09-12T04:43:51.093612Z"
+            }
+          ]
+        },
+        {
+          "findingId": 26,
+          "events": [
+            {
+              "id": 41,
+              "actorId": 9,
+              "action": "CONFIRM",
+              "fromStatus": "OPEN",
+              "toStatus": "CONFIRMED",
+              "comment": "演练核验：返回类型及实际返回值均为完整 Order。已核对实体包含 receiverPhone 和 receiverAddress，未经过脱敏 DTO 或安全投影，违反 AC-4。",
+              "createdAt": "2026-09-12T04:43:29.287968Z"
+            },
+            {
+              "id": 44,
+              "actorId": 4,
+              "action": "CLAIM",
+              "fromStatus": "CONFIRMED",
+              "toStatus": "IN_PROGRESS",
+              "comment": "演练开发认领：已阅读审查依据，后续按建议提交修复；当前尚未标记修复完成。",
+              "createdAt": "2026-09-12T04:43:58.547956Z"
+            }
+          ]
+        }
+      ],
+      "snapshotVerification": {
+        "headSha": "603d8c4460b087497cfec215ecd441baae5fc7e2",
+        "baseSha": "78caedf2e78e33f18cb6b51b045b5141650cfdb6",
+        "requirementRevisionId": 8,
+        "changedFileCount": 2,
+        "allPatchesMatch": true,
+        "coverage": {
+          "files": [
+            {
+              "path": "review-materials/PR-05.md",
+              "patchTruncated": false
+            },
+            {
+              "path": "src/main/java/com/example/mall/service/CustomerOrderQueryService.java",
+              "patchTruncated": false
+            }
+          ],
+          "truncated": false,
+          "notReviewed": []
+        },
+        "checkedAt": "2026-09-12T04:39:37.074Z"
+      }
+    },
+    {
+      "sequence": 6,
+      "projectId": 2,
+      "repo": "forgepilot-demo-tenant-user-center",
+      "title": "运营后台令牌认证与角色授权",
+      "startedAt": "2026-09-12T04:45:24.677Z",
+      "phase": "decided",
+      "requirementId": 8,
+      "requirementRevisionId": 9,
+      "pullRequestNumber": 1,
+      "pullRequestUrl": "https://github.com/LinYsssss/forgepilot-demo-tenant-user-center/pull/1",
+      "prCreatedAt": "2026-09-12T04:45:56.001Z",
+      "reviewId": 7,
+      "pullRequestId": 7,
+      "headSha": "2b73b503a6e518c94c4ab01f5b99b4e56962dfcd",
+      "baseSha": "33bbdb48ffbf33b2c618202f6693240dab2c3b15",
+      "findingCount": 3,
+      "reviewCompletedAt": "2026-09-12T04:46:35.705Z",
+      "decision": "REQUEST_CHANGES",
+      "decisionAt": "2026-09-12T04:51:03.458439Z",
+      "confirmed": 3,
+      "rejected": 0,
+      "finishedAt": "2026-09-12T04:51:45.828Z",
+      "model": "gpt-5.6-luna",
+      "promptVersion": "review-2",
+      "executionAttempt": 1,
+      "reviewInputFingerprint": "2086a11a106bcdd7c89146da69a282beec37eb4ff8fb94c0b123d88fc834eb09",
+      "coverage": {
+        "files": [
+          {
+            "path": "review-materials/PR-01.md",
+            "patchTruncated": false
+          },
+          {
+            "path": "src/app/ops_access.py",
+            "patchTruncated": false
+          }
+        ],
+        "truncated": false,
+        "notReviewed": []
+      },
+      "acVerdicts": [
+        {
+          "acId": 50,
+          "acKey": "AC-1",
+          "verdict": "AT_RISK"
+        },
+        {
+          "acId": 51,
+          "acKey": "AC-2",
+          "verdict": "AT_RISK"
+        },
+        {
+          "acId": 52,
+          "acKey": "AC-3",
+          "verdict": "AT_RISK"
+        },
+        {
+          "acId": 53,
+          "acKey": "AC-4",
+          "verdict": "NOT_FOUND"
+        }
+      ],
+      "findings": [
+        {
+          "id": 27,
+          "findingType": "REQUIREMENT",
+          "path": "src/app/ops_access.py",
+          "line": 4,
+          "evidence": "    return bool(request.headers.get('Authorization'))",
+          "category": "SECURITY",
+          "explanation": "The implementation treats the mere presence of an Authorization header as successful authentication. It does not demonstrate reuse of token signature, algorithm, or expiration validation, so forged and expired tokens could be accepted.",
+          "suggestion": "Invoke the existing token-validation logic and require successful signature, algorithm, and expiration checks before granting access.",
+          "confidence": "HIGH",
+          "status": "IN_PROGRESS",
+          "continuity": "NEW",
+          "requirementId": 8,
+          "requirementRevisionId": 9,
+          "acId": 50,
+          "acKey": "AC-1",
+          "assigneeId": 4,
+          "carriedFromFindingId": null,
+          "findingKey": "209766ce0e25db959835d96d32e090b7c84fd78954adc58cd0383afa8366a3cf",
+          "evidenceHash": "a197ae800ef0b8ca9c4ad2ff8eda3fb9670c48ca66c5748530b721d6e164e033",
+          "basisHash": "c430e47379bb23ccda1b203096f760992ecc23d98aa6bb6472385912e4b956f2"
+        },
+        {
+          "id": 28,
+          "findingType": "REQUIREMENT",
+          "path": "src/app/ops_access.py",
+          "line": 4,
+          "evidence": "    return bool(request.headers.get('Authorization'))",
+          "category": "SECURITY",
+          "explanation": "Missing headers are rejected, but any non-empty Authorization header is accepted. This does not distinguish valid tokens from forged or expired tokens and therefore cannot reliably produce the required 401 response.",
+          "suggestion": "Parse and validate the bearer token rather than checking header presence, and return 401 whenever validation fails or the token is missing.",
+          "confidence": "HIGH",
+          "status": "IN_PROGRESS",
+          "continuity": "NEW",
+          "requirementId": 8,
+          "requirementRevisionId": 9,
+          "acId": 51,
+          "acKey": "AC-2",
+          "assigneeId": 4,
+          "carriedFromFindingId": null,
+          "findingKey": "326eeb6fa227068cab14a37430de0fe2750737e94de15eee3d473a3f0e06a099",
+          "evidenceHash": "a197ae800ef0b8ca9c4ad2ff8eda3fb9670c48ca66c5748530b721d6e164e033",
+          "basisHash": "e21853cc1f32145cd96c4717a8d4d4d8c3333d8fac9e29d9b9545a12a404bd4d"
+        },
+        {
+          "id": 29,
+          "findingType": "REQUIREMENT",
+          "path": "src/app/ops_access.py",
+          "line": 4,
+          "evidence": "    return bool(request.headers.get('Authorization'))",
+          "category": "SECURITY",
+          "explanation": "The shown check has no role or permission evaluation. An authenticated user without operations-management privileges is not shown to receive 403.",
+          "suggestion": "After successful authentication, authorize the required operations-management role separately and return 403 when the role is absent.",
+          "confidence": "HIGH",
+          "status": "IN_PROGRESS",
+          "continuity": "NEW",
+          "requirementId": 8,
+          "requirementRevisionId": 9,
+          "acId": 52,
+          "acKey": "AC-3",
+          "assigneeId": 4,
+          "carriedFromFindingId": null,
+          "findingKey": "28df945ad060ccadddd18ba0b752bd97ce5f59165242f7b2b21c7fd15b81d2e1",
+          "evidenceHash": "a197ae800ef0b8ca9c4ad2ff8eda3fb9670c48ca66c5748530b721d6e164e033",
+          "basisHash": "52acc3771499af086de8f89c696e868ef3398faef7765dd9be833dfa7684145f"
+        }
+      ],
+      "humanAdjudication": {
+        "findings": [
+          {
+            "id": 27,
+            "status": "CONFIRMED",
+            "comment": "演练核验：allow_ops 仅把 Authorization 头转为 bool，没有调用 auth.verify_token；该函数已具备 HS256 算法、签名和 exp 校验。现实现接受任意非空伪造令牌，违反 AC-1。"
+          },
+          {
+            "id": 28,
+            "status": "CONFIRMED",
+            "comment": "演练核验：缺失头会返回 false，但伪造或过期令牌仍返回 true，无法作为 AC-2 要求的 401 拒绝依据。需在验证失败时统一拒绝，而非只检查头是否存在。"
+          },
+          {
+            "id": 29,
+            "status": "CONFIRMED",
+            "comment": "演练核验：allow_ops 未读取已验证 TokenClaims.role，也没有运营管理角色判断，普通角色带非空头同样被允许，违反 AC-3 的无权限返回 403 要求。"
+          }
+        ],
+        "returnComment": "退回修改：复用现有 verify_token 校验令牌签名、算法与过期时间，缺失或无效令牌返回 401；从已验证上下文取得角色与租户，无运营管理权限返回 403。补齐对应认证与授权边界测试后重新提交。"
+      },
+      "events": [
+        {
+          "findingId": 27,
+          "events": [
+            {
+              "id": 45,
+              "actorId": 9,
+              "action": "CONFIRM",
+              "fromStatus": "OPEN",
+              "toStatus": "CONFIRMED",
+              "comment": "演练核验：allow_ops 仅把 Authorization 头转为 bool，没有调用 auth.verify_token；该函数已具备 HS256 算法、签名和 exp 校验。现实现接受任意非空伪造令牌，违反 AC-1。",
+              "createdAt": "2026-09-12T04:50:53.031826Z"
+            },
+            {
+              "id": 48,
+              "actorId": 4,
+              "action": "CLAIM",
+              "fromStatus": "CONFIRMED",
+              "toStatus": "IN_PROGRESS",
+              "comment": "演练开发认领：已阅读审查依据，后续按建议提交修复；当前尚未标记修复完成。",
+              "createdAt": "2026-09-12T04:51:29.742593Z"
+            }
+          ]
+        },
+        {
+          "findingId": 28,
+          "events": [
+            {
+              "id": 46,
+              "actorId": 9,
+              "action": "CONFIRM",
+              "fromStatus": "OPEN",
+              "toStatus": "CONFIRMED",
+              "comment": "演练核验：缺失头会返回 false，但伪造或过期令牌仍返回 true，无法作为 AC-2 要求的 401 拒绝依据。需在验证失败时统一拒绝，而非只检查头是否存在。",
+              "createdAt": "2026-09-12T04:50:54.822123Z"
+            },
+            {
+              "id": 49,
+              "actorId": 4,
+              "action": "CLAIM",
+              "fromStatus": "CONFIRMED",
+              "toStatus": "IN_PROGRESS",
+              "comment": "演练开发认领：已阅读审查依据，后续按建议提交修复；当前尚未标记修复完成。",
+              "createdAt": "2026-09-12T04:51:34.796895Z"
+            }
+          ]
+        },
+        {
+          "findingId": 29,
+          "events": [
+            {
+              "id": 47,
+              "actorId": 9,
+              "action": "CONFIRM",
+              "fromStatus": "OPEN",
+              "toStatus": "CONFIRMED",
+              "comment": "演练核验：allow_ops 未读取已验证 TokenClaims.role，也没有运营管理角色判断，普通角色带非空头同样被允许，违反 AC-3 的无权限返回 403 要求。",
+              "createdAt": "2026-09-12T04:50:59.118077Z"
+            },
+            {
+              "id": 50,
+              "actorId": 4,
+              "action": "CLAIM",
+              "fromStatus": "CONFIRMED",
+              "toStatus": "IN_PROGRESS",
+              "comment": "演练开发认领：已阅读审查依据，后续按建议提交修复；当前尚未标记修复完成。",
+              "createdAt": "2026-09-12T04:51:40.255999Z"
+            }
+          ]
+        }
+      ],
+      "snapshotVerification": {
+        "headSha": "2b73b503a6e518c94c4ab01f5b99b4e56962dfcd",
+        "baseSha": "33bbdb48ffbf33b2c618202f6693240dab2c3b15",
+        "requirementRevisionId": 9,
+        "changedFileCount": 2,
+        "allPatchesMatch": true,
+        "coverage": {
+          "files": [
+            {
+              "path": "review-materials/PR-01.md",
+              "patchTruncated": false
+            },
+            {
+              "path": "src/app/ops_access.py",
+              "patchTruncated": false
+            }
+          ],
+          "truncated": false,
+          "notReviewed": []
+        },
+        "checkedAt": "2026-09-12T04:46:35.711Z"
+      }
+    },
+    {
+      "sequence": 7,
+      "projectId": 2,
+      "repo": "forgepilot-demo-tenant-user-center",
+      "title": "运营用户查询隔离与分页",
+      "startedAt": "2026-09-12T04:52:28.630Z",
+      "phase": "decided",
+      "requirementId": 9,
+      "requirementRevisionId": 10,
+      "pullRequestNumber": 2,
+      "pullRequestUrl": "https://github.com/LinYsssss/forgepilot-demo-tenant-user-center/pull/2",
+      "prCreatedAt": "2026-09-12T04:53:01.973Z",
+      "reviewId": 8,
+      "pullRequestId": 8,
+      "headSha": "e143bb4753529f45083e11da7a600b7b05958ae1",
+      "baseSha": "33bbdb48ffbf33b2c618202f6693240dab2c3b15",
+      "findingCount": 4,
+      "reviewCompletedAt": "2026-09-12T04:54:00.757Z",
+      "decision": "REQUEST_CHANGES",
+      "decisionAt": "2026-09-12T04:55:30.159143Z",
+      "confirmed": 3,
+      "rejected": 1,
+      "finishedAt": "2026-09-12T04:55:52.928Z",
+      "model": "gpt-5.6-luna",
+      "promptVersion": "review-2",
+      "executionAttempt": 1,
+      "reviewInputFingerprint": "54b649132d3dfbf3249a2267395069330ff04eeca81d278a39cccb2446505248",
+      "coverage": {
+        "files": [
+          {
+            "path": "review-materials/PR-02.md",
+            "patchTruncated": false
+          },
+          {
+            "path": "src/app/ops_user_query.py",
+            "patchTruncated": false
+          }
+        ],
+        "truncated": false,
+        "notReviewed": []
+      },
+      "acVerdicts": [
+        {
+          "acId": 54,
+          "acKey": "AC-1",
+          "verdict": "AT_RISK"
+        },
+        {
+          "acId": 55,
+          "acKey": "AC-2",
+          "verdict": "AT_RISK"
+        },
+        {
+          "acId": 56,
+          "acKey": "AC-3",
+          "verdict": "NOT_FOUND"
+        },
+        {
+          "acId": 57,
+          "acKey": "AC-4",
+          "verdict": "NOT_FOUND"
+        }
+      ],
+      "findings": [
+        {
+          "id": 30,
+          "findingType": "REQUIREMENT",
+          "path": "src/app/ops_user_query.py",
+          "line": 2,
+          "evidence": "    return connection.execute(f\"select * from app_user where tenant_id={tenant_id} and username like '%{keyword}%'\")",
+          "category": "REQUIREMENT_GAP",
+          "explanation": "The query includes a tenant_id condition, but it executes directly through connection instead of TenantScopedRepository, and the evidence does not show that tenant_id comes from the authenticated context. This leaves tenant isolation dependent on an unverified caller-supplied value.",
+          "suggestion": "Route the operation through TenantScopedRepository and obtain tenant_id exclusively from the authenticated context.",
+          "confidence": "HIGH",
+          "status": "IN_PROGRESS",
+          "continuity": "NEW",
+          "requirementId": 9,
+          "requirementRevisionId": 10,
+          "acId": 54,
+          "acKey": "AC-1",
+          "assigneeId": 4,
+          "carriedFromFindingId": null,
+          "findingKey": "ffb10c7d6a6a95ea6c5bc16ca1909d46e72577ff468760e0dfcb91f5d81ed6a3",
+          "evidenceHash": "62f81317fb5e11470f608941501b70f6a9bf724cf05f2815faccb542e11cbd67",
+          "basisHash": "6233253054014f4def4db3cc0b8b9c44e02b541f37b599f5dd97cc9e23f0c8a8"
+        },
+        {
+          "id": 31,
+          "findingType": "REQUIREMENT",
+          "path": "src/app/ops_user_query.py",
+          "line": 2,
+          "evidence": "    return connection.execute(f\"select * from app_user where tenant_id={tenant_id} and username like '%{keyword}%'\")",
+          "category": "SECURITY",
+          "explanation": "The SQL is constructed with an f-string, so both tenant_id and keyword are interpolated into the statement rather than bound as parameters. This permits SQL injection and violates the parameter-binding requirement.",
+          "suggestion": "Use a parameterized query API for tenant_id and the keyword pattern, with no user-controlled values interpolated into SQL text.",
+          "confidence": "HIGH",
+          "status": "IN_PROGRESS",
+          "continuity": "NEW",
+          "requirementId": 9,
+          "requirementRevisionId": 10,
+          "acId": 55,
+          "acKey": "AC-2",
+          "assigneeId": 4,
+          "carriedFromFindingId": null,
+          "findingKey": "0b5b3726a9c797d5a82162d73cb8ab25e7e57b40f213006eb626164ff0a035f7",
+          "evidenceHash": "62f81317fb5e11470f608941501b70f6a9bf724cf05f2815faccb542e11cbd67",
+          "basisHash": "63999cf0fc66f90a1bebc94221387af25e346532ee10de6dd2b5a09cb6b67eef"
+        },
+        {
+          "id": 32,
+          "findingType": "REQUIREMENT",
+          "path": "src/app/ops_user_query.py",
+          "line": 2,
+          "evidence": "    return connection.execute(f\"select * from app_user where tenant_id={tenant_id} and username like '%{keyword}%'\")",
+          "category": "REQUIREMENT_GAP",
+          "explanation": "The shown query has no pagination parameters, row limit, or validation/truncation for page size. It can therefore return an unbounded result set instead of enforcing a maximum page size of 100.",
+          "suggestion": "Add page and size handling, reject or clamp invalid sizes, and enforce a SQL limit with a maximum of 100 rows per page.",
+          "confidence": "HIGH",
+          "status": "IN_PROGRESS",
+          "continuity": "NEW",
+          "requirementId": 9,
+          "requirementRevisionId": 10,
+          "acId": 56,
+          "acKey": "AC-3",
+          "assigneeId": 4,
+          "carriedFromFindingId": null,
+          "findingKey": "1df7c0ae9f30961879ddcf98ba255f7cf906ffddbdfd990f1df6fb9fd47b7d40",
+          "evidenceHash": "62f81317fb5e11470f608941501b70f6a9bf724cf05f2815faccb542e11cbd67",
+          "basisHash": "ddb87397f88c55226003bc985436c369c4d100ee69093282871e794420050b3d"
+        },
+        {
+          "id": 33,
+          "findingType": "REQUIREMENT",
+          "path": "src/app/ops_user_query.py",
+          "line": 2,
+          "evidence": "    return connection.execute(f\"select * from app_user where tenant_id={tenant_id} and username like '%{keyword}%'\")",
+          "category": "REQUIREMENT_GAP",
+          "explanation": "The query does not show a sort field or direction being validated against the existing whitelist. No safe ordering mechanism is present in the reviewed change.",
+          "suggestion": "Accept only existing whitelisted sort fields and directions, then apply the validated choices through the repository's safe ordering mechanism.",
+          "confidence": "HIGH",
+          "status": "REJECTED",
+          "continuity": "NEW",
+          "requirementId": 9,
+          "requirementRevisionId": 10,
+          "acId": 57,
+          "acKey": "AC-4",
+          "assigneeId": null,
+          "carriedFromFindingId": null,
+          "findingKey": "a1a5f44f2806f7a7801c1bc359e84e9ab21ea124ec86e209e9afc8098261728f",
+          "evidenceHash": "62f81317fb5e11470f608941501b70f6a9bf724cf05f2815faccb542e11cbd67",
+          "basisHash": "46cada5da1d5ad519175112c99d61c303d045616ee111b5833f3fdeca8aa616b"
+        }
+      ],
+      "humanAdjudication": {
+        "findings": [
+          {
+            "id": 30,
+            "status": "CONFIRMED",
+            "comment": "演练核验：find_users 直接调用 connection.execute，绕过强制 TenantScopedRepository；tenant_id 只是函数参数，未使用已验证的 TenantContext。虽包含租户条件，仍违反 AC-1 指定的仓储与认证上下文边界。"
+          },
+          {
+            "id": 31,
+            "status": "CONFIRMED",
+            "comment": "演练核验：keyword 原样进入 f-string 的 LIKE 字符串，单引号可结束字符串并改变 SQL 结构；tenant_id 也未绑定。参数绑定要求未实现，注入证据成立，违反 AC-2。"
+          },
+          {
+            "id": 32,
+            "status": "CONFIRMED",
+            "comment": "演练核验：函数没有 page/size 参数，SQL 没有 LIMIT/OFFSET，空关键字可匹配租户全部用户；与既有仓储最大 100 行规则及 AC-3 不符。"
+          },
+          {
+            "id": 33,
+            "status": "REJECTED",
+            "comment": "演练核验驳回：当前函数没有排序字段或方向输入，也没有 ORDER BY 或原始排序片段，无法据此认定绕过排序白名单。AC-4 约束排序输入的使用方式，并未明确要求新增可配置排序功能；已有关键字 SQL 拼接风险由发现 31 单独确认。"
+          }
+        ],
+        "returnComment": "退回修改：查询必须经 TenantScopedRepository 并从已认证上下文取得租户；绑定关键字及租户值，补齐分页和每页最多 100 条限制。当前差异没有排序输入，排序白名单缺失的指控已驳回；后续若增加排序功能须遵守白名单要求。"
+      },
+      "events": [
+        {
+          "findingId": 30,
+          "events": [
+            {
+              "id": 51,
+              "actorId": 9,
+              "action": "CONFIRM",
+              "fromStatus": "OPEN",
+              "toStatus": "CONFIRMED",
+              "comment": "演练核验：find_users 直接调用 connection.execute，绕过强制 TenantScopedRepository；tenant_id 只是函数参数，未使用已验证的 TenantContext。虽包含租户条件，仍违反 AC-1 指定的仓储与认证上下文边界。",
+              "createdAt": "2026-09-12T04:55:07.540638Z"
+            },
+            {
+              "id": 55,
+              "actorId": 4,
+              "action": "CLAIM",
+              "fromStatus": "CONFIRMED",
+              "toStatus": "IN_PROGRESS",
+              "comment": "演练开发认领：已阅读审查依据，后续按建议提交修复；当前尚未标记修复完成。",
+              "createdAt": "2026-09-12T04:55:43.342475Z"
+            }
+          ]
+        },
+        {
+          "findingId": 31,
+          "events": [
+            {
+              "id": 52,
+              "actorId": 9,
+              "action": "CONFIRM",
+              "fromStatus": "OPEN",
+              "toStatus": "CONFIRMED",
+              "comment": "演练核验：keyword 原样进入 f-string 的 LIKE 字符串，单引号可结束字符串并改变 SQL 结构；tenant_id 也未绑定。参数绑定要求未实现，注入证据成立，违反 AC-2。",
+              "createdAt": "2026-09-12T04:55:13.485015Z"
+            },
+            {
+              "id": 56,
+              "actorId": 4,
+              "action": "CLAIM",
+              "fromStatus": "CONFIRMED",
+              "toStatus": "IN_PROGRESS",
+              "comment": "演练开发认领：已阅读审查依据，后续按建议提交修复；当前尚未标记修复完成。",
+              "createdAt": "2026-09-12T04:55:46.253829Z"
+            }
+          ]
+        },
+        {
+          "findingId": 32,
+          "events": [
+            {
+              "id": 53,
+              "actorId": 9,
+              "action": "CONFIRM",
+              "fromStatus": "OPEN",
+              "toStatus": "CONFIRMED",
+              "comment": "演练核验：函数没有 page/size 参数，SQL 没有 LIMIT/OFFSET，空关键字可匹配租户全部用户；与既有仓储最大 100 行规则及 AC-3 不符。",
+              "createdAt": "2026-09-12T04:55:20.030987Z"
+            },
+            {
+              "id": 57,
+              "actorId": 4,
+              "action": "CLAIM",
+              "fromStatus": "CONFIRMED",
+              "toStatus": "IN_PROGRESS",
+              "comment": "演练开发认领：已阅读审查依据，后续按建议提交修复；当前尚未标记修复完成。",
+              "createdAt": "2026-09-12T04:55:48.784460Z"
+            }
+          ]
+        },
+        {
+          "findingId": 33,
+          "events": [
+            {
+              "id": 54,
+              "actorId": 9,
+              "action": "REJECT",
+              "fromStatus": "OPEN",
+              "toStatus": "REJECTED",
+              "comment": "演练核验驳回：当前函数没有排序字段或方向输入，也没有 ORDER BY 或原始排序片段，无法据此认定绕过排序白名单。AC-4 约束排序输入的使用方式，并未明确要求新增可配置排序功能；已有关键字 SQL 拼接风险由发现 31 单独确认。",
+              "createdAt": "2026-09-12T04:55:26.698132Z"
+            }
+          ]
+        }
+      ],
+      "snapshotVerification": {
+        "headSha": "e143bb4753529f45083e11da7a600b7b05958ae1",
+        "baseSha": "33bbdb48ffbf33b2c618202f6693240dab2c3b15",
+        "requirementRevisionId": 10,
+        "changedFileCount": 2,
+        "allPatchesMatch": true,
+        "coverage": {
+          "files": [
+            {
+              "path": "review-materials/PR-02.md",
+              "patchTruncated": false
+            },
+            {
+              "path": "src/app/ops_user_query.py",
+              "patchTruncated": false
+            }
+          ],
+          "truncated": false,
+          "notReviewed": []
+        },
+        "checkedAt": "2026-09-12T04:54:00.759Z"
+      }
+    },
+    {
+      "sequence": 8,
+      "projectId": 2,
+      "repo": "forgepilot-demo-tenant-user-center",
+      "title": "用户数据导出范围与审计",
+      "startedAt": "2026-09-12T04:56:42.573Z",
+      "phase": "decided",
+      "requirementId": 10,
+      "requirementRevisionId": 11,
+      "pullRequestNumber": 3,
+      "pullRequestUrl": "https://github.com/LinYsssss/forgepilot-demo-tenant-user-center/pull/3",
+      "prCreatedAt": "2026-09-12T04:57:18.818Z",
+      "reviewId": 9,
+      "pullRequestId": 9,
+      "headSha": "10f068c6c164b5487268e3b43fc8edfd53cfe288",
+      "baseSha": "33bbdb48ffbf33b2c618202f6693240dab2c3b15",
+      "findingCount": 4,
+      "reviewCompletedAt": "2026-09-12T04:58:10.820Z",
+      "decision": "REQUEST_CHANGES",
+      "decisionAt": "2026-09-12T04:59:45.703914Z",
+      "confirmed": 4,
+      "rejected": 0,
+      "finishedAt": "2026-09-12T05:00:13.805Z",
+      "model": "gpt-5.6-luna",
+      "promptVersion": "review-2",
+      "executionAttempt": 1,
+      "reviewInputFingerprint": "54d8c816821a38030e4634ea873604c591ac5d8c9fbc71404992cee3936dfe60",
+      "coverage": {
+        "files": [
+          {
+            "path": "review-materials/PR-03.md",
+            "patchTruncated": false
+          },
+          {
+            "path": "src/app/export_service.py",
+            "patchTruncated": false
+          }
+        ],
+        "truncated": false,
+        "notReviewed": []
+      },
+      "acVerdicts": [
+        {
+          "acId": 58,
+          "acKey": "AC-1",
+          "verdict": "AT_RISK"
+        },
+        {
+          "acId": 59,
+          "acKey": "AC-2",
+          "verdict": "AT_RISK"
+        },
+        {
+          "acId": 60,
+          "acKey": "AC-3",
+          "verdict": "AT_RISK"
+        },
+        {
+          "acId": 61,
+          "acKey": "AC-4",
+          "verdict": "NOT_FOUND"
+        },
+        {
+          "acId": 62,
+          "acKey": "AC-5",
+          "verdict": "NOT_FOUND"
+        }
+      ],
+      "findings": [
+        {
+          "id": 34,
+          "findingType": "REQUIREMENT",
+          "path": "src/app/export_service.py",
+          "line": 2,
+          "evidence": "return connection.execute(f\"select * from app_user where tenant_id = {tenant_id}\").fetchall()",
+          "category": "REQUIREMENT_GAP",
+          "explanation": "The query filters by a tenant_id value, but the change does not demonstrate that the value comes from the authenticated context or that the TenantScopedRepository boundary is reused.",
+          "suggestion": "Obtain the tenant identity exclusively from the authenticated context and route the export query through TenantScopedRepository.",
+          "confidence": "HIGH",
+          "status": "IN_PROGRESS",
+          "continuity": "NEW",
+          "requirementId": 10,
+          "requirementRevisionId": 11,
+          "acId": 58,
+          "acKey": "AC-1",
+          "assigneeId": 4,
+          "carriedFromFindingId": null,
+          "findingKey": "5f031c4ec0c983ca5ac804c378bd6c98110e775f27127842ec4af03b4e74aa5f",
+          "evidenceHash": "8f8018ea6e582c579dcdc10fe47f90061e7fae4a4768836ccac89dedc7aa42a6",
+          "basisHash": "b478d4533fd8f980d796730447c801e29eaa41f590a633ba93deb38535ff7040"
+        },
+        {
+          "id": 35,
+          "findingType": "REQUIREMENT",
+          "path": "src/app/export_service.py",
+          "line": 2,
+          "evidence": "return connection.execute(f\"select * from app_user where tenant_id = {tenant_id}\").fetchall()",
+          "category": "PERFORMANCE",
+          "explanation": "The export fetches every matching row with fetchall and shows no 10000-row limit, so an unbounded result can still exhaust memory or database resources.",
+          "suggestion": "Enforce a maximum of 10000 rows in the query or export workflow and avoid fetching an unbounded result set.",
+          "confidence": "HIGH",
+          "status": "IN_PROGRESS",
+          "continuity": "NEW",
+          "requirementId": 10,
+          "requirementRevisionId": 11,
+          "acId": 59,
+          "acKey": "AC-2",
+          "assigneeId": 4,
+          "carriedFromFindingId": null,
+          "findingKey": "e31fab598a19aff1d31d0803c5c47c3b48b8e58831cab0630964d2c55a669f04",
+          "evidenceHash": "8f8018ea6e582c579dcdc10fe47f90061e7fae4a4768836ccac89dedc7aa42a6",
+          "basisHash": "1f0a1294b7fd9de4c07eb016854ff2a2dbaad46559b64302de246847b7449b94"
+        },
+        {
+          "id": 36,
+          "findingType": "REQUIREMENT",
+          "path": "src/app/export_service.py",
+          "line": 2,
+          "evidence": "return connection.execute(f\"select * from app_user where tenant_id = {tenant_id}\").fetchall()",
+          "category": "SECURITY",
+          "explanation": "Using select * exports every column in app_user, including fields that are not explicitly approved and potentially sensitive internal fields such as password hashes.",
+          "suggestion": "Replace select * with an explicit allowlist of exportable, appropriately sanitized columns.",
+          "confidence": "HIGH",
+          "status": "IN_PROGRESS",
+          "continuity": "NEW",
+          "requirementId": 10,
+          "requirementRevisionId": 11,
+          "acId": 60,
+          "acKey": "AC-3",
+          "assigneeId": 4,
+          "carriedFromFindingId": null,
+          "findingKey": "0363741b2e4b9f77814992d94d89ad721869ef2024e77632d0131fdf3949a0a6",
+          "evidenceHash": "8f8018ea6e582c579dcdc10fe47f90061e7fae4a4768836ccac89dedc7aa42a6",
+          "basisHash": "08fdc7353851eca9f969c198700376d2bda83d47c090066e7b38517570865739"
+        },
+        {
+          "id": 37,
+          "findingType": "CODE_QUALITY",
+          "path": "src/app/export_service.py",
+          "line": 2,
+          "evidence": "return connection.execute(f\"select * from app_user where tenant_id = {tenant_id}\").fetchall()",
+          "category": "SECURITY",
+          "explanation": "The tenant_id value is interpolated directly into SQL, which can permit SQL injection if the value is not strictly controlled and also bypasses the mandated tenant-scoped data access layer.",
+          "suggestion": "Use the tenant-scoped repository and parameterized query arguments instead of constructing SQL with string interpolation.",
+          "confidence": "HIGH",
+          "status": "IN_PROGRESS",
+          "continuity": "NEW",
+          "requirementId": 10,
+          "requirementRevisionId": 11,
+          "acId": null,
+          "acKey": null,
+          "assigneeId": 4,
+          "carriedFromFindingId": null,
+          "findingKey": "6103043b330c526f8e19bdc7056650388fd4444107ce7421d04a905628b541d5",
+          "evidenceHash": "8f8018ea6e582c579dcdc10fe47f90061e7fae4a4768836ccac89dedc7aa42a6",
+          "basisHash": "41a110739ef9fe5d99185417366d79dd0a84afbf948212d3a03293e702299838"
+        }
+      ],
+      "humanAdjudication": {
+        "findings": [
+          {
+            "id": 34,
+            "status": "CONFIRMED",
+            "comment": "演练核验：export_all 接受独立 tenant_id 并直接执行 SQL，没有复用 TenantScopedRepository 或接收已认证 TenantContext，违反 AC-1 指定的数据访问边界。"
+          },
+          {
+            "id": 35,
+            "status": "CONFIRMED",
+            "comment": "演练核验：查询没有 LIMIT，直接对整个租户结果 fetchall；既有仓储的 MAX_EXPORT_ROWS=10000 未使用，违反 AC-2 的单次行数上限。"
+          },
+          {
+            "id": 36,
+            "status": "CONFIRMED",
+            "comment": "演练核验：select * 将 app_user 全部列交给导出调用方，没有明确字段白名单；不满足 AC-3 排除密码散列等内部字段的要求。确认的是无约束整行导出，不把潜在列泄露当作已观察到的生产泄露。"
+          },
+          {
+            "id": 37,
+            "status": "CONFIRMED",
+            "comment": "演练核验：Python 的 tenant_id: int 只是类型注解，不执行运行时类型校验；传入字符串可原样进入 f-string SQL。函数内既无认证来源约束也无参数绑定，违反租户隔离规范禁止直接拼 SQL 的要求。"
+          }
+        ],
+        "returnComment": "退回修改：从已认证上下文取得租户，经租户仓储使用绑定参数和最多 10000 行的有界查询，明确导出字段白名单。另 AC-4/AC-5 对邮箱、手机号脱敏及操作人/时间/行数审计仍未实现，需一并补齐后重新提交。"
+      },
+      "events": [
+        {
+          "findingId": 34,
+          "events": [
+            {
+              "id": 58,
+              "actorId": 9,
+              "action": "CONFIRM",
+              "fromStatus": "OPEN",
+              "toStatus": "CONFIRMED",
+              "comment": "演练核验：export_all 接受独立 tenant_id 并直接执行 SQL，没有复用 TenantScopedRepository 或接收已认证 TenantContext，违反 AC-1 指定的数据访问边界。",
+              "createdAt": "2026-09-12T04:59:29.186087Z"
+            },
+            {
+              "id": 62,
+              "actorId": 4,
+              "action": "CLAIM",
+              "fromStatus": "CONFIRMED",
+              "toStatus": "IN_PROGRESS",
+              "comment": "演练开发认领：已阅读审查依据，后续按建议提交修复；当前尚未标记修复完成。",
+              "createdAt": "2026-09-12T04:59:55.580051Z"
+            }
+          ]
+        },
+        {
+          "findingId": 35,
+          "events": [
+            {
+              "id": 59,
+              "actorId": 9,
+              "action": "CONFIRM",
+              "fromStatus": "OPEN",
+              "toStatus": "CONFIRMED",
+              "comment": "演练核验：查询没有 LIMIT，直接对整个租户结果 fetchall；既有仓储的 MAX_EXPORT_ROWS=10000 未使用，违反 AC-2 的单次行数上限。",
+              "createdAt": "2026-09-12T04:59:35.131391Z"
+            },
+            {
+              "id": 63,
+              "actorId": 4,
+              "action": "CLAIM",
+              "fromStatus": "CONFIRMED",
+              "toStatus": "IN_PROGRESS",
+              "comment": "演练开发认领：已阅读审查依据，后续按建议提交修复；当前尚未标记修复完成。",
+              "createdAt": "2026-09-12T05:00:00.666995Z"
+            }
+          ]
+        },
+        {
+          "findingId": 36,
+          "events": [
+            {
+              "id": 60,
+              "actorId": 9,
+              "action": "CONFIRM",
+              "fromStatus": "OPEN",
+              "toStatus": "CONFIRMED",
+              "comment": "演练核验：select * 将 app_user 全部列交给导出调用方，没有明确字段白名单；不满足 AC-3 排除密码散列等内部字段的要求。确认的是无约束整行导出，不把潜在列泄露当作已观察到的生产泄露。",
+              "createdAt": "2026-09-12T04:59:39.146721Z"
+            },
+            {
+              "id": 64,
+              "actorId": 4,
+              "action": "CLAIM",
+              "fromStatus": "CONFIRMED",
+              "toStatus": "IN_PROGRESS",
+              "comment": "演练开发认领：已阅读审查依据，后续按建议提交修复；当前尚未标记修复完成。",
+              "createdAt": "2026-09-12T05:00:07.159559Z"
+            }
+          ]
+        },
+        {
+          "findingId": 37,
+          "events": [
+            {
+              "id": 61,
+              "actorId": 9,
+              "action": "CONFIRM",
+              "fromStatus": "OPEN",
+              "toStatus": "CONFIRMED",
+              "comment": "演练核验：Python 的 tenant_id: int 只是类型注解，不执行运行时类型校验；传入字符串可原样进入 f-string SQL。函数内既无认证来源约束也无参数绑定，违反租户隔离规范禁止直接拼 SQL 的要求。",
+              "createdAt": "2026-09-12T04:59:43.588329Z"
+            },
+            {
+              "id": 65,
+              "actorId": 4,
+              "action": "CLAIM",
+              "fromStatus": "CONFIRMED",
+              "toStatus": "IN_PROGRESS",
+              "comment": "演练开发认领：已阅读审查依据，后续按建议提交修复；当前尚未标记修复完成。",
+              "createdAt": "2026-09-12T05:00:09.192795Z"
+            }
+          ]
+        }
+      ],
+      "snapshotVerification": {
+        "headSha": "10f068c6c164b5487268e3b43fc8edfd53cfe288",
+        "baseSha": "33bbdb48ffbf33b2c618202f6693240dab2c3b15",
+        "requirementRevisionId": 11,
+        "changedFileCount": 2,
+        "allPatchesMatch": true,
+        "coverage": {
+          "files": [
+            {
+              "path": "review-materials/PR-03.md",
+              "patchTruncated": false
+            },
+            {
+              "path": "src/app/export_service.py",
+              "patchTruncated": false
+            }
+          ],
+          "truncated": false,
+          "notReviewed": []
+        },
+        "checkedAt": "2026-09-12T04:58:10.825Z"
+      }
+    },
+    {
+      "sequence": 9,
+      "projectId": 2,
+      "repo": "forgepilot-demo-tenant-user-center",
+      "title": "密码重置授权与安全存储",
+      "startedAt": "2026-09-12T05:00:44.489Z",
+      "phase": "decided",
+      "requirementId": 11,
+      "requirementRevisionId": 12,
+      "pullRequestNumber": 4,
+      "pullRequestUrl": "https://github.com/LinYsssss/forgepilot-demo-tenant-user-center/pull/4",
+      "prCreatedAt": "2026-09-12T05:01:39.460Z",
+      "reviewId": 10,
+      "pullRequestId": 10,
+      "headSha": "8e39e05ad270093a0ad3b48b8e67bcf7b7f8bdc8",
+      "baseSha": "33bbdb48ffbf33b2c618202f6693240dab2c3b15",
+      "findingCount": 5,
+      "reviewCompletedAt": "2026-09-12T05:02:53.925Z",
+      "decision": "REQUEST_CHANGES",
+      "decisionAt": "2026-09-12T05:07:22.518388Z",
+      "confirmed": 5,
+      "rejected": 0,
+      "finishedAt": "2026-09-12T05:07:50.421Z",
+      "model": "gpt-5.6-luna",
+      "promptVersion": "review-2",
+      "executionAttempt": 1,
+      "reviewInputFingerprint": "c85dd3d7178aa808f75d374f0b491e5a9c18550dd094f1025b4bd11e13d6e589",
+      "coverage": {
+        "files": [
+          {
+            "path": "review-materials/PR-04.md",
+            "patchTruncated": false
+          },
+          {
+            "path": "src/app/password_reset.py",
+            "patchTruncated": false
+          }
+        ],
+        "truncated": false,
+        "notReviewed": []
+      },
+      "acVerdicts": [
+        {
+          "acId": 63,
+          "acKey": "AC-1",
+          "verdict": "AT_RISK"
+        },
+        {
+          "acId": 64,
+          "acKey": "AC-2",
+          "verdict": "AT_RISK"
+        },
+        {
+          "acId": 65,
+          "acKey": "AC-3",
+          "verdict": "AT_RISK"
+        },
+        {
+          "acId": 66,
+          "acKey": "AC-4",
+          "verdict": "AT_RISK"
+        },
+        {
+          "acId": 67,
+          "acKey": "AC-5",
+          "verdict": "AT_RISK"
+        }
+      ],
+      "findings": [
+        {
+          "id": 38,
+          "findingType": "REQUIREMENT",
+          "path": "src/app/password_reset.py",
+          "line": 4,
+          "evidence": "def reset_password(connection, user_id: int, password: str):",
+          "category": "SECURITY",
+          "explanation": "The reset function accepts only a database connection, user ID, and password. The patch does not demonstrate authorization for an operations role or verification that the target user belongs to the authenticated tenant.",
+          "suggestion": "Require the authenticated context, enforce the permitted operations role, and resolve or validate the target user through the current tenant scope before resetting the password.",
+          "confidence": "HIGH",
+          "status": "IN_PROGRESS",
+          "continuity": "NEW",
+          "requirementId": 11,
+          "requirementRevisionId": 12,
+          "acId": 63,
+          "acKey": "AC-1",
+          "assigneeId": 4,
+          "carriedFromFindingId": null,
+          "findingKey": "1422e38fb703333f721ec69ef7f487a0dc58e1bc4c73c8e66917e8cb2dab14d6",
+          "evidenceHash": "e833fe685f05d8b977a36acaaa63728f73497fd075eb7c69f3403489c2ff158d",
+          "basisHash": "a9e818d10fc22736acc5d9fc104cc7bbd4b1eab0ac6fef19439177079c02b49f"
+        },
+        {
+          "id": 39,
+          "findingType": "REQUIREMENT",
+          "path": "src/app/password_reset.py",
+          "line": 4,
+          "evidence": "    digest = hashlib.sha256(password.encode()).hexdigest()",
+          "category": "SECURITY",
+          "explanation": "The password is stored using unsalted SHA-256, which violates the required bcrypt policy and is incompatible with the mandated password storage protection.",
+          "suggestion": "Reuse the existing bcrypt password policy with a cost factor of at least 12, rather than applying a fast hash directly.",
+          "confidence": "HIGH",
+          "status": "IN_PROGRESS",
+          "continuity": "NEW",
+          "requirementId": 11,
+          "requirementRevisionId": 12,
+          "acId": 64,
+          "acKey": "AC-2",
+          "assigneeId": 4,
+          "carriedFromFindingId": null,
+          "findingKey": "dacd325be59001ce1f47b1f105549a6ef80c2b8b366e16087d3bda3695bbd9fb",
+          "evidenceHash": "c3a54dfff14cbf6a3dfe928d9d7902e0624da3ffcdd1261a183cad9bb2018a58",
+          "basisHash": "fe7429bfe789535db51bcc004bd321b064693b9fedfe854fc1bbea432524acaf"
+        },
+        {
+          "id": 40,
+          "findingType": "REQUIREMENT",
+          "path": "src/app/password_reset.py",
+          "line": 4,
+          "evidence": "def reset_password(connection, user_id: int, password: str):",
+          "category": "SECURITY",
+          "explanation": "The function accepts the new password but the patch shows no validation for the required minimum length or upper-case, lower-case, and numeric character rules before hashing it.",
+          "suggestion": "Apply the existing password-policy validator before generating the password hash and reject invalid passwords without updating the database.",
+          "confidence": "HIGH",
+          "status": "IN_PROGRESS",
+          "continuity": "NEW",
+          "requirementId": 11,
+          "requirementRevisionId": 12,
+          "acId": 65,
+          "acKey": "AC-3",
+          "assigneeId": 4,
+          "carriedFromFindingId": null,
+          "findingKey": "b511a2b6aba15c78531c1a2ca7f29ac2ae380397960c24943d14c420ba46ad02",
+          "evidenceHash": "e833fe685f05d8b977a36acaaa63728f73497fd075eb7c69f3403489c2ff158d",
+          "basisHash": "5b4d8baeac09f0d59000afa578ce00eaabe4aedaf2f0f73f366fc368610b300d"
+        },
+        {
+          "id": 41,
+          "findingType": "REQUIREMENT",
+          "path": "src/app/password_reset.py",
+          "line": 5,
+          "evidence": "    return connection.execute('update app_user set password_hash=%s where id=%s', (digest, user_id))",
+          "category": "SECURITY",
+          "explanation": "The value parameters are bound, but the update filters only by user ID and omits the authenticated tenant scope. It also directly executes SQL instead of using the tenant-scoped data-access layer, allowing a cross-tenant update when IDs overlap.",
+          "suggestion": "Perform the update through the tenant-scoped repository or add an authenticated tenant condition to the update while retaining parameter binding.",
+          "confidence": "HIGH",
+          "status": "IN_PROGRESS",
+          "continuity": "NEW",
+          "requirementId": 11,
+          "requirementRevisionId": 12,
+          "acId": 66,
+          "acKey": "AC-4",
+          "assigneeId": 4,
+          "carriedFromFindingId": null,
+          "findingKey": "0b703247b42eb41a65e76ebf1395e799ef59b5a75165cda1082c7dd259864978",
+          "evidenceHash": "3a73131e481cada65db4bb07b1931e108f71a693d6c778d7229a6db05acce20a",
+          "basisHash": "94fc8702c9b570079de6d81f11b0c068798acae26ecb8417dcfc1e49c0b78fdd"
+        },
+        {
+          "id": 42,
+          "findingType": "REQUIREMENT",
+          "path": "src/app/password_reset.py",
+          "line": 5,
+          "evidence": "    return connection.execute('update app_user set password_hash=%s where id=%s', (digest, user_id))",
+          "category": "SECURITY",
+          "explanation": "The patch performs the password update but shows no audit event recording the operator and target user, and no evidence that the reset operation produces the required sanitized audit record.",
+          "suggestion": "Write a reset audit event containing the authenticated operator and target user identifiers while explicitly excluding the plaintext password and password hash.",
+          "confidence": "MEDIUM",
+          "status": "IN_PROGRESS",
+          "continuity": "NEW",
+          "requirementId": 11,
+          "requirementRevisionId": 12,
+          "acId": 67,
+          "acKey": "AC-5",
+          "assigneeId": 4,
+          "carriedFromFindingId": null,
+          "findingKey": "c080d7171f3c287bd7dd35b909eda3f4203a5cee4dc08f4c1a07ee4d7a880bf5",
+          "evidenceHash": "3a73131e481cada65db4bb07b1931e108f71a693d6c778d7229a6db05acce20a",
+          "basisHash": "7d3793b57e9712cd00ebc3886a2eb537459cf88c7f2b960679527ddb4e20b132"
+        }
+      ],
+      "humanAdjudication": {
+        "findings": [
+          {
+            "id": 38,
+            "status": "CONFIRMED",
+            "comment": "演练核验：第 3 行 reset_password 入口只有 connection、user_id、password，完整函数未接收认证上下文或校验运营角色、目标租户归属，违反 AC-1。模型定位在相邻第 4 行，实际依据为整个函数入口及更新路径。"
+          },
+          {
+            "id": 39,
+            "status": "CONFIRMED",
+            "comment": "演练核验：第 4 行使用无盐 SHA-256 十六进制串存储密码，没有复用 auth.hash_password 的 bcrypt cost=12；不符合 AC-2，且与现有 bcrypt 验证方式不兼容。"
+          },
+          {
+            "id": 40,
+            "status": "CONFIRMED",
+            "comment": "演练核验：第 3–5 行完整函数直接散列并更新任意 password，未检查最短 12 位、大小写及数字规则，违反 AC-3。源代码依据为函数全体，而非只凭模型给出的相邻行号。"
+          },
+          {
+            "id": 41,
+            "status": "CONFIRMED",
+            "comment": "演练核验：UPDATE 已正确使用参数绑定，但 WHERE 只有 id=%s，没有当前认证 tenant_id 条件，也未经租户仓储；可指定其他租户的用户 ID，违反 AC-4 的租户范围要求。"
+          },
+          {
+            "id": 42,
+            "status": "CONFIRMED",
+            "comment": "演练核验：函数直接返回数据库更新结果，未记录操作人和目标用户的密码重置审计事件；该新增文件没有审计调用或操作者上下文，AC-5 尚未实现。"
+          }
+        ],
+        "returnComment": "退回修改：校验运营授权与目标用户租户归属，使用认证租户限定的绑定参数更新；复用 bcrypt 存储策略并补齐长度、大小写及数字校验；记录不含明文密码或散列的操作者/目标用户审计事件后再提交。"
+      },
+      "events": [
+        {
+          "findingId": 38,
+          "events": [
+            {
+              "id": 66,
+              "actorId": 9,
+              "action": "CONFIRM",
+              "fromStatus": "OPEN",
+              "toStatus": "CONFIRMED",
+              "comment": "演练核验：第 3 行 reset_password 入口只有 connection、user_id、password，完整函数未接收认证上下文或校验运营角色、目标租户归属，违反 AC-1。模型定位在相邻第 4 行，实际依据为整个函数入口及更新路径。",
+              "createdAt": "2026-09-12T05:06:42.460127Z"
+            },
+            {
+              "id": 71,
+              "actorId": 4,
+              "action": "CLAIM",
+              "fromStatus": "CONFIRMED",
+              "toStatus": "IN_PROGRESS",
+              "comment": "演练开发认领：已阅读审查依据，后续按建议提交修复；当前尚未标记修复完成。",
+              "createdAt": "2026-09-12T05:07:33.179436Z"
+            }
+          ]
+        },
+        {
+          "findingId": 39,
+          "events": [
+            {
+              "id": 67,
+              "actorId": 9,
+              "action": "CONFIRM",
+              "fromStatus": "OPEN",
+              "toStatus": "CONFIRMED",
+              "comment": "演练核验：第 4 行使用无盐 SHA-256 十六进制串存储密码，没有复用 auth.hash_password 的 bcrypt cost=12；不符合 AC-2，且与现有 bcrypt 验证方式不兼容。",
+              "createdAt": "2026-09-12T05:06:51.892396Z"
+            },
+            {
+              "id": 72,
+              "actorId": 4,
+              "action": "CLAIM",
+              "fromStatus": "CONFIRMED",
+              "toStatus": "IN_PROGRESS",
+              "comment": "演练开发认领：已阅读审查依据，后续按建议提交修复；当前尚未标记修复完成。",
+              "createdAt": "2026-09-12T05:07:39.754294Z"
+            }
+          ]
+        },
+        {
+          "findingId": 40,
+          "events": [
+            {
+              "id": 68,
+              "actorId": 9,
+              "action": "CONFIRM",
+              "fromStatus": "OPEN",
+              "toStatus": "CONFIRMED",
+              "comment": "演练核验：第 3–5 行完整函数直接散列并更新任意 password，未检查最短 12 位、大小写及数字规则，违反 AC-3。源代码依据为函数全体，而非只凭模型给出的相邻行号。",
+              "createdAt": "2026-09-12T05:07:03.086903Z"
+            },
+            {
+              "id": 73,
+              "actorId": 4,
+              "action": "CLAIM",
+              "fromStatus": "CONFIRMED",
+              "toStatus": "IN_PROGRESS",
+              "comment": "演练开发认领：已阅读审查依据，后续按建议提交修复；当前尚未标记修复完成。",
+              "createdAt": "2026-09-12T05:07:43.071678Z"
+            }
+          ]
+        },
+        {
+          "findingId": 41,
+          "events": [
+            {
+              "id": 69,
+              "actorId": 9,
+              "action": "CONFIRM",
+              "fromStatus": "OPEN",
+              "toStatus": "CONFIRMED",
+              "comment": "演练核验：UPDATE 已正确使用参数绑定，但 WHERE 只有 id=%s，没有当前认证 tenant_id 条件，也未经租户仓储；可指定其他租户的用户 ID，违反 AC-4 的租户范围要求。",
+              "createdAt": "2026-09-12T05:07:10.883301Z"
+            },
+            {
+              "id": 74,
+              "actorId": 4,
+              "action": "CLAIM",
+              "fromStatus": "CONFIRMED",
+              "toStatus": "IN_PROGRESS",
+              "comment": "演练开发认领：已阅读审查依据，后续按建议提交修复；当前尚未标记修复完成。",
+              "createdAt": "2026-09-12T05:07:44.644684Z"
+            }
+          ]
+        },
+        {
+          "findingId": 42,
+          "events": [
+            {
+              "id": 70,
+              "actorId": 9,
+              "action": "CONFIRM",
+              "fromStatus": "OPEN",
+              "toStatus": "CONFIRMED",
+              "comment": "演练核验：函数直接返回数据库更新结果，未记录操作人和目标用户的密码重置审计事件；该新增文件没有审计调用或操作者上下文，AC-5 尚未实现。",
+              "createdAt": "2026-09-12T05:07:16.991326Z"
+            },
+            {
+              "id": 75,
+              "actorId": 4,
+              "action": "CLAIM",
+              "fromStatus": "CONFIRMED",
+              "toStatus": "IN_PROGRESS",
+              "comment": "演练开发认领：已阅读审查依据，后续按建议提交修复；当前尚未标记修复完成。",
+              "createdAt": "2026-09-12T05:07:46.217603Z"
+            }
+          ]
+        }
+      ],
+      "snapshotVerification": {
+        "headSha": "8e39e05ad270093a0ad3b48b8e67bcf7b7f8bdc8",
+        "baseSha": "33bbdb48ffbf33b2c618202f6693240dab2c3b15",
+        "requirementRevisionId": 12,
+        "changedFileCount": 2,
+        "allPatchesMatch": true,
+        "coverage": {
+          "files": [
+            {
+              "path": "review-materials/PR-04.md",
+              "patchTruncated": false
+            },
+            {
+              "path": "src/app/password_reset.py",
+              "patchTruncated": false
+            }
+          ],
+          "truncated": false,
+          "notReviewed": []
+        },
+        "checkedAt": "2026-09-12T05:02:53.927Z"
+      }
+    },
+    {
+      "sequence": 10,
+      "projectId": 2,
+      "repo": "forgepilot-demo-tenant-user-center",
+      "title": "运营前端安全渲染与配置合并",
+      "startedAt": "2026-09-12T05:08:09.616Z",
+      "phase": "decided",
+      "requirementId": 12,
+      "requirementRevisionId": 13,
+      "pullRequestNumber": 5,
+      "pullRequestUrl": "https://github.com/LinYsssss/forgepilot-demo-tenant-user-center/pull/5",
+      "prCreatedAt": "2026-09-12T05:08:41.937Z",
+      "reviewId": 11,
+      "pullRequestId": 11,
+      "headSha": "bedbcf7040e53a4b3894a2c3cb0875b7ef4474ec",
+      "baseSha": "33bbdb48ffbf33b2c618202f6693240dab2c3b15",
+      "findingCount": 3,
+      "reviewCompletedAt": "2026-09-12T05:09:31.258Z",
+      "decision": "REQUEST_CHANGES",
+      "decisionAt": "2026-09-12T05:10:55.342753Z",
+      "confirmed": 3,
+      "rejected": 0,
+      "finishedAt": "2026-09-12T05:11:22.840Z",
+      "model": "gpt-5.6-luna",
+      "promptVersion": "review-2",
+      "executionAttempt": 1,
+      "reviewInputFingerprint": "8067b366fa4b64231f16ffb9ae3a39eaa50fbf7e0f546b5e90b0fb6016ad3156",
+      "coverage": {
+        "files": [
+          {
+            "path": "review-materials/PR-05.md",
+            "patchTruncated": false
+          },
+          {
+            "path": "web/ops-preferences.js",
+            "patchTruncated": false
+          }
+        ],
+        "truncated": false,
+        "notReviewed": []
+      },
+      "acVerdicts": [
+        {
+          "acId": 68,
+          "acKey": "AC-1",
+          "verdict": "AT_RISK"
+        },
+        {
+          "acId": 69,
+          "acKey": "AC-2",
+          "verdict": "AT_RISK"
+        },
+        {
+          "acId": 70,
+          "acKey": "AC-3",
+          "verdict": "NOT_FOUND"
+        },
+        {
+          "acId": 71,
+          "acKey": "AC-4",
+          "verdict": "AT_RISK"
+        }
+      ],
+      "findings": [
+        {
+          "id": 43,
+          "findingType": "REQUIREMENT",
+          "path": "web/ops-preferences.js",
+          "line": 2,
+          "evidence": "  container.innerHTML = `<p>${user.nickname}: ${user.email}</p>`;",
+          "category": "SECURITY",
+          "explanation": "User-controlled nickname and email are inserted through innerHTML, so a malicious nickname can execute script instead of being rendered as text.",
+          "suggestion": "Construct the element and assign user-controlled values with textContent rather than interpolating them into innerHTML.",
+          "confidence": "HIGH",
+          "status": "IN_PROGRESS",
+          "continuity": "NEW",
+          "requirementId": 12,
+          "requirementRevisionId": 13,
+          "acId": 68,
+          "acKey": "AC-1",
+          "assigneeId": 4,
+          "carriedFromFindingId": null,
+          "findingKey": "5d75e4494f1c7e0df343ab040d8a0195d584d51b57ea7b53a94ccb16bd871dd5",
+          "evidenceHash": "28967fced5f540aab7638d7a88970859e5ded82101b09baa21066e7fff2ad83c",
+          "basisHash": "bdada01ee5b383e90f439494de5610ace220398afa4eb1016125b734c0ce283f"
+        },
+        {
+          "id": 44,
+          "findingType": "REQUIREMENT",
+          "path": "web/ops-preferences.js",
+          "line": 2,
+          "evidence": "  container.innerHTML = `<p>${user.nickname}: ${user.email}</p>`;",
+          "category": "SECURITY",
+          "explanation": "The list outputs the email directly without masking, exposing personal information contrary to the list-display requirement.",
+          "suggestion": "Apply the approved email masking format before rendering list data, and ensure phone numbers receive the corresponding masking treatment.",
+          "confidence": "HIGH",
+          "status": "IN_PROGRESS",
+          "continuity": "NEW",
+          "requirementId": 12,
+          "requirementRevisionId": 13,
+          "acId": 69,
+          "acKey": "AC-2",
+          "assigneeId": 4,
+          "carriedFromFindingId": null,
+          "findingKey": "d8b72358e2ee73de847ba0d41e1724d0650ecc152682a4c96c72f0e850c7fd32",
+          "evidenceHash": "28967fced5f540aab7638d7a88970859e5ded82101b09baa21066e7fff2ad83c",
+          "basisHash": "6f5a8178ee29f63d379df3c196f95de6c45b7b9a84313469a7128767855514bc"
+        },
+        {
+          "id": 45,
+          "findingType": "REQUIREMENT",
+          "path": "web/ops-preferences.js",
+          "line": 4,
+          "evidence": "export function merge(target, source) { for (const key in source) target[key] = source[key]; }",
+          "category": "SECURITY",
+          "explanation": "The merge copies every enumerable key, including inherited properties and dangerous keys such as __proto__, constructor, and prototype, allowing prototype pollution and unauthorized settings to be accepted.",
+          "suggestion": "Restrict merging to an explicit allowlist of own properties and reject __proto__, constructor, prototype, and other unsafe keys.",
+          "confidence": "HIGH",
+          "status": "IN_PROGRESS",
+          "continuity": "NEW",
+          "requirementId": 12,
+          "requirementRevisionId": 13,
+          "acId": 71,
+          "acKey": "AC-4",
+          "assigneeId": 4,
+          "carriedFromFindingId": null,
+          "findingKey": "32ef01de83a4cb618f049f3ffbac7051418d5d79fb97153d0f2b5e1c20333bc7",
+          "evidenceHash": "04496aa450f43dbee851f7ff2697f24df24123247af9ce027a199aa98b9f6173",
+          "basisHash": "97079192e23ae79e0eea1ba8b207a6bb29e9a6f565399aa80d1e093e7c1f38f0"
+        }
+      ],
+      "humanAdjudication": {
+        "findings": [
+          {
+            "id": 43,
+            "status": "CONFIRMED",
+            "comment": "演练核验：nickname 和 email 直接插入 innerHTML，带 HTML/事件属性的昵称会被解释为页面标记；没有安全文本渲染或转义，违反 AC-1 的 textContent 要求。"
+          },
+          {
+            "id": 44,
+            "status": "CONFIRMED",
+            "comment": "演练核验：render 原样使用 user.email，传入完整邮箱时会完整展示，未应用列表脱敏规则，违反 AC-2。当前差异未展示手机号，因此确认依据限定为已输出的邮箱。"
+          },
+          {
+            "id": 45,
+            "status": "CONFIRMED",
+            "comment": "演练核验：for...in 会枚举继承属性，target[key] 也未限制允许字段或拒绝危险键；JSON 来源的自有 __proto__ 键可触发普通对象的原型 setter，改变目标对象原型，违反 AC-4。"
+          }
+        ],
+        "returnComment": "退回修改：使用安全文本节点渲染用户资料，对列表邮箱执行脱敏；配置合并仅接受允许的自有属性并拒绝 __proto__、constructor、prototype 等危险键，补齐对应输入边界验证后提交。"
+      },
+      "events": [
+        {
+          "findingId": 43,
+          "events": [
+            {
+              "id": 76,
+              "actorId": 9,
+              "action": "CONFIRM",
+              "fromStatus": "OPEN",
+              "toStatus": "CONFIRMED",
+              "comment": "演练核验：nickname 和 email 直接插入 innerHTML，带 HTML/事件属性的昵称会被解释为页面标记；没有安全文本渲染或转义，违反 AC-1 的 textContent 要求。",
+              "createdAt": "2026-09-12T05:10:44.763288Z"
+            },
+            {
+              "id": 79,
+              "actorId": 4,
+              "action": "CLAIM",
+              "fromStatus": "CONFIRMED",
+              "toStatus": "IN_PROGRESS",
+              "comment": "演练开发认领：已阅读审查依据，后续按建议提交修复；当前尚未标记修复完成。",
+              "createdAt": "2026-09-12T05:11:09.029554Z"
+            }
+          ]
+        },
+        {
+          "findingId": 44,
+          "events": [
+            {
+              "id": 77,
+              "actorId": 9,
+              "action": "CONFIRM",
+              "fromStatus": "OPEN",
+              "toStatus": "CONFIRMED",
+              "comment": "演练核验：render 原样使用 user.email，传入完整邮箱时会完整展示，未应用列表脱敏规则，违反 AC-2。当前差异未展示手机号，因此确认依据限定为已输出的邮箱。",
+              "createdAt": "2026-09-12T05:10:48.914510Z"
+            },
+            {
+              "id": 80,
+              "actorId": 4,
+              "action": "CLAIM",
+              "fromStatus": "CONFIRMED",
+              "toStatus": "IN_PROGRESS",
+              "comment": "演练开发认领：已阅读审查依据，后续按建议提交修复；当前尚未标记修复完成。",
+              "createdAt": "2026-09-12T05:11:14.070496Z"
+            }
+          ]
+        },
+        {
+          "findingId": 45,
+          "events": [
+            {
+              "id": 78,
+              "actorId": 9,
+              "action": "CONFIRM",
+              "fromStatus": "OPEN",
+              "toStatus": "CONFIRMED",
+              "comment": "演练核验：for...in 会枚举继承属性，target[key] 也未限制允许字段或拒绝危险键；JSON 来源的自有 __proto__ 键可触发普通对象的原型 setter，改变目标对象原型，违反 AC-4。",
+              "createdAt": "2026-09-12T05:10:52.379457Z"
+            },
+            {
+              "id": 81,
+              "actorId": 4,
+              "action": "CLAIM",
+              "fromStatus": "CONFIRMED",
+              "toStatus": "IN_PROGRESS",
+              "comment": "演练开发认领：已阅读审查依据，后续按建议提交修复；当前尚未标记修复完成。",
+              "createdAt": "2026-09-12T05:11:18.919247Z"
+            }
+          ]
+        }
+      ],
+      "snapshotVerification": {
+        "headSha": "bedbcf7040e53a4b3894a2c3cb0875b7ef4474ec",
+        "baseSha": "33bbdb48ffbf33b2c618202f6693240dab2c3b15",
+        "requirementRevisionId": 13,
+        "changedFileCount": 2,
+        "allPatchesMatch": true,
+        "coverage": {
+          "files": [
+            {
+              "path": "review-materials/PR-05.md",
+              "patchTruncated": false
+            },
+            {
+              "path": "web/ops-preferences.js",
+              "patchTruncated": false
+            }
+          ],
+          "truncated": false,
+          "notReviewed": []
+        },
+        "checkedAt": "2026-09-12T05:09:31.260Z"
+      }
+    },
+    {
+      "sequence": 11,
+      "projectId": 3,
+      "repo": "forgepilot-demo-payment-settlement-service",
+      "title": "即时结算金额与业务校验",
+      "startedAt": "2026-09-12T05:12:09.682Z",
+      "phase": "decided",
+      "requirementId": 13,
+      "requirementRevisionId": 14,
+      "pullRequestNumber": 1,
+      "pullRequestUrl": "https://github.com/LinYsssss/forgepilot-demo-payment-settlement-service/pull/1",
+      "prCreatedAt": "2026-09-12T05:12:48.160Z",
+      "reviewId": 12,
+      "pullRequestId": 12,
+      "headSha": "a6fc37ba87e76dc86a8c6428f0bb1aac6e6aa606",
+      "baseSha": "9240412e10377aa12700e4d40232ac867442bc61",
+      "findingCount": 5,
+      "reviewCompletedAt": "2026-09-12T05:13:53.937Z",
+      "decision": "REQUEST_CHANGES",
+      "decisionAt": "2026-09-12T05:15:49.319823Z",
+      "confirmed": 5,
+      "rejected": 0,
+      "finishedAt": "2026-09-12T05:16:50.661Z",
+      "model": "gpt-5.6-luna",
+      "promptVersion": "review-2",
+      "executionAttempt": 1,
+      "reviewInputFingerprint": "c91a7cc11c4103fb9f7ff37ce55aecfbab7c9b5a365af210117b20cbb4608e9d",
+      "coverage": {
+        "files": [
+          {
+            "path": "review-materials/PR-01.md",
+            "patchTruncated": false
+          },
+          {
+            "path": "src/main/java/com/example/settlement/service/InstantPayoutFacade.java",
+            "patchTruncated": false
+          }
+        ],
+        "truncated": false,
+        "notReviewed": []
+      },
+      "acVerdicts": [
+        {
+          "acId": 72,
+          "acKey": "AC-1",
+          "verdict": "AT_RISK"
+        },
+        {
+          "acId": 73,
+          "acKey": "AC-2",
+          "verdict": "AT_RISK"
+        },
+        {
+          "acId": 74,
+          "acKey": "AC-3",
+          "verdict": "NOT_FOUND"
+        },
+        {
+          "acId": 75,
+          "acKey": "AC-4",
+          "verdict": "NOT_FOUND"
+        },
+        {
+          "acId": 76,
+          "acKey": "AC-5",
+          "verdict": "NOT_FOUND"
+        }
+      ],
+      "findings": [
+        {
+          "id": 46,
+          "findingType": "REQUIREMENT",
+          "path": "src/main/java/com/example/settlement/service/InstantPayoutFacade.java",
+          "line": 3,
+          "evidence": "    public double payout(double amountYuan) { return Math.round(amountYuan * 0.008 * 100D) / 100D; }",
+          "category": "CORRECTNESS",
+          "explanation": "结算金额使用 double 元作为输入和返回值，并通过浮点运算计算结果，不符合金额全程使用 long 分的要求，可能造成精度误差。",
+          "suggestion": "将接口及内部计算统一改为以分为单位的 long，并避免所有浮点类型参与金额计算。",
+          "confidence": "HIGH",
+          "status": "IN_PROGRESS",
+          "continuity": "NEW",
+          "requirementId": 13,
+          "requirementRevisionId": 14,
+          "acId": 72,
+          "acKey": "AC-1",
+          "assigneeId": 4,
+          "carriedFromFindingId": null,
+          "findingKey": "ad21ef1cca8ef8ff90b3aca16ef5590f8b64cfcb40858f80ab67e741407a0ddb",
+          "evidenceHash": "d37229ec16b7afb92f01e7041b5dacdab6a428a3e71d50ba56793ef2564ab154",
+          "basisHash": "a9188bcea04c644b203a4099ca075649c9831986e233037d339e71043419e865"
+        },
+        {
+          "id": 47,
+          "findingType": "REQUIREMENT",
+          "path": "src/main/java/com/example/settlement/service/InstantPayoutFacade.java",
+          "line": 3,
+          "evidence": "    public double payout(double amountYuan) { return Math.round(amountYuan * 0.008 * 100D) / 100D; }",
+          "category": "CORRECTNESS",
+          "explanation": "费率 0.008 被直接硬编码，且使用 Math.round 四舍五入；没有体现从商户配置读取费率并以整数基点向下取整。",
+          "suggestion": "从 merchant_fee_config 读取生效费率，以整数基点和 long 分进行计算，并使用向下截断而非四舍五入。",
+          "confidence": "HIGH",
+          "status": "IN_PROGRESS",
+          "continuity": "NEW",
+          "requirementId": 13,
+          "requirementRevisionId": 14,
+          "acId": 73,
+          "acKey": "AC-2",
+          "assigneeId": 4,
+          "carriedFromFindingId": null,
+          "findingKey": "68f62b8601f7280bf1b5112966bbaa6ab566dcae6deeb57b6c0b8fbd583de3d3",
+          "evidenceHash": "d37229ec16b7afb92f01e7041b5dacdab6a428a3e71d50ba56793ef2564ab154",
+          "basisHash": "579080cc33609442a685089622bbed51382639554359f1b756fffb9b9fa7f486"
+        },
+        {
+          "id": 48,
+          "findingType": "REQUIREMENT",
+          "path": "src/main/java/com/example/settlement/service/InstantPayoutFacade.java",
+          "line": 3,
+          "evidence": "    public double payout(double amountYuan) { return Math.round(amountYuan * 0.008 * 100D) / 100D; }",
+          "category": "REQUIREMENT_GAP",
+          "explanation": "该实现未体现对请求币种为 CNY 的校验，也未体现扣除手续费后的净结算金额必须至少为 100 分。",
+          "suggestion": "在发起结算前明确拒绝非 CNY 请求，并基于扣费后的 long 分净额执行不低于 100 分的校验。",
+          "confidence": "HIGH",
+          "status": "IN_PROGRESS",
+          "continuity": "NEW",
+          "requirementId": 13,
+          "requirementRevisionId": 14,
+          "acId": 74,
+          "acKey": "AC-3",
+          "assigneeId": 4,
+          "carriedFromFindingId": null,
+          "findingKey": "d6a038f930b36e8f77edd55121754919a0a18e8e4c0373e7553fb7d151eb3dbb",
+          "evidenceHash": "d37229ec16b7afb92f01e7041b5dacdab6a428a3e71d50ba56793ef2564ab154",
+          "basisHash": "7d2aeffc9963efef48108d9b07d6a4d466a493577ea5ff34fb3dfd976657ae89"
+        },
+        {
+          "id": 49,
+          "findingType": "REQUIREMENT",
+          "path": "src/main/java/com/example/settlement/service/InstantPayoutFacade.java",
+          "line": 3,
+          "evidence": "    public double payout(double amountYuan) { return Math.round(amountYuan * 0.008 * 100D) / 100D; }",
+          "category": "REQUIREMENT_GAP",
+          "explanation": "该实现未体现对风控商户的识别、T+7 结算周期限制或人工复核要求，因此看不到阻止风控商户绕过规定周期即时放款的逻辑。",
+          "suggestion": "根据商户风险等级强制执行规定结算周期，并在人工复核完成前拒绝即时放款。",
+          "confidence": "HIGH",
+          "status": "IN_PROGRESS",
+          "continuity": "NEW",
+          "requirementId": 13,
+          "requirementRevisionId": 14,
+          "acId": 75,
+          "acKey": "AC-4",
+          "assigneeId": 4,
+          "carriedFromFindingId": null,
+          "findingKey": "041cd1efc38b5fe7f9d25131dc702ed330d1337befe2094eff9dc75c22994a02",
+          "evidenceHash": "d37229ec16b7afb92f01e7041b5dacdab6a428a3e71d50ba56793ef2564ab154",
+          "basisHash": "59e8e3a595744db92c97724ee91b1a47aa4328bf5de9aedb9cbd585880418c0b"
+        },
+        {
+          "id": 50,
+          "findingType": "REQUIREMENT",
+          "path": "src/main/java/com/example/settlement/service/InstantPayoutFacade.java",
+          "line": 3,
+          "evidence": "    public double payout(double amountYuan) { return Math.round(amountYuan * 0.008 * 100D) / 100D; }",
+          "category": "REQUIREMENT_GAP",
+          "explanation": "该实现没有调用方幂等键参数或幂等处理逻辑，无法保证重复请求返回首次结算结果，也无法防止重复放款。",
+          "suggestion": "要求调用方提供稳定幂等键，并结合唯一约束和结算状态机确保重复请求复用首次结算结果。",
+          "confidence": "HIGH",
+          "status": "IN_PROGRESS",
+          "continuity": "NEW",
+          "requirementId": 13,
+          "requirementRevisionId": 14,
+          "acId": 76,
+          "acKey": "AC-5",
+          "assigneeId": 4,
+          "carriedFromFindingId": null,
+          "findingKey": "49e8597f2e57234fa2a91b87d7bee845f2e32f2d6c5d97e7c716fe298f642b83",
+          "evidenceHash": "d37229ec16b7afb92f01e7041b5dacdab6a428a3e71d50ba56793ef2564ab154",
+          "basisHash": "ecb2c85696c090ecbce58603eda8f95a0538c0ea0cd4adbd6d698e980e6ca5e5"
+        }
+      ],
+      "humanAdjudication": {
+        "findings": [
+          {
+            "id": 46,
+            "status": "CONFIRMED",
+            "comment": "演练核验：payout 的输入和返回值均为 double，金额乘法及除法也使用浮点数，未采用 long 整数分，直接违反 AC-1。"
+          },
+          {
+            "id": 47,
+            "status": "CONFIRMED",
+            "comment": "演练核验：0.008 为硬编码旧费率，Math.round 为四舍五入；现有 FeeCalculator 从商户配置读取基点并用整数除法向下取整，新入口未复用，违反 AC-2。"
+          },
+          {
+            "id": 48,
+            "status": "CONFIRMED",
+            "comment": "演练核验：唯一方法只计算并返回数值，没有 CNY 校验，也没有扣费净额至少 100 分的判断；AC-3 所要求的结算前置规则未实现。"
+          },
+          {
+            "id": 49,
+            "status": "CONFIRMED",
+            "comment": "演练核验：新入口没有商户身份、风险等级、结算周期或人工复核判断，无法实现 AC-4 对风控商户的限制。确认的是规则缺失，并非宣称本次演练已经发生真实资金放款。"
+          },
+          {
+            "id": 50,
+            "status": "CONFIRMED",
+            "comment": "演练核验：方法未要求稳定幂等键，也没有持久化或查询首次结算结果的路径，AC-5 未实现；不能以一次纯数值计算替代完整结算幂等契约。"
+          }
+        ],
+        "returnComment": "退回修改：采用 long 整数分和商户配置基点费率，手续费向下取整；补齐 CNY、最小净额、风控商户周期及人工复核限制，并使用稳定幂等键保存和复用首次结果后重新提交。"
+      },
+      "events": [
+        {
+          "findingId": 46,
+          "events": [
+            {
+              "id": 82,
+              "actorId": 9,
+              "action": "CONFIRM",
+              "fromStatus": "OPEN",
+              "toStatus": "CONFIRMED",
+              "comment": "演练核验：payout 的输入和返回值均为 double，金额乘法及除法也使用浮点数，未采用 long 整数分，直接违反 AC-1。",
+              "createdAt": "2026-09-12T05:15:24.946547Z"
+            },
+            {
+              "id": 87,
+              "actorId": 4,
+              "action": "CLAIM",
+              "fromStatus": "CONFIRMED",
+              "toStatus": "IN_PROGRESS",
+              "comment": "演练开发认领：已阅读审查依据，后续按建议提交修复；当前尚未标记修复完成。",
+              "createdAt": "2026-09-12T05:16:11.814797Z"
+            }
+          ]
+        },
+        {
+          "findingId": 47,
+          "events": [
+            {
+              "id": 83,
+              "actorId": 9,
+              "action": "CONFIRM",
+              "fromStatus": "OPEN",
+              "toStatus": "CONFIRMED",
+              "comment": "演练核验：0.008 为硬编码旧费率，Math.round 为四舍五入；现有 FeeCalculator 从商户配置读取基点并用整数除法向下取整，新入口未复用，违反 AC-2。",
+              "createdAt": "2026-09-12T05:15:29.518662Z"
+            },
+            {
+              "id": 88,
+              "actorId": 4,
+              "action": "CLAIM",
+              "fromStatus": "CONFIRMED",
+              "toStatus": "IN_PROGRESS",
+              "comment": "演练开发认领：已阅读审查依据，后续按建议提交修复；当前尚未标记修复完成。",
+              "createdAt": "2026-09-12T05:16:19.461030Z"
+            }
+          ]
+        },
+        {
+          "findingId": 48,
+          "events": [
+            {
+              "id": 84,
+              "actorId": 9,
+              "action": "CONFIRM",
+              "fromStatus": "OPEN",
+              "toStatus": "CONFIRMED",
+              "comment": "演练核验：唯一方法只计算并返回数值，没有 CNY 校验，也没有扣费净额至少 100 分的判断；AC-3 所要求的结算前置规则未实现。",
+              "createdAt": "2026-09-12T05:15:32.527687Z"
+            },
+            {
+              "id": 89,
+              "actorId": 4,
+              "action": "CLAIM",
+              "fromStatus": "CONFIRMED",
+              "toStatus": "IN_PROGRESS",
+              "comment": "演练开发认领：已阅读审查依据，后续按建议提交修复；当前尚未标记修复完成。",
+              "createdAt": "2026-09-12T05:16:26.483172Z"
+            }
+          ]
+        },
+        {
+          "findingId": 49,
+          "events": [
+            {
+              "id": 85,
+              "actorId": 9,
+              "action": "CONFIRM",
+              "fromStatus": "OPEN",
+              "toStatus": "CONFIRMED",
+              "comment": "演练核验：新入口没有商户身份、风险等级、结算周期或人工复核判断，无法实现 AC-4 对风控商户的限制。确认的是规则缺失，并非宣称本次演练已经发生真实资金放款。",
+              "createdAt": "2026-09-12T05:15:39.797863Z"
+            },
+            {
+              "id": 90,
+              "actorId": 4,
+              "action": "CLAIM",
+              "fromStatus": "CONFIRMED",
+              "toStatus": "IN_PROGRESS",
+              "comment": "演练开发认领：已阅读审查依据，后续按建议提交修复；当前尚未标记修复完成。",
+              "createdAt": "2026-09-12T05:16:38.045620Z"
+            }
+          ]
+        },
+        {
+          "findingId": 50,
+          "events": [
+            {
+              "id": 86,
+              "actorId": 9,
+              "action": "CONFIRM",
+              "fromStatus": "OPEN",
+              "toStatus": "CONFIRMED",
+              "comment": "演练核验：方法未要求稳定幂等键，也没有持久化或查询首次结算结果的路径，AC-5 未实现；不能以一次纯数值计算替代完整结算幂等契约。",
+              "createdAt": "2026-09-12T05:15:44.399500Z"
+            },
+            {
+              "id": 91,
+              "actorId": 4,
+              "action": "CLAIM",
+              "fromStatus": "CONFIRMED",
+              "toStatus": "IN_PROGRESS",
+              "comment": "演练开发认领：已阅读审查依据，后续按建议提交修复；当前尚未标记修复完成。",
+              "createdAt": "2026-09-12T05:16:45.045355Z"
+            }
+          ]
+        }
+      ],
+      "snapshotVerification": {
+        "headSha": "a6fc37ba87e76dc86a8c6428f0bb1aac6e6aa606",
+        "baseSha": "9240412e10377aa12700e4d40232ac867442bc61",
+        "requirementRevisionId": 14,
+        "changedFileCount": 2,
+        "allPatchesMatch": true,
+        "coverage": {
+          "files": [
+            {
+              "path": "review-materials/PR-01.md",
+              "patchTruncated": false
+            },
+            {
+              "path": "src/main/java/com/example/settlement/service/InstantPayoutFacade.java",
+              "patchTruncated": false
+            }
+          ],
+          "truncated": false,
+          "notReviewed": []
+        },
+        "checkedAt": "2026-09-12T05:13:53.940Z"
+      }
+    },
+    {
+      "sequence": 12,
+      "projectId": 3,
+      "repo": "forgepilot-demo-payment-settlement-service",
+      "title": "人工退款幂等授权与日志保护",
+      "startedAt": "2026-09-12T05:17:25.140Z",
+      "phase": "decided",
+      "requirementId": 14,
+      "requirementRevisionId": 15,
+      "pullRequestNumber": 2,
+      "pullRequestUrl": "https://github.com/LinYsssss/forgepilot-demo-payment-settlement-service/pull/2",
+      "prCreatedAt": "2026-09-12T05:18:43.719Z",
+      "reviewId": 13,
+      "pullRequestId": 13,
+      "headSha": "297b35157c54a2b59576fb40c796c9e35cd3f310",
+      "baseSha": "9240412e10377aa12700e4d40232ac867442bc61",
+      "findingCount": 4,
+      "reviewCompletedAt": "2026-09-12T05:19:40.162Z",
+      "decision": "REQUEST_CHANGES",
+      "decisionAt": "2026-09-12T05:23:40.325578Z",
+      "confirmed": 3,
+      "rejected": 1,
+      "finishedAt": "2026-09-12T05:27:37.826Z",
+      "model": "gpt-5.6-luna",
+      "promptVersion": "review-2",
+      "executionAttempt": 1,
+      "reviewInputFingerprint": "031804bc8632f6c8636b376d703cb05264a655d409097baa21a859c26d227cef",
+      "coverage": {
+        "files": [
+          {
+            "path": "review-materials/PR-02.md",
+            "patchTruncated": false
+          },
+          {
+            "path": "src/main/java/com/example/settlement/service/ManualRefundFacade.java",
+            "patchTruncated": false
+          }
+        ],
+        "truncated": false,
+        "notReviewed": []
+      },
+      "acVerdicts": [
+        {
+          "acId": 77,
+          "acKey": "AC-1",
+          "verdict": "NOT_FOUND"
+        },
+        {
+          "acId": 78,
+          "acKey": "AC-2",
+          "verdict": "NOT_FOUND"
+        },
+        {
+          "acId": 79,
+          "acKey": "AC-3",
+          "verdict": "NOT_FOUND"
+        },
+        {
+          "acId": 80,
+          "acKey": "AC-4",
+          "verdict": "AT_RISK"
+        }
+      ],
+      "findings": [
+        {
+          "id": 51,
+          "findingType": "REQUIREMENT",
+          "path": "src/main/java/com/example/settlement/service/ManualRefundFacade.java",
+          "line": 3,
+          "evidence": "    public void refund(Long orderId, long amountFen) { System.out.println(\"refund \" + orderId + \" \" + amountFen); }",
+          "category": "REQUIREMENT_GAP",
+          "explanation": "退款方法没有接收调用方提供的幂等键，也没有展示幂等结果的持久化处理，因此重复请求无法依据稳定键去重。",
+          "suggestion": "要求退款调用方提供幂等键，并在持久化层以租户和幂等键建立唯一约束，保存首次处理结果后返回该结果。",
+          "confidence": "HIGH",
+          "status": "IN_PROGRESS",
+          "continuity": "NEW",
+          "requirementId": 14,
+          "requirementRevisionId": 15,
+          "acId": 77,
+          "acKey": "AC-1",
+          "assigneeId": 4,
+          "carriedFromFindingId": null,
+          "findingKey": "24cc4a2b5cae1aee283cf2cb59a068373bce327352b1190e4148f04f9728a430",
+          "evidenceHash": "25e4d1af482440b9b31d7fa5871d8151eeedefe14e5b31834d443cdc2883cc77",
+          "basisHash": "3281714d30c0b27d342c96693364ca5322bda256d538f7729871d5be0a9f615b"
+        },
+        {
+          "id": 52,
+          "findingType": "REQUIREMENT",
+          "path": "src/main/java/com/example/settlement/service/ManualRefundFacade.java",
+          "line": 3,
+          "evidence": "    public void refund(Long orderId, long amountFen) { System.out.println(\"refund \" + orderId + \" \" + amountFen); }",
+          "category": "REQUIREMENT_GAP",
+          "explanation": "方法没有幂等键查重、首次结果保存或返回逻辑，重试请求没有证据表明会返回首次结果并避免再次退款。",
+          "suggestion": "在执行退款前按幂等键读取已持久化结果；已有结果时直接返回，只有首次请求才能执行退款并保存结果。",
+          "confidence": "HIGH",
+          "status": "IN_PROGRESS",
+          "continuity": "NEW",
+          "requirementId": 14,
+          "requirementRevisionId": 15,
+          "acId": 78,
+          "acKey": "AC-2",
+          "assigneeId": 4,
+          "carriedFromFindingId": null,
+          "findingKey": "81b4585653e723c8bfbbce7d65ba0546c1610b1492448a62e28b25f9704741bf",
+          "evidenceHash": "25e4d1af482440b9b31d7fa5871d8151eeedefe14e5b31834d443cdc2883cc77",
+          "basisHash": "21b280792ff5eaa747e681edf3b7d027fe4c91c4bf57dedbf8f1e0ec1990b694"
+        },
+        {
+          "id": 53,
+          "findingType": "REQUIREMENT",
+          "path": "src/main/java/com/example/settlement/service/ManualRefundFacade.java",
+          "line": 3,
+          "evidence": "    public void refund(Long orderId, long amountFen) { System.out.println(\"refund \" + orderId + \" \" + amountFen); }",
+          "category": "REQUIREMENT_GAP",
+          "explanation": "退款方法未接收或校验调用方身份和 ADMIN 权限，也没有展示合法操作人或资源归属校验。",
+          "suggestion": "在执行强制退款前校验调用方具备 ADMIN 角色，并校验操作人的合法身份及其对目标退款资源的归属权限。",
+          "confidence": "HIGH",
+          "status": "REJECTED",
+          "continuity": "NEW",
+          "requirementId": 14,
+          "requirementRevisionId": 15,
+          "acId": 79,
+          "acKey": "AC-3",
+          "assigneeId": null,
+          "carriedFromFindingId": null,
+          "findingKey": "a7a2d6e3395e7ef2901d24739f9465402736b77cb366bbb1a036dc274ea02a34",
+          "evidenceHash": "25e4d1af482440b9b31d7fa5871d8151eeedefe14e5b31834d443cdc2883cc77",
+          "basisHash": "017c6c1b4a19d619d5414dfa926d31e228dc9c03fa633fdf47aeb1597cf2bfdd"
+        },
+        {
+          "id": 54,
+          "findingType": "REQUIREMENT",
+          "path": "src/main/java/com/example/settlement/service/ManualRefundFacade.java",
+          "line": 3,
+          "evidence": "    public void refund(Long orderId, long amountFen) { System.out.println(\"refund \" + orderId + \" \" + amountFen); }",
+          "category": "REQUIREMENT_GAP",
+          "explanation": "资金日志直接输出订单号和金额明细，违反了只能记录批准的审计标识且不得记录订单或金额明细的要求。",
+          "suggestion": "移除订单号和金额输出，仅记录经过批准的审计标识及必要的非敏感审计元数据。",
+          "confidence": "HIGH",
+          "status": "IN_PROGRESS",
+          "continuity": "NEW",
+          "requirementId": 14,
+          "requirementRevisionId": 15,
+          "acId": 80,
+          "acKey": "AC-4",
+          "assigneeId": 4,
+          "carriedFromFindingId": null,
+          "findingKey": "5b762f4f6f550a9d81682b02dcc40e9c3c7bfa28c0d115008df0d65301d42f58",
+          "evidenceHash": "25e4d1af482440b9b31d7fa5871d8151eeedefe14e5b31834d443cdc2883cc77",
+          "basisHash": "26c8a82e5496e6a5794ed412f5f0c4788039adc8549709d174518d747b574899"
+        }
+      ],
+      "humanAdjudication": {
+        "findings": [
+          {
+            "id": 51,
+            "status": "CONFIRMED",
+            "comment": "演练核验：refund 只接收 orderId 和 amountFen，没有调用方稳定幂等键，也没有结果持久化路径，违反 AC-1。"
+          },
+          {
+            "id": 52,
+            "status": "CONFIRMED",
+            "comment": "演练核验：方法返回 void，未按幂等键查询或返回首次处理结果，AC-2 的重试契约没有实现。当前代码只打印日志，本次并未执行真实重复退款。"
+          },
+          {
+            "id": 53,
+            "status": "REJECTED",
+            "comment": "演练核验驳回：当前差异仅新增普通 refund 方法，没有强制退款入口、force 参数或对 forceRefund 的调用；无法把 AC-3 对强制操作的授权条件直接认定为此路径已绕过 ADMIN 校验。AC-3 仍需在实际强制退款路径核验，未因此判为已覆盖。"
+          },
+          {
+            "id": 54,
+            "status": "CONFIRMED",
+            "comment": "演练核验：System.out.println 明确拼接 orderId 与 amountFen，将订单和金额明细写入标准输出，直接违反 AC-4 仅记录批准审计标识的要求。"
+          }
+        ],
+        "returnComment": "退回修改：退款需使用调用方稳定幂等键，持久化并复用首次结果；移除订单和金额明细日志，仅保留批准的审计标识。强制退款授权在当前差异没有对应入口，AC-3 保持未覆盖，需在实际强制路径补充 ADMIN 和合法操作人验证依据。"
+      },
+      "events": [
+        {
+          "findingId": 51,
+          "events": [
+            {
+              "id": 92,
+              "actorId": 9,
+              "action": "CONFIRM",
+              "fromStatus": "OPEN",
+              "toStatus": "CONFIRMED",
+              "comment": "演练核验：refund 只接收 orderId 和 amountFen，没有调用方稳定幂等键，也没有结果持久化路径，违反 AC-1。",
+              "createdAt": "2026-09-12T05:22:25.770049Z"
+            },
+            {
+              "id": 96,
+              "actorId": 4,
+              "action": "CLAIM",
+              "fromStatus": "CONFIRMED",
+              "toStatus": "IN_PROGRESS",
+              "comment": "演练开发认领：已阅读审查依据，后续按建议提交修复；当前尚未标记修复完成。",
+              "createdAt": "2026-09-12T05:26:36.237877Z"
+            }
+          ]
+        },
+        {
+          "findingId": 52,
+          "events": [
+            {
+              "id": 93,
+              "actorId": 9,
+              "action": "CONFIRM",
+              "fromStatus": "OPEN",
+              "toStatus": "CONFIRMED",
+              "comment": "演练核验：方法返回 void，未按幂等键查询或返回首次处理结果，AC-2 的重试契约没有实现。当前代码只打印日志，本次并未执行真实重复退款。",
+              "createdAt": "2026-09-12T05:22:49.332651Z"
+            },
+            {
+              "id": 97,
+              "actorId": 4,
+              "action": "CLAIM",
+              "fromStatus": "CONFIRMED",
+              "toStatus": "IN_PROGRESS",
+              "comment": "演练开发认领：已阅读审查依据，后续按建议提交修复；当前尚未标记修复完成。",
+              "createdAt": "2026-09-12T05:27:01.446836Z"
+            }
+          ]
+        },
+        {
+          "findingId": 53,
+          "events": [
+            {
+              "id": 94,
+              "actorId": 9,
+              "action": "REJECT",
+              "fromStatus": "OPEN",
+              "toStatus": "REJECTED",
+              "comment": "演练核验驳回：当前差异仅新增普通 refund 方法，没有强制退款入口、force 参数或对 forceRefund 的调用；无法把 AC-3 对强制操作的授权条件直接认定为此路径已绕过 ADMIN 校验。AC-3 仍需在实际强制退款路径核验，未因此判为已覆盖。",
+              "createdAt": "2026-09-12T05:23:10.033168Z"
+            }
+          ]
+        },
+        {
+          "findingId": 54,
+          "events": [
+            {
+              "id": 95,
+              "actorId": 9,
+              "action": "CONFIRM",
+              "fromStatus": "OPEN",
+              "toStatus": "CONFIRMED",
+              "comment": "演练核验：System.out.println 明确拼接 orderId 与 amountFen，将订单和金额明细写入标准输出，直接违反 AC-4 仅记录批准审计标识的要求。",
+              "createdAt": "2026-09-12T05:23:29.433808Z"
+            },
+            {
+              "id": 98,
+              "actorId": 4,
+              "action": "CLAIM",
+              "fromStatus": "CONFIRMED",
+              "toStatus": "IN_PROGRESS",
+              "comment": "演练开发认领：已阅读审查依据，后续按建议提交修复；当前尚未标记修复完成。",
+              "createdAt": "2026-09-12T05:27:21.247583Z"
+            }
+          ]
+        }
+      ],
+      "snapshotVerification": {
+        "headSha": "297b35157c54a2b59576fb40c796c9e35cd3f310",
+        "baseSha": "9240412e10377aa12700e4d40232ac867442bc61",
+        "requirementRevisionId": 15,
+        "changedFileCount": 2,
+        "allPatchesMatch": true,
+        "coverage": {
+          "files": [
+            {
+              "path": "review-materials/PR-02.md",
+              "patchTruncated": false
+            },
+            {
+              "path": "src/main/java/com/example/settlement/service/ManualRefundFacade.java",
+              "patchTruncated": false
+            }
+          ],
+          "truncated": false,
+          "notReviewed": []
+        },
+        "checkedAt": "2026-09-12T05:19:40.164Z"
+      }
+    },
+    {
+      "sequence": 13,
+      "projectId": 3,
+      "repo": "forgepilot-demo-payment-settlement-service",
+      "title": "银行回调验签与事件幂等",
+      "startedAt": "2026-09-12T05:28:10.120Z",
+      "phase": "decided",
+      "requirementId": 15,
+      "requirementRevisionId": 16,
+      "pullRequestNumber": 3,
+      "pullRequestUrl": "https://github.com/LinYsssss/forgepilot-demo-payment-settlement-service/pull/3",
+      "prCreatedAt": "2026-09-12T05:29:27.831Z",
+      "reviewId": 14,
+      "pullRequestId": 14,
+      "headSha": "db40404eabe9183e673eb271930dd3e6cf491ccd",
+      "baseSha": "9240412e10377aa12700e4d40232ac867442bc61",
+      "findingCount": 4,
+      "reviewCompletedAt": "2026-09-12T05:30:26.049Z",
+      "decision": "REQUEST_CHANGES",
+      "decisionAt": "2026-09-12T05:33:56.813548Z",
+      "confirmed": 4,
+      "rejected": 0,
+      "finishedAt": "2026-09-12T05:35:57.222Z",
+      "model": "gpt-5.6-luna",
+      "promptVersion": "review-2",
+      "executionAttempt": 1,
+      "reviewInputFingerprint": "bb166b42955ae7855c524560232b4c354ac87c2c808d407f9a5dfdc18b7087fa",
+      "coverage": {
+        "files": [
+          {
+            "path": "review-materials/PR-03.md",
+            "patchTruncated": false
+          },
+          {
+            "path": "src/main/java/com/example/settlement/controller/BankNoticeController.java",
+            "patchTruncated": false
+          }
+        ],
+        "truncated": false,
+        "notReviewed": []
+      },
+      "acVerdicts": [
+        {
+          "acId": 81,
+          "acKey": "AC-1",
+          "verdict": "NOT_FOUND"
+        },
+        {
+          "acId": 82,
+          "acKey": "AC-2",
+          "verdict": "NOT_FOUND"
+        },
+        {
+          "acId": 83,
+          "acKey": "AC-3",
+          "verdict": "NOT_FOUND"
+        },
+        {
+          "acId": 84,
+          "acKey": "AC-4",
+          "verdict": "NOT_FOUND"
+        }
+      ],
+      "findings": [
+        {
+          "id": 55,
+          "findingType": "REQUIREMENT",
+          "path": "src/main/java/com/example/settlement/controller/BankNoticeController.java",
+          "line": 5,
+          "evidence": "    public int accept(byte[] body, Map<String, String> headers) { return body.length > 0 ? 200 : 400; }",
+          "category": "REQUIREMENT_GAP",
+          "explanation": "The callback only checks whether the body is non-empty. There is no HMAC verification based on the original bytes before accepting the request or processing business data.",
+          "suggestion": "Perform HMAC verification over the original request bytes before parsing or trusting any business fields, and reject the request when verification fails.",
+          "confidence": "HIGH",
+          "status": "IN_PROGRESS",
+          "continuity": "NEW",
+          "requirementId": 15,
+          "requirementRevisionId": 16,
+          "acId": 81,
+          "acKey": "AC-1",
+          "assigneeId": 4,
+          "carriedFromFindingId": null,
+          "findingKey": "7c85ea52a20acfcf4032b49dfc7ba62c25328359590a4d7cd3849772af911dd1",
+          "evidenceHash": "a99dd9b184796a23ea4272460d90fc4a2d6fe7b4b9243ed76c71b7ac819f9af8",
+          "basisHash": "2cc109025de5196187a960766d7dbbb86563776fef0d1996a365ea06923c4697"
+        },
+        {
+          "id": 56,
+          "findingType": "REQUIREMENT",
+          "path": "src/main/java/com/example/settlement/controller/BankNoticeController.java",
+          "line": 5,
+          "evidence": "    public int accept(byte[] body, Map<String, String> headers) { return body.length > 0 ? 200 : 400; }",
+          "category": "REQUIREMENT_GAP",
+          "explanation": "Missing or invalid signatures are not checked, and the method returns 400 for an empty body rather than demonstrating a 401 response for signature failures. The reviewed code also provides no evidence that rejected callback bodies are excluded from logs or persistence.",
+          "suggestion": "Validate the signature before any body handling, return 401 for missing or invalid signatures, and ensure the rejected body is neither logged nor persisted.",
+          "confidence": "HIGH",
+          "status": "IN_PROGRESS",
+          "continuity": "NEW",
+          "requirementId": 15,
+          "requirementRevisionId": 16,
+          "acId": 82,
+          "acKey": "AC-2",
+          "assigneeId": 4,
+          "carriedFromFindingId": null,
+          "findingKey": "78a870adef0b352d9e56bb9f56ff939da973bca1fec3f8cf88f63cd5f14e762a",
+          "evidenceHash": "a99dd9b184796a23ea4272460d90fc4a2d6fe7b4b9243ed76c71b7ac819f9af8",
+          "basisHash": "c35213fb2e0576748054a9409ef24546aa2a49746f7eac9e957cc90c482cb750"
+        },
+        {
+          "id": 57,
+          "findingType": "REQUIREMENT",
+          "path": "src/main/java/com/example/settlement/controller/BankNoticeController.java",
+          "line": 5,
+          "evidence": "    public int accept(byte[] body, Map<String, String> headers) { return body.length > 0 ? 200 : 400; }",
+          "category": "REQUIREMENT_GAP",
+          "explanation": "The callback handler contains no event_id extraction, persistent deduplication, or protection against applying a repeated callback more than once.",
+          "suggestion": "Persist a unique event_id before changing settlement state and make duplicate deliveries a no-op, with the deduplication operation safe under concurrent requests.",
+          "confidence": "HIGH",
+          "status": "IN_PROGRESS",
+          "continuity": "NEW",
+          "requirementId": 15,
+          "requirementRevisionId": 16,
+          "acId": 83,
+          "acKey": "AC-3",
+          "assigneeId": 4,
+          "carriedFromFindingId": null,
+          "findingKey": "f5b45b2bdb9df9298463375e8a5a220961e2baf7c9e8e2d149a727b7711085cf",
+          "evidenceHash": "a99dd9b184796a23ea4272460d90fc4a2d6fe7b4b9243ed76c71b7ac819f9af8",
+          "basisHash": "a2ba85111b58a0d13c744f09c15dbd7c9dc34da2ac69da50f1c302abb67336b0"
+        },
+        {
+          "id": 58,
+          "findingType": "REQUIREMENT",
+          "path": "src/main/java/com/example/settlement/controller/BankNoticeController.java",
+          "line": 5,
+          "evidence": "    public int accept(byte[] body, Map<String, String> headers) { return body.length > 0 ? 200 : 400; }",
+          "category": "REQUIREMENT_GAP",
+          "explanation": "The handler does not inspect or verify a tenant identifier, so the reviewed change provides no protection against a callback referring to a business object owned by another tenant.",
+          "suggestion": "Resolve the callback business object using tenant-scoped lookup and reject the event when its tenant does not match the authenticated or configured callback tenant.",
+          "confidence": "HIGH",
+          "status": "IN_PROGRESS",
+          "continuity": "NEW",
+          "requirementId": 15,
+          "requirementRevisionId": 16,
+          "acId": 84,
+          "acKey": "AC-4",
+          "assigneeId": 4,
+          "carriedFromFindingId": null,
+          "findingKey": "2a7266dd0ae8f1a8e5d63013c2d45e03b1078c5b80434f223a4775ccf82c08a4",
+          "evidenceHash": "a99dd9b184796a23ea4272460d90fc4a2d6fe7b4b9243ed76c71b7ac819f9af8",
+          "basisHash": "c6cf37eb844eca1940118a1c2581547c06af4946f6b158656602acae69b71e7f"
+        }
+      ],
+      "humanAdjudication": {
+        "findings": [
+          {
+            "id": 55,
+            "status": "CONFIRMED",
+            "comment": "演练核验：实际第 4 行 accept 未读取 headers，也未对原始 body 字节执行 HMAC 校验，仅判断长度便接受，违反 AC-1。模型标到相邻第 5 行，裁决依据为完整方法源码。"
+          },
+          {
+            "id": 56,
+            "status": "CONFIRMED",
+            "comment": "演练核验：缺失或错误签名的非空正文仍返回 200，没有 AC-2 要求的 401 拒绝路径。当前方法没有日志或持久化调用，确认范围是签名拒绝逻辑缺失，不据此指控其已记录回调正文。"
+          },
+          {
+            "id": 57,
+            "status": "CONFIRMED",
+            "comment": "演练核验：方法没有 event_id 处理、唯一约束或持久化去重路径，AC-3 尚未实现。当前实现没有真正更新结算状态，本次未发生重复资金状态写入。"
+          },
+          {
+            "id": 58,
+            "status": "CONFIRMED",
+            "comment": "演练核验：所有非空 body 走同一成功分支，没有可信租户映射或业务对象归属校验，无法拒绝跨租户事件，违反 AC-4。"
+          }
+        ],
+        "returnComment": "退回修改：先基于原始请求字节执行 HMAC 验签，缺失或错误签名返回 401；验签通过后再解析事件，以持久化 event_id 实现并发安全去重，并核对可信租户映射与业务对象归属。保持回调正文不进入日志或持久化明细。"
+      },
+      "events": [
+        {
+          "findingId": 55,
+          "events": [
+            {
+              "id": 99,
+              "actorId": 9,
+              "action": "CONFIRM",
+              "fromStatus": "OPEN",
+              "toStatus": "CONFIRMED",
+              "comment": "演练核验：实际第 4 行 accept 未读取 headers，也未对原始 body 字节执行 HMAC 校验，仅判断长度便接受，违反 AC-1。模型标到相邻第 5 行，裁决依据为完整方法源码。",
+              "createdAt": "2026-09-12T05:32:13.245042Z"
+            },
+            {
+              "id": 103,
+              "actorId": 4,
+              "action": "CLAIM",
+              "fromStatus": "CONFIRMED",
+              "toStatus": "IN_PROGRESS",
+              "comment": "演练开发认领：已阅读审查依据，后续按建议提交修复；当前尚未标记修复完成。",
+              "createdAt": "2026-09-12T05:34:26.916227Z"
+            }
+          ]
+        },
+        {
+          "findingId": 56,
+          "events": [
+            {
+              "id": 100,
+              "actorId": 9,
+              "action": "CONFIRM",
+              "fromStatus": "OPEN",
+              "toStatus": "CONFIRMED",
+              "comment": "演练核验：缺失或错误签名的非空正文仍返回 200，没有 AC-2 要求的 401 拒绝路径。当前方法没有日志或持久化调用，确认范围是签名拒绝逻辑缺失，不据此指控其已记录回调正文。",
+              "createdAt": "2026-09-12T05:32:54.139431Z"
+            },
+            {
+              "id": 104,
+              "actorId": 4,
+              "action": "CLAIM",
+              "fromStatus": "CONFIRMED",
+              "toStatus": "IN_PROGRESS",
+              "comment": "演练开发认领：已阅读审查依据，后续按建议提交修复；当前尚未标记修复完成。",
+              "createdAt": "2026-09-12T05:34:54.919113Z"
+            }
+          ]
+        },
+        {
+          "findingId": 57,
+          "events": [
+            {
+              "id": 101,
+              "actorId": 9,
+              "action": "CONFIRM",
+              "fromStatus": "OPEN",
+              "toStatus": "CONFIRMED",
+              "comment": "演练核验：方法没有 event_id 处理、唯一约束或持久化去重路径，AC-3 尚未实现。当前实现没有真正更新结算状态，本次未发生重复资金状态写入。",
+              "createdAt": "2026-09-12T05:33:16.534234Z"
+            },
+            {
+              "id": 105,
+              "actorId": 4,
+              "action": "CLAIM",
+              "fromStatus": "CONFIRMED",
+              "toStatus": "IN_PROGRESS",
+              "comment": "演练开发认领：已阅读审查依据，后续按建议提交修复；当前尚未标记修复完成。",
+              "createdAt": "2026-09-12T05:35:18.530606Z"
+            }
+          ]
+        },
+        {
+          "findingId": 58,
+          "events": [
+            {
+              "id": 102,
+              "actorId": 9,
+              "action": "CONFIRM",
+              "fromStatus": "OPEN",
+              "toStatus": "CONFIRMED",
+              "comment": "演练核验：所有非空 body 走同一成功分支，没有可信租户映射或业务对象归属校验，无法拒绝跨租户事件，违反 AC-4。",
+              "createdAt": "2026-09-12T05:33:35.432015Z"
+            },
+            {
+              "id": 106,
+              "actorId": 4,
+              "action": "CLAIM",
+              "fromStatus": "CONFIRMED",
+              "toStatus": "IN_PROGRESS",
+              "comment": "演练开发认领：已阅读审查依据，后续按建议提交修复；当前尚未标记修复完成。",
+              "createdAt": "2026-09-12T05:35:40.233342Z"
+            }
+          ]
+        }
+      ],
+      "snapshotVerification": {
+        "headSha": "db40404eabe9183e673eb271930dd3e6cf491ccd",
+        "baseSha": "9240412e10377aa12700e4d40232ac867442bc61",
+        "requirementRevisionId": 16,
+        "changedFileCount": 2,
+        "allPatchesMatch": true,
+        "coverage": {
+          "files": [
+            {
+              "path": "review-materials/PR-03.md",
+              "patchTruncated": false
+            },
+            {
+              "path": "src/main/java/com/example/settlement/controller/BankNoticeController.java",
+              "patchTruncated": false
+            }
+          ],
+          "truncated": false,
+          "notReviewed": []
+        },
+        "checkedAt": "2026-09-12T05:30:26.053Z"
+      }
+    },
+    {
+      "sequence": 14,
+      "projectId": 3,
+      "repo": "forgepilot-demo-payment-settlement-service",
+      "title": "结算运营查询租户隔离",
+      "startedAt": "2026-09-12T05:36:32.529Z",
+      "phase": "decided",
+      "requirementId": 16,
+      "requirementRevisionId": 17,
+      "pullRequestNumber": 4,
+      "pullRequestUrl": "https://github.com/LinYsssss/forgepilot-demo-payment-settlement-service/pull/4",
+      "prCreatedAt": "2026-09-12T05:38:07.922Z",
+      "reviewId": 15,
+      "pullRequestId": 15,
+      "headSha": "7dee70d2d9f3e4115670e2072d6f7c55bc277898",
+      "baseSha": "9240412e10377aa12700e4d40232ac867442bc61",
+      "findingCount": 3,
+      "reviewCompletedAt": "2026-09-12T05:38:59.019Z",
+      "decision": "REQUEST_CHANGES",
+      "decisionAt": "2026-09-12T05:41:20.729220Z",
+      "confirmed": 3,
+      "rejected": 0,
+      "finishedAt": "2026-09-12T05:42:25.531Z",
+      "model": "gpt-5.6-luna",
+      "promptVersion": "review-2",
+      "executionAttempt": 1,
+      "reviewInputFingerprint": "d0f7699b0041f910b1322cf837965d88d774aaac0d7995da93b1bf517fe5b3bc",
+      "coverage": {
+        "files": [
+          {
+            "path": "review-materials/PR-04.md",
+            "patchTruncated": false
+          },
+          {
+            "path": "src/main/java/com/example/settlement/repository/OperationsSettlementQuery.java",
+            "patchTruncated": false
+          }
+        ],
+        "truncated": false,
+        "notReviewed": []
+      },
+      "acVerdicts": [
+        {
+          "acId": 85,
+          "acKey": "AC-1",
+          "verdict": "AT_RISK"
+        },
+        {
+          "acId": 86,
+          "acKey": "AC-2",
+          "verdict": "AT_RISK"
+        },
+        {
+          "acId": 87,
+          "acKey": "AC-3",
+          "verdict": "NOT_FOUND"
+        },
+        {
+          "acId": 88,
+          "acKey": "AC-4",
+          "verdict": "AT_RISK"
+        }
+      ],
+      "findings": [
+        {
+          "id": 59,
+          "findingType": "REQUIREMENT",
+          "path": "src/main/java/com/example/settlement/repository/OperationsSettlementQuery.java",
+          "line": 3,
+          "evidence": "    public String query(Long merchantId) { return \"select * from settlement_request where merchant_id = \" + merchantId; }",
+          "category": "REQUIREMENT_GAP",
+          "explanation": "查询只按 merchant_id 过滤，没有来自认证上下文的 tenant_id 条件，可能导致不同租户之间的数据越界。",
+          "suggestion": "将认证上下文中的 tenant_id 作为强制绑定参数加入查询条件，并确保 merchant_id 不能替代租户边界。",
+          "confidence": "HIGH",
+          "status": "IN_PROGRESS",
+          "continuity": "NEW",
+          "requirementId": 16,
+          "requirementRevisionId": 17,
+          "acId": 85,
+          "acKey": "AC-1",
+          "assigneeId": 4,
+          "carriedFromFindingId": null,
+          "findingKey": "0f01966bce1c7955a98b2b64bd127ba53dcb78e6bb2be471fb28f47a5d414815",
+          "evidenceHash": "eaabee86f0b10b407950b01639b27a6cfff847eabb3531eae076438d95d25ad4",
+          "basisHash": "942c250c513f1f82d14d332223f80cbcab969d2fddd38bfa1f5ef056949e6356"
+        },
+        {
+          "id": 60,
+          "findingType": "REQUIREMENT",
+          "path": "src/main/java/com/example/settlement/repository/OperationsSettlementQuery.java",
+          "line": 3,
+          "evidence": "    public String query(Long merchantId) { return \"select * from settlement_request where merchant_id = \" + merchantId; }",
+          "category": "SECURITY",
+          "explanation": "merchantId 被直接拼接进 SQL 文本，违反等值条件必须使用绑定参数的要求，并引入 SQL 注入风险。",
+          "suggestion": "使用参数化查询，将 merchant_id 和 tenant_id 都作为绑定参数传入，禁止把请求值拼接到 SQL 字符串中。",
+          "confidence": "HIGH",
+          "status": "IN_PROGRESS",
+          "continuity": "NEW",
+          "requirementId": 16,
+          "requirementRevisionId": 17,
+          "acId": 86,
+          "acKey": "AC-2",
+          "assigneeId": 4,
+          "carriedFromFindingId": null,
+          "findingKey": "879d3d6d630d94f576c16f7229be1945bab6a4a3965ef7e3ca1e106c5a3d9f01",
+          "evidenceHash": "eaabee86f0b10b407950b01639b27a6cfff847eabb3531eae076438d95d25ad4",
+          "basisHash": "bcda9172eb6cab0b66c041b1ac542406f9d2b95d66e5514c4618108723621966"
+        },
+        {
+          "id": 61,
+          "findingType": "REQUIREMENT",
+          "path": "src/main/java/com/example/settlement/repository/OperationsSettlementQuery.java",
+          "line": 3,
+          "evidence": "    public String query(Long merchantId) { return \"select * from settlement_request where merchant_id = \" + merchantId; }",
+          "category": "REQUIREMENT_GAP",
+          "explanation": "查询使用 select * 返回表中全部字段，未明确限定运营所需的结算视图，可能暴露不必要的数据并使返回契约不受控。",
+          "suggestion": "明确列出运营查询所需的字段，避免使用 select *，并根据运营接口契约限制返回内容。",
+          "confidence": "HIGH",
+          "status": "IN_PROGRESS",
+          "continuity": "NEW",
+          "requirementId": 16,
+          "requirementRevisionId": 17,
+          "acId": 88,
+          "acKey": "AC-4",
+          "assigneeId": 4,
+          "carriedFromFindingId": null,
+          "findingKey": "10d2000d1ae43fb2e07b52c06402bdf30ab61c984b88ae1f31686111489f3330",
+          "evidenceHash": "eaabee86f0b10b407950b01639b27a6cfff847eabb3531eae076438d95d25ad4",
+          "basisHash": "2f6cb4f195a7943ec9dd6973aa09328ebb8b1d80d2eb3b997161c4219f9fa7fb"
+        }
+      ],
+      "humanAdjudication": {
+        "findings": [
+          {
+            "id": 59,
+            "status": "CONFIRMED",
+            "comment": "演练核验：生成的 SQL 只有 merchant_id 条件，没有来自认证上下文的 tenant_id；商户筛选不能代替租户边界，违反 AC-1。"
+          },
+          {
+            "id": 60,
+            "status": "CONFIRMED",
+            "comment": "演练核验：仅确认 AC-2 的参数绑定违规，merchantId 确实直接进入 SQL 文本。未采信说明中的 SQL 注入推断：该参数是 Java Long，当前路径只能形成数字或 null 文本，没有可注入任意 SQL 的字符串输入证据。仍须按明确规范改为绑定参数。"
+          },
+          {
+            "id": 61,
+            "status": "CONFIRMED",
+            "comment": "演练核验：SQL 明确使用 select *，没有列出运营结算视图所需字段，违反 AC-4 的返回字段白名单要求。"
+          }
+        ],
+        "returnComment": "退回修改：查询需加入可信认证租户条件，商户和租户值均使用绑定参数，并明确返回字段。发现 60 仅确认绑定规范违规，未认定 Long 参数可构成 SQL 注入。另 AC-3 对公共任意 SQL 执行入口的限制尚未覆盖，既有 RawJdbc.execute(String) 需提供收敛或移除的整改依据。"
+      },
+      "events": [
+        {
+          "findingId": 59,
+          "events": [
+            {
+              "id": 107,
+              "actorId": 9,
+              "action": "CONFIRM",
+              "fromStatus": "OPEN",
+              "toStatus": "CONFIRMED",
+              "comment": "演练核验：生成的 SQL 只有 merchant_id 条件，没有来自认证上下文的 tenant_id；商户筛选不能代替租户边界，违反 AC-1。",
+              "createdAt": "2026-09-12T05:40:48.602586Z"
+            },
+            {
+              "id": 110,
+              "actorId": 4,
+              "action": "CLAIM",
+              "fromStatus": "CONFIRMED",
+              "toStatus": "IN_PROGRESS",
+              "comment": "演练开发认领：已阅读审查依据，后续按建议提交修复；当前尚未标记修复完成。",
+              "createdAt": "2026-09-12T05:42:05.019302Z"
+            }
+          ]
+        },
+        {
+          "findingId": 60,
+          "events": [
+            {
+              "id": 108,
+              "actorId": 9,
+              "action": "CONFIRM",
+              "fromStatus": "OPEN",
+              "toStatus": "CONFIRMED",
+              "comment": "演练核验：仅确认 AC-2 的参数绑定违规，merchantId 确实直接进入 SQL 文本。未采信说明中的 SQL 注入推断：该参数是 Java Long，当前路径只能形成数字或 null 文本，没有可注入任意 SQL 的字符串输入证据。仍须按明确规范改为绑定参数。",
+              "createdAt": "2026-09-12T05:41:08.426904Z"
+            },
+            {
+              "id": 111,
+              "actorId": 4,
+              "action": "CLAIM",
+              "fromStatus": "CONFIRMED",
+              "toStatus": "IN_PROGRESS",
+              "comment": "演练开发认领：已阅读审查依据，后续按建议提交修复；当前尚未标记修复完成。",
+              "createdAt": "2026-09-12T05:42:11.591297Z"
+            }
+          ]
+        },
+        {
+          "findingId": 61,
+          "events": [
+            {
+              "id": 109,
+              "actorId": 9,
+              "action": "CONFIRM",
+              "fromStatus": "OPEN",
+              "toStatus": "CONFIRMED",
+              "comment": "演练核验：SQL 明确使用 select *，没有列出运营结算视图所需字段，违反 AC-4 的返回字段白名单要求。",
+              "createdAt": "2026-09-12T05:41:12.723834Z"
+            },
+            {
+              "id": 112,
+              "actorId": 4,
+              "action": "CLAIM",
+              "fromStatus": "CONFIRMED",
+              "toStatus": "IN_PROGRESS",
+              "comment": "演练开发认领：已阅读审查依据，后续按建议提交修复；当前尚未标记修复完成。",
+              "createdAt": "2026-09-12T05:42:15.229306Z"
+            }
+          ]
+        }
+      ],
+      "snapshotVerification": {
+        "headSha": "7dee70d2d9f3e4115670e2072d6f7c55bc277898",
+        "baseSha": "9240412e10377aa12700e4d40232ac867442bc61",
+        "requirementRevisionId": 17,
+        "changedFileCount": 2,
+        "allPatchesMatch": true,
+        "coverage": {
+          "files": [
+            {
+              "path": "review-materials/PR-04.md",
+              "patchTruncated": false
+            },
+            {
+              "path": "src/main/java/com/example/settlement/repository/OperationsSettlementQuery.java",
+              "patchTruncated": false
+            }
+          ],
+          "truncated": false,
+          "notReviewed": []
+        },
+        "checkedAt": "2026-09-12T05:38:59.021Z"
+      }
+    },
+    {
+      "sequence": 15,
+      "projectId": 3,
+      "repo": "forgepilot-demo-payment-settlement-service",
+      "title": "商户费率预览配置与舍入",
+      "startedAt": "2026-09-12T05:43:06.347Z",
+      "phase": "decided",
+      "requirementId": 17,
+      "requirementRevisionId": 18,
+      "pullRequestNumber": 5,
+      "pullRequestUrl": "https://github.com/LinYsssss/forgepilot-demo-payment-settlement-service/pull/5",
+      "prCreatedAt": "2026-09-12T05:44:59.240Z",
+      "reviewId": 16,
+      "pullRequestId": 16,
+      "headSha": "71684d5512c7c166406c8474aaa93f83366343e7",
+      "baseSha": "9240412e10377aa12700e4d40232ac867442bc61",
+      "findingCount": 3,
+      "reviewCompletedAt": "2026-09-12T05:45:58.527Z",
+      "decision": "REQUEST_CHANGES",
+      "decisionAt": "2026-09-12T05:48:53.519872Z",
+      "confirmed": 3,
+      "rejected": 0,
+      "finishedAt": "2026-09-12T05:50:09.745Z",
+      "model": "gpt-5.6-luna",
+      "promptVersion": "review-2",
+      "executionAttempt": 1,
+      "reviewInputFingerprint": "47adffef6a3fd1b41d083e643f3a49332e10b0efe5d2dcb88896abc00c4b3608",
+      "coverage": {
+        "files": [
+          {
+            "path": "review-materials/PR-05.md",
+            "patchTruncated": false
+          },
+          {
+            "path": "src/main/java/com/example/settlement/service/MerchantFeePreview.java",
+            "patchTruncated": false
+          }
+        ],
+        "truncated": false,
+        "notReviewed": []
+      },
+      "acVerdicts": [
+        {
+          "acId": 89,
+          "acKey": "AC-1",
+          "verdict": "NOT_FOUND"
+        },
+        {
+          "acId": 90,
+          "acKey": "AC-2",
+          "verdict": "NOT_FOUND"
+        },
+        {
+          "acId": 91,
+          "acKey": "AC-3",
+          "verdict": "AT_RISK"
+        },
+        {
+          "acId": 92,
+          "acKey": "AC-4",
+          "verdict": "NOT_FOUND"
+        }
+      ],
+      "findings": [
+        {
+          "id": 62,
+          "findingType": "REQUIREMENT",
+          "path": "src/main/java/com/example/settlement/service/MerchantFeePreview.java",
+          "line": 3,
+          "evidence": "    public long estimate(long amountFen) { return Math.round(amountFen * 0.006); }",
+          "category": "REQUIREMENT_GAP",
+          "explanation": "费率被固定为 0.006，代码没有读取 merchant_fee_config，因此无法按商户使用当前配置，也无法让不同商户的费率影响预览结果。",
+          "suggestion": "按 merchant_id 查询 merchant_fee_config 中最新生效的 fee_rate_bp，并使用该配置计算预览费用。",
+          "confidence": "HIGH",
+          "status": "IN_PROGRESS",
+          "continuity": "NEW",
+          "requirementId": 17,
+          "requirementRevisionId": 18,
+          "acId": 89,
+          "acKey": "AC-1",
+          "assigneeId": 4,
+          "carriedFromFindingId": null,
+          "findingKey": "469941037cf4640d4456e93a30f9b223c24af0a7e8add6808d6b6473fe13b66b",
+          "evidenceHash": "ae69aa0584313c0894627b8e0d240db4584330bb3b183a6804cc868ce1b7ad75",
+          "basisHash": "de1fb83f5ba4d8b20598a2957b184b8a92a36cf2a68e401e3237d398b1e5d8e5"
+        },
+        {
+          "id": 63,
+          "findingType": "REQUIREMENT",
+          "path": "src/main/java/com/example/settlement/service/MerchantFeePreview.java",
+          "line": 3,
+          "evidence": "    public long estimate(long amountFen) { return Math.round(amountFen * 0.006); }",
+          "category": "REQUIREMENT_GAP",
+          "explanation": "表达式中的 0.006 会使 long 金额参与浮点运算，未按整数分和整数基点进行计算，存在浮点精度风险。",
+          "suggestion": "将费率表示为整数基点，并使用整数乘法和除法完成费用计算，避免任何浮点类型。",
+          "confidence": "HIGH",
+          "status": "IN_PROGRESS",
+          "continuity": "NEW",
+          "requirementId": 17,
+          "requirementRevisionId": 18,
+          "acId": 90,
+          "acKey": "AC-2",
+          "assigneeId": 4,
+          "carriedFromFindingId": null,
+          "findingKey": "0141f5e2d4412480dbc400bd8385febeb64393b5e5581c9d7db6020a99802325",
+          "evidenceHash": "ae69aa0584313c0894627b8e0d240db4584330bb3b183a6804cc868ce1b7ad75",
+          "basisHash": "b2f830d992e81fe296d283f17035fe6a5d706572930d0919371eba464b58c5ef"
+        },
+        {
+          "id": 64,
+          "findingType": "REQUIREMENT",
+          "path": "src/main/java/com/example/settlement/service/MerchantFeePreview.java",
+          "line": 3,
+          "evidence": "    public long estimate(long amountFen) { return Math.round(amountFen * 0.006); }",
+          "category": "REQUIREMENT_GAP",
+          "explanation": "手续费使用 Math.round，会进行四舍五入；当结果包含小数分时可能向上进位，不符合必须向下取整的结算规则。",
+          "suggestion": "改用整数除法实现截断向下取整，并移除 Math.round。",
+          "confidence": "HIGH",
+          "status": "IN_PROGRESS",
+          "continuity": "NEW",
+          "requirementId": 17,
+          "requirementRevisionId": 18,
+          "acId": 91,
+          "acKey": "AC-3",
+          "assigneeId": 4,
+          "carriedFromFindingId": null,
+          "findingKey": "ede0224a4cd4e6c77ff038cad0b6bbd10104ab53962a93d95261283682b18f0d",
+          "evidenceHash": "ae69aa0584313c0894627b8e0d240db4584330bb3b183a6804cc868ce1b7ad75",
+          "basisHash": "acd259f12bf211bebe0bf117a09680261ad6aa402086e4eb4f45ba2cfcb6399c"
+        }
+      ],
+      "humanAdjudication": {
+        "findings": [
+          {
+            "id": 62,
+            "status": "CONFIRMED",
+            "comment": "演练核验：estimate 固定使用 0.006，没有商户或租户上下文，也未调用 MerchantFeeConfigRepository；当前标准费率数值虽为 0.6%，仍不能替代按商户读取当前配置，违反 AC-1，并缺少 AC-4 的差异化结果。"
+          },
+          {
+            "id": 63,
+            "status": "CONFIRMED",
+            "comment": "演练核验：输入为 long 不代表全程整数运算；乘以 double 字面量 0.006 时金额会转换为浮点数，违反 AC-2 的整数分及整数基点要求。"
+          },
+          {
+            "id": 64,
+            "status": "CONFIRMED",
+            "comment": "演练核验：Math.round 对 100 分金额的 0.6 分手续费返回 1 分，而整数基点公式 100*60/10000 应得 0 分；确实存在向上进位，违反 AC-3 的向下取整规则。"
+          }
+        ],
+        "returnComment": "退回修改：费率预览应复用按租户和商户读取当前配置的计算逻辑，金额与基点全程使用整数，手续费向下取整；补齐不同商户配置及小数分边界的验证后重新提交。"
+      },
+      "events": [
+        {
+          "findingId": 62,
+          "events": [
+            {
+              "id": 113,
+              "actorId": 9,
+              "action": "CONFIRM",
+              "fromStatus": "OPEN",
+              "toStatus": "CONFIRMED",
+              "comment": "演练核验：estimate 固定使用 0.006，没有商户或租户上下文，也未调用 MerchantFeeConfigRepository；当前标准费率数值虽为 0.6%，仍不能替代按商户读取当前配置，违反 AC-1，并缺少 AC-4 的差异化结果。",
+              "createdAt": "2026-09-12T05:47:55.921925Z"
+            },
+            {
+              "id": 116,
+              "actorId": 4,
+              "action": "CLAIM",
+              "fromStatus": "CONFIRMED",
+              "toStatus": "IN_PROGRESS",
+              "comment": "演练开发认领：已阅读审查依据，后续按建议提交修复；当前尚未标记修复完成。",
+              "createdAt": "2026-09-12T05:49:27.544318Z"
+            }
+          ]
+        },
+        {
+          "findingId": 63,
+          "events": [
+            {
+              "id": 114,
+              "actorId": 9,
+              "action": "CONFIRM",
+              "fromStatus": "OPEN",
+              "toStatus": "CONFIRMED",
+              "comment": "演练核验：输入为 long 不代表全程整数运算；乘以 double 字面量 0.006 时金额会转换为浮点数，违反 AC-2 的整数分及整数基点要求。",
+              "createdAt": "2026-09-12T05:48:15.524796Z"
+            },
+            {
+              "id": 117,
+              "actorId": 4,
+              "action": "CLAIM",
+              "fromStatus": "CONFIRMED",
+              "toStatus": "IN_PROGRESS",
+              "comment": "演练开发认领：已阅读审查依据，后续按建议提交修复；当前尚未标记修复完成。",
+              "createdAt": "2026-09-12T05:49:43.035321Z"
+            }
+          ]
+        },
+        {
+          "findingId": 64,
+          "events": [
+            {
+              "id": 115,
+              "actorId": 9,
+              "action": "CONFIRM",
+              "fromStatus": "OPEN",
+              "toStatus": "CONFIRMED",
+              "comment": "演练核验：Math.round 对 100 分金额的 0.6 分手续费返回 1 分，而整数基点公式 100*60/10000 应得 0 分；确实存在向上进位，违反 AC-3 的向下取整规则。",
+              "createdAt": "2026-09-12T05:48:37.639670Z"
+            },
+            {
+              "id": 118,
+              "actorId": 4,
+              "action": "CLAIM",
+              "fromStatus": "CONFIRMED",
+              "toStatus": "IN_PROGRESS",
+              "comment": "演练开发认领：已阅读审查依据，后续按建议提交修复；当前尚未标记修复完成。",
+              "createdAt": "2026-09-12T05:49:57.636890Z"
+            }
+          ]
+        }
+      ],
+      "snapshotVerification": {
+        "headSha": "71684d5512c7c166406c8474aaa93f83366343e7",
+        "baseSha": "9240412e10377aa12700e4d40232ac867442bc61",
+        "requirementRevisionId": 18,
+        "changedFileCount": 2,
+        "allPatchesMatch": true,
+        "coverage": {
+          "files": [
+            {
+              "path": "review-materials/PR-05.md",
+              "patchTruncated": false
+            },
+            {
+              "path": "src/main/java/com/example/settlement/service/MerchantFeePreview.java",
+              "patchTruncated": false
+            }
+          ],
+          "truncated": false,
+          "notReviewed": []
+        },
+        "checkedAt": "2026-09-12T05:45:58.534Z"
+      }
+    }
+  ],
+  "sequential": true,
+  "confirmed": 55,
+  "rejected": 2,
+  "webhook": [
+    {
+      "sequence": 1,
+      "deliveryId": "3842248929934573568",
+      "guid": "b4a7df30-ae60-11f1-8ff7-8dd8f926cc1f",
+      "event": "pull_request",
+      "action": "opened",
+      "statusCode": 202,
+      "deliveredAt": "2026-09-12T04:16:22.93Z",
+      "headSha": "1338abc40f4e5c0738c51a8640b3207fbbf2c5dc"
+    },
+    {
+      "sequence": 2,
+      "deliveryId": "3842249706235232256",
+      "guid": "8c7a44c0-ae61-11f1-8bd4-2f195c2c4014",
+      "event": "pull_request",
+      "action": "opened",
+      "statusCode": 202,
+      "deliveredAt": "2026-09-12T04:22:24.387Z",
+      "headSha": "016a14e165cdaee0afb22d2afaa07f85bd027218"
+    },
+    {
+      "sequence": 3,
+      "deliveryId": "3842250580988846080",
+      "guid": "7f58cc70-ae62-11f1-88c8-68201f7cfa94",
+      "event": "pull_request",
+      "action": "opened",
+      "statusCode": 202,
+      "deliveredAt": "2026-09-12T04:29:11.745Z",
+      "headSha": "4adc6d950e0236c4a4bb6d5397a8c806d3afe19c"
+    },
+    {
+      "sequence": 4,
+      "deliveryId": "3842251216971112448",
+      "guid": "2fd09470-ae63-11f1-85ff-3c1097670c62",
+      "event": "pull_request",
+      "action": "opened",
+      "statusCode": 202,
+      "deliveredAt": "2026-09-12T04:34:07.913Z",
+      "headSha": "e97794d291adb9f523a09023c8396d75a190b129"
+    },
+    {
+      "sequence": 5,
+      "deliveryId": "3842251763887374336",
+      "guid": "c7dc1280-ae63-11f1-827e-14c6dd901624",
+      "event": "pull_request",
+      "action": "opened",
+      "statusCode": 202,
+      "deliveredAt": "2026-09-12T04:38:22.569Z",
+      "headSha": "603d8c4460b087497cfec215ecd441baae5fc7e2"
+    },
+    {
+      "sequence": 6,
+      "deliveryId": "3842252744293351424",
+      "guid": "d7a03740-ae64-11f1-9093-9750c9df84cf",
+      "event": "pull_request",
+      "action": "opened",
+      "statusCode": 202,
+      "deliveredAt": "2026-09-12T04:45:59.072Z",
+      "headSha": "2b73b503a6e518c94c4ab01f5b99b4e56962dfcd"
+    },
+    {
+      "sequence": 7,
+      "deliveryId": "3842253659295449088",
+      "guid": "d5977980-ae65-11f1-8a61-d1fa64f036ef",
+      "event": "pull_request",
+      "action": "opened",
+      "statusCode": 202,
+      "deliveredAt": "2026-09-12T04:53:05.159Z",
+      "headSha": "e143bb4753529f45083e11da7a600b7b05958ae1"
+    },
+    {
+      "sequence": 8,
+      "deliveryId": "3842254209764294656",
+      "guid": "6e96a660-ae66-11f1-877f-45077ca3c6ea",
+      "event": "pull_request",
+      "action": "opened",
+      "statusCode": 202,
+      "deliveredAt": "2026-09-12T04:57:21.515Z",
+      "headSha": "10f068c6c164b5487268e3b43fc8edfd53cfe288"
+    },
+    {
+      "sequence": 9,
+      "deliveryId": "3842254769458528256",
+      "guid": "09d981b0-ae67-11f1-8ca5-ef9baef3b363",
+      "event": "pull_request",
+      "action": "opened",
+      "statusCode": 202,
+      "deliveredAt": "2026-09-12T05:01:42.114Z",
+      "headSha": "8e39e05ad270093a0ad3b48b8e67bcf7b7f8bdc8"
+    },
+    {
+      "sequence": 10,
+      "deliveryId": "3842255676761964544",
+      "guid": "05ba8e20-ae68-11f1-9989-482266e506dc",
+      "event": "pull_request",
+      "action": "opened",
+      "statusCode": 202,
+      "deliveredAt": "2026-09-12T05:08:44.648Z",
+      "headSha": "bedbcf7040e53a4b3894a2c3cb0875b7ef4474ec"
+    },
+    {
+      "sequence": 11,
+      "deliveryId": "3842256207104442368",
+      "guid": "98e803d0-ae68-11f1-8030-150f6c9f7e09",
+      "event": "pull_request",
+      "action": "opened",
+      "statusCode": 202,
+      "deliveredAt": "2026-09-12T05:12:51.603Z",
+      "headSha": "a6fc37ba87e76dc86a8c6428f0bb1aac6e6aa606"
+    },
+    {
+      "sequence": 12,
+      "deliveryId": "3842256970702651392",
+      "guid": "6caf1a50-ae69-11f1-8846-41ddd730a2db",
+      "event": "pull_request",
+      "action": "opened",
+      "statusCode": 202,
+      "deliveredAt": "2026-09-12T05:18:47.152Z",
+      "headSha": "297b35157c54a2b59576fb40c796c9e35cd3f310"
+    },
+    {
+      "sequence": 13,
+      "deliveryId": "3842258354122522624",
+      "guid": "ec9266e0-ae6a-11f1-9ad3-54dd6377edba",
+      "event": "pull_request",
+      "action": "opened",
+      "statusCode": 202,
+      "deliveredAt": "2026-09-12T05:29:31.372Z",
+      "headSha": "db40404eabe9183e673eb271930dd3e6cf491ccd"
+    },
+    {
+      "sequence": 14,
+      "deliveryId": "3842259469645905920",
+      "guid": "22375a70-ae6c-11f1-92c0-884f20db8fb0",
+      "event": "pull_request",
+      "action": "opened",
+      "statusCode": 202,
+      "deliveredAt": "2026-09-12T05:38:10.862Z",
+      "headSha": "7dee70d2d9f3e4115670e2072d6f7c55bc277898"
+    },
+    {
+      "sequence": 15,
+      "deliveryId": "3842260354667118592",
+      "guid": "17cb6530-ae6d-11f1-8c7f-ed3cbd27bd85",
+      "event": "pull_request",
+      "action": "opened",
+      "statusCode": 202,
+      "deliveredAt": "2026-09-12T05:45:02.989Z",
+      "headSha": "71684d5512c7c166406c8474aaa93f83366343e7"
+    }
+  ],
+  "projectChecks": [
+    {
+      "projectId": 1,
+      "reviewListCount": 5,
+      "exerciseReviewCount": 5,
+      "pendingOrRunning": 0,
+      "readyKnowledgeDocuments": 4,
+      "checks": [
+        {
+          "sequence": 1,
+          "reviewId": 2,
+          "requirementId": 3,
+          "requirementStatus": "IN_DEVELOPMENT",
+          "decision": "REQUEST_CHANGES",
+          "findings": 4,
+          "headSha": "1338abc40f4e5c0738c51a8640b3207fbbf2c5dc",
+          "current": true
+        },
+        {
+          "sequence": 2,
+          "reviewId": 3,
+          "requirementId": 4,
+          "requirementStatus": "IN_DEVELOPMENT",
+          "decision": "REQUEST_CHANGES",
+          "findings": 3,
+          "headSha": "016a14e165cdaee0afb22d2afaa07f85bd027218",
+          "current": true
+        },
+        {
+          "sequence": 3,
+          "reviewId": 4,
+          "requirementId": 5,
+          "requirementStatus": "IN_DEVELOPMENT",
+          "decision": "REQUEST_CHANGES",
+          "findings": 4,
+          "headSha": "4adc6d950e0236c4a4bb6d5397a8c806d3afe19c",
+          "current": true
+        },
+        {
+          "sequence": 4,
+          "reviewId": 5,
+          "requirementId": 6,
+          "requirementStatus": "IN_DEVELOPMENT",
+          "decision": "REQUEST_CHANGES",
+          "findings": 5,
+          "headSha": "e97794d291adb9f523a09023c8396d75a190b129",
+          "current": true
+        },
+        {
+          "sequence": 5,
+          "reviewId": 6,
+          "requirementId": 7,
+          "requirementStatus": "IN_DEVELOPMENT",
+          "decision": "REQUEST_CHANGES",
+          "findings": 3,
+          "headSha": "603d8c4460b087497cfec215ecd441baae5fc7e2",
+          "current": true
+        }
+      ]
+    },
+    {
+      "projectId": 2,
+      "reviewListCount": 5,
+      "exerciseReviewCount": 5,
+      "pendingOrRunning": 0,
+      "readyKnowledgeDocuments": 4,
+      "checks": [
+        {
+          "sequence": 6,
+          "reviewId": 7,
+          "requirementId": 8,
+          "requirementStatus": "IN_DEVELOPMENT",
+          "decision": "REQUEST_CHANGES",
+          "findings": 3,
+          "headSha": "2b73b503a6e518c94c4ab01f5b99b4e56962dfcd",
+          "current": true
+        },
+        {
+          "sequence": 7,
+          "reviewId": 8,
+          "requirementId": 9,
+          "requirementStatus": "IN_DEVELOPMENT",
+          "decision": "REQUEST_CHANGES",
+          "findings": 4,
+          "headSha": "e143bb4753529f45083e11da7a600b7b05958ae1",
+          "current": true
+        },
+        {
+          "sequence": 8,
+          "reviewId": 9,
+          "requirementId": 10,
+          "requirementStatus": "IN_DEVELOPMENT",
+          "decision": "REQUEST_CHANGES",
+          "findings": 4,
+          "headSha": "10f068c6c164b5487268e3b43fc8edfd53cfe288",
+          "current": true
+        },
+        {
+          "sequence": 9,
+          "reviewId": 10,
+          "requirementId": 11,
+          "requirementStatus": "IN_DEVELOPMENT",
+          "decision": "REQUEST_CHANGES",
+          "findings": 5,
+          "headSha": "8e39e05ad270093a0ad3b48b8e67bcf7b7f8bdc8",
+          "current": true
+        },
+        {
+          "sequence": 10,
+          "reviewId": 11,
+          "requirementId": 12,
+          "requirementStatus": "IN_DEVELOPMENT",
+          "decision": "REQUEST_CHANGES",
+          "findings": 3,
+          "headSha": "bedbcf7040e53a4b3894a2c3cb0875b7ef4474ec",
+          "current": true
+        }
+      ]
+    },
+    {
+      "projectId": 3,
+      "reviewListCount": 5,
+      "exerciseReviewCount": 5,
+      "pendingOrRunning": 0,
+      "readyKnowledgeDocuments": 4,
+      "checks": [
+        {
+          "sequence": 11,
+          "reviewId": 12,
+          "requirementId": 13,
+          "requirementStatus": "IN_DEVELOPMENT",
+          "decision": "REQUEST_CHANGES",
+          "findings": 5,
+          "headSha": "a6fc37ba87e76dc86a8c6428f0bb1aac6e6aa606",
+          "current": true
+        },
+        {
+          "sequence": 12,
+          "reviewId": 13,
+          "requirementId": 14,
+          "requirementStatus": "IN_DEVELOPMENT",
+          "decision": "REQUEST_CHANGES",
+          "findings": 4,
+          "headSha": "297b35157c54a2b59576fb40c796c9e35cd3f310",
+          "current": true
+        },
+        {
+          "sequence": 13,
+          "reviewId": 14,
+          "requirementId": 15,
+          "requirementStatus": "IN_DEVELOPMENT",
+          "decision": "REQUEST_CHANGES",
+          "findings": 4,
+          "headSha": "db40404eabe9183e673eb271930dd3e6cf491ccd",
+          "current": true
+        },
+        {
+          "sequence": 14,
+          "reviewId": 15,
+          "requirementId": 16,
+          "requirementStatus": "IN_DEVELOPMENT",
+          "decision": "REQUEST_CHANGES",
+          "findings": 3,
+          "headSha": "7dee70d2d9f3e4115670e2072d6f7c55bc277898",
+          "current": true
+        },
+        {
+          "sequence": 15,
+          "reviewId": 16,
+          "requirementId": 17,
+          "requirementStatus": "IN_DEVELOPMENT",
+          "decision": "REQUEST_CHANGES",
+          "findings": 3,
+          "headSha": "71684d5512c7c166406c8474aaa93f83366343e7",
+          "current": true
+        }
+      ]
+    }
+  ],
+  "progress": [
+    {
+      "sequence": 1,
+      "projectId": 1,
+      "repo": "forgepilot-demo-mall-order-service",
+      "title": "仓库发货前置校验",
+      "startedAt": "2026-09-12T04:14:13.716Z",
+      "phase": "decided",
+      "requirementId": 3,
+      "requirementRevisionId": 4,
+      "pullRequestNumber": 7,
+      "pullRequestUrl": "https://github.com/LinYsssss/forgepilot-demo-mall-order-service/pull/7",
+      "prCreatedAt": "2026-09-12T04:16:18.975Z",
+      "reviewId": 2,
+      "pullRequestId": 2,
+      "headSha": "1338abc40f4e5c0738c51a8640b3207fbbf2c5dc",
+      "baseSha": "78caedf2e78e33f18cb6b51b045b5141650cfdb6",
+      "findingCount": 4,
+      "reviewCompletedAt": "2026-09-12T04:17:16.325Z",
+      "decision": "REQUEST_CHANGES",
+      "decisionAt": "2026-09-12T04:19:36.677377Z",
+      "confirmed": 4,
+      "rejected": 0,
+      "finishedAt": "2026-09-12T04:20:13.864Z"
+    },
+    {
+      "sequence": 2,
+      "projectId": 1,
+      "repo": "forgepilot-demo-mall-order-service",
+      "title": "管理端强制发货授权与审计",
+      "startedAt": "2026-09-12T04:21:53.807Z",
+      "phase": "decided",
+      "requirementId": 4,
+      "requirementRevisionId": 5,
+      "pullRequestNumber": 8,
+      "pullRequestUrl": "https://github.com/LinYsssss/forgepilot-demo-mall-order-service/pull/8",
+      "prCreatedAt": "2026-09-12T04:22:20.830Z",
+      "reviewId": 3,
+      "pullRequestId": 3,
+      "headSha": "016a14e165cdaee0afb22d2afaa07f85bd027218",
+      "baseSha": "78caedf2e78e33f18cb6b51b045b5141650cfdb6",
+      "findingCount": 3,
+      "reviewCompletedAt": "2026-09-12T04:24:22.817Z",
+      "decision": "REQUEST_CHANGES",
+      "decisionAt": "2026-09-12T04:26:24.603150Z",
+      "confirmed": 3,
+      "rejected": 0,
+      "finishedAt": "2026-09-12T04:27:01.488Z"
+    },
+    {
+      "sequence": 3,
+      "projectId": 1,
+      "repo": "forgepilot-demo-mall-order-service",
+      "title": "订单搜索参数绑定与数据保护",
+      "startedAt": "2026-09-12T04:28:31.267Z",
+      "phase": "decided",
+      "requirementId": 5,
+      "requirementRevisionId": 6,
+      "pullRequestNumber": 9,
+      "pullRequestUrl": "https://github.com/LinYsssss/forgepilot-demo-mall-order-service/pull/9",
+      "prCreatedAt": "2026-09-12T04:29:09.112Z",
+      "reviewId": 4,
+      "pullRequestId": 4,
+      "headSha": "4adc6d950e0236c4a4bb6d5397a8c806d3afe19c",
+      "baseSha": "78caedf2e78e33f18cb6b51b045b5141650cfdb6",
+      "findingCount": 4,
+      "reviewCompletedAt": "2026-09-12T04:30:17.140Z",
+      "decision": "REQUEST_CHANGES",
+      "decisionAt": "2026-09-12T04:32:25.638112Z",
+      "confirmed": 4,
+      "rejected": 0,
+      "finishedAt": "2026-09-12T04:32:56.560Z"
+    },
+    {
+      "sequence": 4,
+      "projectId": 1,
+      "repo": "forgepilot-demo-mall-order-service",
+      "title": "大促批量发货权限与幂等",
+      "startedAt": "2026-09-12T04:33:29.674Z",
+      "phase": "decided",
+      "requirementId": 6,
+      "requirementRevisionId": 7,
+      "pullRequestNumber": 10,
+      "pullRequestUrl": "https://github.com/LinYsssss/forgepilot-demo-mall-order-service/pull/10",
+      "prCreatedAt": "2026-09-12T04:34:04.720Z",
+      "reviewId": 5,
+      "pullRequestId": 5,
+      "headSha": "e97794d291adb9f523a09023c8396d75a190b129",
+      "baseSha": "78caedf2e78e33f18cb6b51b045b5141650cfdb6",
+      "findingCount": 5,
+      "reviewCompletedAt": "2026-09-12T04:35:18.106Z",
+      "decision": "REQUEST_CHANGES",
+      "decisionAt": "2026-09-12T04:36:38.102366Z",
+      "confirmed": 5,
+      "rejected": 0,
+      "finishedAt": "2026-09-12T04:37:05.974Z"
+    },
+    {
+      "sequence": 5,
+      "projectId": 1,
+      "repo": "forgepilot-demo-mall-order-service",
+      "title": "用户订单详情归属校验与脱敏",
+      "startedAt": "2026-09-12T04:37:46.736Z",
+      "phase": "decided",
+      "requirementId": 7,
+      "requirementRevisionId": 8,
+      "pullRequestNumber": 11,
+      "pullRequestUrl": "https://github.com/LinYsssss/forgepilot-demo-mall-order-service/pull/11",
+      "prCreatedAt": "2026-09-12T04:38:20.184Z",
+      "reviewId": 6,
+      "pullRequestId": 6,
+      "headSha": "603d8c4460b087497cfec215ecd441baae5fc7e2",
+      "baseSha": "78caedf2e78e33f18cb6b51b045b5141650cfdb6",
+      "findingCount": 3,
+      "reviewCompletedAt": "2026-09-12T04:39:37.072Z",
+      "decision": "REQUEST_CHANGES",
+      "decisionAt": "2026-09-12T04:43:31.909807Z",
+      "confirmed": 3,
+      "rejected": 0,
+      "finishedAt": "2026-09-12T04:44:05.275Z"
+    },
+    {
+      "sequence": 6,
+      "projectId": 2,
+      "repo": "forgepilot-demo-tenant-user-center",
+      "title": "运营后台令牌认证与角色授权",
+      "startedAt": "2026-09-12T04:45:24.677Z",
+      "phase": "decided",
+      "requirementId": 8,
+      "requirementRevisionId": 9,
+      "pullRequestNumber": 1,
+      "pullRequestUrl": "https://github.com/LinYsssss/forgepilot-demo-tenant-user-center/pull/1",
+      "prCreatedAt": "2026-09-12T04:45:56.001Z",
+      "reviewId": 7,
+      "pullRequestId": 7,
+      "headSha": "2b73b503a6e518c94c4ab01f5b99b4e56962dfcd",
+      "baseSha": "33bbdb48ffbf33b2c618202f6693240dab2c3b15",
+      "findingCount": 3,
+      "reviewCompletedAt": "2026-09-12T04:46:35.705Z",
+      "decision": "REQUEST_CHANGES",
+      "decisionAt": "2026-09-12T04:51:03.458439Z",
+      "confirmed": 3,
+      "rejected": 0,
+      "finishedAt": "2026-09-12T04:51:45.828Z"
+    },
+    {
+      "sequence": 7,
+      "projectId": 2,
+      "repo": "forgepilot-demo-tenant-user-center",
+      "title": "运营用户查询隔离与分页",
+      "startedAt": "2026-09-12T04:52:28.630Z",
+      "phase": "decided",
+      "requirementId": 9,
+      "requirementRevisionId": 10,
+      "pullRequestNumber": 2,
+      "pullRequestUrl": "https://github.com/LinYsssss/forgepilot-demo-tenant-user-center/pull/2",
+      "prCreatedAt": "2026-09-12T04:53:01.973Z",
+      "reviewId": 8,
+      "pullRequestId": 8,
+      "headSha": "e143bb4753529f45083e11da7a600b7b05958ae1",
+      "baseSha": "33bbdb48ffbf33b2c618202f6693240dab2c3b15",
+      "findingCount": 4,
+      "reviewCompletedAt": "2026-09-12T04:54:00.757Z",
+      "decision": "REQUEST_CHANGES",
+      "decisionAt": "2026-09-12T04:55:30.159143Z",
+      "confirmed": 3,
+      "rejected": 1,
+      "finishedAt": "2026-09-12T04:55:52.928Z"
+    },
+    {
+      "sequence": 8,
+      "projectId": 2,
+      "repo": "forgepilot-demo-tenant-user-center",
+      "title": "用户数据导出范围与审计",
+      "startedAt": "2026-09-12T04:56:42.573Z",
+      "phase": "decided",
+      "requirementId": 10,
+      "requirementRevisionId": 11,
+      "pullRequestNumber": 3,
+      "pullRequestUrl": "https://github.com/LinYsssss/forgepilot-demo-tenant-user-center/pull/3",
+      "prCreatedAt": "2026-09-12T04:57:18.818Z",
+      "reviewId": 9,
+      "pullRequestId": 9,
+      "headSha": "10f068c6c164b5487268e3b43fc8edfd53cfe288",
+      "baseSha": "33bbdb48ffbf33b2c618202f6693240dab2c3b15",
+      "findingCount": 4,
+      "reviewCompletedAt": "2026-09-12T04:58:10.820Z",
+      "decision": "REQUEST_CHANGES",
+      "decisionAt": "2026-09-12T04:59:45.703914Z",
+      "confirmed": 4,
+      "rejected": 0,
+      "finishedAt": "2026-09-12T05:00:13.805Z"
+    },
+    {
+      "sequence": 9,
+      "projectId": 2,
+      "repo": "forgepilot-demo-tenant-user-center",
+      "title": "密码重置授权与安全存储",
+      "startedAt": "2026-09-12T05:00:44.489Z",
+      "phase": "decided",
+      "requirementId": 11,
+      "requirementRevisionId": 12,
+      "pullRequestNumber": 4,
+      "pullRequestUrl": "https://github.com/LinYsssss/forgepilot-demo-tenant-user-center/pull/4",
+      "prCreatedAt": "2026-09-12T05:01:39.460Z",
+      "reviewId": 10,
+      "pullRequestId": 10,
+      "headSha": "8e39e05ad270093a0ad3b48b8e67bcf7b7f8bdc8",
+      "baseSha": "33bbdb48ffbf33b2c618202f6693240dab2c3b15",
+      "findingCount": 5,
+      "reviewCompletedAt": "2026-09-12T05:02:53.925Z",
+      "decision": "REQUEST_CHANGES",
+      "decisionAt": "2026-09-12T05:07:22.518388Z",
+      "confirmed": 5,
+      "rejected": 0,
+      "finishedAt": "2026-09-12T05:07:50.421Z"
+    },
+    {
+      "sequence": 10,
+      "projectId": 2,
+      "repo": "forgepilot-demo-tenant-user-center",
+      "title": "运营前端安全渲染与配置合并",
+      "startedAt": "2026-09-12T05:08:09.616Z",
+      "phase": "decided",
+      "requirementId": 12,
+      "requirementRevisionId": 13,
+      "pullRequestNumber": 5,
+      "pullRequestUrl": "https://github.com/LinYsssss/forgepilot-demo-tenant-user-center/pull/5",
+      "prCreatedAt": "2026-09-12T05:08:41.937Z",
+      "reviewId": 11,
+      "pullRequestId": 11,
+      "headSha": "bedbcf7040e53a4b3894a2c3cb0875b7ef4474ec",
+      "baseSha": "33bbdb48ffbf33b2c618202f6693240dab2c3b15",
+      "findingCount": 3,
+      "reviewCompletedAt": "2026-09-12T05:09:31.258Z",
+      "decision": "REQUEST_CHANGES",
+      "decisionAt": "2026-09-12T05:10:55.342753Z",
+      "confirmed": 3,
+      "rejected": 0,
+      "finishedAt": "2026-09-12T05:11:22.840Z"
+    },
+    {
+      "sequence": 11,
+      "projectId": 3,
+      "repo": "forgepilot-demo-payment-settlement-service",
+      "title": "即时结算金额与业务校验",
+      "startedAt": "2026-09-12T05:12:09.682Z",
+      "phase": "decided",
+      "requirementId": 13,
+      "requirementRevisionId": 14,
+      "pullRequestNumber": 1,
+      "pullRequestUrl": "https://github.com/LinYsssss/forgepilot-demo-payment-settlement-service/pull/1",
+      "prCreatedAt": "2026-09-12T05:12:48.160Z",
+      "reviewId": 12,
+      "pullRequestId": 12,
+      "headSha": "a6fc37ba87e76dc86a8c6428f0bb1aac6e6aa606",
+      "baseSha": "9240412e10377aa12700e4d40232ac867442bc61",
+      "findingCount": 5,
+      "reviewCompletedAt": "2026-09-12T05:13:53.937Z",
+      "decision": "REQUEST_CHANGES",
+      "decisionAt": "2026-09-12T05:15:49.319823Z",
+      "confirmed": 5,
+      "rejected": 0,
+      "finishedAt": "2026-09-12T05:16:50.661Z"
+    },
+    {
+      "sequence": 12,
+      "projectId": 3,
+      "repo": "forgepilot-demo-payment-settlement-service",
+      "title": "人工退款幂等授权与日志保护",
+      "startedAt": "2026-09-12T05:17:25.140Z",
+      "phase": "decided",
+      "requirementId": 14,
+      "requirementRevisionId": 15,
+      "pullRequestNumber": 2,
+      "pullRequestUrl": "https://github.com/LinYsssss/forgepilot-demo-payment-settlement-service/pull/2",
+      "prCreatedAt": "2026-09-12T05:18:43.719Z",
+      "reviewId": 13,
+      "pullRequestId": 13,
+      "headSha": "297b35157c54a2b59576fb40c796c9e35cd3f310",
+      "baseSha": "9240412e10377aa12700e4d40232ac867442bc61",
+      "findingCount": 4,
+      "reviewCompletedAt": "2026-09-12T05:19:40.162Z",
+      "decision": "REQUEST_CHANGES",
+      "decisionAt": "2026-09-12T05:23:40.325578Z",
+      "confirmed": 3,
+      "rejected": 1,
+      "finishedAt": "2026-09-12T05:27:37.826Z"
+    },
+    {
+      "sequence": 13,
+      "projectId": 3,
+      "repo": "forgepilot-demo-payment-settlement-service",
+      "title": "银行回调验签与事件幂等",
+      "startedAt": "2026-09-12T05:28:10.120Z",
+      "phase": "decided",
+      "requirementId": 15,
+      "requirementRevisionId": 16,
+      "pullRequestNumber": 3,
+      "pullRequestUrl": "https://github.com/LinYsssss/forgepilot-demo-payment-settlement-service/pull/3",
+      "prCreatedAt": "2026-09-12T05:29:27.831Z",
+      "reviewId": 14,
+      "pullRequestId": 14,
+      "headSha": "db40404eabe9183e673eb271930dd3e6cf491ccd",
+      "baseSha": "9240412e10377aa12700e4d40232ac867442bc61",
+      "findingCount": 4,
+      "reviewCompletedAt": "2026-09-12T05:30:26.049Z",
+      "decision": "REQUEST_CHANGES",
+      "decisionAt": "2026-09-12T05:33:56.813548Z",
+      "confirmed": 4,
+      "rejected": 0,
+      "finishedAt": "2026-09-12T05:35:57.222Z"
+    },
+    {
+      "sequence": 14,
+      "projectId": 3,
+      "repo": "forgepilot-demo-payment-settlement-service",
+      "title": "结算运营查询租户隔离",
+      "startedAt": "2026-09-12T05:36:32.529Z",
+      "phase": "decided",
+      "requirementId": 16,
+      "requirementRevisionId": 17,
+      "pullRequestNumber": 4,
+      "pullRequestUrl": "https://github.com/LinYsssss/forgepilot-demo-payment-settlement-service/pull/4",
+      "prCreatedAt": "2026-09-12T05:38:07.922Z",
+      "reviewId": 15,
+      "pullRequestId": 15,
+      "headSha": "7dee70d2d9f3e4115670e2072d6f7c55bc277898",
+      "baseSha": "9240412e10377aa12700e4d40232ac867442bc61",
+      "findingCount": 3,
+      "reviewCompletedAt": "2026-09-12T05:38:59.019Z",
+      "decision": "REQUEST_CHANGES",
+      "decisionAt": "2026-09-12T05:41:20.729220Z",
+      "confirmed": 3,
+      "rejected": 0,
+      "finishedAt": "2026-09-12T05:42:25.531Z"
+    },
+    {
+      "sequence": 15,
+      "projectId": 3,
+      "repo": "forgepilot-demo-payment-settlement-service",
+      "title": "商户费率预览配置与舍入",
+      "startedAt": "2026-09-12T05:43:06.347Z",
+      "phase": "decided",
+      "requirementId": 17,
+      "requirementRevisionId": 18,
+      "pullRequestNumber": 5,
+      "pullRequestUrl": "https://github.com/LinYsssss/forgepilot-demo-payment-settlement-service/pull/5",
+      "prCreatedAt": "2026-09-12T05:44:59.240Z",
+      "reviewId": 16,
+      "pullRequestId": 16,
+      "headSha": "71684d5512c7c166406c8474aaa93f83366343e7",
+      "baseSha": "9240412e10377aa12700e4d40232ac867442bc61",
+      "findingCount": 3,
+      "reviewCompletedAt": "2026-09-12T05:45:58.527Z",
+      "decision": "REQUEST_CHANGES",
+      "decisionAt": "2026-09-12T05:48:53.519872Z",
+      "confirmed": 3,
+      "rejected": 0,
+      "finishedAt": "2026-09-12T05:50:09.745Z"
+    }
+  ],
+  "caseCount": 15,
+  "exerciseIdentity": "live-sequential-20260912",
+  "applicationCommit": "3d002116ea1f9bdc086e83f6cbcc929d1da60ae2",
+  "projectPreparation": {
+    "projects": [
+      {
+        "projectId": 1,
+        "repo": "forgepilot-demo-mall-order-service",
+        "members": [
+          {
+            "userId": 1,
+            "roles": [
+              "LEADER"
+            ]
+          },
+          {
+            "userId": 4,
+            "roles": [
+              "DEVELOPER"
+            ]
+          },
+          {
+            "userId": 5,
+            "roles": [
+              "DEVELOPER"
+            ]
+          },
+          {
+            "userId": 9,
+            "roles": [
+              "REVIEWER"
+            ]
+          },
+          {
+            "userId": 10,
+            "roles": [
+              "REVIEWER"
+            ]
+          }
+        ],
+        "repositoryId": 1,
+        "hookId": 669791570,
+        "hookEvents": [
+          "pull_request",
+          "push"
+        ],
+        "documents": [
+          {
+            "id": 4,
+            "title": "security-policy.md",
+            "status": "READY"
+          },
+          {
+            "id": 3,
+            "title": "order-flow.md",
+            "status": "READY"
+          },
+          {
+            "id": 2,
+            "title": "db-schema.md",
+            "status": "READY"
+          },
+          {
+            "id": 1,
+            "title": "bug-history.md",
+            "status": "READY"
+          }
+        ]
+      },
+      {
+        "projectId": 2,
+        "repo": "forgepilot-demo-tenant-user-center",
+        "members": [
+          {
+            "userId": 1,
+            "roles": [
+              "LEADER"
+            ]
+          },
+          {
+            "userId": 4,
+            "roles": [
+              "DEVELOPER"
+            ]
+          },
+          {
+            "userId": 9,
+            "roles": [
+              "REVIEWER"
+            ]
+          }
+        ],
+        "repositoryId": 2,
+        "hookId": 678007146,
+        "hookEvents": [
+          "pull_request",
+          "push"
+        ],
+        "documents": [
+          {
+            "id": 8,
+            "title": "tenant-isolation.md",
+            "status": "READY"
+          },
+          {
+            "id": 7,
+            "title": "bug-history.md",
+            "status": "READY"
+          },
+          {
+            "id": 6,
+            "title": "auth-policy.md",
+            "status": "READY"
+          },
+          {
+            "id": 5,
+            "title": "api-contract.md",
+            "status": "READY"
+          }
+        ]
+      },
+      {
+        "projectId": 3,
+        "repo": "forgepilot-demo-payment-settlement-service",
+        "members": [
+          {
+            "userId": 1,
+            "roles": [
+              "LEADER"
+            ]
+          },
+          {
+            "userId": 4,
+            "roles": [
+              "DEVELOPER"
+            ]
+          },
+          {
+            "userId": 9,
+            "roles": [
+              "REVIEWER"
+            ]
+          }
+        ],
+        "repositoryId": 3,
+        "hookId": 678008280,
+        "hookEvents": [
+          "pull_request",
+          "push"
+        ],
+        "documents": [
+          {
+            "id": 12,
+            "title": "settlement-rules.md",
+            "status": "READY"
+          },
+          {
+            "id": 11,
+            "title": "security-policy.md",
+            "status": "READY"
+          },
+          {
+            "id": 10,
+            "title": "db-schema.md",
+            "status": "READY"
+          },
+          {
+            "id": 9,
+            "title": "bug-history.md",
+            "status": "READY"
+          }
+        ]
+      }
+    ],
+    "pageErrors": [],
+    "completedAt": "2026-09-12T04:13:05.947Z"
+  },
+  "operationalVerification": {
+    "checkedAt": "2026-09-12T05:59:17.783Z",
+    "database": {
+      "reviewCount": 15,
+      "completedReviews": 15,
+      "pendingOrRunning": 0,
+      "requestChangesByReviewer": 15,
+      "projectReviewCounts": [
+        {
+          "project_id": 1,
+          "count": 5
+        },
+        {
+          "project_id": 2,
+          "count": 5
+        },
+        {
+          "project_id": 3,
+          "count": 5
+        }
+      ],
+      "findingCount": 57,
+      "claimedByDeveloper": 55,
+      "rejectedFindings": 2,
+      "findingEvents": 112,
+      "readyKnowledgeDocuments": 12,
+      "exerciseRequirementsInDevelopment": 15,
+      "currentInputMismatches": 0,
+      "snapshotMismatches": 0,
+      "schemaVersion": "14"
+    },
+    "health": [
+      {
+        "url": "http://127.0.0.1:18080/actuator/health",
+        "httpStatus": 200,
+        "status": "UP"
+      },
+      {
+        "url": "http://127.0.0.1:18081/api/actuator/health",
+        "httpStatus": 200,
+        "status": "UP"
+      },
+      {
+        "url": "https://yasinlin.com/api/actuator/health",
+        "httpStatus": 200,
+        "status": "UP"
+      },
+      {
+        "url": "https://yasinlin.com/",
+        "httpStatus": 200,
+        "status": "HTTP_OK"
+      }
+    ],
+    "asset": {
+      "path": "/assets/index-Dnjjy4sb.js",
+      "sha256": "c0cc0d8dd2664ed85c571488656512a0021567fa1a0bcf22dcbb660cab6ea3e1"
+    },
+    "backup": {
+      "path": "/root/forgepilot-backups/review-sequential-complete-20260912T055915Z/database.dump",
+      "bytes": 431683,
+      "sha256": "5f6aea6ebb730e0acbf9c1a7e373f92973428cb26b70eed544b3077713d981c6",
+      "directoryMode": "0700",
+      "fileMode": "0600",
+      "restoreListVerified": true
+    }
+  }
+}
