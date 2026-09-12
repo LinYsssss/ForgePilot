@@ -416,3 +416,70 @@ Completed the minimal reviewer/return/merge/notification/knowledge collaboration
 ### Status
 
 [OK] **Completed**
+
+
+## Session 15: Deploy concurrency fixes and review 15 PRs sequentially
+
+**Date**: 2026-09-12
+**Task**: Deploy concurrency fixes and review 15 PRs sequentially
+**Branch**: `main`
+
+### Summary
+
+Deployed four verified fixes, backed up and cleared old review records, and completed 15 sequential live PR reviews: 55 confirmed/claimed findings, two rejected, 112 verified events.
+
+### Main Changes
+
+The four reported concurrency defects were fixed, verified, pushed, and deployed
+as application commit `3d00211`: review-page response ownership, shared requirement
+write locking, atomic manual-review identity/snapshot capture, and consistent
+GitHub metadata/file reads. The existing database and V14 schema were preserved.
+
+The prior local review chain was backed up and cleared under the user's explicit
+authorization. The supplied owner, developer, and reviewer credentials all worked
+through the public browser UI. Three demo projects were prepared with repository
+connections, signed webhooks, memberships, and 12 READY knowledge documents.
+
+All 15 real PRs were processed one at a time, from requirement publication and
+assignment through GitHub ingestion, AI review, explicit reviewer adjudication,
+REQUEST_CHANGES, and developer claims. The final result is 55 confirmed findings
+claimed by dev01, two rejected findings, and 112 finding events. The demo PRs remain
+open and their requirements remain IN_DEVELOPMENT for implementation work.
+
+Final checks verified every webhook, non-overlapping case intervals, current PR
+heads and requirement revisions, all stored patches, final role actions, and
+database counts. No review jobs are pending/running, and no current-input or
+immutable-snapshot mismatches remain. Public and loopback health are UP, and the
+deployed JavaScript matches the verified build. A private post-exercise database
+backup passed the restore-list check.
+
+The report records the embedding proxy timeout, browser-action/screenshot
+recoveries, exact preservation of large GitHub delivery IDs, and evidence-based
+limits on model claims. Credentials, browser sessions, and database dumps remain
+outside Git. The formal evaluation freeze, corpus, ledger, and raw outputs were
+not changed or rerun.
+
+Report: `.trellis/tasks/archive/2026-09/09-12-review-concurrency-consistency/live-review-exercise.md`
+
+Detailed results: `.trellis/tasks/archive/2026-09/09-12-review-concurrency-consistency/live-review-results.json`
+
+Deployment/backup record: `.trellis/tasks/archive/2026-09/09-12-review-concurrency-consistency/deployment.md`
+
+The unrelated planning task `08-30-scm-pr-decision-actions` was left untouched.
+
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `3d00211` | (see git log) |
+| `6ac67cb` | (see git log) |
+| `7ee2070` | (see git log) |
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- The requested deployment and review exercise are complete. Fixture repairs remain a separate development follow-up on the existing PR branches.

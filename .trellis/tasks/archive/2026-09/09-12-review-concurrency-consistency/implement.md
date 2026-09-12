@@ -14,7 +14,7 @@
 - [x] Back up the existing demo database and deploy the application containers.
 - [x] Clear the prior review records while preserving project setup and formal evaluation assets.
 - [x] Exercise the 15 demo PR reviews sequentially and record each outcome.
-- [ ] Archive the completed task and record the session after operational verification.
+- [x] Archive the completed task and record the session after operational verification.
 
 The existing unrelated planning task is not modified. Implementation runs in the
 main agent under the user's explicit fix request; no agent delegation is used.
