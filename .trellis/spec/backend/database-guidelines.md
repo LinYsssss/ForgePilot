@@ -189,6 +189,83 @@ Re-claim deletes findings from the abandoned attempt in the same transaction,
 so a crashed worker cannot pin the Review permanently. These paths are tested
 through direct JDBC and concurrent workers in the `review` test package.
 
+## Scenario: concurrent requirement writes and review snapshots
+
+### 1. Scope / Trigger
+
+Requirement lifecycle guards and Review identity/context capture span multiple
+statements. PostgreSQL READ COMMITTED does not make those statements observe one
+snapshot merely because they share a transaction.
+
+### 2. Signatures
+
+- `RequirementRepository.lockActiveByProjectIdAndId(long projectId, long id)`
+- `RequirementService.requireForUpdate(long projectId, long requirementId)`
+- `DecisionRepository.lockPullRequestAndReadHead(long projectId, long pullRequestId)`
+- `ReviewService.requestReview(long projectId, long pullRequestId, long actorId)`
+- `GitHubClient.fetch(ScmRepository repository, int number)`
+
+### 3. Contracts
+
+- Every existing-requirement lifecycle, assignment, draft-edit, revision-publish,
+  and delete entry point acquires the same requirement row lock before loading
+  its entity or evaluating mutable state. Retain it through commit. Creation
+  owns its newly inserted row; read-only queries need no write lock.
+- Lock a scalar requirement ID, then load the entity graph in a separate query.
+  This avoids locking the nullable revision join and ensures the graph is read
+  after a contending transaction commits. Do not preload it before the lock.
+- Manual review creation uses the same project-scoped PR row lock as decisions
+  and SCM updates before reading identity. Keep the lock through context capture
+  and insert/retry. Delivery creation joins the SCM transaction, which already
+  locked or inserted the PR. A requirement revision change still needs a human
+  request; these locks do not introduce an automatic trigger.
+- GitHub file pages cannot be pinned to a requested SHA. Read validated metadata
+  before and after all pages; compare base/head SHA, head ref, title, updated time,
+  and author identity/name. Discard every page on mismatch and allow only one
+  fresh attempt. A failed check must happen before `PullRequestSyncService.apply`.
+
+### 4. Validation & Error Matrix
+
+| State observed after waiting | Result |
+|---|---|
+| Draft has left DRAFT | 409; prose and AC remain frozen |
+| Assignment/publication targets a terminal requirement | 409; terminal state remains |
+| Lifecycle transition is invalid from the latest state | Existing 422 behavior |
+| Requirement was deleted or is outside the project | 404; no duplicate deletion record |
+| Concurrent reviewer/developer writes are both valid | Preserve both assignments |
+| Two manual requests create the same current identity | Reuse one Review row |
+| GitHub changes during both attempts | 409; persist no mixed input |
+| Confirming GitHub metadata is malformed | 422; persist nothing |
+
+### 5. Good / Base / Bad Cases
+
+- Good: a queued assignment observes cancellation and refuses; a queued draft
+  edit observes READY and preserves both text and AC.
+- Base: a valid write may wait and then succeed against the newly committed
+  state. A stable GitHub snapshot needs one file traversal and two metadata reads.
+- Bad: check DRAFT, wait only when flushing the revision UPDATE, and rewrite a
+  revision another transaction has already frozen.
+
+### 6. Tests Required
+
+`RequirementConcurrencyTest` holds real requirement/revision rows and confirms
+the competing backend is blocked using `pg_blocking_pids`, then commits the
+winning change. Assert final rows and refusal codes, not just elapsed time.
+`ReviewSnapshotConcurrencyTest` pauses between real identity and context reads
+while a webhook update competes; assert identity, fingerprint, and patch agree.
+`GitHubClientGuardTest` scripts head/base/time/title changes and a push between
+file pages; assert the final manifest, bounded calls, and absence of bad writes.
+
+### 7. Wrong vs Correct
+
+```java
+// Wrong: the ordinary read lets a delayed writer validate stale state.
+Requirement requirement = require(projectId, requirementId);
+
+// Correct: take the shared lock before loading or checking mutable state.
+Requirement requirement = requireForUpdate(projectId, requirementId);
+```
+
 ## Image pinning
 
 `compose.yaml` pins the same pgvector image by tag **and** digest, and

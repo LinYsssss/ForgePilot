@@ -126,7 +126,7 @@ public class RequirementService {
     public RequirementDetail editDraft(long projectId, long actorId, long requirementId,
             RequirementContent content) {
         access.requireRole(projectId, actorId, ProjectRole.LEADER);
-        Requirement requirement = require(projectId, requirementId);
+        Requirement requirement = requireForUpdate(projectId, requirementId);
         if (requirement.getStatus() != RequirementStatus.DRAFT) {
             throw ApiException.conflict(
                     "This requirement has left DRAFT; publish a new revision instead of editing in place.");
@@ -139,14 +139,13 @@ public class RequirementService {
     /**
      * 需求一旦离开 DRAFT，其修订即被冻结，于是变更会带着必填的原因发布
      * {@code seq + 1} 并再次回填指针。当前修订永远是最新的那一个，
-     * 这正是要递增它的 seq 的原因；并发的第二次发布会在唯一键
-     * {@code (requirement_id, seq)} 上落败。
+     * 发布与其他需求写入共用行锁，并发发布会读取前一次提交后的 seq。
      */
     @Transactional
     public RequirementDetail publishRevision(long projectId, long actorId, long requirementId,
             RequirementContent content, String changeReason) {
         access.requireRole(projectId, actorId, ProjectRole.LEADER);
-        Requirement requirement = require(projectId, requirementId);
+        Requirement requirement = requireForUpdate(projectId, requirementId);
         if (requirement.getStatus() == RequirementStatus.DRAFT) {
             throw ApiException.conflict("A DRAFT requirement is edited in place, not published as a revision.");
         }
@@ -169,7 +168,7 @@ public class RequirementService {
     public RequirementDetail changeStatus(long projectId, long actorId, long requirementId,
             RequirementStatus target) {
         access.requireRole(projectId, actorId, ProjectRole.LEADER);
-        Requirement requirement = require(projectId, requirementId);
+        Requirement requirement = requireForUpdate(projectId, requirementId);
         if (!ALLOWED_TARGETS.get(requirement.getStatus()).contains(target)) {
             throw ApiException.unprocessable("A " + requirement.getStatus()
                     + " requirement cannot move to " + target + ".");
@@ -182,7 +181,7 @@ public class RequirementService {
     @Transactional
     public RequirementDetail assignReviewer(long projectId, long actorId, long requirementId, Long reviewerId) {
         access.requireRole(projectId, actorId, ProjectRole.LEADER);
-        Requirement requirement = require(projectId, requirementId);
+        Requirement requirement = requireForUpdate(projectId, requirementId);
         if (isTerminal(requirement.getStatus())) {
             throw ApiException.conflict("A terminal requirement cannot be reassigned.");
         }
@@ -200,7 +199,7 @@ public class RequirementService {
     @Transactional
     public RequirementDetail assign(long projectId, long actorId, long requirementId, long assigneeId) {
         access.requireRole(projectId, actorId, ProjectRole.LEADER);
-        Requirement requirement = require(projectId, requirementId);
+        Requirement requirement = requireForUpdate(projectId, requirementId);
         if (requirement.getStatus() != RequirementStatus.READY
                 && requirement.getStatus() != RequirementStatus.IN_DEVELOPMENT) {
             throw ApiException.conflict("Only a READY or IN_DEVELOPMENT requirement can be assigned.");
@@ -225,18 +224,12 @@ public class RequirementService {
      * <p>前置条件只有「状态是 CANCELED」。不额外要求「无 PR 关联且无 Finding」：
      * 软删之下不存在悬空引用，那个条件只会平白挡住正常使用。
      *
-     * <p>这里刻意用未过滤的 {@code findByProjectIdAndId}——它必须能看见已经删掉的
-     * 行，才能把「重复删除」判定成 404 而不是把一条已删需求再删一次。
+     * <p>与其他写入口共用行锁；等待期间已被删除的行同样返回 404。
      */
     @Transactional
     public void delete(long projectId, long actorId, long requirementId) {
         access.requireRole(projectId, actorId, ProjectRole.LEADER);
-        Requirement requirement = requirements.findByProjectIdAndId(projectId, requirementId)
-                .orElseThrow(ApiException::notFound);
-        if (requirement.getDeletedAt() != null) {
-            // 已经离开产品面，答案与「不存在」一致——与项目隔离的 404 口径相同。
-            throw ApiException.notFound();
-        }
+        Requirement requirement = requireForUpdate(projectId, requirementId);
         if (requirement.getStatus() != RequirementStatus.CANCELED) {
             throw ApiException.conflict("Only a canceled requirement can be deleted; this one is "
                     + requirement.getStatus() + ".");
@@ -250,6 +243,13 @@ public class RequirementService {
     private Requirement require(long projectId, long requirementId) {
         return requirements.findByProjectIdAndIdAndDeletedAtIsNull(projectId, requirementId)
                 .orElseThrow(ApiException::notFound);
+    }
+
+    /** All lifecycle, assignment and revision guards run after acquiring this shared lock. */
+    private Requirement requireForUpdate(long projectId, long requirementId) {
+        requirements.lockActiveByProjectIdAndId(projectId, requirementId)
+                .orElseThrow(ApiException::notFound);
+        return require(projectId, requirementId);
     }
 
     /** DONE 与 CANCELED 是流转表没有给出任何出口的两个状态。 */

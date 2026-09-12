@@ -26,6 +26,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
@@ -243,6 +244,83 @@ class GitHubClientGuardTest extends ScmTestBase {
                 .containsEntry("author_username", "octocat");
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = {"head", "base", "updated_at", "title"})
+    void aChangeDuringTheFileReadRetriesTheEntireSnapshot(String field) throws Exception {
+        Fixture fixture = new Fixture();
+        String current = switch (field) {
+            case "head" -> wellFormed().replace(HEAD_SHA, "new-head");
+            case "base" -> wellFormed().replace(BASE_SHA, "new-base");
+            case "updated_at" -> wellFormed().replace("12:00:00Z", "12:00:01Z");
+            case "title" -> wellFormed().replace("A pull request", "A new title");
+            default -> throw new AssertionError(field);
+        };
+        provider.servePullRequests(wellFormed(), current, current, current);
+        provider.serveFileAttempts(List.of(List.of(FILES), List.of("""
+                [{"filename":"stable.txt","status":"added","patch":"stable diff"}]""")));
+
+        deliver(fixture, 7, status().isAccepted());
+
+        assertThat(provider.metadataReads.get()).isEqualTo(4);
+        assertThat(provider.fileReads.get()).isEqualTo(2);
+        JsonNode metadata = json.readTree(current);
+        assertThat(jdbc.queryForMap("select head_sha, base_sha, title from pull_request where repository_id = ?",
+                fixture.repository))
+                .containsEntry("head_sha", metadata.path("head").path("sha").asString())
+                .containsEntry("base_sha", metadata.path("base").path("sha").asString())
+                .containsEntry("title", metadata.path("title").asString());
+        assertThat(storedFiles(fixture).path(0).path("path").asString()).isEqualTo("stable.txt");
+    }
+
+    @Test
+    void aPushBetweenFilePagesDiscardsAllPagesFromTheUnstableAttempt() throws Exception {
+        Fixture fixture = new Fixture();
+        String current = wellFormed().replace(HEAD_SHA, "new-head");
+        provider.servePullRequests(wellFormed(), current, current, current);
+        provider.serveFileAttempts(List.of(
+                List.of(fullPage(), FILES),
+                List.of("""
+                        [{"filename":"stable.txt","status":"added","patch":"stable diff"}]""")));
+
+        deliver(fixture, 7, status().isAccepted());
+
+        assertThat(provider.fileReads.get()).isEqualTo(3);
+        assertThat(storedFiles(fixture).size()).isEqualTo(1);
+        assertThat(storedFiles(fixture).path(0).path("patch").asString()).isEqualTo("stable diff");
+    }
+
+    @Test
+    void continuousPushesStopAfterOneRetryWithoutPersistingAMixedSnapshot() throws Exception {
+        Fixture fixture = new Fixture();
+        String second = wellFormed().replace(HEAD_SHA, "head-B");
+        String third = wellFormed().replace(HEAD_SHA, "head-C");
+        provider.servePullRequests(wellFormed(), second, second, third);
+
+        deliver(fixture, 7, status().isConflict());
+
+        assertThat(provider.metadataReads.get()).isEqualTo(4);
+        assertThat(provider.fileReads.get()).isEqualTo(2);
+        assertNothingWasWritten(fixture);
+        assertThat(jdbc.queryForObject("select count(*) from review where project_id = ?",
+                Integer.class, fixture.project)).isZero();
+    }
+
+    @Test
+    void aMalformedConfirmingReadIsRefusedBeforePersistence() throws Exception {
+        Fixture fixture = new Fixture();
+        provider.servePullRequests(wellFormed(), wellFormed().replace("\"sha\":\"" + HEAD_SHA + "\"", "\"sha\":null"));
+
+        MvcResult refused = deliver(fixture, 7, status().isUnprocessableEntity());
+
+        assertThat(message(refused)).contains("head.sha");
+        assertNothingWasWritten(fixture);
+    }
+
+    private JsonNode storedFiles(Fixture fixture) {
+        return json.readTree(jdbc.queryForObject("select changed_files from pull_request where repository_id = ?",
+                String.class, fixture.repository));
+    }
+
     // ------------------------------------------------------------------ helpers
 
     /** A rejection has to write nothing: 422 with a row stored would be worse than 500. */
@@ -350,8 +428,11 @@ class GitHubClientGuardTest extends ScmTestBase {
     private static final class StubProvider {
 
         private final HttpServer server;
-        private volatile String pullRequestJson = "";
-        private volatile List<String> filePages = List.of("[]");
+        private volatile List<String> pullRequestVersions = List.of("{}");
+        private volatile List<List<String>> fileAttempts = List.of(List.of("[]"));
+        private final AtomicInteger metadataReads = new AtomicInteger();
+        private final AtomicInteger fileReads = new AtomicInteger();
+        private final AtomicInteger fileAttempt = new AtomicInteger(-1);
 
         private StubProvider() throws IOException {
             server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
@@ -364,15 +445,26 @@ class GitHubClientGuardTest extends ScmTestBase {
         }
 
         private void servePullRequest(String json) {
-            pullRequestJson = json;
+            servePullRequests(json);
+        }
+
+        private void servePullRequests(String... versions) {
+            pullRequestVersions = List.of(versions);
+            metadataReads.set(0);
         }
 
         private void serveFiles(String json) {
-            filePages = List.of(json);
+            serveFilePages(json);
         }
 
         private void serveFilePages(String... pages) {
-            filePages = List.of(pages);
+            serveFileAttempts(List.of(List.of(pages)));
+        }
+
+        private void serveFileAttempts(List<List<String>> attempts) {
+            fileAttempts = attempts;
+            fileAttempt.set(-1);
+            fileReads.set(0);
         }
 
         private void handle(HttpExchange exchange) throws IOException {
@@ -380,9 +472,12 @@ class GitHubClientGuardTest extends ScmTestBase {
             String body;
             if (uri.getPath().endsWith("/files")) {
                 int page = Integer.parseInt(uri.getQuery().replaceAll(".*page=", ""));
-                body = page <= filePages.size() ? filePages.get(page - 1) : "[]";
+                if (page == 1) fileAttempt.incrementAndGet();
+                fileReads.incrementAndGet();
+                List<String> pages = fileAttempts.get(Math.min(fileAttempt.get(), fileAttempts.size() - 1));
+                body = page <= pages.size() ? pages.get(page - 1) : "[]";
             } else {
-                body = pullRequestJson;
+                body = pullRequestVersions.get(Math.min(metadataReads.getAndIncrement(), pullRequestVersions.size() - 1));
             }
             byte[] bytes = body.getBytes(UTF_8);
             exchange.getResponseHeaders().add("Content-Type", "application/json");

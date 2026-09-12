@@ -25,7 +25,7 @@ human decision loop. These guides describe the resulting runtime conventions.
 | Guide | Description | Status |
 |-------|-------------|--------|
 | [Directory Structure](./directory-structure.md) | Actual `backend/` layout and package boundaries | Active |
-| [Database Guidelines](./database-guidelines.md) | Flyway authority and the real-PostgreSQL test contract | Active |
+| [Database Guidelines](./database-guidelines.md) | Flyway, concurrent writes/snapshots, and real-PostgreSQL tests | Active |
 | [Quality Guidelines](./quality-guidelines.md) | Executable build, architecture, scope, and configuration checks | Active |
 | [Error Handling](./error-handling.md) | `ApiError`, attachment/public text access, assigned review and merge outcome contracts | Active |
 | [Logging Guidelines](./logging-guidelines.md) | Single-handler logging and secret exclusions | Active |

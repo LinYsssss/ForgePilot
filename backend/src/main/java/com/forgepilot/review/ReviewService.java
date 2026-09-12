@@ -44,17 +44,20 @@ public class ReviewService {
 
     private final ReviewRepository reviews;
     private final ReviewClaimRepository claims;
+    private final DecisionRepository decisions;
     private final ProjectAccessService access;
     private final ApplicationEventPublisher publisher;
     private final JdbcTemplate jdbc;
     private final ObjectMapper json;
     private final ProjectScmIdentityAccess scmIdentities;
 
-    ReviewService(ReviewRepository reviews, ReviewClaimRepository claims, ProjectAccessService access,
+    ReviewService(ReviewRepository reviews, ReviewClaimRepository claims, DecisionRepository decisions,
+            ProjectAccessService access,
             ApplicationEventPublisher publisher, JdbcTemplate jdbc, ObjectMapper json,
             ProjectScmIdentityAccess scmIdentities) {
         this.reviews = reviews;
         this.claims = claims;
+        this.decisions = decisions;
         this.access = access;
         this.publisher = publisher;
         this.jdbc = jdbc;
@@ -72,6 +75,11 @@ public class ReviewService {
      */
     @Transactional
     public Review requestReview(long projectId, long pullRequestId, long actorId) {
+        // 与 Webhook 更新和终局决定持有同一条 PR 行锁，先锁再读取身份。
+        // READ COMMITTED 只保证单条语句的快照；否则下面的身份可能属于 A，
+        // 而 create() 再读上下文时，Webhook 已将这一行推进到 B。
+        decisions.lockPullRequestAndReadHead(projectId, pullRequestId)
+                .orElseThrow(ApiException::notFound);
         PullRequestIdentity pullRequest = pullRequestIn(projectId, pullRequestId);
         authorize(projectId, actorId, pullRequest);
         Review review = openOrTake(projectId, pullRequestId, pullRequest);
@@ -95,6 +103,7 @@ public class ReviewService {
      * <p>与 {@link #requestReview} 不同，这里遇到已存在的 COMPLETED 行只是直接接管。
      * 同一个 webhook 的重复投递必须是无害的；在这里抛冲突，
      * 会因为一次重复的 GitHub 投递而把 PR 的更新整个回滚掉。
+     * SCM 调用方已在本事务内锁定或新建 PR，因此身份和快照也受该行锁保护。
      */
     @Transactional(propagation = Propagation.MANDATORY)
     public Review openForDelivery(long pullRequestId) {

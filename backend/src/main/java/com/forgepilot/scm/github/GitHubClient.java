@@ -37,6 +37,7 @@ import tools.jackson.databind.JsonNode;
 public class GitHubClient {
 
     private static final int PAGE_SIZE = 100;
+    private static final int SNAPSHOT_ATTEMPTS = 2;
     private static final Duration READ_TIMEOUT = Duration.ofSeconds(20);
 
     private final OutboundUrlPolicy outbound;
@@ -53,24 +54,43 @@ public class GitHubClient {
         RestClient client = clientFor(repository);
         String externalId = repository.getExternalId();
 
+        // GitHub 的 files 接口不能固定到某个 SHA，分页期间的 push 也会改变后续页。
+        // 只有前后元数据一致才接受整份清单；变化时丢弃全部页，最多重读一次。
+        for (int attempt = 0; attempt < SNAPSHOT_ATTEMPTS; attempt++) {
+            PullRequestMetadata before = metadata(client, externalId, number);
+            List<ChangedFile> files = changedFiles(client, externalId, number);
+            PullRequestMetadata after = metadata(client, externalId, number);
+            if (before.equals(after)) {
+                return new PullRequestSnapshot(number, before.baseSha(), before.headSha(),
+                        before.headRef(), before.title(), null, before.updatedAt(),
+                        before.authorExternalUserId(), before.authorUsername(), files);
+            }
+        }
+        throw ApiException.conflict(
+                "GitHub pull request kept changing while its diff was being read. Please synchronize again.");
+    }
+
+    private PullRequestMetadata metadata(RestClient client, String externalId, int number) {
         JsonNode pullRequest = client.get()
                 .uri("/repositories/{repository}/pulls/{number}", externalId, number)
                 .retrieve()
                 .body(JsonNode.class);
-
-        return new PullRequestSnapshot(
-                number,
+        if (pullRequest == null || !pullRequest.isObject()) {
+            throw ApiException.unprocessable("The provider's pull request metadata is missing.");
+        }
+        return new PullRequestMetadata(
                 required(pullRequest.path("base"), "sha", "base.sha"),
                 required(pullRequest.path("head"), "sha", "head.sha"),
                 required(pullRequest.path("head"), "ref", "head.ref"),
                 required(pullRequest, "title"),
-                // GitHub 不提供稳定的 diff 修订号，因此这一格保持为空，
-                // 定序完全依赖 updated_at。
-                null,
+                // 没有稳定的 diff 修订号；updated_at 还能发现 SHA 回退后的更新。
                 Instant.parse(required(pullRequest, "updated_at")),
                 required(pullRequest.path("user"), "id", "user.id"),
-                required(pullRequest.path("user"), "login", "user.login"),
-                changedFiles(client, externalId, number));
+                required(pullRequest.path("user"), "login", "user.login"));
+    }
+
+    private record PullRequestMetadata(String baseSha, String headSha, String headRef, String title,
+            Instant updatedAt, String authorExternalUserId, String authorUsername) {
     }
 
     public void merge(ScmRepository repository, int number, String expectedHeadSha) {

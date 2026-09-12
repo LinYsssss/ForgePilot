@@ -193,9 +193,12 @@ class ChangedFileLimitTest extends ScmTestBase {
 
         deliver(fixture, 34);
 
-        // The client did fetch it all, including the empty second page: this one is
-        // refused by the manifest guard, not by the counting one.
-        assertThat(provider.requestLines()).hasSize(2);
+        // The client fetched the full page and confirmed unchanged metadata; the
+        // serialized-manifest guard then refuses it before any row is stored.
+        assertThat(provider.requestLines()).containsExactly(
+                "/repositories/" + fixture.externalId + "/pulls/34",
+                "/repositories/" + fixture.externalId + "/pulls/34/files?per_page=100&page=1",
+                "/repositories/" + fixture.externalId + "/pulls/34");
         assertThat(pullRequestCount(fixture)).isZero();
     }
 

@@ -1,0 +1,4 @@
+{"file":".trellis/spec/backend/quality-guidelines.md","reason":"Java 21 container verify, architecture, schema, and configuration gates."}
+{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"Frontend lint, typecheck, delayed-response tests, and build gates."}
+{"file":".trellis/spec/backend/database-guidelines.md","reason":"Validate lock ordering and snapshots against PostgreSQL."}
+{"file":".trellis/spec/frontend/state-management.md","reason":"Validate stale-response and operation-state ownership."}

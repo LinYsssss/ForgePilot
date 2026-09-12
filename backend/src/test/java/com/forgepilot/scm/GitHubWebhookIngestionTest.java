@@ -125,7 +125,8 @@ class GitHubWebhookIngestionTest extends ScmTestBase {
         // with the stored token. Without this the stub proves nothing about github.com.
         assertThat(provider.requestLines()).containsExactly(
                 "/repositories/" + fixture.externalId + "/pulls/7",
-                "/repositories/" + fixture.externalId + "/pulls/7/files?per_page=100&page=1");
+                "/repositories/" + fixture.externalId + "/pulls/7/files?per_page=100&page=1",
+                "/repositories/" + fixture.externalId + "/pulls/7");
         assertThat(provider.authorization()).isEqualTo("Bearer token-" + fixture.externalId);
 
         long pullRequest = pullRequestId(fixture, 7);

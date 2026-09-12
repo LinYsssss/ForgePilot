@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from "vue";
+import { computed, onBeforeUnmount, ref, watch } from "vue";
 import { RouterLink, useRoute } from "vue-router";
 
 import {
@@ -102,6 +102,25 @@ function target(): { projectId: number; reviewId: number } | null {
   return pid === null || rid === null ? null : { projectId: pid, reviewId: rid };
 }
 
+function isCurrentPage(ids: { projectId: number; reviewId: number }, token: number): boolean {
+  return token === detailLoadToken
+    && ids.projectId === projectId.value
+    && ids.reviewId === reviewId.value;
+}
+
+/** A write must refer to the loaded review and PR currently shown on this route. */
+function displayedTarget(): { projectId: number; reviewId: number; pullRequestId: number } | null {
+  const ids = target();
+  const review = detail.value;
+  const pull = pullRequest.value;
+  if (ids === null || loading.value || review === null || pull === null
+    || project.value?.id !== ids.projectId || review.id !== ids.reviewId
+    || pull.projectId !== ids.projectId || review.pullRequestId !== pull.id) {
+    return null;
+  }
+  return { ...ids, pullRequestId: pull.id };
+}
+
 const hasContext = computed(() => target() !== null);
 
 /**
@@ -161,7 +180,8 @@ const decisionBlockers = computed<string[]>(() => {
 });
 
 const canSubmitDecision = computed(
-  () => canDecide.value && decisionBlockers.value.length === 0,
+  () => displayedTarget() !== null && canDecide.value && decisionBlockers.value.length === 0
+    && !associationPending.value,
 );
 
 const reviewContext = computed(() => parseReviewContext(detail.value?.contextSnapshot));
@@ -217,10 +237,17 @@ async function load(): Promise<void> {
   publicDocumentIds.value = [];
   publicDocumentsError.value = null;
   eventsByFinding.value = {};
+  eventsPendingFor.value = null;
   eventsError.value = null;
+  findingPending.value = null;
   findingError.value = null;
+  selectedFindingId.value = null;
+  selectedPath.value = null;
+  decisionPending.value = false;
   decisionError.value = null;
   decisionComment.value = "";
+  associationPending.value = false;
+  associationSelection.value = null;
   associationError.value = null;
   associationReason.value = "";
   findingComments.value = {};
@@ -236,11 +263,11 @@ async function load(): Promise<void> {
         listRequirements(ids.projectId),
         getReview(ids.projectId, ids.reviewId),
         listProjectKnowledge(ids.projectId).catch((failure: unknown) => {
-          if (token === detailLoadToken) publicDocumentsError.value = apiErrorMessage(failure);
+          if (isCurrentPage(ids, token)) publicDocumentsError.value = apiErrorMessage(failure);
           return [];
         }),
       ]);
-    if (token !== detailLoadToken) {
+    if (!isCurrentPage(ids, token)) {
       return;
     }
     project.value = loadedProject;
@@ -254,7 +281,7 @@ async function load(): Promise<void> {
       getPullRequest(ids.projectId, loadedReview.pullRequestId),
       listPullRequestReviews(ids.projectId, loadedReview.pullRequestId),
     ]);
-    if (token !== detailLoadToken) {
+    if (!isCurrentPage(ids, token)) {
       return;
     }
     pullRequest.value = loadedPullRequest;
@@ -264,17 +291,17 @@ async function load(): Promise<void> {
     if (previous?.decision === "REQUEST_CHANGES") {
       try {
         const loadedPrevious = await getReview(ids.projectId, previous.id);
-        if (token === detailLoadToken) previousReview.value = loadedPrevious;
+        if (isCurrentPage(ids, token)) previousReview.value = loadedPrevious;
       } catch (failure: unknown) {
-        if (token === detailLoadToken) previousError.value = apiErrorMessage(failure);
+        if (isCurrentPage(ids, token)) previousError.value = apiErrorMessage(failure);
       }
     }
   } catch (failure: unknown) {
-    if (token === detailLoadToken) {
+    if (isCurrentPage(ids, token)) {
       loadError.value = apiErrorMessage(failure);
     }
   } finally {
-    if (token === detailLoadToken) {
+    if (isCurrentPage(ids, token)) {
       loading.value = false;
     }
   }
@@ -283,37 +310,46 @@ async function load(): Promise<void> {
 // 用 watch 而不是 mounted：仅 `:id` 变化时 vue-router 会复用本组件，
 // 因此放在 `onMounted` 里加载会一直显示上一次 Review。
 watch([projectId, reviewId], load, { immediate: true });
+onBeforeUnmount(() => { detailLoadToken++; });
 
 async function saveAssociation(): Promise<void> {
-  const ids = target();
-  const pull = pullRequest.value;
-  if (ids === null || pull === null) {
+  const ids = displayedTarget();
+  const token = detailLoadToken;
+  if (ids === null || associationPending.value || !canEditAssociation.value) {
     return;
   }
   associationPending.value = true;
   associationError.value = null;
   try {
-    pullRequest.value = await setPullRequestRequirement(
+    const loadedPullRequest = await setPullRequestRequirement(
       ids.projectId,
-      pull.id,
+      ids.pullRequestId,
       associationSelection.value,
       associationReason.value,
     );
+    if (!isCurrentPage(ids, token)) return;
+    pullRequest.value = loadedPullRequest;
     associationReason.value = "";
     // `isCurrent` 与那六项前置条件都是从 PR 推导出来的，
     // 因此必须重新读取该 Review，而不能在本地打补丁。
-    detail.value = await getReview(ids.projectId, ids.reviewId);
-    history.value = await listPullRequestReviews(ids.projectId, pull.id);
+    const [loadedReview, loadedHistory] = await Promise.all([
+      getReview(ids.projectId, ids.reviewId),
+      listPullRequestReviews(ids.projectId, ids.pullRequestId),
+    ]);
+    if (!isCurrentPage(ids, token)) return;
+    detail.value = loadedReview;
+    history.value = loadedHistory;
   } catch (failure: unknown) {
-    associationError.value = apiErrorMessage(failure);
+    if (isCurrentPage(ids, token)) associationError.value = apiErrorMessage(failure);
   } finally {
-    associationPending.value = false;
+    if (isCurrentPage(ids, token)) associationPending.value = false;
   }
 }
 
 async function decide(decision: "APPROVE" | "REQUEST_CHANGES"): Promise<void> {
-  const ids = target();
-  if (ids === null) {
+  const ids = displayedTarget();
+  const token = detailLoadToken;
+  if (ids === null || decisionPending.value) {
     return;
   }
   decisionError.value = null;
@@ -325,15 +361,19 @@ async function decide(decision: "APPROVE" | "REQUEST_CHANGES"): Promise<void> {
   decisionPending.value = true;
   try {
     await decideReview(ids.projectId, ids.reviewId, decision, decisionComment.value);
+    if (!isCurrentPage(ids, token)) return;
     decisionComment.value = "";
-    detail.value = await getReview(ids.projectId, ids.reviewId);
-    if (pullRequest.value !== null) {
-      history.value = await listPullRequestReviews(ids.projectId, pullRequest.value.id);
-    }
+    const [loadedReview, loadedHistory] = await Promise.all([
+      getReview(ids.projectId, ids.reviewId),
+      listPullRequestReviews(ids.projectId, ids.pullRequestId),
+    ]);
+    if (!isCurrentPage(ids, token)) return;
+    detail.value = loadedReview;
+    history.value = loadedHistory;
   } catch (failure: unknown) {
-    decisionError.value = apiErrorMessage(failure);
+    if (isCurrentPage(ids, token)) decisionError.value = apiErrorMessage(failure);
   } finally {
-    decisionPending.value = false;
+    if (isCurrentPage(ids, token)) decisionPending.value = false;
   }
 }
 
@@ -343,26 +383,33 @@ async function move(
   action: FindingAction,
   comment: string,
 ): Promise<void> {
-  const ids = target();
-  if (ids === null) {
+  const ids = displayedTarget();
+  const token = detailLoadToken;
+  if (ids === null || !detail.value?.findings.some(finding => finding.id === findingId)
+    || findingPending.value === findingId) {
     return;
   }
   findingPending.value = findingId;
   findingError.value = null;
   try {
     await moveFinding(ids.projectId, findingId, status, comment);
+    if (!isCurrentPage(ids, token)) return;
     setFindingComment(findingId, "");
-    detail.value = await getReview(ids.projectId, ids.reviewId);
+    const loadedReview = await getReview(ids.projectId, ids.reviewId);
+    if (!isCurrentPage(ids, token)) return;
+    detail.value = loadedReview;
     if (String(findingId) in eventsByFinding.value) {
+      const events = await listFindingEvents(ids.projectId, findingId);
+      if (!isCurrentPage(ids, token)) return;
       eventsByFinding.value = {
         ...eventsByFinding.value,
-        [String(findingId)]: await listFindingEvents(ids.projectId, findingId),
+        [String(findingId)]: events,
       };
     }
   } catch (failure: unknown) {
-    findingError.value = `${action} 失败：${apiErrorMessage(failure)}`;
+    if (isCurrentPage(ids, token)) findingError.value = `${action} 失败：${apiErrorMessage(failure)}`;
   } finally {
-    findingPending.value = null;
+    if (isCurrentPage(ids, token) && findingPending.value === findingId) findingPending.value = null;
   }
 }
 
@@ -378,21 +425,25 @@ function selectFinding(finding: Finding): void {
 }
 
 async function showEvents(findingId: number): Promise<void> {
-  const ids = target();
-  if (ids === null) {
+  const ids = displayedTarget();
+  const token = detailLoadToken;
+  if (ids === null || !detail.value?.findings.some(finding => finding.id === findingId)
+    || eventsPendingFor.value === findingId) {
     return;
   }
   eventsPendingFor.value = findingId;
   eventsError.value = null;
   try {
+    const events = await listFindingEvents(ids.projectId, findingId);
+    if (!isCurrentPage(ids, token)) return;
     eventsByFinding.value = {
       ...eventsByFinding.value,
-      [String(findingId)]: await listFindingEvents(ids.projectId, findingId),
+      [String(findingId)]: events,
     };
   } catch (failure: unknown) {
-    eventsError.value = { findingId, message: apiErrorMessage(failure) };
+    if (isCurrentPage(ids, token)) eventsError.value = { findingId, message: apiErrorMessage(failure) };
   } finally {
-    eventsPendingFor.value = null;
+    if (isCurrentPage(ids, token) && eventsPendingFor.value === findingId) eventsPendingFor.value = null;
   }
 }
 

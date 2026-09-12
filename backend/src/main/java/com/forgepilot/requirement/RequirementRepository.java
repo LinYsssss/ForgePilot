@@ -25,13 +25,21 @@ public interface RequirementRepository extends JpaRepository<Requirement, Long> 
 
     /**
      * 软删之后的取值口。产品面的每一条读取与写入都走带 {@code AndDeletedAtIsNull}
-     * 的这两个方法，只有删除本身用上面未过滤的版本——它必须能判定「已经删了」。
+     * 的查询方法，写入（包括删除）还须先取得下面的 active 行锁。
      */
     @EntityGraph(attributePaths = "currentRevision")
     Optional<Requirement> findByProjectIdAndIdAndDeletedAtIsNull(long projectId, long id);
 
     @EntityGraph(attributePaths = "currentRevision")
     List<Requirement> findByProjectIdAndDeletedAtIsNullOrderByIdAsc(long projectId);
+
+    /** Lock before loading the entity graph, so checks after a wait see the committed state. */
+    @Query(value = """
+            SELECT id FROM requirement
+             WHERE project_id = :projectId AND id = :id AND deleted_at IS NULL
+             FOR UPDATE
+            """, nativeQuery = true)
+    Optional<Long> lockActiveByProjectIdAndId(long projectId, long id);
 
     /** Display eligibility only; decisions still authorize through ProjectAccessService. */
     @Query(value = "select distinct user_id from project_member_role "

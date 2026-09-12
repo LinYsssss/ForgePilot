@@ -20,7 +20,7 @@ Precision Review Console direction.
 | [Directory Structure](./directory-structure.md) | Module organization and file layout | Active |
 | [Component Guidelines](./component-guidelines.md) | Component patterns, props, composition | Active |
 | [Hook Guidelines](./hook-guidelines.md) | Composables and request boundary | Active |
-| [State Management](./state-management.md) | Local, URL, and future server state | Active |
+| [State Management](./state-management.md) | Local/URL state and async ownership across page visits | Active |
 | [Quality Guidelines](./quality-guidelines.md) | Code standards, accessibility, drift | Active |
 | [Type Safety](./type-safety.md) | TypeScript and boundary types | Active |
 
