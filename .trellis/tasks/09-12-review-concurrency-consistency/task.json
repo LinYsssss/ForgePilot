@@ -15,12 +15,17 @@
   "branch": "main",
   "base_branch": "main",
   "worktree_path": null,
-  "commit": null,
+  "commit": "3d002116ea1f9bdc086e83f6cbcc929d1da60ae2",
   "pr_url": null,
   "subtasks": [],
   "children": [],
   "parent": null,
   "relatedFiles": [],
-  "notes": "Implementation and automated verification complete. On 2026-09-12 the user authorized committing/pushing the fixes, deployment, clearing prior review records, and sequentially exercising 15 demo PR reviews. Deployment and exercise evidence will be recorded in this task.",
-  "meta": {"implementation_status": "verified", "verification": "validation.md"}
+  "notes": "Fix commit 3d002116ea1f9bdc086e83f6cbcc929d1da60ae2 is pushed, deployed, and green in CI. Prior review chain was backed up and cleared. The 15-case browser exercise is prepared; awaiting valid owner login information after the shared test password returned HTTP 401. No new PR reviews have started; do not archive or mark complete.",
+  "meta": {
+    "implementation_status": "deployed",
+    "verification": "validation.md",
+    "deployment": "deployment.md",
+    "exercise_status": "prepared_waiting_for_leader_login"
+  }
 }

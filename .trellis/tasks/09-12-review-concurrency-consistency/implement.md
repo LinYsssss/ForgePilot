@@ -10,9 +10,9 @@
 - [x] Review the complete diff against backend/frontend specs and update the
       prevention guidance for the newly enforced concurrency invariants.
 - [x] Record verification evidence and present the concrete changes for review.
-- [ ] Commit and push the verified fixes under the user's follow-up authorization.
-- [ ] Back up the existing demo database and deploy the application containers.
-- [ ] Clear the prior review records while preserving project setup and formal evaluation assets.
+- [x] Commit and push the verified fixes under the user's follow-up authorization.
+- [x] Back up the existing demo database and deploy the application containers.
+- [x] Clear the prior review records while preserving project setup and formal evaluation assets.
 - [ ] Exercise the 15 demo PR reviews sequentially and record each outcome.
 - [ ] Archive the completed task and record the session after operational verification.
 
