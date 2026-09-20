@@ -13,6 +13,7 @@ import {
 } from "../../app/routes";
 import { formatDateTime } from "../../lib/datetime";
 import { apiErrorMessage } from "../../lib/http";
+import { useFinitePolling } from "../../composables/useFinitePolling";
 import { getProject, hasProjectRole, listMembers, type Member, type Project } from "../project/api";
 import { listProjectKnowledge } from "../knowledge/api";
 import { listRequirements, type RequirementSummary } from "../requirement/api";
@@ -122,6 +123,22 @@ function displayedTarget(): { projectId: number; reviewId: number; pullRequestId
 }
 
 const hasContext = computed(() => target() !== null);
+const detailPollingKey = computed(() => {
+  const ids = target();
+  return ids !== null && (detail.value?.status === "PENDING" || detail.value?.status === "RUNNING")
+    ? `review:${ids.projectId}:${ids.reviewId}`
+    : null;
+});
+const detailPolling = useFinitePolling(detailPollingKey, async () => {
+  const ids = target();
+  const token = detailLoadToken;
+  if (ids === null) return;
+  const loaded = await getReview(ids.projectId, ids.reviewId);
+  if (isCurrentPage(ids, token)) detail.value = loaded;
+});
+const detailPollingError = computed(() => detailPolling.error.value === null
+  ? null
+  : apiErrorMessage(detailPolling.error.value));
 
 /**
  * ARCHITECTURE.md 3.1 的决策闸门：只要 PR 的*当前* head 上存在任何一次
@@ -478,6 +495,12 @@ function eventsErrorFor(findingId: number): string | null {
     </p>
     <p v-else-if="loading" class="muted">正在加载审查…</p>
     <p v-else-if="loadError" class="alert" role="alert">{{ loadError }}</p>
+    <p v-if="detailPollingError" class="alert" role="alert">
+      审查状态自动刷新失败：{{ detailPollingError }}
+      <button type="button" class="button button-quiet" @click="detailPolling.retry">
+        重新刷新
+      </button>
+    </p>
 
     <template v-if="detail !== null">
       <section class="panel" aria-labelledby="review-progress-title">

@@ -78,6 +78,8 @@ const requirementDocument = {
 };
 
 const calls: RecordedCall[] = [];
+let attachmentStatuses: Array<"PENDING" | "READY"> = ["READY"];
+let attachmentReads = 0;
 
 function jsonResponse(body: unknown): Response {
   return new Response(JSON.stringify(body), {
@@ -113,7 +115,14 @@ function respond(path: string, method: string): Response {
     });
   }
   if (path === "/api/projects/3/requirements/12/attachments") {
-    return jsonResponse([requirementDocument]);
+    const status = attachmentStatuses[Math.min(attachmentReads, attachmentStatuses.length - 1)];
+    attachmentReads++;
+    return jsonResponse([{
+      ...requirementDocument,
+      status,
+      chunkCount: status === "READY" ? 1 : 0,
+      embeddedChunkCount: status === "READY" ? 1 : 0,
+    }]);
   }
   if (path === "/api/projects/3/requirements/12/attachments/44/content") {
     return jsonResponse({
@@ -151,9 +160,11 @@ function respond(path: string, method: string): Response {
   throw new Error(`unexpected request: ${method} ${path}`);
 }
 
-async function mountDetailPage() {
+async function mountDetailPage(statuses: Array<"PENDING" | "READY"> = ["READY"]) {
   clearSession();
   calls.length = 0;
+  attachmentStatuses = statuses;
+  attachmentReads = 0;
   vi.stubGlobal(
     "fetch",
     vi.fn((path: string | URL | Request, init?: RequestInit) => {
@@ -176,10 +187,27 @@ async function mountDetailPage() {
 }
 
 afterEach(() => {
+  vi.useRealTimers();
   vi.unstubAllGlobals();
 });
 
 describe("requirement detail contract", () => {
+  it("refreshes a pending attachment without resetting the requirement draft", async () => {
+    vi.useFakeTimers();
+    const wrapper = await mountDetailPage(["PENDING", "READY"]);
+    await wrapper.get("#edit-title").setValue("unsaved title");
+    expect(wrapper.get(".attachment-section").text()).toContain("正在处理");
+
+    await vi.advanceTimersByTimeAsync(2_000);
+    await flushPromises();
+
+    expect(wrapper.get(".attachment-section").text()).toContain("可用于召回");
+    expect(wrapper.get<HTMLInputElement>("#edit-title").element.value).toBe("unsaved title");
+    expect(attachmentReads).toBe(2);
+    await vi.advanceTimersByTimeAsync(10_000);
+    expect(attachmentReads).toBe(2);
+  });
+
   it("shows requirement status without absorbing review activity", async () => {
     const wrapper = await mountDetailPage();
 

@@ -5,6 +5,7 @@ import { RouterLink, useRoute, useRouter } from "vue-router";
 import { parseId, knowledgeDocumentRoute, knowledgeRoute, PROJECT_QUERY_KEY } from "../../app/routes";
 import { formatDateTime } from "../../lib/datetime";
 import { apiErrorMessage } from "../../lib/http";
+import { useFinitePolling } from "../../composables/useFinitePolling";
 import { hasProjectRole, listProjects, type Project } from "../project/api";
 import {
   deleteProjectKnowledge,
@@ -14,6 +15,7 @@ import {
   listProjectKnowledge,
   uploadProjectKnowledge,
   type KnowledgeDocument,
+  type KnowledgeStatus,
 } from "./api";
 
 const route = useRoute();
@@ -48,7 +50,11 @@ const files = ref<File[]>([]);
 const uploadPending = ref(false);
 const uploadError = ref<string | null>(null);
 /** 逐文件结果：批量上传是 N 次独立调用，因此每个文件各有自己的成败。 */
-const uploadResults = ref<Array<{ name: string; error: string | null }>>([]);
+const uploadResults = ref<Array<{
+  name: string;
+  status: KnowledgeStatus | null;
+  error: string | null;
+}>>([]);
 const deletePending = ref(false);
 let listToken = 0;
 const selectedProject = computed(
@@ -60,6 +66,23 @@ const summary = computed(() => ({
   pending: documents.value.filter((document) => document.status === "PENDING").length,
   failed: documents.value.filter((document) => document.status === "FAILED").length,
 }));
+const pollingKey = computed(() => {
+  const id = projectId.value;
+  return id !== null && documents.value.some(document => document.status === "PENDING")
+    ? `knowledge:${id}`
+    : null;
+});
+
+const polling = useFinitePolling(pollingKey, async () => {
+  const id = projectId.value;
+  const token = listToken;
+  if (id === null) return;
+  const loaded = await listProjectKnowledge(id);
+  if (id === projectId.value && token === listToken) documents.value = loaded;
+});
+const pollingError = computed(() => polling.error.value === null
+  ? null
+  : apiErrorMessage(polling.error.value));
 
 function selectProject(event: Event): void {
   const id = parseId((event.target as HTMLSelectElement).value);
@@ -93,8 +116,8 @@ function pickFiles(event: Event): void {
 
 /**
  * 逐文件独立上传，不是一个批量端点。每次调用都是后端自己的一个事务，
- * 因此一个文件失败既不会回滚已经成功的那些，也不会阻断后面的；这也避免了一个
- * 横跨 N 次 embedding 外部调用的长事务。
+ * 因此一个文件失败既不会回滚已经成功的那些，也不会阻断后面的。
+ * 每个文件会先作为 PENDING 文档被受理，再由后台逐个完成向量化。
  */
 async function upload(): Promise<void> {
   const id = projectId.value;
@@ -104,10 +127,17 @@ async function upload(): Promise<void> {
   uploadResults.value = [];
   for (const selected of files.value) {
     try {
-      await uploadProjectKnowledge(id, { title: selected.name, text: await selected.text() });
-      uploadResults.value.push({ name: selected.name, error: null });
+      const accepted = await uploadProjectKnowledge(id, {
+        title: selected.name,
+        text: await selected.text(),
+      });
+      uploadResults.value.push({ name: selected.name, status: accepted.status, error: null });
     } catch (failure: unknown) {
-      uploadResults.value.push({ name: selected.name, error: apiErrorMessage(failure) });
+      uploadResults.value.push({
+        name: selected.name,
+        status: null,
+        error: apiErrorMessage(failure),
+      });
     }
   }
   files.value = [];
@@ -190,6 +220,10 @@ watch(projectId, load, { immediate: true });
     <p v-if="projectId === null" class="empty-state">选择一个项目以阅读项目知识。</p>
     <template v-else>
       <p v-if="error" class="alert" role="alert">{{ error }}</p>
+      <p v-if="pollingError" class="alert" role="alert">
+        文档状态自动刷新失败：{{ pollingError }}
+        <button type="button" class="button button-quiet" @click="polling.retry">重新刷新</button>
+      </p>
       <section class="knowledge-summary" aria-label="文档处理状态">
         <div class="panel"><strong>{{ documents.length }}</strong><span>知识文档</span></div>
         <div class="panel">
@@ -208,7 +242,7 @@ watch(projectId, load, { immediate: true });
           <h2 id="knowledge-upload-title" class="panel-title">上传项目知识</h2>
           <p class="field-hint">
             支持 .txt 与 .md，可一次选择多个文件。逐个文件独立处理并各自报告结果，
-            某个文件失败不影响其余文件。
+            上传会先受理为“正在处理”，后台完成向量化后自动更新；某个文件失败不影响其余文件。
           </p>
         </div>
         <form class="inline-form" @submit.prevent="upload">
@@ -226,16 +260,19 @@ watch(projectId, load, { immediate: true });
             </p>
           </div>
           <button class="button button-primary" :disabled="files.length === 0 || uploadPending">
-            {{ uploadPending ? "正在处理…" : `上传并处理 ${files.length || ""}` }}
+            {{ uploadPending ? "正在上传…" : `上传 ${files.length || ""}` }}
           </button>
         </form>
         <p v-if="uploadError" class="alert" role="alert">{{ uploadError }}</p>
         <ul v-if="uploadResults.length" class="record-list upload-results">
           <li v-for="result in uploadResults" :key="result.name" class="record">
             <span
-              :class="['badge', result.error === null ? 'badge-success' : 'badge-danger']"
-            >{{ result.error === null ? "成功" : "失败" }}</span>
+              :class="['badge', result.error === null ? 'badge-warning' : 'badge-danger']"
+            >{{ result.error === null ? "已受理" : "失败" }}</span>
             <strong>{{ result.name }}</strong>
+            <span v-if="result.error === null" class="muted">
+              {{ result.status === "READY" ? "处理完成" : "等待后台处理" }}
+            </span>
             <span v-if="result.error" class="muted">{{ result.error }}</span>
           </li>
         </ul>

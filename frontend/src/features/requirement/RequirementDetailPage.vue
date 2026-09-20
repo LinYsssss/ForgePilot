@@ -5,6 +5,7 @@ import { RouterLink, useRoute, useRouter } from "vue-router";
 import { parseId, requirementsRoute, reviewDetailRoute, PROJECT_QUERY_KEY } from "../../app/routes";
 import { formatDateTime } from "../../lib/datetime";
 import { apiErrorMessage } from "../../lib/http";
+import { useFinitePolling } from "../../composables/useFinitePolling";
 import { useSession } from "../auth/session";
 import { getProject, hasProjectRole, listMembers, type Member, type Project } from "../project/api";
 import {
@@ -50,7 +51,7 @@ import {
   type Revision,
   type RevisionContent,
 } from "./api";
-import type { KnowledgeDocument } from "../knowledge/api";
+import type { KnowledgeDocument, KnowledgeStatus } from "../knowledge/api";
 import {
   isTerminal,
   requirementPhase,
@@ -125,6 +126,33 @@ function target(): { projectId: number; requirementId: number } | null {
   const pid = projectId.value;
   const rid = requirementId.value;
   return pid === null || rid === null ? null : { projectId: pid, requirementId: rid };
+}
+
+const attachmentPollingKey = computed(() => {
+  const ids = target();
+  return ids !== null && attachments.value.some(document => document.status === "PENDING")
+    ? `requirement-attachments:${ids.projectId}:${ids.requirementId}`
+    : null;
+});
+const attachmentPolling = useFinitePolling(attachmentPollingKey, async () => {
+  const ids = target();
+  const token = detailLoadToken;
+  if (ids === null) return;
+  const loaded = await listAttachments(ids.projectId, ids.requirementId);
+  const current = target();
+  if (token === detailLoadToken && current?.projectId === ids.projectId
+    && current.requirementId === ids.requirementId) {
+    attachments.value = loaded;
+  }
+});
+const attachmentPollingError = computed(() => attachmentPolling.error.value === null
+  ? null
+  : apiErrorMessage(attachmentPolling.error.value));
+
+function knowledgeStatusLabel(status: KnowledgeStatus): string {
+  if (status === "READY") return "可用于召回";
+  if (status === "FAILED") return "处理失败";
+  return "正在处理";
 }
 
 const hasContext = computed(() => target() !== null);
@@ -593,18 +621,28 @@ function saveReviewer(): Promise<void> {
           </button>
         </form>
         <p v-if="attachmentError" class="alert" role="alert">{{ attachmentError }}</p>
+        <p v-if="attachmentPollingError" class="alert" role="alert">
+          文档状态自动刷新失败：{{ attachmentPollingError }}
+          <button type="button" class="button button-quiet" @click="attachmentPolling.retry">
+            重新刷新
+          </button>
+        </p>
         <p v-if="attachments.length === 0" class="empty-state">该需求还没有文档。</p>
         <ol v-else class="record-list document-list">
           <li v-for="item in attachments" :key="item.id" class="record">
             <div class="record-head">
               <h3 class="record-title">{{ item.title }}</h3>
-              <span class="badge badge-info">{{ item.status }}</span>
+              <span
+                class="badge"
+                :class="item.status === 'READY' ? 'badge-success' : item.status === 'FAILED' ? 'badge-danger' : 'badge-warning'"
+              >{{ knowledgeStatusLabel(item.status) }}</span>
             </div>
             <p class="muted">
               {{ item.embeddedChunkCount }}/{{ item.chunkCount }} 向量 Chunk · 维度
               {{ item.embeddingDimension ?? "未就绪" }} ·
               {{ [item.embeddingProvider, item.embeddingModel].filter(Boolean).join(" · ") || "未记录 Profile" }}
             </p>
+            <p v-if="item.failureReason" class="alert" role="alert">{{ item.failureReason }}</p>
             <div class="record-actions">
               <button
                 type="button"

@@ -12,6 +12,7 @@ import {
 } from "../../app/routes";
 import { formatDateTime } from "../../lib/datetime";
 import { apiErrorMessage } from "../../lib/http";
+import { useFinitePolling } from "../../composables/useFinitePolling";
 import { useSession } from "../auth/session";
 import { hasProjectRole, listProjects, type Project } from "../project/api";
 import { listRequirements, type RequirementSummary } from "../requirement/api";
@@ -114,6 +115,33 @@ const activityRows = computed(() =>
     activity: activity.value[String(requirement.id)] ?? null,
   })),
 );
+const pollingKey = computed(() => {
+  const project = projectId.value;
+  const hasActiveReview = projectReviews.value.some(review =>
+    review.status === "PENDING" || review.status === "RUNNING")
+    || pullRequestReviews.value.some(review =>
+      review.status === "PENDING" || review.status === "RUNNING");
+  if (project === null || !hasActiveReview) return null;
+  return `reviews:${project}:${pullRequestId.value ?? "all"}`;
+});
+const polling = useFinitePolling(pollingKey, async () => {
+  const project = projectId.value;
+  const pull = pullRequestId.value;
+  const expectedKey = pollingKey.value;
+  if (project === null || expectedKey === null) return;
+  const [loadedReviews, loadedActivity, loadedPullReviews] = await Promise.all([
+    listProjectReviews(project),
+    listReviewActivity(project),
+    pull === null ? Promise.resolve(null) : listPullRequestReviews(project, pull),
+  ]);
+  if (pollingKey.value !== expectedKey) return;
+  projectReviews.value = loadedReviews;
+  activity.value = loadedActivity;
+  if (loadedPullReviews !== null) pullRequestReviews.value = loadedPullReviews;
+});
+const pollingError = computed(() => polling.error.value === null
+  ? null
+  : apiErrorMessage(polling.error.value));
 
 const canTriggerReview = computed(() => {
   return (
@@ -272,6 +300,12 @@ onMounted(async () => {
 
     <template v-else>
       <p v-if="projectError" class="alert" role="alert">{{ projectError }}</p>
+      <p v-if="pollingError" class="alert" role="alert">
+        审查状态自动刷新失败：{{ pollingError }}
+        <button type="button" class="button button-quiet" @click="polling.retry">
+          重新刷新
+        </button>
+      </p>
 
       <section class="panel review-index-panel" aria-labelledby="project-reviews-title">
         <div class="index-head">

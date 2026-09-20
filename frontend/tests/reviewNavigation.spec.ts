@@ -9,12 +9,12 @@ type Operation = "association" | "decision" | "finding" | "events";
 const OPERATIONS: Operation[] = ["association", "decision", "finding", "events"];
 const wrappers: VueWrapper[] = [];
 
-function review(projectId: number, id: number): ReviewDetail {
+function review(projectId: number, id: number, status: ReviewDetail["status"] = "COMPLETED"): ReviewDetail {
   return {
     id, pullRequestId: id + 10, headSha: `head-${projectId}-${id}`,
     reviewInputFingerprint: `input-${projectId}-${id}`,
     requirementId: null, requirementRevisionId: null,
-    status: "COMPLETED", decision: "PENDING", decisionBy: null, decisionAt: null,
+    status, decision: "PENDING", decisionBy: null, decisionAt: null,
     decisionComment: null, decisionBlockReason: null, isCurrent: true,
     contextSnapshot: null, coverage: null, acVerdicts: [],
     engine: null, promptVersion: null, model: null, executionAttempt: 1,
@@ -62,9 +62,10 @@ function operationRequest(operation: Operation, reviewId = 101, projectId = 3) {
   }
 }
 
-async function openReview() {
+async function openReview(options: { runningThenComplete?: boolean } = {}) {
   const calls: { path: string; method: string }[] = [];
   let held: { path: string; method: string; deferred: ReturnType<typeof deferredResponse> } | null = null;
+  let initialReviewReads = 0;
 
   function bodyFor(path: string): unknown {
     const match = /^\/api\/projects\/(\d+)(.*)$/.exec(path);
@@ -75,7 +76,14 @@ async function openReview() {
       id: projectId, name: `Project ${projectId}`, status: "ACTIVE", myRoles: ["LEADER"],
     };
     const detail = /^\/reviews\/(\d+)$/.exec(suffix);
-    if (detail) return review(projectId, Number(detail[1]));
+    if (detail) {
+      const id = Number(detail[1]);
+      if (options.runningThenComplete && projectId === 3 && id === 101) {
+        initialReviewReads++;
+        return review(projectId, id, initialReviewReads === 1 ? "RUNNING" : "COMPLETED");
+      }
+      return review(projectId, id);
+    }
     const pull = /^\/pull-requests\/(\d+)(?:\/requirement)?$/.exec(suffix);
     if (pull) return pullRequest(projectId, Number(pull[1]));
     const history = /^\/pull-requests\/(\d+)\/reviews$/.exec(suffix);
@@ -138,10 +146,32 @@ async function perform(wrapper: VueWrapper, operation: Operation) {
 
 afterEach(() => {
   for (const wrapper of wrappers.splice(0)) wrapper.unmount();
+  vi.useRealTimers();
   vi.unstubAllGlobals();
 });
 
 describe("review operations belong to the page visit that started them", () => {
+  it("refreshes a running review to terminal state without clearing form input", async () => {
+    vi.useFakeTimers();
+    const { wrapper, calls } = await openReview({ runningThenComplete: true });
+    await wrapper.get("#decision-comment").setValue("keep this decision note");
+    await wrapper.get("#association-reason").setValue("keep this association note");
+
+    await vi.advanceTimersByTimeAsync(2_000);
+    await flushPromises();
+
+    expect(wrapper.get(".review-status").text()).toContain("已完成");
+    expect(wrapper.get<HTMLTextAreaElement>("#decision-comment").element.value)
+      .toBe("keep this decision note");
+    expect(wrapper.get<HTMLInputElement>("#association-reason").element.value)
+      .toBe("keep this association note");
+    const detailReads = () => calls.filter(call =>
+      call.method === "GET" && call.path === "/api/projects/3/reviews/101").length;
+    expect(detailReads()).toBe(2);
+    await vi.advanceTimersByTimeAsync(10_000);
+    expect(detailReads()).toBe(2);
+  });
+
   it.each(OPERATIONS)("ignores an old %s response after switching reviews", async (operation) => {
     const { wrapper, router, calls, hold } = await openReview();
     const old = hold(operationRequest(operation));
