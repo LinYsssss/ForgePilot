@@ -1,9 +1,10 @@
 # Hook Guidelines
 
-In Vue terminology, stateful hooks are composables. Phase 1 has no custom
-composable because the shell has no business state. Vue Router's `useRoute`
+In Vue terminology, stateful hooks are composables. Vue Router's `useRoute`
 and `useRouter` are used where route context is required; keep those calls in
-`<script setup>` or a composable called from setup.
+`<script setup>` or a composable called from setup. The one shared lifecycle
+composable is `src/composables/useFinitePolling.ts`, used by review and knowledge
+status consumers.
 
 ## Composable pattern
 
@@ -29,6 +30,11 @@ export function useExample() {
 Do not introduce a generic `useApi`, `useEverything`, or lifecycle wrapper
 without a concrete repeated contract. Plain deterministic helpers belong in
 `src/lib/`, not under a composable name.
+
+`useFinitePolling` owns only timer, visibility, bounded-failure and cleanup
+behavior. Callers own their endpoint, route-generation check, server records and
+error wording. It uses a self-scheduling timeout after each request, so slow reads
+never overlap or accumulate.
 
 ## Data fetching
 

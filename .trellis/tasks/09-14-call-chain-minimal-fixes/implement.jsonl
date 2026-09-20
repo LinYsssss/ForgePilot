@@ -1,0 +1,6 @@
+{"file": ".trellis/spec/backend/index.md", "reason": "Backend package, persistence and verification conventions"}
+{"file": ".trellis/spec/backend/database-guidelines.md", "reason": "Existing FK mapping, short transactions and isolated database tests"}
+{"file": ".trellis/spec/backend/logging-guidelines.md", "reason": "Safe phase diagnostics without raw provider content"}
+{"file": ".trellis/spec/frontend/state-management.md", "reason": "Preserve route ownership and user input during status refresh"}
+{"file": ".trellis/spec/frontend/hook-guidelines.md", "reason": "A single narrow polling composable"}
+{"file": ".trellis/tasks/09-14-call-chain-minimal-fixes/research/minimality.md", "reason": "Evidence and explicit rejection of heavier architecture"}

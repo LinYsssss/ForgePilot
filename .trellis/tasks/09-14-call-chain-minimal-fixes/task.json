@@ -1,0 +1,32 @@
+{
+  "id": "call-chain-minimal-fixes",
+  "name": "call-chain-minimal-fixes",
+  "title": "Minimal fixes for the audited call chain",
+  "description": "Minimal fixes for the seven audited call-chain defects; reuse existing state, modules and queries.",
+  "status": "in_progress",
+  "dev_type": "fullstack",
+  "scope": "call-chain",
+  "package": null,
+  "priority": "P1",
+  "creator": "LinYsssss",
+  "assignee": "LinYsssss",
+  "createdAt": "2026-09-14",
+  "completedAt": null,
+  "branch": null,
+  "base_branch": "main",
+  "worktree_path": null,
+  "commit": null,
+  "pr_url": null,
+  "subtasks": [],
+  "children": [],
+  "parent": null,
+  "relatedFiles": [],
+  "notes": "Implementation approved on 2026-09-15. Follow the reviewed minimal plan; no subagents or production deployment authorized.",
+  "meta": {
+    "audit_report": "/root/forgepilot-reports/call-chain-20260914/report.md",
+    "session_context": "codex-call-chain-minimal-20260914",
+    "implementation_approval": "User explicitly approved the final plan on 2026-09-15: 批准",
+    "verification_date": "2026-09-20",
+    "verification_status": "passed_backend_416_frontend_63"
+  }
+}

@@ -36,11 +36,14 @@ contract.
 
 ## Server state
 
-There is no automatic cache, retry, polling, optimistic mutation, or query
-invalidation in Phase 1. A feature that later needs those behaviors must state
-their freshness, error, and cancellation semantics before adding an adapter.
-Until then, call `requestJson<T>` explicitly, expose loading and failure states
-in the UI, and preserve `HttpError` status/body information.
+There is no automatic cache, optimistic mutation, or query invalidation in
+Phase 1. Review execution and knowledge ingestion are the one authorized polling
+case: `useFinitePolling` schedules the next read only after the previous read
+settles, runs only while the displayed record is PENDING/RUNNING, pauses while
+the page is hidden, and stops at terminal state or unmount. Three consecutive
+failures stop automatic reads and expose a manual retry. Feature callbacks still
+call `requestJson<T>` explicitly, preserve `HttpError` information, and apply a
+response only when its project/route generation still owns the page.
 
 ## Async operations on reused detail pages
 
@@ -72,6 +75,9 @@ decisions while the page or its requirement association is still refreshing.
 to another review/project or revisits the original review, and checks both the
 rendered identity and outgoing decision target. It also proves old errors and
 `finally` callbacks cannot clear a new visit's input or pending operation.
+Polling refreshes only the result record/list. It must not call a detail page's
+initial `load()` because that function resets comments, filters, selected evidence,
+attachment inputs, and other local edits.
 
 ## Common mistakes
 

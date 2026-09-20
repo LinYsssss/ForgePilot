@@ -155,6 +155,21 @@ GitHub 默认 `apiBase=https://api.github.com`；GitLab 默认 `https://gitlab.c
 
 远端合并与数据库提交不是原子操作。已合并同 SHA 的人工重试可补上本地决定；这不是撤销/改判接口。GitLab 仓库 Token 需要 `api` 与实际合并权限，个人身份核验 Token 的只读要求不变。
 
+## 知识文档创建与处理
+
+- `POST /api/projects/{projectId}/knowledge/documents`
+- `POST /api/projects/{projectId}/requirements/{requirementId}/attachments`
+- `POST /api/projects/{projectId}/requirements/{requirementId}/attachments/{documentId}/promote`
+
+创建与提升成功均返回 201 和现有 `KnowledgeDocumentView`，初始 `status` 为
+`PENDING`。请求只校验并保存文档，不等待 Embedding provider；前端通过现有列表
+端点刷新元数据，直到状态变为 `READY` 或 `FAILED`。`READY` 表示全部 chunk、向量和
+Embedding Profile 已在同一事务提交；`FAILED` 携带受控的 `failureReason`，不会自动
+无限重试。处理中删除公共知识后，后台结果不会把已删除文档重新创建。
+
+项目知识与需求附件页面只在存在 `PENDING` 项时轮询，前一次请求结束后才安排下一次；
+页面离开、标签页隐藏或全部进入终态时停止。连续刷新失败有上限，并显示手动重试入口。
+
 ## 公共知识原文
 
 - `GET /api/projects/{projectId}/knowledge/documents/{documentId}/content`
@@ -171,7 +186,7 @@ GitHub 默认 `apiBase=https://api.github.com`；GitLab 默认 `https://gitlab.c
 - `DELETE /api/projects/{projectId}/knowledge/documents/{documentId}`
   - 硬删。成功 204，同事务删除该文档的全部 `knowledge_chunk`（含向量），此后 Guidance 与 Review 的检索都不再召回它。
   - 文档是需求附件时返回 409，并指出是哪条需求在引用；请先在该需求下解除附件。
-  - 批量上传**没有**批量端点：一次多文件上传就是对 `POST .../knowledge/documents` 的 N 次独立调用，逐文件成败互不影响。
+  - 批量上传**没有**批量端点：一次多文件上传就是对 `POST .../knowledge/documents` 的 N 次独立受理，逐文件成败与后台处理状态互不影响。
 - `DELETE /api/projects/{projectId}/members/{userId}`
   - 见上「项目与成员」。
 - `DELETE /api/projects/{projectId}/requirements/{requirementId}`

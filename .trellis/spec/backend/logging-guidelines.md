@@ -2,23 +2,18 @@
 
 ## What exists
 
-Exactly one logger in the whole backend:
-
-```java
-// common/ApiExceptionHandler.java
-private static final Logger log = LoggerFactory.getLogger(ApiExceptionHandler.class);
-```
-
-Nothing else logs. `auth`, `project` and `requirement` contain no logger, no
-`slf4j` import, and no print statement, and that is deliberate rather than an
-oversight — see "Why almost nothing logs" below.
+`ApiExceptionHandler` logs request failures that can be joined to an HTTP
+`traceId`. A small set of asynchronous owners also log outcomes that have no
+waiting caller: notification delivery, Review worker cleanup/validation, and
+knowledge ingestion cleanup. Feature packages still do not log normal method
+entry, request payloads, prompts, provider bodies, document text or source excerpts.
 
 There is no logging configuration file, no MDC, no structured/JSON encoder and
 no correlation filter. Log format and appenders are Spring Boot's defaults.
 
 ## Levels and the correlation field
 
-`ApiExceptionHandler` is the only producer, and it follows one rule:
+`ApiExceptionHandler` follows one rule:
 
 | Response | Level | What is written |
 |---|---|---|
@@ -50,8 +45,11 @@ raise it; if it reaches a client, it is already logged. Requests are not
 access-logged by the application: the container in front of it is where that
 belongs.
 
-`grep -rn "Logger\|slf4j" backend/src/main/java | grep -v "^.*/common/"` returning
-nothing is a real invariant of this codebase, not a coincidence.
+An asynchronous log line must contain only stable IDs, attempt/stage, a controlled
+application error code or exception class, and the outcome. Validation reasons
+must come from bounded validators, never raw model output. If terminal cleanup
+cannot be stored, log that recovery remains active; do not pretend the task was
+marked failed.
 
 ## Never log
 

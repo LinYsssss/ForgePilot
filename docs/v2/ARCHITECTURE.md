@@ -362,6 +362,8 @@ stateDiagram-v2
 
 领取必须是单条原子条件更新：只有 PENDING 或 lease 已过期的 RUNNING 可领取；每次领取递增 `execution_attempt`、生成新 `execution_token` 并写 `lease_until`。Worker 完成、失败或续租时必须同时匹配 `review_id + execution_token + status=RUNNING`，过期 Worker 的写入影响行数为 0，不能覆盖新尝试、插入 Finding 或改写 Review。
 
+每次实际 AI HTTP 尝试（知识召回、批次、重试、格式修复和综合）前都先续租；续租失败立即停止该旧 worker，不写 FAILED。分析或结果事务中的其他运行时失败会先让结果事务回滚，再用同一 attempt/token 围栏写 FAILED；清理暂时不可用时保留 RUNNING，由 reconciliation 在租约过期后恢复。
+
 reconciliation 恢复已落库但未执行的 PENDING 和 lease 过期的 RUNNING，**不补建**从未存在的 Review。失败重试复用原行并产生新 attempt/token；`COMPLETED` 永不重跑或覆盖。Decision 与执行状态正交：`PENDING | APPROVE | REQUEST_CHANGES`。
 
 ### 3.3 单次 Review（小 PR 路径）
@@ -395,6 +397,7 @@ sequenceDiagram
 3. Finding 按稳定 fingerprint 去重（含大小写敏感 path，不做 lower-case）。
 4. 任一 Batch 非法 JSON 且修复失败 → 整个 Review = FAILED，不输出部分成功报告。
 5. 必须保存 truncation/coverage manifest，未审查文件在 UI 显式呈现，禁止静默截断。
+6. 分批预算按最终格式化 Prompt 计算，包含 Requirement、AC、召回知识、路径和框架文本；网关对仍超预算的完整 Prompt 返回 `ai_prompt_too_large`，不得再次静默裁剪。
 
 绝不因分批产生第二套 Pipeline。
 
@@ -458,6 +461,9 @@ Requirement、文档、PR 标题、代码注释**全部是不可信数据**，�
 
 ## 5. Knowledge
 
+- 创建项目知识、需求附件和提升副本时，只在短事务中保存 `PENDING` 文档（附件关系与文档仍原子提交），HTTP 201 不等待 Embedding。单个 `KnowledgeIngestionProcessor` 按 ID 串行领取下一条 PENDING；读取后释放事务，在无数据库连接占用的情况下调用 provider，再以一个事务写入全部 chunk、Profile、向量并标记 READY。任一步失败都会回滚派生行并在新事务标记 FAILED；删除或状态已变化的文档在提交阶段被跳过。
+- 应用调度池至少两个线程：文档处理的慢外部调用不得阻塞 Review reconciliation。当前单后端部署依靠单个 fixed-delay 调用保持文档串行；不引入分布式租约或任务表。
+- 检索 SQL 只读取 `knowledge_document.status='READY'` 的向量。页面只在存在 PENDING 文档时用共享的自调度轮询刷新状态，终态、隐藏或卸载后停止，并对连续失败提供有界重试与明确错误。
 - 公共原文通过 `GET .../knowledge/documents/{id}/content|download` 按需读取：成员身份、`project_id` 和 `source_type=PROJECT_KNOWLEDGE` 同时满足才返回。content 为 `{documentId,title,text}`，download 为 UTF-8 `text/plain` 附件；列表仍只返回元数据。需求附件只能通过所属需求入口读，不能借公共接口绕过归属检查。历史审查保存的摘录与当前原文分开呈现，删除原文不抹掉历史证据。
 - 一个部署一个 Embedding provider/model/dimension；**部署配置不得改变 schema**。
 - `knowledge_chunk.embedding` 是唯一向量存储，pgvector **无维度 `vector`**；无 JSON 双写、无第二 vector 表、无运行时 DDL。
