@@ -27,6 +27,8 @@
     "session_context": "codex-call-chain-minimal-20260914",
     "implementation_approval": "User explicitly approved the final plan on 2026-09-15: 批准",
     "verification_date": "2026-09-20",
-    "verification_status": "passed_backend_416_frontend_63"
+    "verification_status": "passed_backend_416_frontend_63_and_production_15_prs",
+    "deployed_commit": "4121cea",
+    "production_revalidation": "15_completed_45_linked_ai_calls"
   }
 }

@@ -71,6 +71,13 @@ Existing diagnostic artifacts remain immutable evidence and are not overwritten.
 - Final `git diff --check`, task context validation and architecture/configuration
   checks passed. The tree remains at nine production packages, 21 business tables
   and 14 migrations, with no dependency or migration change.
+- 2026-09-20 production deployment completed at commit `4121cea`, preserving
+  PostgreSQL and Flyway V14. Internal and public health checks passed.
+- 2026-09-20 production revalidation completed for all 15 existing real PR
+  snapshots. Reviews 17–31 are COMPLETED; their 45 REVIEW/EMBEDDING AI calls are
+  successful and linked to the correct Review IDs. Historical reviews and
+  decisions remain intact. See `deployment.md` and
+  `production-revalidation.md`.
 
 ## Required final gates
 
