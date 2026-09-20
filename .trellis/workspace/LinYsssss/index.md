@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 16
+- **Total Sessions**: 17
 - **Last Active**: 2026-09-20
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~509 | Active |
+| `journal-1.md` | ~531 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 17 | 2026-09-20 | Publish thesis-ready production revalidation evidence | `b179b6c`, `e15427c` | `main` |
 | 16 | 2026-09-20 | Deploy and revalidate audited call chain | `631fb51`, `eb1e7e3`, `4121cea`, `2c1a4af` | `main` |
 | 15 | 2026-09-12 | Deploy concurrency fixes and review 15 PRs sequentially | `3d00211`, `6ac67cb`, `7ee2070` | `main` |
 | 14 | 2026-09-08 | Complete review collaboration and deploy V14 | `746e40b`, `989403c` | `main` |

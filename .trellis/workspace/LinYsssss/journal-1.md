@@ -507,3 +507,25 @@ Completed and deployed the seven minimal call-chain fixes, preserved PostgreSQL 
 ### Status
 
 [OK] **Completed**
+
+
+## Session 17: Publish thesis-ready production revalidation evidence
+
+**Date**: 2026-09-20
+**Task**: Publish thesis-ready production revalidation evidence
+**Branch**: `main`
+
+### Summary
+
+Converted the 15-PR production revalidation into a Chinese thesis-ready analysis, a compact 42-column CSV, and a dependency-free verifier; reconciled production/database evidence, preserved formal evaluation boundaries, removed the redundant full-response payload and temporary browser artifacts, and retained both verified database backups.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `b179b6c` | (see git log) |
+| `e15427c` | (see git log) |
+
+### Status
+
+[OK] **Completed**
