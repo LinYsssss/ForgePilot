@@ -38,3 +38,5 @@
 这些数字随代码变化。改动代码后若这里的数字过期，以实际执行结果为准——`docs/v2/README.md` 与各 README 中的同一组数字需要**同步更新**。
 
 2026-09-08 六份 HTML 已同步指定审查人、退回理由与轮次、按审查 SHA 合并、提交后通知、公共知识阅读及 V14。后续代码审查修复了开发指派目标资格、历史 Review 的负责人归属和重开 Finding 的分组；提交 `746e40b` 的后端全套、前端四项门、评测契约及两次空库启动 CI 全部通过，现有 `fp-demo` 已完成保留数据的 V14 升级，公网检查通过。详见 [代码审查记录](../../.trellis/tasks/archive/2026-09/09-07-review-collaboration/code-review.md) 与 [部署记录](../../.trellis/tasks/archive/2026-09/09-07-review-collaboration/deployment.md)。六份 HTML 保留其 2026-09-08 快照日期；其中“真实浏览器及外部 SCM 尚未执行”这一历史边界，已被后续 15 个真实 GitHub PR 演练和 2026-09-20 部署后复验补充。当前论文引用口径与可复算数据见[生产复验结果](../thesis/PRODUCTION-REVALIDATION.md)；真实 GitLab 与钉钉联调仍不由该结果证明，容量及正式评测继续保留原始日期和历史证据。
+
+2026-09-20 补充：Review 输出校验现要求 Finding `evidence` 与 AC `excerpt` 逐字锚定到 diff 新侧源码，并按真实命中纠正或消除行号；需求质量检查在完整 Prompt 超预算时跳过 AI，以 `quality-2` 保存 `ai=null` 的确定性结果。五份直接相关 HTML 已追加相同说明；2026-09-08 的快照数字、正式评测冻结、holdout 台账、原始输出与生产复验数据均未覆盖或重跑。

@@ -516,7 +516,7 @@ from acceptance_criterion order by requirement_revision_id, sort_order;"
 
 **操作**：对需求运行质量检查。
 
-**预期**：给出**建议**。
+**预期**：给出**建议**。完整 Prompt 在脱敏后处于预算内时恰好调用一次 AI；超预算时报告包含 `PROMPT_BUDGET_EXCEEDED`、`ai=null`，且 provider 零调用，规则结果仍以 `quality-2` 保存。
 
 **关键**：质量检查**不是工作流状态**，不阻塞任何操作，也**不会自动把需求置为 READY**。DRAFT 期间正文一改，质量检查结果即失效。
 
@@ -776,7 +776,7 @@ select id, project_id, review_id, requirement_revision_id, ac_id,
 from finding order by id;"
 ```
 
-**预期**：每条 Finding 带证据——命中的 AC、代码位置、引用的项目知识片段。
+**预期**：每条 Finding 带证据——命中的 AC、代码位置、引用的项目知识片段。源码 `evidence` 必须逐字锚定到对应 diff hunk 的新侧源码（不含 diff 标记）；唯一命中会纠正模型行号，多处命中且模型行号不能消歧时行号为空。删除行、元数据、虚构引用与跨 hunk 拼接均不得进入结果，并应留下 validator warning。
 
 ### G2 三个正交概念分开呈现
 

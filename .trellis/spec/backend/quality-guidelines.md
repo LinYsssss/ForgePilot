@@ -58,6 +58,30 @@ passes because nothing is selected is not enforcement.
 - Do not add coverage thresholds, style plugins, or extra static-analysis
   gates without a concrete failure they would have caught.
 
+### Deterministic checks at AI boundaries
+
+Model instructions are not validation. Two owning services enforce the parts of
+their contracts that can be checked without a provider:
+
+- `review/ReviewOutputValidator` reconstructs only the visible new-side source
+  of each valid unified-diff hunk before accepting a Finding `evidence` or batch
+  AC `excerpt`. Matching normalizes line endings only, never whitespace, and
+  never joins separate hunks. A missing quotation is dropped with a warning; a
+  unique match owns and may correct the line; an ambiguous match keeps a line
+  only when the reported line selects a real candidate. Deleted lines, diff
+  metadata, and truncation markers are never source. `finding_key` uses the
+  anchored line while `evidence_hash` continues to cover the verbatim quote.
+- `requirement/RequirementQualityService` calculates the sanitized complete
+  prompt length before calling `AiGateway`. A prompt over the configured budget
+  must skip the provider and persist a `quality-2` report with
+  `PROMPT_BUDGET_EXCEEDED` and `ai=null`; sending a truncated prefix for partial
+  analysis is forbidden.
+
+Regression anchors are `ReviewOutputValidatorTest`, `ChangedFileBatcherTest`,
+`ReviewPipelineIntegrationTest`, and `RequirementQualityTest`. When either
+boundary changes, cover at least the base case, the rejected case, and any
+correction/nullable-output case in those tests.
+
 ### Outbound calls are stubbed, never credentialed
 
 CI holds no AI provider key, no SCM token and no repository secret, and

@@ -344,7 +344,7 @@
       <tr><td class="id">FR-C7</td><td>LEADER 指派开发负责人及审查人；首次开发指派与 <code>READY → IN_DEVELOPMENT</code> 同事务</td><td>服务端校验开发目标为 DEVELOPER/LEADER、审查目标为 REVIEWER/LEADER；无资格 403、非成员 404，失败不改变原指派/状态；审查人可清空，终态不能改指派</td></tr>
       <tr><td class="id">FR-C8</td><td>LEADER 上传 <code>.txt/.md</code> 需求文档；全体成员可阅读并按原文件名下载</td><td>—</td></tr>
       <tr><td class="id">FR-C9</td><td>结构化需求可导出 Markdown</td><td>含标题、背景、描述与 AC；与需求文档<strong>不自动同步</strong></td></tr>
-      <tr><td class="id">FR-C10</td><td>需求质量检查：确定性规则 + <strong>一次</strong>结构化 AI 调用</td><td>结果归属具体修订；<strong>不改变需求状态</strong>；DRAFT 正文一改即失效</td></tr>
+      <tr><td class="id">FR-C10</td><td>需求质量检查：确定性规则 + 预算内<strong>一次</strong>结构化 AI 调用</td><td>完整 Prompt 超预算时跳过 AI，以 <code>quality-2</code> 保存 <code>ai=null</code> 的规则结果；结果归属具体修订，<strong>不改变需求状态</strong>，DRAFT 正文一改即失效</td></tr>
       <tr><td class="id">FR-C11</td><td>一次性知识增强实现建议</td><td>无输入框、无对话历史；需求正文变更后旧结果清除</td></tr>
       <tr><td class="id">FR-C12</td><td>已作废需求可软删</td><td>非作废需求返回 409；重复删除返回 404；AI 调用审计与 PR 关联事实<strong>保持完整</strong></td></tr>
       <tr><td class="id">FR-C13</td><td>AI、Webhook、PR、Review <strong>一律不得</strong>推进需求状态</td><td>状态变更只能由具备权限的人触发</td></tr>
@@ -392,7 +392,7 @@
       <tr><td class="id">FR-F3</td><td>并发抢占围栏：同一次 Review 同时只有一个 worker 能执行</td><td>抢占为<strong>单条原子条件更新</strong>；失败方匹配零行；过期 worker 不得完成、失败、续租或追加 Finding</td></tr>
       <tr><td class="id">FR-F4</td><td>大 PR 分批送模型；批次<strong>只报告候选与证据，绝不给出裁定</strong></td><td>小 PR 与大 PR 走<strong>完全相同</strong>的路径，无捷径分支</td></tr>
       <tr><td class="id">FR-F5</td><td>综合阶段对被审查修订的<strong>每一条</strong> AC 给出裁定</td><td>模型跳过的填为 <code>NOT_FOUND</code> 并记警告；沉默的模型无法缩短报告</td></tr>
-      <tr><td class="id">FR-F6</td><td>结构非法的回答获得<strong>恰好一次</strong>格式修复；仍失败则整次 Review FAILED</td><td><strong>绝不产出「成功但为空」的报告</strong>；FAILED 的 Review 在类型上没有 Report</td></tr>
+      <tr><td class="id">FR-F6</td><td>结构非法的回答获得<strong>恰好一次</strong>格式修复；仍失败则整次 Review FAILED；Finding 与 AC 源码引用必须逐字锚定到对应 diff hunk 的新侧</td><td><strong>绝不产出「成功但为空」的报告</strong>；无命中引用丢弃，唯一命中纠正行号，多处命中无法消歧时不输出精确行号；删除行、元数据、截断标记与跨 hunk 拼接均不接受</td></tr>
       <tr><td class="id">FR-F7</td><td>覆盖清单显式标注被截断、已审查与未审查的文件</td><td>「空的未审查清单」与「缺失的未审查清单」<strong>保持可区分</strong>；缺失 manifest 不显示为「全部覆盖」</td></tr>
       <tr><td class="id">FR-F8</td><td>Finding 携带三个确定性哈希，支撑跨轮次去重、抑制与血缘</td><td><strong>三个哈希都不覆盖模型散文</strong>（说明、建议、置信度）</td></tr>
       <tr><td class="id">FR-F9</td><td>Finding 人工生命周期：认领 → 标记已修复 → 复核通过/打回；可填备注</td><td>按角色的按钮矩阵与后端一致；审计永久保留，成员已删时回退数字 id</td></tr>
@@ -746,6 +746,7 @@
     本文档描述 2026-09-08 的代码形态：73 条功能需求、38 条非功能需求。
     当前后端全套执行、失败类复核及审查修复后的相关验证、前端验证见 TEST-REPORT.html；正式评测沿用历史证据，本轮未重跑。真实浏览器、远端合并与通知另有人工验收清单。
   </p>
+  <p>2026-09-20 补充：FR-C10 增补超预算跳过 AI 的语义，FR-F6 增补 diff 新侧证据锚定；73 条功能需求与 2026-09-08 快照计数保持不变。</p>
   <p>
     配套文档：《ForgePilot 使用与代码手册》（逐类代码说明与术语速查）、
     《跟着一次 PR 走完 ForgePilot》（主干代码走查）、

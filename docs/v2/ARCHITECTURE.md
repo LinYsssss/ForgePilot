@@ -383,7 +383,7 @@ sequenceDiagram
     K-->>R: project-scoped evidence
     R->>A: Requirement + AC + Evidence + patches + JSON schema
     A-->>R: structured ReviewOutput
-    R->>V: validate enum/acId/sourceId/path/line
+    R->>V: validate enum/acId/sourceId/path + anchor evidence to diff
     V-->>R: valid findings + warnings
     R->>D: Review(COMPLETED) + Finding
 ```
@@ -405,7 +405,8 @@ sequenceDiagram
 
 - 每条 AC 最终必须有 `COVERED | NOT_FOUND | AT_RISK`；模型漏项由 Validator 补 `NOT_FOUND`。
 - `acId` 必须属于当前 Requirement Revision；`sourceId` 必须在本次召回白名单；`filePath` 必须在 changed files 内。
-- 行号必须落在 patch 可验证范围，无法验证则不输出精确行号。
+- Finding `evidence` 与批次 AC `excerpt` 必须逐字存在于对应 changed file 的合法 unified-diff hunk 新侧源码中；diff 的 `+`/空格标记、删除行、元数据与截断标记都不是源码。只归一化 CRLF/LF，不裁剪或折叠空白，也不允许跨 hunk 拼接引用。
+- 引用无命中时丢弃该 Finding/AC evidence 并记录 warning；唯一命中时以真实起始行纠正模型的错误或空行号；多处命中仅在模型行号等于候选时消歧，否则保留已验证引用但不输出伪精确行号。`finding_key` 使用锚定后的行号，`evidence_hash` 仍基于原始逐字引用。
 - Finding 证据保存不可变 excerpt + hash，历史 Review 不受知识文档后续变更影响。
 - Finding 跨轮血缘（`continuity`、`evidence_hash`、`basis_hash`、`carried_from_finding_id`、`finding_key`）规则见；`evidence_hash` 必须基于确定性源码证据，`basis_hash` 必须基于所引用 AC/Requirement Revision、知识 excerpt/hash 与确定性规则版本，二者均禁止哈希模型生成的描述。只有两者均未变才允许继承历史误报抑制。
 - Review 创建时保存 `head_sha`、`review_input_fingerprint`、`requirement_id`、`requirement_revision_id` 及 Requirement/AC/Knowledge evidence/truncation 的不可变上下文快照；历史页面禁止通过 PR 当前关联反推审查语义。页面以当前 PR 的 head/fingerprint/revision 对比快照派生“当前/已过期”，不写 `INVALIDATED` 状态。
@@ -438,6 +439,8 @@ AiGateway.embed(texts, embeddingConfig)
 `ai` 负责 HTTP、认证、超时、一次有限重试、调用元数据、Token/延迟与错误分类。
 它**不知道** Requirement/Finding/Review 等业务类型，也不暴露 tool loop。
 业务 Prompt 归 `requirement` 与 `review` 各自所有；Requirement Quality 与一次性 Implementation Guidance 共享 AI Gateway 但使用不同 schema。不建 Prompt Registry，不建万能 ContextBuilder。
+
+Requirement Quality 先运行确定性规则并按脱敏后的完整 Prompt 计算预算。预算内只调用一次 AI；超预算时生成 `PROMPT_BUDGET_EXCEEDED`、跳过 AI，以 `quality-2` 保存并返回 `ai=null` 的规则结果，不把截断后的部分需求交给模型，也不改变 Requirement 状态。历史结果不迁移。
 
 ### 4.2 ReviewContext
 

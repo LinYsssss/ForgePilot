@@ -81,7 +81,7 @@ flowchart LR
 - 一个项目一个活动 GitHub/GitLab 仓库；PR/MR 与 Requirement 关联。
 - Requirement 附件复用 Project Knowledge 文档，不做双份解析；首版只允许 LEADER 上传 `.txt/.md`，所有项目成员可阅读和下载。
 - Requirement 详情并列结构化 Revision 与需求文档；结构化内容可导出 Markdown，两者不自动同步或映射。
-- Requirement Quality Check：确定性规则 + 一次结构化 AI 分析。
+- Requirement Quality Check：确定性规则 + 预算内一次结构化 AI 分析；完整 Prompt 超预算时保留规则结果、跳过 AI，不做截断后的部分分析。
 - Requirement Implementation Guidance：基于 Requirement、AC 与项目知识生成一次性实现清单、相关规则和风险提示，不保存对话。
 - Project Knowledge：上传、切片、Embedding、项目内检索、按需阅读与下载公共知识原文；需求附件仍经所属需求入口读取。
 - 六入口产品界面：工作台、项目、研发需求、项目知识、仓库接入、代码审查；工作台只读组合真实业务数据。

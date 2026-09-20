@@ -849,6 +849,13 @@ sync.apply(repository, github.fetch(repository, pullRequestNumber(payload)));</c
     </p>
   </div>
 
+  <p>
+    2026-09-20 起，这里的“为真”还包括源码引用本身：校验器从每个合法 unified-diff hunk
+    独立重建新侧源码，去掉 diff 标记后逐字查找 Finding <code>evidence</code> 与 AC <code>excerpt</code>。
+    无命中会丢弃并记录 warning；唯一命中按真实起始行纠正模型行号；多处命中无法由模型行号消歧时，
+    引用仍可保留，但行号为空。引用不能跨 hunk，删除行和截断标记也不能作为证据。
+  </p>
+
   <p class="srcpath">真实代码 —— 用类型把「成功的空报告」变成不可表达</p>
   <pre><code><span class="k">public record</span> Outcome(ReviewStatus status, ReviewOutput output, String failureReason) {
 
@@ -1064,6 +1071,7 @@ events.publishEvent(new ReviewDecided(projectId, reviewId));</code></pre>
 </div>
 
 <footer class="end">
+  <p>2026-09-20 补充：第 11 站已加入 diff 新侧逐字证据锚定与行号纠正规则；2026-09-08 主干走查快照和正式评测证据未改写。</p>
   <p>
     这份走查覆盖<strong>主干</strong>：一次 PR 从到达到审查完成，并说明人工决定、按 SHA 合并和提交后通知的边界。
     需求管理、知识入库、成员与 SCM 身份绑定的完整操作另见使用手册。

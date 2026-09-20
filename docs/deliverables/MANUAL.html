@@ -850,8 +850,8 @@ docker compose -p fp-demo up --detach --wait backend frontend</code></pre>
         <tr><td class="f">RequirementAttachment</td><td>需求与知识文档之间的关系，也是附件归属的<strong>唯一事实源</strong>。</td></tr>
         <tr><td class="f">RequirementAttachmentRepository</td><td>附件关系的仓库。</td></tr>
         <tr><td class="f">RequirementAttachmentService</td><td>附件的唯一拥有者。文档上的 scope 只是投影，归属事实在关系表。</td></tr>
-        <tr><td class="f">RequirementQualityService</td><td>需求质量检查：确定性规则 + <strong>一次</strong>结构化 AI 调用，结果归属具体修订。<code>QUALITY_VERSION</code> 随规则集或 Prompt 变化而变——存下来的报告只有对着产生它的版本才可解读。</td></tr>
-        <tr><td class="f">QualityReport</td><td>质量检查结果。含 <code>DUPLICATE_CRITERION</code>（两条 AC 文本完全相同会让同一缺陷以两个 key 报告两次，而抑制按 key 生效）与 <code>PROMPT_BUDGET_EXCEEDED</code>（被截断却仍「成功作答」就是那种绝不允许的静默截断）。</td></tr>
+        <tr><td class="f">RequirementQualityService</td><td>需求质量检查：先跑确定性规则，完整 Prompt 在脱敏后处于预算内时调用<strong>一次</strong>结构化 AI；超预算则跳过 AI，仍保存并返回规则结果。结果归属具体修订，<code>QUALITY_VERSION</code> 现为 <code>quality-2</code>。</td></tr>
+        <tr><td class="f">QualityReport</td><td>质量检查结果。含 <code>DUPLICATE_CRITERION</code>（两条 AC 文本完全相同会让同一缺陷以两个 key 报告两次，而抑制按 key 生效）与 <code>PROMPT_BUDGET_EXCEEDED</code>（不截断后做部分分析，而是返回 <code>ai=null</code> 的确定性报告）。</td></tr>
         <tr><td class="f">ImplementationGuidanceService</td><td>一次性、知识增强的实现建议。只读当前需求、其 AC 与当前需求可见的知识。</td></tr>
         <tr><td class="f">ImplementationGuidance</td><td>建议结果，点名具体修订。</td></tr>
         <tr><td class="f">RemovedMemberAssignmentListener</td><td>成员离开项目时清除需求开发与审查人指派，并把清理数量写入现有删除审计。</td></tr>
@@ -1000,7 +1000,7 @@ docker compose -p fp-demo up --detach --wait backend frontend</code></pre>
         <tr><td class="f">ReviewPipeline <span class="lb"></span></td><td><b>它做什么：</b>一次审查的完整流程编排。<br><b>为什么这么写：</b>完整流程：从被抢占的行到落库的报告。小 PR 与大 PR<strong>走完全相同的路径</strong>——「让批次直接下结论」的捷径正是被明令禁止的第二条流水线。</td></tr>
         <tr><td class="f">ChangedFileBatcher <span class="lb"></span></td><td><b>它做什么：</b>把变更文件切成若干批，因为大 PR 一次塞不进模型。<br><b>为什么这么写：</b>把变更文件切批并运行分批阶段。批次只产出候选与证据。第一个「解析不过、修复也救不回来」的批次让<strong>整次 Review</strong> 失败并丢弃已有产出——只报告了五个批次中三个的 Review 看上去是完整的，而它对另外两个的判断是错的。</td></tr>
         <tr><td class="f">ReviewPrompts <span class="lb"></span></td><td><b>它做什么：</b>发给模型的两段提示词和两个输出格式定义。<br><b>为什么这么写：</b>两个 Prompt 与两个 schema，以常量形式存在。三条承重规则都为了让抑制机制保持诚实。<code>VERSION</code> 现为 <code>review-2</code>。</td></tr>
-        <tr><td class="f">ReviewOutputValidator <span class="lb"></span></td><td><b>它做什么：</b>检查模型的回答是否可用，不可用就判定失败。<br><b>为什么这么写：</b>把模型回答变成对本次 Review 上下文<strong>为真</strong>的结果，或变成 FAILED 裁定。结构非法只给<strong>一次</strong>格式修复；编造的引用被丢弃并记入 warnings，而不是让整次失败。校验发生在写入<strong>之前</strong>，触发器是最后一道防线不是第一道。</td></tr>
+        <tr><td class="f">ReviewOutputValidator <span class="lb"></span></td><td><b>它做什么：</b>检查模型的回答是否可用，不可用就判定失败。<br><b>为什么这么写：</b>把模型回答变成对本次 Review 上下文<strong>为真</strong>的结果，或变成 FAILED 裁定。Finding 与 AC 引用必须逐字存在于对应 diff hunk 的新侧源码；唯一命中纠正行号，多处命中无法消歧时不输出精确行号，编造、删除侧或跨 hunk 引用被丢弃并记入 warnings。结构非法只给<strong>一次</strong>格式修复；校验发生在写入<strong>之前</strong>。</td></tr>
         <tr><td class="f">ReviewOutput</td><td>校验后的结果。FAILED 的 Review <strong>根本没有</strong> Report 而不是有一个空的——「绝无残缺报告」因此是关于类型的事实。</td></tr>
         <tr><td class="f">AcVerdict</td><td><code>COVERED</code> / <code>NOT_FOUND</code> / <code>AT_RISK</code>。<strong>只有综合阶段有资格下裁定</strong>；被审查修订的每一条 AC 最终都有裁定，模型跳过的填成 <code>NOT_FOUND</code>，所以沉默的模型永远无法把报告缩短。</td></tr>
         <tr><td class="f">ReviewReconciliationScheduler</td><td>把「已落库但不再推进」的 Review 放回轨道。它的唯一查询 FROM 子句里<strong>有且仅有 <code>review</code> 一张表</strong>——由 review 驱动的结果集必然是已存在行的子集，所以无论条件写得多错都不可能产出一个从未创建的 Review。</td></tr>
@@ -1256,7 +1256,7 @@ docker compose -p fp-demo up --detach --wait backend frontend</code></pre>
       <tr><td><span class="verb get">GET</span></td><td class="f">…/attachments/{documentId}/content</td><td>读完整原文。</td></tr>
       <tr><td><span class="verb get">GET</span></td><td class="f">…/attachments/{documentId}/download</td><td>按原文件名下载。</td></tr>
       <tr><td><span class="verb post">POST</span></td><td class="f">…/attachments/{documentId}/promote</td><td>提升为公共知识（<strong>复制</strong>，非改写）。</td></tr>
-      <tr><td><span class="verb post">POST</span></td><td class="f">/{requirementId}/quality</td><td>质量检查：规则 + 一次结构化 AI 调用。不改需求状态。</td></tr>
+      <tr><td><span class="verb post">POST</span></td><td class="f">/{requirementId}/quality</td><td>质量检查：规则 + 预算内一次结构化 AI 调用；超预算返回 <code>quality-2</code>、<code>ai=null</code> 的规则报告。不改需求状态。</td></tr>
       <tr><td><span class="verb post">POST</span></td><td class="f">/{requirementId}/guidance</td><td>一次性实现建议。</td></tr>
       <tr><td><span class="verb get">GET</span></td><td class="f">/{requirementId}/review-activity</td><td>该需求的派生评审活动。</td></tr>
     </tbody>
@@ -1565,6 +1565,7 @@ python3 evaluation/tools/score.py --selftest</code></pre>
     本手册已按 2026-09-08 工作树同步：9 个后端包、21 张表、14 条迁移、6 个一级导航、11 条产品路由。
     源文件/行数仅是当日快照；测试结果见 TEST-REPORT.html。本轮 CI 与两次冷启动通过，现有部署已保留数据升级至 V14，见<a href="../../.trellis/tasks/archive/2026-09/09-07-review-collaboration/deployment.md">部署记录</a>。历史容量/评测证据保留原测量日期，真实远端合并及钉钉投递未执行。
   </p>
+  <p>2026-09-20 补充：输出校验新增 diff 新侧逐字证据锚定与真实行号纠正；需求质量检查超预算时跳过 AI。此补充不改写上述 2026-09-08 快照或正式评测证据。</p>
   <p>
     更权威的单一定义处在仓库里：架构与数据模型见 <code>docs/v2/ARCHITECTURE.md</code>，
     产品规则见 <code>docs/v2/PRD.md</code>，端点契约见 <code>docs/v2/API.md</code>，

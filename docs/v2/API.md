@@ -115,6 +115,15 @@ GitHub 默认 `apiBase=https://api.github.com`；GitLab 默认 `https://gitlab.c
 
 远端 PR 保存的 `authorExternalUserId/authorUsername` 是不可变快照。`authorUserId` 是可重算投影：只有 Provider、实例、稳定外部用户 ID 与当前活动绑定一致时才有值。撤销、替换或审批绑定会重算项目内既有 PR；任何“本人 PR”授权均按稳定 ID 判断，不按用户名。
 
+## 需求质量检查
+
+- `POST /api/projects/{projectId}/requirements/{requirementId}/quality`
+  - 仅 LEADER；针对当前 Revision 运行并保存建议性报告，不改变需求状态。
+  - 响应：`{requirementId,revisionId,revisionSeq,qualityVersion,checkedAt,rules,ai}`；当前规则语义版本为 `quality-2`。
+  - 完整 Prompt 在脱敏后不超过预算时调用一次结构化 AI，`ai` 为 `{summary,issues}`。
+  - 超预算时返回 `PROMPT_BUDGET_EXCEEDED`，不调用 AI、不做截断后的部分分析，报告仍正常保存且 `ai=null`。
+  - 历史版本报告保持原样；DRAFT 正文编辑仍使当前修订上的旧质量结果失效。
+
 ## 需求审查人
 
 - `POST /api/projects/{projectId}/requirements/{requirementId}/reviewer`
