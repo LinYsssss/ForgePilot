@@ -26,7 +26,7 @@
     "source_deployment_commit": "4121cea",
     "source_reviews": "17-31",
     "dataset": "docs/thesis/production-revalidation-20260920.csv",
-    "dataset_sha256": "6bfd4a53c162086f38f3e280716be8b2f8ad1953091ddb343037c3790e691560",
+    "dataset_sha256": "6136455048b7f97ee038513518c03156e3f271787d32f33475c5de67cc614a7a",
     "verification_status": "passed_recompute_links_freeze_and_cleanup"
   }
 }

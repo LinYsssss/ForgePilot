@@ -105,7 +105,7 @@ token 与 39,677 个输出 token，总计 143,001 个 token。表 2 展示时延
 逐例数据位于
 [`production-revalidation-20260920.csv`](./production-revalidation-20260920.csv)，
 SHA-256 为
-`6bfd4a53c162086f38f3e280716be8b2f8ad1953091ddb343037c3790e691560`。
+`6136455048b7f97ee038513518c03156e3f271787d32f33475c5de67cc614a7a`。
 数据集只包含标识、状态、计数、时延、token 和布尔一致性字段，不包含登录状态、
 凭据、Authorization 头、Prompt、模型正文、知识原文或 PR patch。
 
