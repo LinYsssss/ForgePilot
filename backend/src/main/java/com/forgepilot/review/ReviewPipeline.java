@@ -4,8 +4,8 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -27,7 +27,10 @@ import com.forgepilot.review.ReviewOutputValidator.Context;
 import com.forgepilot.review.ReviewOutputValidator.Outcome;
 import com.forgepilot.review.ReviewPrompts.KnowledgeExcerpt;
 import com.forgepilot.scm.ChangedFile;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
@@ -73,6 +76,8 @@ import tools.jackson.databind.ObjectMapper;
 @Service
 public class ReviewPipeline {
 
+    private static final Logger log = LoggerFactory.getLogger(ReviewPipeline.class);
+
     private final ReviewRepository reviews;
     private final FindingRepository findings;
     private final ChangedFileBatcher batcher;
@@ -116,12 +121,8 @@ public class ReviewPipeline {
      * 因此没有任何调用方能意外地存下半份报告——
      * 与 {@link BatchPhase} 和 {@link Outcome} 采用的是同一形态。
      *
-     * <p>{@code heartbeat} 在每次 provider 调用之前续租。它必须存在：
-     * 租约是 300 秒，而单次调用可能耗时 120 秒，于是一个三批次的 Review
-     * 会活得比自己的抢占还久，从而在半途被别人夺走。
-     * 它的返回值**刻意**不予理会——此后的每一次写入都以 token 设了围栏，
-     * 因此一个已经丢失的租约只会白费工夫，绝不可能造成一次错误写入；
-     * 在这里加个分支，只会把那条保证重复一遍。
+     * <p>{@code heartbeat} 由网关在每次 HTTP 尝试前执行，包括检索、重试和格式修复。
+     * 失去租约会抛出异常并停止后续调用；结果写入仍受 token/attempt 围栏保护。
      */
     public Optional<Report> analyse(ReviewExecutor.Claim claim, Runnable heartbeat) {
         Review review = reviews.findByProjectIdAndId(claim.projectId(), claim.reviewId())
@@ -129,31 +130,42 @@ public class ReviewPipeline {
         JsonNode snapshot = snapshotOf(review);
         String requirementText = requirementTextOf(snapshot);
         List<Context.Ac> criteria = acceptanceCriteriaOf(snapshot);
-        Plan plan = batcher.plan(changedFilesOf(snapshot));
-        List<KnowledgeExcerpt> recalled = recall(review, requirementText, criteria, plan);
+        List<ChangedFile> changedFiles = changedFilesOf(snapshot);
+        AiCallContext callContext = AiCallContext.ofReview(claim.projectId(), claim.reviewId(),
+                review.getRequirementId(), review.getRequirementRevisionId());
+        List<KnowledgeExcerpt> recalled = atStage("recall",
+                () -> recall(review, requirementText, criteria, changedFiles, callContext, heartbeat));
 
         // 一个回答要被对照检查的全部内容，且全部来自本次 Review 自己的那一行，
         // 而不是 PR 的当前状态（3.5）。可见文件就是计划将要真正发送出去的那些：
         // 一条针对「覆盖清单标为未审查」的文件的 finding，绝不能被存下来。
-        Context context = new Context(review.getRequirementId(), review.getRequirementRevisionId(),
-                requirementText, criteria, excerptHashesOf(recalled), reviewedFiles(plan));
-        AiCallContext callContext = callContextOf(review);
+        Context input = new Context(review.getRequirementId(), review.getRequirementRevisionId(),
+                requirementText, criteria, excerptHashesOf(recalled), changedFiles);
+        Plan plan = batcher.plan(changedFiles, ai.promptCharBudget(),
+                // The largest possible index is conservative for every real batch, including 10+.
+                files -> ReviewPrompts.batch(input, recalled,
+                        new Batch(Math.max(1, changedFiles.size()), files)).length());
+        Context context = input.withVisibleFiles(reviewedFiles(plan));
 
         BatchPhase phase = batcher.run(plan, context, reviewer(context, recalled, callContext, heartbeat));
         if (phase.status() == ReviewStatus.FAILED) {
+            log.warn("Review {} attempt {} invalid batch output: {}", claim.reviewId(), claim.attempt(),
+                    phase.failureReason());
             return Optional.empty();
         }
 
-        heartbeat.run();
         // 一次调用，一次性覆盖所有批次的候选项与证据。
         // AC 裁定只在这里决定，别处一律不行。
         Outcome outcome = validator.validate(
-                ai.chat(ReviewPrompts.synthesis(context, recalled, phase.candidates(), phase.evidence(),
-                        plan.coverage()), ReviewPrompts.SYNTHESIS_SCHEMA, AiUseCase.REVIEW, callContext),
-                malformed -> ai.chat(ReviewPrompts.repair(malformed), ReviewPrompts.SYNTHESIS_SCHEMA,
-                        AiUseCase.REVIEW, callContext),
+                atStage("synthesis", () -> ai.chat(ReviewPrompts.synthesis(context, recalled,
+                        phase.candidates(), phase.evidence(), plan.coverage()), ReviewPrompts.SYNTHESIS_SCHEMA,
+                        AiUseCase.REVIEW, callContext, heartbeat)),
+                malformed -> atStage("synthesis repair", () -> ai.chat(ReviewPrompts.repair(malformed),
+                        ReviewPrompts.SYNTHESIS_SCHEMA, AiUseCase.REVIEW, callContext, heartbeat)),
                 context);
         if (outcome.status() == ReviewStatus.FAILED) {
+            log.warn("Review {} attempt {} invalid synthesis output: {}", claim.reviewId(), claim.attempt(),
+                    outcome.failureReason());
             return Optional.empty();
         }
         return Optional.of(new Report(withBatchWarnings(outcome.output(), phase.warnings()),
@@ -270,26 +282,27 @@ public class ReviewPipeline {
 
     /**
      * 本次 Review 被允许引用的项目知识（3.3）。查询串由需求、它的验收条件
-     * 以及那些真正会被审查的路径构成。
+     * 以及快照中的变更路径构成。知识召回完成后才按完整上下文确定实际分批覆盖。
      *
      * <p>空白查询会「什么都不召回」，而不是去把空串做向量化：检索会返回距离
      * 给定向量最近的那些分块，因此一个空查询返回的不是「没有知识」，
      * 而是**任意的**知识，还会让模型去引用它。
      */
     private List<KnowledgeExcerpt> recall(Review review, String requirementText,
-            List<Context.Ac> criteria, Plan plan) {
+            List<Context.Ac> criteria, List<ChangedFile> changedFiles,
+            AiCallContext callContext, Runnable heartbeat) {
         StringBuilder query = new StringBuilder();
         if (requirementText != null) {
             query.append(requirementText).append('\n');
         }
         criteria.forEach(criterion -> query.append(criterion.text()).append('\n'));
-        plan.coverage().files().forEach(file -> query.append(file.path()).append('\n'));
+        changedFiles.forEach(file -> query.append(file.path()).append('\n'));
         if (query.isEmpty()) {
             return List.of();
         }
 
         float[] vector = ai.embed(List.of(query.toString()), embeddingModel,
-                AiCallContext.ofProject(review.getProjectId())).getFirst();
+                callContext, heartbeat).getFirst();
         List<KnowledgeExcerpt> recalled = new ArrayList<>();
         for (ChunkMatch match : knowledge.search(review.getProjectId(), retrievalActor(review),
                 review.getRequirementId(), vector, knowledgeTopK)) {
@@ -333,13 +346,6 @@ public class ReviewPipeline {
         return plan.batches().stream().flatMap(batch -> batch.files().stream()).toList();
     }
 
-    private static AiCallContext callContextOf(Review review) {
-        return review.getRequirementId() == null
-                ? AiCallContext.ofProject(review.getProjectId())
-                : AiCallContext.ofRevision(review.getProjectId(), review.getRequirementId(),
-                        review.getRequirementRevisionId());
-    }
-
     // --------------------------------------------------------------- 模型调用
 
     /**
@@ -353,17 +359,30 @@ public class ReviewPipeline {
 
             @Override
             public String review(Batch batch) {
-                heartbeat.run();
-                return ai.chat(ReviewPrompts.batch(context, recalled, batch),
-                        ReviewPrompts.BATCH_SCHEMA, AiUseCase.REVIEW, callContext);
+                return atStage("batch " + batch.index(), () -> ai.chat(ReviewPrompts.batch(context, recalled, batch),
+                        ReviewPrompts.BATCH_SCHEMA, AiUseCase.REVIEW, callContext, heartbeat));
             }
 
             @Override
             public String repair(Batch batch, String malformedAnswer) {
-                return ai.chat(ReviewPrompts.repair(malformedAnswer),
-                        ReviewPrompts.BATCH_SCHEMA, AiUseCase.REVIEW, callContext);
+                return atStage("batch " + batch.index() + " repair", () -> ai.chat(ReviewPrompts.repair(malformedAnswer),
+                        ReviewPrompts.BATCH_SCHEMA, AiUseCase.REVIEW, callContext, heartbeat));
             }
         };
+    }
+
+    /** Preserve the failing phase without carrying raw provider/SQL payloads into worker logs. */
+    private static <T> T atStage(String stage, Supplier<T> operation) {
+        try {
+            return operation.get();
+        } catch (RuntimeException failure) {
+            if (failure instanceof ApiException api) {
+                throw new ApiException(api.getStatus(), api.getCode(),
+                        "Review " + stage + " failed (" + api.getCode() + ").");
+            }
+            throw new ApiException(HttpStatus.INTERNAL_SERVER_ERROR, "review_pipeline_failed",
+                    "Review " + stage + " failed (" + failure.getClass().getSimpleName() + ").");
+        }
     }
 
     /**

@@ -11,6 +11,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import com.forgepilot.PostgresTestBase;
 import com.forgepilot.ai.AiGateway;
+import com.forgepilot.knowledge.KnowledgeIngestionProcessor;
 import com.forgepilot.common.ApiException;
 import com.forgepilot.knowledge.ChunkSearchRepository.ChunkMatch;
 import com.forgepilot.knowledge.KnowledgeDocumentView;
@@ -38,6 +39,9 @@ class RequirementAttachmentServiceTest extends PostgresTestBase {
 
     @Autowired
     private KnowledgeService knowledge;
+
+    @Autowired
+    private KnowledgeIngestionProcessor ingestion;
 
     @Autowired
     private JdbcTemplate jdbc;
@@ -91,6 +95,8 @@ class RequirementAttachmentServiceTest extends PostgresTestBase {
         assertThat(jdbc.queryForObject("select count(*) from requirement_attachment "
                 + "where project_id = ? and document_id = ?", Integer.class, fixture.project, first.id()))
                 .isOne();
+
+        processPendingKnowledge(ingestion, jdbc);
 
         List<Long> firstRecall = knowledge.search(fixture.project, fixture.leader, fixture.firstRequirement,
                 new float[] {1f, 0f}, 10).stream().map(ChunkMatch::documentId).toList();

@@ -4,6 +4,9 @@ import java.util.Optional;
 import java.util.UUID;
 
 import com.forgepilot.common.ApiException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatus;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.beans.factory.annotation.Value;
@@ -33,6 +36,8 @@ import org.springframework.transaction.support.TransactionTemplate;
  */
 @Service
 public class ReviewExecutor {
+
+    private static final Logger log = LoggerFactory.getLogger(ReviewExecutor.class);
 
     /** worker 拥有一个 Review 期间所持有的东西。这四个字段合起来就是那道围栏。 */
     public record Claim(long projectId, long reviewId, int attempt, UUID token) {
@@ -132,34 +137,39 @@ public class ReviewExecutor {
         }
         Claim claim = taken.get();
 
-        Optional<ReviewPipeline.Report> report;
+        String stage = "analysis";
+        Boolean committed;
         try {
-            report = pipeline.analyse(claim, () -> renew(claim));
-        } catch (ApiException providerFailure) {
-            // 3.2：“RUNNING -> FAILED：AI 失败”。让这个异常逃逸出去，会让该行
-            // 一直停在 RUNNING 直到租约过期，而 reconciliation 随后会重新抢占它、
-            // 再次去调用那个同样不可达的 provider——如此循环，永无止境。
-            // FAILED 会停下来等人处理，这正是 3.2 里人工重试的用途。
-            failAndPublish(claim);
-            return;
-        }
-        if (report.isEmpty()) {
-            // 某个批次即便用掉那一次修复也仍然解析不了，或者综合阶段没能通过校验。
-            // 什么都不写：3.4.4 禁止残缺报告，3.5 禁止“成功的空结果”。
-            failAndPublish(claim);
-            return;
-        }
-
-        Boolean committed = finishingTransaction.execute(status -> {
-            pipeline.store(claim, report.get());
-            if (!complete(claim)) {
-                // 租约在分析与本次写入之间丢失了。报告不得比它所属的 Review 活得更久：
-                // 这个 attempt 已不再拥有那一行，而另一个 attempt 正在产出它自己的结果。
-                status.setRollbackOnly();
-                return false;
+            Optional<ReviewPipeline.Report> report = pipeline.analyse(claim, () -> {
+                if (!renew(claim)) {
+                    throw new ApiException(HttpStatus.CONFLICT, "review_lease_lost",
+                            "This worker no longer owns the review.");
+                }
+            });
+            if (report.isEmpty()) {
+                failAndPublish(claim);
+                return;
             }
-            return true;
-        });
+
+            stage = "result commit";
+            committed = finishingTransaction.execute(status -> {
+                pipeline.store(claim, report.get());
+                if (!complete(claim)) {
+                    status.setRollbackOnly();
+                    return false;
+                }
+                return true;
+            });
+        } catch (RuntimeException failure) {
+            if (failure instanceof ApiException api && api.getCode().equals("review_lease_lost")) {
+                return;
+            }
+            log.warn("Review {} attempt {} failed in {}: {}", claim.reviewId(), claim.attempt(), stage,
+                    failure instanceof ApiException api ? api.getMessage() : failure.getClass().getSimpleName());
+            // Any failed result transaction has already rolled back; terminal cleanup uses a fresh transaction.
+            failAndPublish(claim);
+            return;
+        }
 
         // 发布点在事务**之外**，且只在它确实提交之后。放进事务里会让一个失去租约、
         // 随后整体回滚的 attempt 也把事件发出去——那就是为一次从未发生的完成发通知。
@@ -169,8 +179,13 @@ public class ReviewExecutor {
     }
 
     private void failAndPublish(Claim claim) {
-        if (fail(claim)) {
-            publisher.publishEvent(new ReviewFailed(claim.projectId(), claim.reviewId()));
+        try {
+            if (fail(claim)) {
+                publisher.publishEvent(new ReviewFailed(claim.projectId(), claim.reviewId()));
+            }
+        } catch (RuntimeException cleanupFailure) {
+            log.warn("Review {} attempt {} failure cleanup unavailable ({}); lease recovery remains active",
+                    claim.reviewId(), claim.attempt(), cleanupFailure.getClass().getSimpleName());
         }
     }
 }

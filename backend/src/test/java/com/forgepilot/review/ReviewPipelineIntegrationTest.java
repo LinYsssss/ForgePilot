@@ -18,6 +18,7 @@ import java.util.function.UnaryOperator;
 
 import com.forgepilot.PostgresTestBase;
 import com.forgepilot.ai.AiGateway;
+import com.forgepilot.knowledge.KnowledgeIngestionProcessor;
 import com.forgepilot.knowledge.KnowledgeService;
 import com.forgepilot.scm.ChangedFile;
 import com.forgepilot.scm.PullRequestChanged;
@@ -99,6 +100,9 @@ class ReviewPipelineIntegrationTest extends PostgresTestBase {
     private ObjectMapper json;
 
     @Autowired
+    private KnowledgeIngestionProcessor ingestion;
+
+    @Autowired
     private JdbcTemplate jdbc;
 
     @Autowired
@@ -113,12 +117,20 @@ class ReviewPipelineIntegrationTest extends PostgresTestBase {
     @BeforeEach
     void theProviderAnswersFromTheScript() {
         mockMvc = MockMvcBuilders.webAppContextSetup(context).apply(springSecurity()).build();
+        when(ai.promptCharBudget()).thenReturn(60_000);
         when(ai.embed(anyList(), any(), any())).thenAnswer(call -> {
             List<String> texts = call.getArgument(0);
             return texts.stream().map(text -> new float[] {0.1f, 0.2f, 0.3f, 0.4f}).toList();
         });
-        when(ai.chat(any(), any(), any(), any())).thenAnswer(call ->
-                provider.answer(call.getArgument(0), call.getArgument(1)));
+        when(ai.embed(anyList(), any(), any(), any())).thenAnswer(call -> {
+            call.<Runnable>getArgument(3).run();
+            List<String> texts = call.getArgument(0);
+            return texts.stream().map(text -> new float[] {0.1f, 0.2f, 0.3f, 0.4f}).toList();
+        });
+        when(ai.chat(any(), any(), any(), any(), any())).thenAnswer(call -> {
+            call.<Runnable>getArgument(4).run();
+            return provider.answer(call.getArgument(0), call.getArgument(1));
+        });
     }
 
     // ------------------------------------------------------- the chain, end to end
@@ -707,6 +719,7 @@ class ReviewPipelineIntegrationTest extends PostgresTestBase {
             this.knowledgeText = "本项目的金额一律使用 BigDecimal，禁止使用 double。";
             long document = knowledge.createProjectKnowledge(project, leader,
                     "编码规范-" + sequence, knowledgeText);
+            processPendingKnowledge(ingestion, jdbc);
             this.knowledgeChunk = jdbc.queryForObject(
                     "select id from knowledge_chunk where document_id = ? order by seq limit 1",
                     Long.class, document);

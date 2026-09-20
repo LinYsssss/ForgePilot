@@ -9,11 +9,8 @@ package com.forgepilot.ai;
  * 已经为 knowledge 认可的形态（“只收不透明 scope id”）。这些列本来
  * 就以标量写入，因此并无信息损失。
  *
- * <p>{@code review_id} 是**故意缺席**的。它的外键由后来的迁移补上，
- * 而那次迁移的前提是既有行必须全为 NULL；让这一列在 Java 侧根本不可达，
- * 才是真正的保证，光靠“约定没人会写”是靠不住的。
  */
-public record AiCallContext(long projectId, Long requirementId, Long requirementRevisionId) {
+public record AiCallContext(long projectId, Long requirementId, Long requirementRevisionId, Long reviewId) {
 
     public AiCallContext {
         // ai_call_log 的三列复合键是 MATCH SIMPLE：只要有一列为 NULL，
@@ -26,11 +23,16 @@ public record AiCallContext(long projectId, Long requirementId, Long requirement
 
     /** 用于不属于任何需求的调用，例如为项目知识做向量化。 */
     public static AiCallContext ofProject(long projectId) {
-        return new AiCallContext(projectId, null, null);
+        return new AiCallContext(projectId, null, null, null);
     }
 
     /** 用于针对某个修订文本的调用，例如需求质量检查或实现建议。 */
     public static AiCallContext ofRevision(long projectId, long requirementId, long requirementRevisionId) {
-        return new AiCallContext(projectId, requirementId, requirementRevisionId);
+        return new AiCallContext(projectId, requirementId, requirementRevisionId, null);
+    }
+
+    public static AiCallContext ofReview(long projectId, long reviewId,
+            Long requirementId, Long requirementRevisionId) {
+        return new AiCallContext(projectId, requirementId, requirementRevisionId, reviewId);
     }
 }

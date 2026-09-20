@@ -20,9 +20,6 @@ import org.hibernate.annotations.CreationTimestamp;
  * **有意**不在这里：{@code error} 只放分类信息（例如 {@code HTTP 429}），
  * 绝不放响应体（.trellis/spec/backend/logging-guidelines.md）。
  *
- * <p>表里存在 {@code review_id} 列但故意不做映射：它的外键由后来的迁移补上，
- * 前提是此前写入的每一行该列都为 NULL。Hibernate 会忽略没有字段
- * 认领的列，因此这道保证不花任何代价。
  */
 @Entity
 @Table(name = "ai_call_log")
@@ -35,6 +32,9 @@ public class AiCallLog {
     @Column(name = "project_id", nullable = false)
     private Long projectId;
 
+    @Column(name = "review_id")
+    private Long reviewId;
+
     @Column(name = "requirement_id")
     private Long requirementId;
 
@@ -45,7 +45,7 @@ public class AiCallLog {
     @Column(name = "use_case", nullable = false, length = 32)
     private AiUseCase useCase;
 
-    /** 实际使用的模型，使评测得以复现。 */
+    /** 请求配置的模型名，不代表对供应商内部实际模型的验证。 */
     @Column(name = "model", nullable = false, length = 128)
     private String model;
 
@@ -78,6 +78,7 @@ public class AiCallLog {
     private AiCallLog(AiCallContext context, AiUseCase useCase, String model, int latencyMs,
             AiCallStatus status) {
         this.projectId = context.projectId();
+        this.reviewId = context.reviewId();
         this.requirementId = context.requirementId();
         this.requirementRevisionId = context.requirementRevisionId();
         this.useCase = useCase;
@@ -109,6 +110,10 @@ public class AiCallLog {
 
     public Long getProjectId() {
         return projectId;
+    }
+
+    public Long getReviewId() {
+        return reviewId;
     }
 
     public Long getRequirementId() {

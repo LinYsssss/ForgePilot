@@ -2,6 +2,7 @@ package com.forgepilot.review;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.ToIntFunction;
 
 import com.forgepilot.review.ReviewOutput.FindingCandidate;
 import com.forgepilot.review.ReviewOutputValidator.AcEvidence;
@@ -67,12 +68,13 @@ public class ChangedFileBatcher {
      * 并加以标注——这既是 7.2 的规则，也是分批契约的精神：可以裁，
      * 但绝不能悄悄地裁。
      */
-    public Plan plan(List<ChangedFile> changedFiles) {
+    public Plan plan(List<ChangedFile> changedFiles, int gatewayBudget,
+            ToIntFunction<List<ChangedFile>> promptChars) {
+        int budget = Math.min(batchBudgetChars, gatewayBudget);
         List<FileCoverage> reviewed = new ArrayList<>();
         List<String> notReviewed = new ArrayList<>();
         List<Batch> batches = new ArrayList<>();
         List<ChangedFile> current = new ArrayList<>();
-        int currentChars = 0;
         boolean cutAnyPatch = false;
 
         List<ChangedFile> ordered = ChangedFile.canonicalOrder(changedFiles);
@@ -82,20 +84,26 @@ public class ChangedFileBatcher {
                 notReviewed.add(file.path());
                 continue;
             }
-            boolean cut = file.patch().length() > maxPatchChars;
-            String patch = cut ? cutAtLineBoundary(file.patch()) : file.patch();
-            if (patch == null || file.path().length() + patch.length() > batchBudgetChars) {
+            int patchBudget = Math.min(maxPatchChars, budget - promptChars.applyAsInt(
+                    List.of(new ChangedFile(file.path(), file.changeType(), ""))));
+            boolean cut = file.patch().length() > patchBudget;
+            String patch = cut ? cutAtLineBoundary(file.patch(), patchBudget) : file.patch();
+            if (patch == null) {
                 notReviewed.add(file.path());
                 continue;
             }
-            int cost = file.path().length() + patch.length();
-            if (!current.isEmpty() && currentChars + cost > batchBudgetChars) {
+            ChangedFile sent = new ChangedFile(file.path(), file.changeType(), patch);
+            if (promptChars.applyAsInt(List.of(sent)) > budget) {
+                notReviewed.add(file.path());
+                continue;
+            }
+            current.add(sent);
+            if (current.size() > 1 && promptChars.applyAsInt(current) > budget) {
+                current.removeLast();
                 batches.add(new Batch(batches.size() + 1, List.copyOf(current)));
                 current.clear();
-                currentChars = 0;
+                current.add(sent);
             }
-            current.add(new ChangedFile(file.path(), file.changeType(), patch));
-            currentChars += cost;
             reviewed.add(new FileCoverage(file.path(), cut));
             cutAnyPatch |= cut;
         }
@@ -145,8 +153,8 @@ public class ChangedFileBatcher {
     }
 
     /** 只保留完整的行；若连第一行都塞不下则返回 null。 */
-    private String cutAtLineBoundary(String patch) {
-        int budget = maxPatchChars - TRUNCATION_MARKER.length();
+    private String cutAtLineBoundary(String patch, int patchBudget) {
+        int budget = patchBudget - TRUNCATION_MARKER.length();
         StringBuilder kept = new StringBuilder();
         for (String row : patch.split("\n", -1)) {
             if (kept.length() + row.length() + 1 > budget) {

@@ -8,7 +8,6 @@ import java.net.http.HttpResponse;
 import java.net.http.HttpTimeoutException;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Function;
 
@@ -47,6 +46,7 @@ public class AiGateway {
 
     private static final String CHAT_PATH = "/chat/completions";
     private static final String EMBEDDING_PATH = "/embeddings";
+    private static final Runnable NO_CHECK = () -> { };
 
     private final AiCallLogRepository callLogs;
     private final ObjectMapper json;
@@ -88,21 +88,37 @@ public class AiGateway {
      * 共享本网关，各自拥有业务侧 schema（ARCHITECTURE.md 4.1）。
      */
     public String chat(String prompt, String schema, AiUseCase useCase, AiCallContext context) {
+        return chat(prompt, schema, useCase, context, NO_CHECK);
+    }
+
+    /** The owner can stop an abandoned operation before each HTTP attempt, including retries. */
+    public String chat(String prompt, String schema, AiUseCase useCase, AiCallContext context,
+            Runnable beforeAttempt) {
         if (chatModel.isBlank()) {
             throw unconfigured();
+        }
+        String redacted = PromptSanitizer.redact(prompt);
+        if (redacted.length() > promptCharBudget) {
+            throw new ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "ai_prompt_too_large",
+                    "The complete AI prompt exceeds the configured character budget.");
         }
         ObjectNode request = json.createObjectNode();
         request.put("model", chatModel);
         request.putArray("messages").addObject()
                 .put("role", "user")
-                .put("content", PromptSanitizer.sanitize(prompt, promptCharBudget));
+                .put("content", redacted);
         if (schema != null) {
             ObjectNode format = request.putObject("response_format");
             format.put("type", "json_schema");
             format.putObject("json_schema").put("name", "result").put("strict", true)
                     .set("schema", parseSchema(schema));
         }
-        return call(chatRoute, CHAT_PATH, request, chatModel, useCase, context, AiGateway::content);
+        return call(chatRoute, CHAT_PATH, request, chatModel, useCase, context, AiGateway::content,
+                beforeAttempt);
+    }
+
+    public int promptCharBudget() {
+        return promptCharBudget;
     }
 
     /**
@@ -111,6 +127,10 @@ public class AiGateway {
      * {@code ai} 只负责把它带给 provider 并写进调用记录。
      */
     public List<float[]> embed(List<String> texts, String model, AiCallContext context) {
+        return embed(texts, model, context, NO_CHECK);
+    }
+
+    public List<float[]> embed(List<String> texts, String model, AiCallContext context, Runnable beforeAttempt) {
         ObjectNode request = json.createObjectNode();
         request.put("model", model);
         ArrayNode input = request.putArray("input");
@@ -118,7 +138,7 @@ public class AiGateway {
             input.add(PromptSanitizer.sanitize(text, promptCharBudget));
         }
         return call(embeddingRoute, EMBEDDING_PATH, request, model, AiUseCase.EMBEDDING, context,
-                answer -> vectors(answer, texts.size()));
+                answer -> vectors(answer, texts.size()), beforeAttempt);
     }
 
     /**
@@ -127,9 +147,10 @@ public class AiGateway {
      * 永久失败表现为一行——重试是可审计的事实，而不是一句声明。
      */
     private <T> T call(ProviderRoute route, String path, ObjectNode request, String model, AiUseCase useCase,
-            AiCallContext context, Function<JsonNode, T> reader) {
+            AiCallContext context, Function<JsonNode, T> reader, Runnable beforeAttempt) {
         HttpRequest post = post(endpoint(route.baseUrl(), path), route.apiKey(), request.toString());
         for (int attempt = 1; attempt <= AiFailurePolicy.MAX_ATTEMPTS; attempt++) {
+            beforeAttempt.run();
             long startedAt = System.nanoTime();
             try {
                 HttpResponse<String> response = http.send(post,
@@ -231,11 +252,20 @@ public class AiGateway {
             throw new MalformedAnswerException("the answer carried " + data.size()
                     + " embeddings for " + expected + " inputs");
         }
-        List<float[]> vectors = new ArrayList<>(expected);
+        float[][] vectors = new float[expected][];
         for (JsonNode item : data) {
-            vectors.add(vector(item.path("embedding")));
+            JsonNode index = item.path("index");
+            if (!index.isIntegralNumber() || !index.canConvertToInt()
+                    || index.intValue() < 0 || index.intValue() >= expected) {
+                throw new MalformedAnswerException("the answer carried an invalid embedding index");
+            }
+            int position = index.intValue();
+            if (vectors[position] != null) {
+                throw new MalformedAnswerException("the answer carried a duplicate embedding index");
+            }
+            vectors[position] = vector(item.path("embedding"));
         }
-        return vectors;
+        return List.of(vectors);
     }
 
     private static float[] vector(JsonNode embedding) {

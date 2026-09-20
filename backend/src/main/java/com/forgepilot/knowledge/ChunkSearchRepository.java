@@ -72,7 +72,7 @@ public class ChunkSearchRepository {
                         + "from knowledge_chunk c "
                         + "join knowledge_document d on d.project_id = c.project_id "
                         + "and d.id = c.document_id "
-                        + "where c.project_id = ? and c.embedding is not null "
+                        + "where c.project_id = ? and d.status = 'READY' and c.embedding is not null "
                         + "and (d.source_type <> 'REQUIREMENT_ATTACHMENT' "
                         + "or d.source_requirement_id = ?) "
                         + "order by c.embedding <=> ?::vector limit ?",

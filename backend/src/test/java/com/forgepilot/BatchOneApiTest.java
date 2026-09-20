@@ -171,6 +171,26 @@ class BatchOneApiTest extends PostgresTestBase {
         assertThat(outsider.read("/api/projects").size()).isEqualTo(1);
     }
 
+    @Test
+    void knowledgeUploadReturnsCreatedPendingWithoutWaitingForEmbedding() throws Exception {
+        Client leader = register();
+        long project = leader.post("/api/projects", """
+                {"name": "Async knowledge"}""").path("id").asLong();
+
+        MvcResult accepted = mockMvc.perform(leader.write(
+                        MockMvcRequestBuilders.post("/api/projects/" + project + "/knowledge/documents"),
+                        "{\"title\":\"guide.md\",\"text\":\"short body\"}"))
+                .andExpect(status().isCreated())
+                .andReturn();
+
+        JsonNode document = body(accepted);
+        assertThat(document.path("status").asString()).isEqualTo("PENDING");
+        assertThat(document.path("chunkCount").asInt()).isZero();
+        assertThat(document.path("embeddedChunkCount").asInt()).isZero();
+        assertThat(leader.read("/api/projects/" + project + "/knowledge/documents")
+                .get(0).path("status").asString()).isEqualTo("PENDING");
+    }
+
     /**
      * 三个 DELETE 端点在**真实 HTTP** 之上的接线。Service 层测试证明了删除
      * 语义，但证明不了路径映射、204 状态码，以及经过安全过滤器链后的答案——一个写错

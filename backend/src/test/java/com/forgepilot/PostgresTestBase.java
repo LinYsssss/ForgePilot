@@ -2,6 +2,9 @@ package com.forgepilot;
 
 import java.time.Duration;
 
+import com.forgepilot.knowledge.KnowledgeIngestionProcessor;
+import org.springframework.jdbc.core.JdbcTemplate;
+
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.postgresql.PostgreSQLContainer;
@@ -30,6 +33,16 @@ public abstract class PostgresTestBase {
         POSTGRES.start();
     }
 
+    /** Drain the durable queue explicitly in tests that need indexed fixtures. */
+    protected static void processPendingKnowledge(KnowledgeIngestionProcessor processor, JdbcTemplate jdbc) {
+        for (int remaining = 1000; remaining > 0; remaining--) {
+            if (jdbc.queryForObject("select count(*) from knowledge_document where status = 'PENDING'",
+                    Integer.class) == 0) return;
+            processor.processNext();
+        }
+        throw new AssertionError("Knowledge ingestion did not drain the pending fixtures.");
+    }
+
     @DynamicPropertySource
     static void datasourceProperties(DynamicPropertyRegistry registry) {
         registry.add("spring.datasource.url", POSTGRES::getJdbcUrl);
@@ -40,5 +53,7 @@ public abstract class PostgresTestBase {
         // 到处都能悄无声息生效的弱密钥，而这恰恰是「失败即关闭」所要防止的。
         // Compose 与 CI 各自注入它们同样是假的值。
         registry.add("forgepilot.scm.secret-key", () -> "test-only-not-a-real-key");
+        // Tests drive pending ingestion explicitly, without a background worker racing their fixtures.
+        registry.add("forgepilot.knowledge.ingestion-interval-ms", () -> "3600000");
     }
 }

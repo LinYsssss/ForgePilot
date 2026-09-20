@@ -51,7 +51,7 @@ class ChangedFileBatcherTest {
 
     @Test
     void everyFileThatWillNotBeReviewedIsNamedInTheManifest() {
-        Plan plan = batcher.plan(List.of(
+        Plan plan = plan(List.of(
                 file("a.txt", 1),
                 new ChangedFile("b.bin", "MODIFIED", null),
                 file("c.txt", 1),
@@ -69,7 +69,7 @@ class ChangedFileBatcherTest {
 
     @Test
     void aCompleteManifestSaysSoRatherThanSayingNothing() {
-        Plan plan = batcher.plan(List.of(file("a.txt", 1), file("b.txt", 1)));
+        Plan plan = plan(List.of(file("a.txt", 1), file("b.txt", 1)));
 
         assertThat(plan.coverage().truncated()).isFalse();
         assertThat(plan.coverage().notReviewed()).isEmpty();
@@ -81,7 +81,7 @@ class ChangedFileBatcherTest {
         ChangedFile huge = file("a.txt", 40);
         assertThat(huge.patch().length()).isGreaterThan(MAX_PATCH_CHARS);
 
-        Plan plan = batcher.plan(List.of(huge));
+        Plan plan = plan(List.of(huge));
         String sent = plan.batches().getFirst().files().getFirst().patch();
 
         assertThat(plan.coverage().files()).containsExactly(new FileCoverage("a.txt", true));
@@ -95,10 +95,11 @@ class ChangedFileBatcherTest {
     }
 
     @Test
-    void aFileThatCannotFitAWholeBatchIsNotReviewedRatherThanQuietlyShortened() {
+    void aFileWithNoWholeLineThatFitsIsRecordedAsNotReviewed() {
         ChangedFileBatcher generousPerFile = new ChangedFileBatcher(validator, MAX_FILES, 100_000, 80);
 
-        Plan plan = generousPerFile.plan(List.of(file("a.txt", 20)));
+        Plan plan = generousPerFile.plan(List.of(new ChangedFile("a.txt", "MODIFIED", "x".repeat(100))),
+                BATCH_BUDGET, ChangedFileBatcherTest::fileChars);
 
         assertThat(plan.batches()).isEmpty();
         assertThat(plan.coverage().notReviewed()).containsExactly("a.txt");
@@ -109,7 +110,7 @@ class ChangedFileBatcherTest {
     void filesAreSplitIntoBatchesThatFitTheBudget() {
         List<ChangedFile> files = List.of(file("c.txt", 3), file("a.txt", 3), file("b.txt", 3));
 
-        Plan plan = batcher.plan(files);
+        Plan plan = plan(files);
 
         assertThat(plan.batches()).hasSizeGreaterThan(1);
         for (Batch batch : plan.batches()) {
@@ -127,7 +128,7 @@ class ChangedFileBatcherTest {
 
     @Test
     void oneBatchThatSurvivesNeitherParsingNorItsRepairFailsTheWholeReview() {
-        Plan plan = batcher.plan(List.of(file("a.txt", 3), file("b.txt", 3)));
+        Plan plan = plan(List.of(file("a.txt", 3), file("b.txt", 3)));
         assertThat(plan.batches()).hasSize(2);
         ScriptedReviewer reviewer = new ScriptedReviewer()
                 .answers(1, batchAnswer(finding("a.txt", 2), ""))
@@ -149,7 +150,7 @@ class ChangedFileBatcherTest {
 
     @Test
     void aFailedPhaseCannotBeGivenAPartialResultAtAll() {
-        Plan plan = batcher.plan(List.of(file("a.txt", 3)));
+        Plan plan = plan(List.of(file("a.txt", 3)));
         BatchPhase good = batcher.run(plan, context(),
                 new ScriptedReviewer().answers(1, batchAnswer(finding("a.txt", 2), "")));
         assertThat(good.candidates()).hasSize(1);
@@ -162,7 +163,7 @@ class ChangedFileBatcherTest {
 
     @Test
     void eachBatchGetsExactlyOneRepairAndAGoodRepairIsAccepted() {
-        Plan plan = batcher.plan(List.of(file("a.txt", 3), file("b.txt", 3)));
+        Plan plan = plan(List.of(file("a.txt", 3), file("b.txt", 3)));
         ScriptedReviewer reviewer = new ScriptedReviewer()
                 .answers(1, "{ not json")
                 .repairs(1, batchAnswer(finding("a.txt", 2), ""))
@@ -177,7 +178,7 @@ class ChangedFileBatcherTest {
 
     @Test
     void aBatchCannotReportOnAFileItWasNotShown() {
-        Plan plan = batcher.plan(List.of(file("a.txt", 3), file("b.txt", 3)));
+        Plan plan = plan(List.of(file("a.txt", 3), file("b.txt", 3)));
         BatchPhase phase = batcher.run(plan, context(), new ScriptedReviewer()
                 .answers(1, batchAnswer(finding("b.txt", 2), ""))
                 .answers(2, batchAnswer(finding("b.txt", 2), "")));
@@ -190,7 +191,7 @@ class ChangedFileBatcherTest {
 
     @Test
     void aBatchProducesEvidenceAndNeverAVerdict() {
-        Plan plan = batcher.plan(List.of(file("a.txt", 3)));
+        Plan plan = plan(List.of(file("a.txt", 3)));
         String claimsAVerdict = "{\"findings\":[],\"acVerdicts\":[{\"acId\":11,\"verdict\":\"COVERED\"}],"
                 + "\"acEvidence\":[{\"acId\":11,\"path\":\"a.txt\",\"line\":2,\"excerpt\":\"+added 0\"}]}";
 
@@ -203,6 +204,39 @@ class ChangedFileBatcherTest {
         assertThat(validator.validate("{\"acVerdicts\":[],\"findings\":[]}",
                         answer -> answer, context()).output().acVerdicts())
                 .containsExactly(new ReviewOutput.AcResult(11L, "AC-1", AcVerdict.NOT_FOUND));
+    }
+
+    @Test
+    void theCompletePromptIncludingContextAndFramingFitsBothBudgets() {
+        Context input = new Context(7L, 9L, "requirement context\n".repeat(220),
+                List.of(new Context.Ac(11L, "AC-1", "criterion".repeat(70))), Map.of(), List.of());
+        var knowledge = List.of(new ReviewPrompts.KnowledgeExcerpt(1, 1, 1, "knowledge\n".repeat(400), 1));
+        ChangedFile large = file("src/Large.java", 5_000);
+        ChangedFileBatcher production = new ChangedFileBatcher(validator, 300, 60_000, 60_000);
+        assertThat(large.patch().length()).isLessThan(60_000);
+        assertThat(ReviewPrompts.batch(input, knowledge, new Batch(1, List.of(large))).length())
+                .isGreaterThan(60_000);
+
+        Plan plan = production.plan(List.of(large, file("src/Other.java", 1)), 59_000,
+                files -> ReviewPrompts.batch(input, knowledge, new Batch(1, files)).length());
+
+        assertThat(plan.coverage().files()).contains(new FileCoverage(large.path(), true));
+        assertThat(plan.coverage().notReviewed()).isEmpty();
+        for (Batch batch : plan.batches()) {
+            assertThat(ReviewPrompts.batch(input, knowledge, batch).length()).isLessThanOrEqualTo(59_000);
+        }
+        String sent = plan.batches().getFirst().files().getFirst().patch();
+        assertThat(sent).endsWith(ChangedFileBatcher.TRUNCATION_MARKER);
+        assertThat(large.patch()).startsWith(sent.substring(0,
+                sent.length() - ChangedFileBatcher.TRUNCATION_MARKER.length()));
+    }
+
+    private Plan plan(List<ChangedFile> files) {
+        return batcher.plan(files, BATCH_BUDGET, ChangedFileBatcherTest::fileChars);
+    }
+
+    private static int fileChars(List<ChangedFile> files) {
+        return files.stream().mapToInt(file -> file.path().length() + file.patch().length()).sum();
     }
 
     private static String batchAnswer(String findings, String evidence) {

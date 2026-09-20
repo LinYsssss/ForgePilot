@@ -25,6 +25,7 @@ import static org.mockito.Mockito.when;
 import com.forgepilot.PostgresTestBase;
 import com.forgepilot.ai.AiCallContext;
 import com.forgepilot.ai.AiGateway;
+import com.forgepilot.knowledge.KnowledgeIngestionProcessor;
 import com.forgepilot.ai.AiUseCase;
 import com.forgepilot.common.ApiException;
 import com.forgepilot.knowledge.KnowledgeDocumentView;
@@ -71,6 +72,9 @@ class ImplementationGuidanceTest extends PostgresTestBase {
 
     @Autowired
     private RequirementAttachmentService attachments;
+
+    @Autowired
+    private KnowledgeIngestionProcessor ingestion;
 
     @Autowired
     private JdbcTemplate jdbc;
@@ -136,6 +140,7 @@ class ImplementationGuidanceTest extends PostgresTestBase {
         long requirement = fixture.requirement("登录", "错误口令会被拒绝");
         attachments.create(fixture.project, fixture.leader, requirement,
                 "认证约定.md", "会话 Cookie 必须标记为 HttpOnly。");
+        processPendingKnowledge(ingestion, jdbc);
 
         ImplementationGuidance produced = guidance.generate(fixture.project, fixture.leader, requirement);
 

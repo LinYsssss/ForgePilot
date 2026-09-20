@@ -12,6 +12,7 @@ import static org.mockito.Mockito.when;
 
 import com.forgepilot.PostgresTestBase;
 import com.forgepilot.ai.AiGateway;
+import com.forgepilot.knowledge.KnowledgeIngestionProcessor;
 import com.forgepilot.common.ApiException;
 import com.forgepilot.project.ProjectRole;
 import org.junit.jupiter.api.BeforeEach;
@@ -36,6 +37,9 @@ class KnowledgeServiceTest extends PostgresTestBase {
 
     @Autowired
     private KnowledgeChunkRepository chunks;
+
+    @Autowired
+    private KnowledgeIngestionProcessor ingestion;
 
     @Autowired
     private JdbcTemplate jdbc;
@@ -64,6 +68,9 @@ class KnowledgeServiceTest extends PostgresTestBase {
 
         long document = knowledge.createProjectKnowledge(fixture.project, fixture.leader, "手册.md", text);
 
+        assertThat(knowledge.document(fixture.project, fixture.leader, document).status())
+                .isEqualTo(KnowledgeStatus.PENDING);
+        processPendingKnowledge(ingestion, jdbc);
         assertThat(documents.findByProjectIdAndId(fixture.project, document))
                 .get().extracting(KnowledgeDocument::getStatus)
                 .isEqualTo(KnowledgeStatus.READY);
@@ -167,6 +174,7 @@ class KnowledgeServiceTest extends PostgresTestBase {
         float[] query = {0.1f, 0.2f, 0.3f, 0.4f};
         long kept = knowledge.createProjectKnowledge(fixture.project, fixture.leader, "留下.md", "留下的正文");
         long doomed = knowledge.createProjectKnowledge(fixture.project, fixture.leader, "删掉.md", "删掉的正文");
+        processPendingKnowledge(ingestion, jdbc);
         assertThat(knowledge.search(fixture.project, fixture.leader, null, query, 10)).hasSize(2);
 
         knowledge.deleteProjectKnowledge(fixture.project, fixture.leader, doomed);
@@ -205,8 +213,8 @@ class KnowledgeServiceTest extends PostgresTestBase {
                 fixture.project, fixture.leader, attachment)))
                 .isEqualTo(HttpStatus.CONFLICT);
         assertThat(documents.findByProjectIdAndId(fixture.project, attachment)).isPresent();
-        assertThat(chunks.findByProjectIdAndDocumentIdOrderBySeqAsc(fixture.project, attachment))
-                .isNotEmpty();
+        assertThat(knowledge.document(fixture.project, fixture.leader, attachment).status())
+                .isEqualTo(KnowledgeStatus.PENDING);
 
         // 提升出来的副本是公共知识，删它不碰原附件。
         long promoted = knowledge.promoteToProjectKnowledge(fixture.project, fixture.leader, attachment);

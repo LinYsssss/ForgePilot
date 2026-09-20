@@ -30,6 +30,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -276,10 +277,10 @@ class AiGatewayTest extends PostgresTestBase {
     // -------------------------------------------------------------- embeddings
 
     @Test
-    void embedReturnsOneVectorPerInputAndRecordsTheCallersModel() {
+    void embedReordersVectorsByIndexAndRecordsTheCallersModel() {
         Fixture fixture = new Fixture();
         BEHAVIOUR.set(exchange -> respond(exchange, 200,
-                "{\"data\":[{\"embedding\":[0.5,-0.25]},{\"embedding\":[0.125,0.0625]}],"
+                "{\"data\":[{\"index\":1,\"embedding\":[0.125,0.0625]},{\"index\":0,\"embedding\":[0.5,-0.25]}],"
                         + "\"usage\":{\"prompt_tokens\":4,\"total_tokens\":4}}"));
 
         List<float[]> vectors = gateway.embed(List.of("first", "second"), EMBEDDING_MODEL,
@@ -317,6 +318,87 @@ class AiGatewayTest extends PostgresTestBase {
                 .singleElement()
                 .satisfies(attempt ->
                         assertThat(attempt.getError()).isEqualTo("the answer carried 1 embeddings for 2 inputs"));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"", "null", "0", "-1", "2", "0.5", "2147483648", "\"1\""})
+    void embedRejectsMissingDuplicateAndInvalidIndexes(String index) {
+        Fixture fixture = new Fixture();
+        String field = index.isEmpty() ? "" : "\"index\":" + index + ",";
+        BEHAVIOUR.set(exchange -> respond(exchange, 200,
+                "{\"data\":[{\"index\":0,\"embedding\":[0.5]}, {" + field + "\"embedding\":[0.25]}]}"));
+
+        assertThatThrownBy(() -> gateway.embed(List.of("first", "second"), EMBEDDING_MODEL,
+                AiCallContext.ofProject(fixture.project))).isInstanceOf(ApiException.class);
+
+        assertThat(REQUESTS).hasValue(1);
+        assertThat(callLogs.findByProjectIdOrderByIdAsc(fixture.project)).singleElement()
+                .satisfies(attempt -> assertThat(attempt.getStatus()).isEqualTo(AiCallStatus.FAILED));
+    }
+
+    @Test
+    void anOversizedChatPromptIsRejectedBeforeAnyHttpAttempt() {
+        Fixture fixture = new Fixture();
+        assertThatThrownBy(() -> gateway.chat("x".repeat(gateway.promptCharBudget() + 1), null,
+                AiUseCase.REVIEW, fixture.revisionContext()))
+                .isInstanceOfSatisfying(ApiException.class,
+                        failure -> assertThat(failure.getCode()).isEqualTo("ai_prompt_too_large"));
+        assertThat(REQUESTS).hasValue(0);
+        assertThat(callLogs.findByProjectIdOrderByIdAsc(fixture.project)).isEmpty();
+    }
+
+    @Test
+    void everyAttemptChecksOwnershipAndALostLeasePreventsTheRetry() {
+        Fixture fixture = new Fixture();
+        AtomicInteger checks = new AtomicInteger();
+        BEHAVIOUR.set(exchange -> respond(exchange, 503, "{}"));
+
+        assertThatThrownBy(() -> gateway.chat("prompt", null, AiUseCase.REVIEW, fixture.revisionContext(), () -> {
+            if (checks.incrementAndGet() == 2) {
+                throw new IllegalStateException("lease replaced");
+            }
+        })).isInstanceOf(IllegalStateException.class).hasMessage("lease replaced");
+
+        assertThat(checks).hasValue(2);
+        assertThat(REQUESTS).hasValue(1);
+        assertThat(callLogs.findByProjectIdOrderByIdAsc(fixture.project)).hasSize(1);
+    }
+
+    @Test
+    void embeddingRetriesAlsoCheckOwnership() {
+        Fixture fixture = new Fixture();
+        AtomicInteger checks = new AtomicInteger();
+        BEHAVIOUR.set(exchange -> respond(exchange, 503, "{}"));
+
+        assertThatThrownBy(() -> gateway.embed(List.of("query"), EMBEDDING_MODEL,
+                fixture.revisionContext(), checks::incrementAndGet)).isInstanceOf(ApiException.class);
+
+        assertThat(checks).hasValue(2);
+        assertThat(REQUESTS).hasValue(2);
+    }
+
+    @Test
+    void reviewChatFailuresAndRecallEmbeddingsCarryTheExistingReviewId() {
+        Fixture fixture = new Fixture();
+        AiCallContext context = fixture.reviewContext();
+        BEHAVIOUR.set(exchange -> respond(exchange, 200, chatAnswer("done")));
+        gateway.chat("prompt", null, AiUseCase.REVIEW, context);
+        BEHAVIOUR.set(exchange -> respond(exchange, 400, "{}"));
+        assertThatThrownBy(() -> gateway.chat("prompt", null, AiUseCase.REVIEW, context))
+                .isInstanceOf(ApiException.class);
+        BEHAVIOUR.set(exchange -> respond(exchange, 200, "{\"data\":[{\"index\":0,\"embedding\":[0.5]}]}"));
+        gateway.embed(List.of("query"), EMBEDDING_MODEL, context);
+
+        assertThat(callLogs.findByProjectIdOrderByIdAsc(fixture.project)).hasSize(3).allSatisfy(attempt -> {
+            assertThat(attempt.getReviewId()).isEqualTo(context.reviewId());
+            assertThat(attempt.getRequirementId()).isEqualTo(fixture.requirement);
+            assertThat(attempt.getRequirementRevisionId()).isEqualTo(fixture.revision);
+        });
+        Fixture other = new Fixture();
+        AiCallContext wrongProject = AiCallContext.ofReview(other.project, context.reviewId(), null, null);
+        assertThatThrownBy(() -> callLogs.saveAndFlush(AiCallLog.failure(wrongProject, AiUseCase.REVIEW,
+                CHAT_MODEL, 1, AiCallStatus.FAILED, "HTTP 400"))).isInstanceOf(DataIntegrityViolationException.class);
+        assertThat(callLogs.findByProjectIdOrderByIdAsc(other.project)).isEmpty();
     }
 
     // ------------------------------------------------------------- the payload
@@ -425,6 +507,26 @@ class AiGatewayTest extends PostgresTestBase {
                     "insert into requirement_revision (project_id, requirement_id, seq, title, created_by) "
                             + "values (?, ?, 1, 'title', ?) returning id",
                     Long.class, project, requirement, owner);
+        }
+
+        private AiCallContext reviewContext() {
+            long repository = jdbc.queryForObject("""
+                    insert into scm_repository (project_id, provider, instance_identity, external_id,
+                        api_base, encrypted_token, encrypted_secret)
+                    values (?, 'GITHUB', ?, 'repo', 'http://127.0.0.1', 'x', 'y') returning id
+                    """, Long.class, project, "ai-host-" + project);
+            long pr = jdbc.queryForObject("""
+                    insert into pull_request (project_id, repository_id, external_number, base_sha,
+                        head_sha, review_input_fingerprint, changed_files, requirement_id,
+                        author_external_user_id, author_username)
+                    values (?, ?, 1, 'base', 'head', 'fingerprint', '[]'::jsonb, ?, '42', 'tester') returning id
+                    """, Long.class, project, repository, requirement);
+            long review = jdbc.queryForObject("""
+                    insert into review (project_id, pull_request_id, head_sha, review_input_fingerprint,
+                        requirement_id, requirement_revision_id, status)
+                    values (?, ?, 'head', 'fingerprint', ?, ?, 'COMPLETED') returning id
+                    """, Long.class, project, pr, requirement, revision);
+            return AiCallContext.ofReview(project, review, requirement, revision);
         }
 
         private AiCallContext revisionContext() {

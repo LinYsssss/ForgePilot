@@ -1,6 +1,11 @@
 spring:
   application:
     name: forgepilot-backend
+  task:
+    scheduling:
+      pool:
+        # Serial document embedding must not delay review lease reconciliation.
+        size: 2
   datasource:
     url: ${FORGEPILOT_DB_URL:jdbc:postgresql://localhost:5432/forgepilot}
     username: ${FORGEPILOT_DB_USERNAME:forgepilot}
@@ -52,6 +57,7 @@ forgepilot:
     timeout: ${FORGEPILOT_AI_TIMEOUT:120s}
     prompt-char-budget: ${FORGEPILOT_AI_PROMPT_CHAR_BUDGET:60000}
   knowledge:
+    ingestion-interval-ms: 1000
     embedding:
       provider: ${FORGEPILOT_KNOWLEDGE_EMBEDDING_PROVIDER:}
       model: ${FORGEPILOT_KNOWLEDGE_EMBEDDING_MODEL:}
