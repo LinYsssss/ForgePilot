@@ -36,7 +36,7 @@ thesis-ready result without overstating what the run measured.
 - [x] Frozen evaluation files are byte-for-byte untouched in the Git diff.
 - [x] Redundant tracked and temporary copies are removed only after the compact
   artifact and thesis text pass consistency checks.
-- [ ] Git working tree is clean and local `main` matches `origin/main` after
+- [x] Git working tree is clean and local `main` matches `origin/main` after
   task archive and journal recording.
 
 ## Notes
