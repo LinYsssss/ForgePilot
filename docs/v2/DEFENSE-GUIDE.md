@@ -110,7 +110,26 @@ Compare the resulting `formal-summary.json` and per-arm score files with the pre
 
 State one more scope boundary honestly, because the arm names invite a stronger reading than the experiment supports. The third arm supplies **every knowledge file of the case verbatim** — `run_development.py` reads them from the case fixture on disk and renders them all into the prompt. It performs no embedding call, no TopK retrieval, and never touches the running application. So the measured effect is *"project knowledge in context helps the model find requirement violations"*, **not** *"ForgePilot's pgvector retrieval helps"*. The retrieval path is a product capability with its own tests; it is not what these numbers evaluate. Claiming otherwise would over-read the experiment.
 
-## 5. Secret and cleanup rules
+## 5. Production revalidation evidence
+
+The deployed `4121cea` application was revalidated serially against 15 existing
+real GitHub PR snapshots. All 15 Reviews completed; all 45 AI calls succeeded
+and referenced the correct Review ID; all PR head, input-fingerprint and
+requirement-revision snapshots matched. This is operational reliability and
+traceability evidence, not a model-accuracy evaluation.
+
+The thesis-ready narrative and compact per-case CSV are under
+[`docs/thesis/`](../thesis/README.md). Recompute every reported aggregate without
+database, SCM or model credentials:
+
+```bash
+python3 docs/thesis/verify-production-revalidation.py
+```
+
+Do not combine its 100% completion rate with the formal evaluation's precision
+or recall. The production run did not independently adjudicate its new Findings.
+
+## 6. Secret and cleanup rules
 
 - `.env`, the private corpus, and formal runtime outputs are ignored by Git.
 - The freeze stores only `apiKeyPresent: true/false`, never a key or authorization header.

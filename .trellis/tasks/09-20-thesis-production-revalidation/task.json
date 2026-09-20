@@ -1,0 +1,32 @@
+{
+  "id": "thesis-production-revalidation",
+  "name": "thesis-production-revalidation",
+  "title": "Thesis-ready production revalidation results",
+  "description": "Convert production PR revalidation data into thesis-ready, reproducible evidence and remove redundant copies.",
+  "status": "in_progress",
+  "dev_type": "docs",
+  "scope": "thesis-evidence",
+  "package": null,
+  "priority": "P2",
+  "creator": "LinYsssss",
+  "assignee": "LinYsssss",
+  "createdAt": "2026-09-20",
+  "completedAt": null,
+  "branch": null,
+  "base_branch": "main",
+  "worktree_path": null,
+  "commit": null,
+  "pr_url": null,
+  "subtasks": [],
+  "children": [],
+  "parent": null,
+  "relatedFiles": [],
+  "notes": "User explicitly authorized writing, checking, pushing, and redundant-artifact cleanup on 2026-09-20.",
+  "meta": {
+    "source_deployment_commit": "4121cea",
+    "source_reviews": "17-31",
+    "dataset": "docs/thesis/production-revalidation-20260920.csv",
+    "dataset_sha256": "6bfd4a53c162086f38f3e280716be8b2f8ad1953091ddb343037c3790e691560",
+    "verification_status": "passed_recompute_links_freeze_and_cleanup"
+  }
+}

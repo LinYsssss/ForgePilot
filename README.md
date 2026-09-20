@@ -29,7 +29,12 @@ ForgePilot 是一个面向软件研发流程的轻量级 AI 研发协作与代�
 | 知识 | PostgreSQL 15 + pgvector，按 `project_id` 与当前 Requirement 双重硬过滤 |
 | 评测 | 三臂对照实验，holdout 只跑一次 |
 
-验证使用 Testcontainers 真实 PostgreSQL 15 + pgvector。2026-09-08 提交 `746e40b` 的 CI 后端全套、前端 lint / typecheck / test / build、评测契约及两次空库启动全部通过。该版本已部署至 [yasinlin.com](https://yasinlin.com)，V14 迁移、数据保留、容器健康和公网资源核对通过。完整结果及待执行的人工验收见 [测试报告](docs/deliverables/TEST-REPORT.html)，问题与改动取舍见 [代码审查记录](.trellis/tasks/archive/2026-09/09-07-review-collaboration/code-review.md)，升级证据见 [部署记录](.trellis/tasks/archive/2026-09/09-07-review-collaboration/deployment.md)。
+验证使用 Testcontainers 真实 PostgreSQL 15 + pgvector。2026-09-20 部署版本
+`4121cea` 的后端全套 416 项测试、前端 lint / typecheck / build 与 63 项测试全部
+通过，现有 PostgreSQL 数据和 V14 schema 保留。部署后 15 个真实 GitHub PR
+快照全部完成复验，45 次 AI 调用全部成功并关联到对应 Review。论文引用口径、
+逐例数据和复算脚本见[生产复验结果](docs/thesis/PRODUCTION-REVALIDATION.md)，
+正式三臂评测仍使用下文所述的不可变证据。
 
 ## 从这里开始
 
@@ -39,6 +44,7 @@ ForgePilot 是一个面向软件研发流程的轻量级 AI 研发协作与代�
 3. docs/v2/ARCHITECTURE.md  模块边界、数据模型、流程契约与运行边界
 4. docs/v2/API.md           账户、成员、SCM 身份与评审协作接口契约
 5. docs/v2/DEFENSE-GUIDE.md 部署、构建闸门与评测复现
+6. docs/thesis/README.md     论文可引用结果、紧凑数据与复算脚本
 ```
 
 ## 仓库结构
@@ -48,6 +54,7 @@ backend/       Spring Boot 模块化单体，9 个业务包 / 21 张表 / 14 个
 frontend/      Vue 3 + TypeScript + Vite 前端，6 个一级导航 / 11 条产品路由
 evaluation/    评测工具链、确定性打分器与冻结配置
 docs/v2/       产品与架构的唯一事实源
+docs/thesis/   论文引用口径、紧凑结果数据与复算脚本
 scripts/       空卷冷启动冒烟脚本
 .trellis/      任务计划与工程规范
 ```

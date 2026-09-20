@@ -70,10 +70,12 @@ run.
 
 ## Evidence
 
-- [production-revalidation-results.json](production-revalidation-results.json)
-  contains the persisted progress map and all 15 Review API responses.
-- Local restartable driver and individual response files remain under
-  `/tmp/forgepilot-call-chain-revalidation-20260920/`.
+- The [thesis evidence](../../../../../docs/thesis/PRODUCTION-REVALIDATION.md)
+  provides a compact per-case CSV and a dependency-free recomputation check.
+  It retains identifiers, counts, latency, token use, coverage and consistency
+  flags without duplicating PR patches, knowledge excerpts or model prose.
+- The temporary restartable driver, browser state and individual API response
+  copies were removed after the compact dataset passed its consistency check.
 - The post-run verified backup is recorded in [deployment.md](deployment.md).
 
 This was production operational verification of the deployed call chain. It is

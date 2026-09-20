@@ -18,7 +18,7 @@ ForgePilot 是围绕需求驱动 Pull Request 审查建设的轻量级 AI 研发
 
 ## 当前形态
 
-后端 9 个顶层包、21 张业务表、14 个 Flyway 迁移；前端 6 个一级导航、11 条产品路由（含非一级 `/account`）。最新验证记录见 [测试报告](../deliverables/TEST-REPORT.html)。
+后端 9 个顶层包、21 张业务表、14 个 Flyway 迁移；前端 6 个一级导航、11 条产品路由（含非一级 `/account`）。自动化测试策略见[测试报告](../deliverables/TEST-REPORT.html)；2026-09-20 的生产调用链数据、论文引用口径和复算脚本见[论文材料](../thesis/README.md)。
 
 已交付能力：
 
