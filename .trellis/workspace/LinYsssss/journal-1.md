@@ -483,3 +483,27 @@ The unrelated planning task `08-30-scm-pr-decision-actions` was left untouched.
 ### Next Steps
 
 - The requested deployment and review exercise are complete. Fixture repairs remain a separate development follow-up on the existing PR branches.
+
+
+## Session 16: Deploy and revalidate audited call chain
+
+**Date**: 2026-09-20
+**Task**: Deploy and revalidate audited call chain
+**Branch**: `main`
+
+### Summary
+
+Completed and deployed the seven minimal call-chain fixes, preserved PostgreSQL with verified backups, serially revalidated all 15 real PR snapshots through new requirement revisions, confirmed 45 successful AI calls linked to Reviews 17-31, archived the task, and preserved historical reviews and formal evaluation assets.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `631fb51` | (see git log) |
+| `eb1e7e3` | (see git log) |
+| `4121cea` | (see git log) |
+| `2c1a4af` | (see git log) |
+
+### Status
+
+[OK] **Completed**

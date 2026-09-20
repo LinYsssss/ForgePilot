@@ -8,8 +8,8 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 15
-- **Last Active**: 2026-09-12
+- **Total Sessions**: 16
+- **Last Active**: 2026-09-20
 <!-- @@@/auto:current-status -->
 
 ---
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~485 | Active |
+| `journal-1.md` | ~509 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 16 | 2026-09-20 | Deploy and revalidate audited call chain | `631fb51`, `eb1e7e3`, `4121cea`, `2c1a4af` | `main` |
 | 15 | 2026-09-12 | Deploy concurrency fixes and review 15 PRs sequentially | `3d00211`, `6ac67cb`, `7ee2070` | `main` |
 | 14 | 2026-09-08 | Complete review collaboration and deploy V14 | `746e40b`, `989403c` | `main` |
 | 13 | 2026-08-25 | 三类资源的删除语义 T-005/T-006/T-007（D022/V10） | `df624c6` | `feat/member-directory-scm-identities` |
