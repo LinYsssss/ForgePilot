@@ -193,7 +193,7 @@ class ChangedFileBatcherTest {
     void aBatchProducesEvidenceAndNeverAVerdict() {
         Plan plan = plan(List.of(file("a.txt", 3)));
         String claimsAVerdict = "{\"findings\":[],\"acVerdicts\":[{\"acId\":11,\"verdict\":\"COVERED\"}],"
-                + "\"acEvidence\":[{\"acId\":11,\"path\":\"a.txt\",\"line\":2,\"excerpt\":\"+added 0\"}]}";
+                + "\"acEvidence\":[{\"acId\":11,\"path\":\"a.txt\",\"line\":2,\"excerpt\":\"added 0\"}]}";
 
         BatchPhase phase = batcher.run(plan, context(), new ScriptedReviewer().answers(1, claimsAVerdict));
 
@@ -204,6 +204,18 @@ class ChangedFileBatcherTest {
         assertThat(validator.validate("{\"acVerdicts\":[],\"findings\":[]}",
                         answer -> answer, context()).output().acVerdicts())
                 .containsExactly(new ReviewOutput.AcResult(11L, "AC-1", AcVerdict.NOT_FOUND));
+    }
+
+    @Test
+    void inventedAcEvidenceIsDroppedAndItsWrongLineIsNeverTrusted() {
+        Plan plan = plan(List.of(file("a.txt", 3)));
+        String answer = batchAnswer("",
+                "{\"acId\":11,\"path\":\"a.txt\",\"line\":99,\"excerpt\":\"invented source\"}");
+
+        BatchPhase phase = batcher.run(plan, context(), new ScriptedReviewer().answers(1, answer));
+
+        assertThat(phase.evidence()).isEmpty();
+        assertThat(phase.warnings()).anyMatch(warning -> warning.contains("does not occur"));
     }
 
     @Test
@@ -245,7 +257,7 @@ class ChangedFileBatcherTest {
 
     private static String finding(String path, int line) {
         return "{\"type\":\"CODE_QUALITY\",\"path\":\"" + path + "\",\"line\":" + line
-                + ",\"category\":\"style\",\"evidence\":\"+added 0\"}";
+                + ",\"category\":\"style\",\"evidence\":\"added 0\"}";
     }
 
     /** Answers by batch index, so a test can make exactly one batch misbehave. */

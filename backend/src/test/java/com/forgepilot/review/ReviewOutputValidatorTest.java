@@ -22,9 +22,8 @@ import tools.jackson.databind.json.JsonMapper;
  *
  * <p>The hash tests are the ones that matter most: they are the only evidence
  * that the suppression mechanism keys on source and requirements rather than on
- * the model's wording (PRD R4). They are written against the whole validator
- * rather than against {@code FindingKeys} directly, so that hashing the raw
- * answer — the obvious way to break R4 — would fail them.
+ * the model's wording (PRD R4). Tests whose excerpts exist in the patch exercise
+ * the whole validator; normalization itself is tested at {@code FindingKeys}.
  */
 class ReviewOutputValidatorTest {
 
@@ -120,23 +119,69 @@ class ReviewOutputValidatorTest {
     }
 
     @Test
-    void anUnverifiableLineIsDroppedAndTheFindingSurvivesWithoutIt() {
+    void aUniqueSourceExcerptCorrectsAnUnverifiableModelLine() {
         ReviewOutput output = valid("", finding("CODE_QUALITY", FILE, 99, "class A {}", ""));
 
         assertThat(output.findings()).hasSize(1);
         assertThat(output.findings().getFirst().line())
-                .as("3.5 forbids emitting a line the patch cannot confirm")
-                .isNull();
+                .as("the verified quotation, not the model's guess, owns the line")
+                .isEqualTo(3);
+        assertThat(output.warnings()).anyMatch(warning -> warning.contains("corrected") && warning.contains("3"));
     }
 
     @Test
-    void aLineTheHunkCoversIsKeptExactly() {
-        assertThat(valid("", finding("CODE_QUALITY", FILE, 3, "class A {}", ""))
-                .findings().getFirst().line()).isEqualTo(3);
-        assertThat(valid("", finding("CODE_QUALITY", FILE, 4, "class A {}", ""))
-                .findings().getFirst().line()).isEqualTo(4);
-        assertThat(valid("", finding("CODE_QUALITY", FILE, 5, "class A {}", ""))
-                .findings().getFirst().line()).isNull();
+    void anInventedSourceExcerptIsDroppedRatherThanHashed() {
+        ReviewOutput output = valid("", finding("CODE_QUALITY", FILE, 3, "class Invented {}", ""));
+
+        assertThat(output.findings()).isEmpty();
+        assertThat(output.warnings()).anyMatch(warning -> warning.contains("does not occur"));
+    }
+
+    @Test
+    void aRepeatedExcerptNeedsItsReportedLineToDisambiguate() {
+        ChangedFile repeated = new ChangedFile(FILE, "MODIFIED", """
+                @@ -1,2 +1,2 @@
+                 class A {}
+                 return value;
+                @@ -20,2 +20,2 @@
+                 class B {}
+                 return value;
+                """);
+        Context repeatedContext = new Context(null, null, null, List.of(), Map.of(), List.of(repeated));
+
+        FindingCandidate disambiguated = validator.validate(answer("",
+                finding("CODE_QUALITY", FILE, 2, "return value;", "")), NO_REPAIR, repeatedContext)
+                .output().findings().getFirst();
+        FindingCandidate ambiguous = validator.validate(answer("",
+                finding("CODE_QUALITY", FILE, 99, "return value;", "")), NO_REPAIR, repeatedContext)
+                .output().findings().getFirst();
+
+        assertThat(disambiguated.line()).isEqualTo(2);
+        assertThat(ambiguous.line()).isNull();
+    }
+
+    @Test
+    void deletedTextMetadataTruncationMarkersAndCrossHunkQuotesAreRejected() {
+        ChangedFile separated = new ChangedFile(FILE, "MODIFIED", """
+                @@ -1,2 +1,2 @@
+                -old secret
+                +new safe
+                 tail
+                @@ -10,1 +10,1 @@
+                -next old
+                +next safe
+                [patch truncated]
+                """);
+        Context separatedContext = new Context(null, null, null, List.of(), Map.of(), List.of(separated));
+        String findings = finding("CODE_QUALITY", FILE, 1, "old secret", "") + ","
+                + finding("CODE_QUALITY", FILE, 1, "@@ -1,2 +1,2 @@", "") + ","
+                + finding("CODE_QUALITY", FILE, 1, "[patch truncated]", "") + ","
+                + finding("CODE_QUALITY", FILE, 1, "new safe\\ntail\\nnext safe", "");
+
+        ReviewOutput output = validator.validate(answer("", findings), NO_REPAIR, separatedContext).output();
+
+        assertThat(output.findings()).isEmpty();
+        assertThat(output.warnings()).filteredOn(warning -> warning.contains("does not occur")).hasSize(4);
     }
 
     @Test
@@ -232,13 +277,8 @@ class ReviewOutputValidatorTest {
 
     @Test
     void oneChangedByteOfSourceEvidenceChangesTheEvidenceHash() {
-        FindingCandidate before = valid("", finding("CODE_QUALITY", FILE, 3, "class A {}", "")).findings().getFirst();
-        FindingCandidate after = valid("", finding("CODE_QUALITY", FILE, 3, "class B {}", "")).findings().getFirst();
-
-        assertThat(after.evidenceHash()).isNotEqualTo(before.evidenceHash());
-        assertThat(after.findingKey())
-                .as("the key locates the finding; the evidence hash decides whether it may be inherited")
-                .isEqualTo(before.findingKey());
+        assertThat(FindingKeys.evidenceHash("class B {}"))
+                .isNotEqualTo(FindingKeys.evidenceHash("class A {}"));
     }
 
     @Test

@@ -26,7 +26,7 @@ import tools.jackson.databind.ObjectMapper;
 
 /**
  * PRD 4 所定义的需求质量检查：确定性规则，
- * 加上<em>一次</em>结构化 AI 调用，并归属到本次检查所针对的那个修订。
+ * 加上预算内<em>一次</em>结构化 AI 调用，并归属到本次检查所针对的那个修订。
  *
  * <p>结果是建议。这里既不读也不写 {@code requirement.status}——PRD 5 排除了
  * NEEDS_IMPROVEMENT 这种状态，也排除了自动提升为 READY，因此一个会改动状态的
@@ -49,7 +49,7 @@ class RequirementQualityService {
      * 一份存下来的报告只有对着产生它的那个版本才可解读——这与把确定性
      * 规则版本放进 {@code basis_hash} 是同一个道理。
      */
-    static final String QUALITY_VERSION = "quality-1";
+    static final String QUALITY_VERSION = "quality-2";
 
     /**
      * 一个常量，而不是模板注册表（ARCHITECTURE.md 4）。最后一段对应
@@ -132,12 +132,14 @@ class RequirementQualityService {
                 .findByProjectIdAndRequirementRevisionIdOrderBySortOrderAsc(projectId, revision.getId());
 
         String prompt = prompt(revision, acceptanceCriteria);
+        int promptLength = promptLength(prompt);
         // 规则先跑，且不依赖调用是否成功，因此 provider 故障不会让确定性的
         // 那一半在下次尝试时付出任何代价。
-        List<QualityReport.RuleFinding> rules = applyRules(revision, acceptanceCriteria, prompt);
-        // 只有一次调用。没有会话、没有第二轮、没有修复轮：
-        // ARCHITECTURE.md 3.5 允许的那一次格式修复属于 review 的预算。
-        QualityReport.AiAssessment assessment = parse(ai.chat(prompt, SCHEMA,
+        List<QualityReport.RuleFinding> rules = applyRules(revision, acceptanceCriteria, promptLength);
+        boolean overBudget = promptLength > promptCharBudget;
+        // 预算内只有一次调用。没有会话、第二轮或修复轮；超预算则保留
+        // 确定性结果并显式跳过 AI，避免网关把整次检查变成失败。
+        QualityReport.AiAssessment assessment = overBudget ? null : parse(ai.chat(prompt, SCHEMA,
                 AiUseCase.REQUIREMENT_QUALITY,
                 AiCallContext.ofRevision(projectId, requirementId, revision.getId())));
 
@@ -154,7 +156,7 @@ class RequirementQualityService {
      * 下游故障；参见 {@link QualityReport.Rule}。
      */
     private List<QualityReport.RuleFinding> applyRules(RequirementRevision revision,
-            List<AcceptanceCriterion> acceptanceCriteria, String prompt) {
+            List<AcceptanceCriterion> acceptanceCriteria, int promptLength) {
         List<QualityReport.RuleFinding> found = new ArrayList<>();
         if (isBlank(revision.getBackground()) && isBlank(revision.getDescription())) {
             found.add(new QualityReport.RuleFinding(QualityReport.Rule.MISSING_DESCRIPTION, null,
@@ -172,17 +174,19 @@ class RequirementQualityService {
                                 + ", so the same problem will be reported twice under two keys."));
             }
         }
-        // 网关是先掩码凭据形状、再裁剪到预算的，因此决定是否截断的长度是
-        // 掩码之后的长度。向 sanitizer 索要一个无限预算，得到的正是它即将
-        // 拿去裁剪的那个字符串。
-        int lengthSent = PromptSanitizer.sanitize(prompt, Integer.MAX_VALUE).length();
-        if (lengthSent > promptCharBudget) {
+        // 网关会先掩码凭据形状，再执行预算检查，因此这里也用脱敏后的长度
+        // 决定是否跳过 AI。向 sanitizer 索要无限预算，只做脱敏而不做裁剪。
+        if (promptLength > promptCharBudget) {
             found.add(new QualityReport.RuleFinding(QualityReport.Rule.PROMPT_BUDGET_EXCEEDED, null,
-                    "This requirement makes a " + lengthSent + " character prompt, above the "
-                            + promptCharBudget + " character budget, so its tail is cut before any "
-                            + "AI analysis — including this one — reads it."));
+                    "This requirement makes a " + promptLength + " character prompt, above the "
+                            + promptCharBudget + " character budget. AI analysis was skipped; the "
+                            + "prompt was not truncated and sent for partial analysis."));
         }
         return found;
+    }
+
+    private static int promptLength(String prompt) {
+        return PromptSanitizer.sanitize(prompt, Integer.MAX_VALUE).length();
     }
 
     private static boolean isBlank(String value) {

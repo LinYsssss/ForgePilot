@@ -5,6 +5,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.UnaryOperator;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import com.forgepilot.review.ReviewOutput.AcResult;
 import com.forgepilot.review.ReviewOutput.FindingCandidate;
@@ -44,6 +46,10 @@ public class ReviewOutputValidator {
      * 这里是模型不遵守时的那道防线。
      */
     private static final int MAX_PROSE = 2000;
+
+    /** A valid unified-diff hunk header, including the optional one-line counts. */
+    private static final Pattern HUNK_HEADER = Pattern.compile(
+            "^@@ -(\\d{1,9})(?:,(\\d{1,9}))? \\+(\\d{1,9})(?:,(\\d{1,9}))? @@.*$");
 
     private final ObjectMapper json;
 
@@ -221,7 +227,14 @@ public class ReviewOutputValidator {
             return null;
         }
 
-        Integer line = verifiedLine(item, file);
+        AnchoredEvidence anchored = anchor(evidence, file);
+        if (anchored == null) {
+            warnings.add("dropped a " + type + " finding for " + path
+                    + ": its source excerpt does not occur on the shown patch's new side");
+            return null;
+        }
+        Integer line = resolvedLine(anchored, integralLineOrNull(item), warnings,
+                "a " + type + " finding for " + path);
         // key 用的是模型给出的原始字符串（在 FindingKeys 里经 normalizeCategory
         // 折叠），落库用的是映射到词表之后的值。两者刻意不同，见 FindingCategory。
         String reportedCategory = stringOrNull(item, "category");
@@ -313,8 +326,17 @@ public class ReviewOutputValidator {
                 warnings.add("dropped AC evidence for criterion " + acId + " in " + path);
                 continue;
             }
+            Integer reportedLine = integralLineOrNull(item);
+            AnchoredEvidence anchored = anchor(excerpt, file);
+            if (anchored == null) {
+                warnings.add("dropped AC evidence for criterion " + acId + " in " + path
+                        + ": its excerpt does not occur on the shown patch's new side");
+                continue;
+            }
             evidence.add(new AcEvidence(criterion.id(), criterion.key(), path,
-                    verifiedLine(item, file), excerpt));
+                    resolvedLine(anchored, reportedLine, warnings,
+                            "AC evidence for criterion " + acId + " in " + path),
+                    excerpt));
         }
         return List.copyOf(evidence);
     }
@@ -351,62 +373,159 @@ public class ReviewOutputValidator {
     }
 
     /**
-     * 模型给出的行号；若 patch 无法确认它则返回 {@code null}。
-     * 3.5 说得很明确：无法核实的行号不予输出。一个看似合理的错误行号
-     * 会把 reviewer 引向错误的位置，而它看起来与正确行号一模一样。
+     * Anchors a verbatim excerpt to source text reconstructed from the patch's new
+     * side. Diff markers are deliberately not source: an added line {@code +return x;}
+     * is indexed as {@code return x;}. Each hunk is searched independently, so a
+     * quotation cannot bridge omitted source between two hunks.
      */
-    private static Integer verifiedLine(JsonNode item, ChangedFile file) {
-        Long line = integralOrNull(item, "line");
-        if (line == null || line < 1 || line > Integer.MAX_VALUE) {
+    private static AnchoredEvidence anchor(String excerpt, ChangedFile file) {
+        if (file.patch() == null) {
             return null;
         }
-        return isOnTheNewSide(file.patch(), line) ? line.intValue() : null;
+        String normalized = normalizeNewlines(excerpt);
+        List<Integer> matches = new ArrayList<>();
+        for (SourceHunk hunk : sourceHunks(file.patch())) {
+            hunk.matchingStartLines(normalized).forEach(line -> {
+                if (!matches.contains(line)) {
+                    matches.add(line);
+                }
+            });
+        }
+        return matches.isEmpty() ? null : new AnchoredEvidence(List.copyOf(matches));
+    }
+
+    private static Integer resolvedLine(AnchoredEvidence anchored, Integer reportedLine,
+            List<String> warnings, String subject) {
+        if (anchored.lines().size() == 1) {
+            Integer actual = anchored.lines().getFirst();
+            if (!actual.equals(reportedLine)) {
+                warnings.add("corrected the line of " + subject + " to " + actual
+                        + " from its verified source excerpt");
+            }
+            return actual;
+        }
+        if (reportedLine != null && anchored.lines().contains(reportedLine)) {
+            return reportedLine;
+        }
+        warnings.add("removed the ambiguous line of " + subject
+                + ": its verified source excerpt occurs at multiple new-side lines");
+        return null;
     }
 
     /**
-     * 遍历一份 unified diff，判断 {@code line} 是否存在于它的新侧。
-     *
-     * <p>没有 patch 的文件——二进制，或超出 provider 自身 diff 上限——
-     * 什么都核实不了，而这是对的：它的内容从来没有被看到过。
-     * 解析不了的内容同样什么都核实不了，因此本遍历看不懂的 diff 形态
-     * 只会损失精确率，而不会凭空编造。
+     * Reconstructs only visible new-side source. A malformed hunk header makes the
+     * patch unverifiable; an incomplete final hunk is still useful because batch
+     * truncation intentionally exposes a line-complete prefix.
      */
-    private static boolean isOnTheNewSide(String patch, long line) {
-        if (patch == null) {
-            return false;
-        }
-        long current = 0;
-        boolean insideHunk = false;
-        for (String row : patch.split("\n", -1)) {
+    private static List<SourceHunk> sourceHunks(String patch) {
+        List<SourceHunk> hunks = new ArrayList<>();
+        List<SourceLine> lines = null;
+        long newLine = 0;
+        long oldRemaining = 0;
+        long newRemaining = 0;
+
+        for (String row : normalizeNewlines(patch).split("\n", -1)) {
             if (row.startsWith("@@")) {
-                current = newSideStart(row);
-                if (current < 0) {
-                    return false;
+                if (lines != null && !lines.isEmpty()) {
+                    hunks.add(new SourceHunk(lines));
                 }
-                insideHunk = true;
-            } else if (insideHunk && (row.startsWith("+") || row.startsWith(" "))) {
-                if (current == line) {
-                    return true;
+                Matcher header = HUNK_HEADER.matcher(row);
+                if (!header.matches()) {
+                    return List.of();
                 }
-                current++;
+                try {
+                    oldRemaining = count(header.group(2));
+                    newLine = Long.parseLong(header.group(3));
+                    newRemaining = count(header.group(4));
+                } catch (NumberFormatException invalidHeader) {
+                    return List.of();
+                }
+                lines = new ArrayList<>();
+                continue;
             }
-            // 被删除的行以及 "\ No newline at end of file" 标记在新侧不占任何行，
-            // 因此它们不推进计数器。
+            if (lines == null || (oldRemaining == 0 && newRemaining == 0)) {
+                continue;
+            }
+            if (row.startsWith(" ") && oldRemaining > 0 && newRemaining > 0) {
+                addSourceLine(lines, newLine++, row.substring(1));
+                oldRemaining--;
+                newRemaining--;
+            } else if (row.startsWith("+") && newRemaining > 0) {
+                addSourceLine(lines, newLine++, row.substring(1));
+                newRemaining--;
+            } else if (row.startsWith("-") && oldRemaining > 0) {
+                oldRemaining--;
+            } else if (!row.startsWith("\\")) {
+                // A line-complete truncated patch ends with an annotation rather
+                // than pretending the remaining hunk exists.
+                oldRemaining = 0;
+                newRemaining = 0;
+            }
         }
-        return false;
+        if (lines != null && !lines.isEmpty()) {
+            hunks.add(new SourceHunk(lines));
+        }
+        return List.copyOf(hunks);
     }
 
-    private static long newSideStart(String hunkHeader) {
-        int plus = hunkHeader.indexOf('+');
-        if (plus < 0) {
-            return -1;
+    private static long count(String count) {
+        return count == null ? 1 : Long.parseLong(count);
+    }
+
+    private static void addSourceLine(List<SourceLine> lines, long number, String text) {
+        if (number >= 1 && number <= Integer.MAX_VALUE) {
+            lines.add(new SourceLine((int) number, text));
         }
-        int end = plus + 1;
-        while (end < hunkHeader.length() && Character.isDigit(hunkHeader.charAt(end))) {
-            end++;
+    }
+
+    private static String normalizeNewlines(String value) {
+        return value.replace("\r\n", "\n").replace('\r', '\n');
+    }
+
+    private static Integer integralLineOrNull(JsonNode item) {
+        Long line = integralOrNull(item, "line");
+        return line == null || line < 1 || line > Integer.MAX_VALUE ? null : line.intValue();
+    }
+
+    private record AnchoredEvidence(List<Integer> lines) {
+    }
+
+    private record SourceLine(int number, String text) {
+    }
+
+    private record SourceHunk(List<SourceLine> lines) {
+
+        private SourceHunk {
+            lines = List.copyOf(lines);
         }
-        int digits = end - plus - 1;
-        return digits < 1 || digits > 9 ? -1 : Long.parseLong(hunkHeader.substring(plus + 1, end));
+
+        List<Integer> matchingStartLines(String excerpt) {
+            StringBuilder source = new StringBuilder();
+            List<Integer> offsets = new ArrayList<>();
+            for (SourceLine line : lines) {
+                if (!source.isEmpty()) {
+                    source.append('\n');
+                }
+                offsets.add(source.length());
+                source.append(line.text());
+            }
+
+            List<Integer> matches = new ArrayList<>();
+            int from = 0;
+            while (from <= source.length()) {
+                int match = source.indexOf(excerpt, from);
+                if (match < 0) {
+                    break;
+                }
+                int lineIndex = 0;
+                while (lineIndex + 1 < offsets.size() && offsets.get(lineIndex + 1) <= match) {
+                    lineIndex++;
+                }
+                matches.add(lines.get(lineIndex).number());
+                from = match + 1;
+            }
+            return matches;
+        }
     }
 
     private static String stringOrNull(JsonNode item, String field) {

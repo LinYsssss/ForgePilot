@@ -163,8 +163,8 @@ class RequirementController {
     }
 
     /**
-     * 需求质量检查：确定性规则加一次结构化 AI 调用（API.md）。
-     * 用 POST，因为它会花掉一次 provider 调用并把结果写到当前修订上。
+     * 需求质量检查：确定性规则加预算内一次结构化 AI 调用（API.md）。
+     * 用 POST，因为它会写当前修订，且预算内会花掉一次 provider 调用。
      * 这个答案是建议——本端点从不改动需求状态（PRD 5）。
      */
     @PostMapping("/{requirementId}/quality")

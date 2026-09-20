@@ -80,7 +80,7 @@ class ReviewPipelineIntegrationTest extends PostgresTestBase {
              class Cart {
             +        return total;
              }""";
-    private static final String QUOTED_EVIDENCE = "+        return total;";
+    private static final String QUOTED_EVIDENCE = "        return total;";
     private static final String LATER_PATCH = """
             @@ -1,2 +1,3 @@
              class Cart {
@@ -581,7 +581,7 @@ class ReviewPipelineIntegrationTest extends PostgresTestBase {
      */
     private static String bigPatch() {
         StringBuilder patch = new StringBuilder("@@ -1,1 +1,602 @@\n class Cart {\n")
-                .append(QUOTED_EVIDENCE).append('\n');
+                .append('+').append(QUOTED_EVIDENCE).append('\n');
         for (int line = 0; line < 600; line++) {
             patch.append("+        // filler that exists only to take up budget ").append(line).append('\n');
         }

@@ -5,7 +5,7 @@ import java.util.List;
 
 /**
  * 对某一次修订做一次需求质量检查的结果（API.md）：
- * 先跑确定性规则，再做一次结构化 AI 评估。
+ * 先跑确定性规则，再在预算允许时做一次结构化 AI 评估。
  *
  * <p>结果中点名了具体修订，因为这个结果就属于那次修订。质量结果是
  * <em>建议</em>：这里没有任何东西会改动 {@code requirement.status}，
@@ -47,9 +47,8 @@ public record QualityReport(long requirementId, long revisionId, int revisionSeq
 
         /**
          * 这条需求产生的 Prompt 超过了网关的字符预算（ARCHITECTURE.md 7.2），
-         * 于是 {@code PromptSanitizer} 会在任何模型看到它之前把尾巴切掉。
-         * 把这件事报出来正是要点所在：被截断却仍然“成功作答”，
-         * 就是那种绝不允许的静默截断。
+         * 因此质量检查保留确定性结果、跳过 AI，而不是把截断后的半份需求
+         * 发给模型并让它“成功作答”。
          */
         PROMPT_BUDGET_EXCEEDED
     }
@@ -58,7 +57,7 @@ public record QualityReport(long requirementId, long revisionId, int revisionSeq
     public record RuleFinding(Rule rule, String acKey, String message) {
     }
 
-    /** 唯一那次结构化 AI 回答。{@code issues} 为空列表表示模型没发现问题。 */
+    /** 预算内唯一那次结构化 AI 回答；超预算跳过 AI 时整个字段为 {@code null}。 */
     public record AiAssessment(String summary, List<AiIssue> issues) {
     }
 

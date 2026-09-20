@@ -177,9 +177,8 @@ class RequirementQualityTest extends PostgresTestBase {
     }
 
     /**
-     * {@code PromptSanitizer} cuts to budget without saying so. A requirement that
-     * is analysed from its first 60 000 characters and still answers successfully
-     * is exactly the silent truncation the contract forbids, so it is reported.
+     * A requirement that cannot fit the complete prompt budget keeps deterministic
+     * findings and skips AI rather than analysing a silently truncated prefix.
      */
     @Test
     void aRequirementTooLongForThePromptBudgetIsReportedRatherThanSilentlyCut() {
@@ -193,6 +192,14 @@ class RequirementQualityTest extends PostgresTestBase {
             // The configured budget, not a number this test made up.
             assertThat(finding.message()).contains("60000");
         });
+        assertThat(report.ai()).isNull();
+        verify(ai, never()).chat(any(), any(), any(), any());
+
+        StoredQuality stored = storedQualityOf(fixture.currentRevisionOf(requirement));
+        assertThat(stored.version()).isEqualTo("quality-2");
+        assertThat(json.readTree(stored.json()).path("ai").isNull()).isTrue();
+        assertThat(json.readTree(stored.json()).path("rules").path(0).path("rule").stringValue())
+                .isEqualTo(QualityReport.Rule.PROMPT_BUDGET_EXCEEDED.name());
     }
 
     /** The rules are not always-on: a well-formed requirement trips none of them. */
