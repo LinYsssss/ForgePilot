@@ -117,7 +117,7 @@ public class KnowledgeService {
         KnowledgeDocument original = documents.findByProjectIdAndId(projectId, documentId)
                 .orElseThrow(ApiException::notFound);
         if (original.getSourceType() != KnowledgeSourceType.REQUIREMENT_ATTACHMENT) {
-            throw ApiException.conflict("This document is already project knowledge.");
+            throw ApiException.conflict("该文档已经是项目知识。");
         }
         return documents.save(original.copyAsProjectKnowledge()).getId();
     }
@@ -144,8 +144,7 @@ public class KnowledgeService {
         KnowledgeDocument document = documents.lockByProjectIdAndId(projectId, documentId)
                 .orElseThrow(ApiException::notFound);
         if (document.getSourceType() == KnowledgeSourceType.REQUIREMENT_ATTACHMENT) {
-            throw ApiException.conflict("This document is an attachment of requirement "
-                    + document.getSourceRequirementId() + "; detach it there first.");
+            throw ApiException.conflict("该文档是需求 " + document.getSourceRequirementId() + " 的附件，请先在该需求下解除。");
         }
         int removed = chunks.findByProjectIdAndDocumentIdOrderBySeqAsc(projectId, documentId).size();
         chunks.deleteByProjectIdAndDocumentId(projectId, documentId);
@@ -156,10 +155,22 @@ public class KnowledgeService {
                 "chunks: " + removed);
     }
 
+    /** 有人类操作者的检索：先证明成员身份，再做项目 + 需求双重硬过滤的向量检索。 */
     @Transactional(readOnly = true)
     public List<ChunkSearchRepository.ChunkMatch> search(long projectId, long actorId,
             Long requirementId, float[] query, int limit) {
         access.requireMember(projectId, actorId);
+        return searchAsEngine(projectId, requirementId, query, limit);
+    }
+
+    /**
+     * 给 Review Engine 的检索入口：自动触发的 Review 没有人类操作者，而它要检索的项目
+     * 就是 Review 自己所属的项目，成员校验在这里证明不了任何东西。项目与需求的隔离
+     * 仍由同一条 SQL 硬过滤（ARCHITECTURE.md 2.3）；本方法不暴露给任何 Controller。
+     */
+    @Transactional(readOnly = true)
+    public List<ChunkSearchRepository.ChunkMatch> searchAsEngine(long projectId, Long requirementId,
+            float[] query, int limit) {
         return vectors.search(projectId, requirementId, query, limit);
     }
 

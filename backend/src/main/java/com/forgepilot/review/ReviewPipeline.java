@@ -234,7 +234,7 @@ public class ReviewPipeline {
      */
     private JsonNode snapshotOf(Review review) {
         if (review.getContextSnapshotJson() == null) {
-            throw ApiException.conflict("This review has no immutable input snapshot.");
+            throw ApiException.conflict("该审查没有不可变输入快照。");
         }
         return json.readTree(review.getContextSnapshotJson());
     }
@@ -304,28 +304,12 @@ public class ReviewPipeline {
         float[] vector = ai.embed(List.of(query.toString()), embeddingModel,
                 callContext, heartbeat).getFirst();
         List<KnowledgeExcerpt> recalled = new ArrayList<>();
-        for (ChunkMatch match : knowledge.search(review.getProjectId(), retrievalActor(review),
+        for (ChunkMatch match : knowledge.searchAsEngine(review.getProjectId(),
                 review.getRequirementId(), vector, knowledgeTopK)) {
             recalled.add(new KnowledgeExcerpt(match.id(), match.documentId(), match.id(),
                     match.content(), 1.0d - match.distance()));
         }
         return recalled;
-    }
-
-    /**
-     * 这次检索是拿谁的成员身份去校验的。
-     *
-     * <p>自动触发的 Review 没有人类操作者，而 {@code KnowledgeService.search}
-     * 需要一个——因为它的鉴权是照着 API 调用方写的。这里由项目的 LEADER 顶上：
-     * 每个项目恰好只有一个 LEADER，而检索本身就是项目内限定的，
-     * 因此这个 actor 不改变结果的任何部分——它只是满足了一次引擎本来就轻松通过的
-     * 成员校验。诚实的修法是在 {@code knowledge} 上开一个不需要 actor 的检索入口，
-     * 而那要改的文件超出了当前的改动范围。
-     */
-    private long retrievalActor(Review review) {
-        return jdbc.queryForObject(
-                "select user_id from project_member_role where project_id = ? and role = 'LEADER'",
-                Long.class, review.getProjectId());
     }
 
     /**
@@ -378,10 +362,10 @@ public class ReviewPipeline {
         } catch (RuntimeException failure) {
             if (failure instanceof ApiException api) {
                 throw new ApiException(api.getStatus(), api.getCode(),
-                        "Review " + stage + " failed (" + api.getCode() + ").");
+                        "审查阶段「" + stage + "」失败（" + api.getCode() + "）。");
             }
             throw new ApiException(HttpStatus.INTERNAL_SERVER_ERROR, "review_pipeline_failed",
-                    "Review " + stage + " failed (" + failure.getClass().getSimpleName() + ").");
+                    "审查阶段「" + stage + "」失败（" + failure.getClass().getSimpleName() + "）。");
         }
     }
 

@@ -1,10 +1,15 @@
 package com.forgepilot.scm;
 
+import com.forgepilot.common.ApiException;
 import com.forgepilot.scm.github.GitHubClient;
 import com.forgepilot.scm.gitlab.GitLabClient;
 import org.springframework.stereotype.Service;
 
-/** Minimal bridge from the review decision to the configured SCM provider. */
+/**
+ * 人工决定到 SCM Provider 的最小桥接：按项目仓库的 Provider 把「合并被审查的 SHA」
+ * 交给 GitHub 或 GitLab 客户端。它是 {@code review} 唯一允许触达 {@code scm} 写操作的门面，
+ * {@code scm} 自身仍不依赖 {@code review}（ARCHITECTURE.md 1.3）。
+ */
 @Service
 class ScmPullRequestDecisionService implements PullRequestDecisionActions {
 
@@ -24,9 +29,9 @@ class ScmPullRequestDecisionService implements PullRequestDecisionActions {
     @Override
     public void merge(long projectId, long pullRequestId, String expectedHeadSha) {
         PullRequest pullRequest = pullRequests.findByProjectIdAndId(projectId, pullRequestId)
-                .orElseThrow();
+                .orElseThrow(ApiException::notFound);
         ScmRepository repository = repositories.findByProjectIdAndId(projectId, pullRequest.getRepositoryId())
-                .orElseThrow();
+                .orElseThrow(ApiException::notFound);
         if (repository.getProvider() == ScmProvider.GITHUB) {
             github.merge(repository, pullRequest.getExternalNumber(), expectedHeadSha);
         } else {
