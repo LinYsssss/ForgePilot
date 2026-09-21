@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
+/** 项目内的身份绑定端点（API.md「项目 SCM 身份绑定」）：可选身份、绑定历史、绑定、审批、撤销。 */
 @RestController
 @RequestMapping("/api/projects/{projectId}/scm")
 class ScmBindingController {

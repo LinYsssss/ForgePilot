@@ -18,7 +18,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 /**
- * 成员移除与作废需求软删（T-006 / T-007）。
+ * 成员移除与作废需求软删。
  *
  * <p>放在根测试包而不是某个 feature 下，是因为它证明的正是跨模块那一段：成员移除
  * 靠 {@code ProjectMemberRemoving} 反转依赖方向，由 {@code requirement} /

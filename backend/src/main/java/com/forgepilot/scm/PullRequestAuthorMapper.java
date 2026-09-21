@@ -2,7 +2,11 @@ package com.forgepilot.scm;
 
 import org.springframework.stereotype.Service;
 
-/** Recomputes the nullable PR-to-member projection from the live verified binding. */
+/**
+ * 重算 {@code pull_request.author_user_id} 这个可空投影：只有 Provider、实例、稳定外部用户 ID
+ * 与某成员当前 ACTIVE 且已验证的绑定全部一致时才映射。绑定的任何变化（新建、审批、撤销、
+ * 身份吊销）都要重跑整个项目，因为投影是从绑定推导的，不是事实源。
+ */
 @Service
 class PullRequestAuthorMapper {
     private final ProjectMemberScmBindingRepository bindings;

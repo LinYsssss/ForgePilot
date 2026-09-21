@@ -21,6 +21,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
+/** 当前用户自己的 SCM 身份端点（API.md「用户 SCM 身份」）；不带 projectId，与项目无关。 */
 @RestController
 @RequestMapping("/api/scm/identities")
 class ScmIdentityController {

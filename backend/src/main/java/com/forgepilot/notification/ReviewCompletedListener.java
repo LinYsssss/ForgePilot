@@ -11,7 +11,11 @@ import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionalEventListener;
 
-/** Best-effort group summaries; no reason, finding text or patch leaves the protected detail page. */
+/**
+ * 把三种审查事件变成钉钉群摘要：AI 完成→审查人、AI 失败→LEADER、人工决定→开发者或 LEADER。
+ * 尽力而为：任何失败只记日志，绝不影响已提交的业务事实。消息只含处理人与详情链接，
+ * 退回理由、Finding 正文与 patch 都不离开受保护的详情页。
+ */
 @Component
 class ReviewCompletedListener {
     private static final Logger log = LoggerFactory.getLogger(ReviewCompletedListener.class);

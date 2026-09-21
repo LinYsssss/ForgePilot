@@ -6,7 +6,7 @@ import { createAppRouter } from "../src/app/router";
 import { bootstrapSession, clearSession } from "../src/features/auth/session";
 
 /**
- * 工作台默认项目规则（T-001）。锁的不变量只有一条：**默认规则只在 URL 缺少
+ * 工作台默认项目规则。锁的不变量只有一条：**默认规则只在 URL 缺少
  * project query 时触发**。写错的两个方向都有真实后果——补 query 后仍然触发就是
  * 无限重定向，带 query 进入也触发就是覆盖用户已经做出的选择（PRD AC2）。
  */

@@ -24,7 +24,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
-/** Project knowledge metadata and member-only public document reading. Raw vectors never leave storage. */
+/** 项目知识的元数据、成员可读的公共原文与 LEADER 的上传/提升/删除。原始向量永不出库。 */
 @RestController
 @RequestMapping("/api/projects/{projectId}/knowledge/documents")
 class KnowledgeController {

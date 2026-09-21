@@ -36,7 +36,7 @@ function navigationTarget(path: string): RouteLocationRaw {
 }
 
 /*
- * 原生 <details> 不会因为点击外部而关闭，这正是 T-008 报的问题。这里补上外部
+ * 原生 <details> 不会因为点击外部而关闭，账户弹层曾因此关不掉。这里补上外部
  * 点击、Esc 和路由变化三条关闭路径，仍然只操作 details.open，不引入第二套
  * 弹层运行时或焦点陷阱。
  */

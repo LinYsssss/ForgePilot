@@ -2,6 +2,7 @@ package com.forgepilot.scm;
 
 import java.time.Instant;
 
+/** 绑定行加上它所引用身份的展示字段，供成员与 LEADER 阅读绑定历史。 */
 record ScmBindingResponse(long id, long userId, long identityId, String label,
         ScmIdentityUsage usageType, ScmProvider provider, String instanceIdentity,
         String externalUserId, String externalUsername, ProjectMemberScmBinding.Status status,

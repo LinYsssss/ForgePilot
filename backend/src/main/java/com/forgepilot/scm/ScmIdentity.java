@@ -13,6 +13,11 @@ import jakarta.persistence.Table;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
+/**
+ * {@code scm_identity} 行：一个平台账号在某 Provider 实例上经一次性 Token 证明过的身份。
+ * 只存稳定外部 ID 与当前用户名，Token 从不落列；{@code LEGACY_*} 两个枚举值只为读取
+ * V8 之前迁入的历史行而保留。
+ */
 @Entity
 @Table(name = "scm_identity")
 class ScmIdentity {

@@ -13,6 +13,11 @@ import jakarta.persistence.Table;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
+/**
+ * {@code project_member_scm_binding} 行：某成员在某项目选用某身份的一段历史。
+ * 状态机为 PENDING_APPROVAL → ACTIVE / REJECTED，ACTIVE → SUPERSEDED / REVOKED；
+ * 行只追加不改写身份，时间列各记一步。{@code accessLevel} 是绑定时核验的仓库访问级别快照。
+ */
 @Entity
 @Table(name = "project_member_scm_binding")
 class ProjectMemberScmBinding {
