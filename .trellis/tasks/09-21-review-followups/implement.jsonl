@@ -1,0 +1,2 @@
+{"file": ".trellis/spec/backend/error-handling.md", "reason": "Unified ApiError producers and 409/422 split"}
+{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "Pinned build path and secret-safety rules"}

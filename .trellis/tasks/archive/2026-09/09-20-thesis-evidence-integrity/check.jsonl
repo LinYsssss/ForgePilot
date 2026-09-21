@@ -1,0 +1,2 @@
+{"file":".trellis/spec/backend/index.md","reason":"Check package ownership, architecture rules, and the required full backend gate."}
+{"file":".trellis/spec/backend/quality-guidelines.md","reason":"Check executable build, architecture, scope, configuration, and secret-safety requirements."}
