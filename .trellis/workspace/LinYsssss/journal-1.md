@@ -529,3 +529,30 @@ Converted the 15-PR production revalidation into a Chinese thesis-ready analysis
 ### Status
 
 [OK] **Completed**
+
+
+## Session 18: Review follow-ups: unified error body, Chinese messages, javadoc and docs sync
+
+**Date**: 2026-09-21
+**Task**: Review follow-ups: unified error body, Chinese messages, javadoc and docs sync
+**Branch**: `main`
+
+### Summary
+
+Mapped Spring MVC pre-controller failures into ApiError, localized 104 user-facing messages, documented the SCM identity/binding classes and the merge-in-transaction tradeoff, indexed all 70 endpoints in API.md, removed the borrowed-LEADER retrieval, hardened nginx headers/cookies, archived two stale tasks.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `2487e94` | (see git log) |
+| `56f2b05` | (see git log) |
+| `3e730c5` | (see git log) |
+| `166d564` | (see git log) |
+| `98a6f03` | (see git log) |
+| `d3dfca4` | (see git log) |
+| `e7d6d00` | (see git log) |
+
+### Status
+
+[OK] **Completed**
