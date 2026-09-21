@@ -143,7 +143,7 @@ public class ReviewExecutor {
             Optional<ReviewPipeline.Report> report = pipeline.analyse(claim, () -> {
                 if (!renew(claim)) {
                     throw new ApiException(HttpStatus.CONFLICT, "review_lease_lost",
-                            "This worker no longer owns the review.");
+                            "当前 worker 已不再持有该审查。");
                 }
             });
             if (report.isEmpty()) {

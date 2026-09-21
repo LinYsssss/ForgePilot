@@ -101,13 +101,13 @@ class GitLabWebhookController {
     private static int mergeRequestIid(JsonNode payload) {
         JsonNode iid = payload.path("object_attributes").path("iid");
         if (!iid.isIntegralNumber() || !iid.canConvertToInt()) {
-            throw ApiException.unprocessable("The delivery has no merge request IID.");
+            throw ApiException.unprocessable("投递中没有 MR IID。");
         }
         return iid.asInt();
     }
 
     private static ApiException unauthenticated() {
         return new ApiException(HttpStatus.UNAUTHORIZED, "unauthorized",
-                "The delivery could not be verified.");
+                "投递无法通过验证。");
     }
 }

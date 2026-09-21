@@ -67,7 +67,7 @@ public class GitHubClient {
             }
         }
         throw ApiException.conflict(
-                "GitHub pull request kept changing while its diff was being read. Please synchronize again.");
+                "读取 diff 期间 GitHub PR 持续变化，请重新同步。");
     }
 
     private PullRequestMetadata metadata(RestClient client, String externalId, int number) {
@@ -76,7 +76,7 @@ public class GitHubClient {
                 .retrieve()
                 .body(JsonNode.class);
         if (pullRequest == null || !pullRequest.isObject()) {
-            throw ApiException.unprocessable("The provider's pull request metadata is missing.");
+            throw ApiException.unprocessable("平台未返回 PR 元数据。");
         }
         return new PullRequestMetadata(
                 required(pullRequest.path("base"), "sha", "base.sha"),
@@ -183,7 +183,7 @@ public class GitHubClient {
                 characters += changed.path().length() + (content == null ? 0 : content.length());
                 if (characters > ChangedFile.MAX_TOTAL_CHARS) {
                     throw ApiException.unprocessable(
-                            "This pull request's diff is larger than this deployment stores.");
+                            "该 PR 的 diff 超过本部署的存储上限。");
                 }
                 files.add(changed);
             }
@@ -206,11 +206,11 @@ public class GitHubClient {
         JsonNode node = parent.path(field);
         if (!node.isValueNode() || node.isNull()) {
             throw ApiException.unprocessable(
-                    "The provider's pull request is missing " + label + ".");
+                    "平台返回的 PR 缺少 " + label + "。");
         }
         String value = node.asString();
         if (value.isBlank()) {
-            throw ApiException.unprocessable("The provider's pull request has an empty " + label + ".");
+            throw ApiException.unprocessable("平台返回的 PR 的 " + label + " 为空。");
         }
         return value;
     }

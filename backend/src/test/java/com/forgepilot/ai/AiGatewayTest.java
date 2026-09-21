@@ -135,7 +135,7 @@ class AiGatewayTest extends PostgresTestBase {
 
         assertThatThrownBy(() -> gateway.chat("prompt", null, AiUseCase.REQUIREMENT_QUALITY, fixture.revisionContext()))
                 .isInstanceOf(ApiException.class)
-                .hasMessage("The AI provider call did not succeed.");
+                .hasMessage("AI 服务调用未成功。");
 
         // Two, not three: ARCHITECTURE.md 7.2 buys one retry and no more.
         assertThat(REQUESTS).hasValue(2);

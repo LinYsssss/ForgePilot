@@ -52,7 +52,7 @@ class AuthService {
     int changePassword(long userId, String currentPassword, String newPassword) {
         UserAccount account = this.accounts.findById(userId).orElseThrow(ApiException::notFound);
         if (!this.passwordEncoder.matches(currentPassword, account.getPasswordHash())) {
-            throw ApiException.unprocessable("The current password is incorrect.");
+            throw ApiException.unprocessable("当前密码不正确。");
         }
         account.changePassword(hash(newPassword));
         return account.getSessionVersion();
@@ -71,7 +71,7 @@ class AuthService {
 
     private String hash(String password) {
         if (password.getBytes(StandardCharsets.UTF_8).length > MAX_PASSWORD_BYTES) {
-            throw ApiException.unprocessable("The password is too long.");
+            throw ApiException.unprocessable("密码过长。");
         }
         return this.passwordEncoder.encode(password);
     }

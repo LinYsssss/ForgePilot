@@ -7,6 +7,13 @@ import com.forgepilot.common.ApiException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+/**
+ * 用户全局 SCM 身份的验证、标注与吊销（不隶属任何项目）。
+ *
+ * <p>身份由 {@code (provider, instance_identity, external_user_id)} 唯一标识；同一远端身份
+ * 被第二个账号验证时以 409 拒绝，而同一账号重复验证只刷新用户名与时间。吊销身份会
+ * 连带撤销它在各项目的 ACTIVE / PENDING 绑定，并逐项目重算 PR 作者映射。
+ */
 @Service
 class ScmIdentityService {
     private final ScmIdentityRepository identities;
@@ -35,7 +42,7 @@ class ScmIdentityService {
         ScmIdentity identity = identities.findProvenIdentity(provider, verified.instanceIdentity(),
                 verified.externalUserId()).map(existing -> {
                     if (existing.getUserId() != userId) {
-                        throw ApiException.conflict("That SCM identity is already claimed.");
+                        throw ApiException.conflict("该 SCM 身份已被其他账号认领。");
                     }
                     existing.refresh(verified, now);
                     existing.rename(label, usageType);

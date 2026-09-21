@@ -93,7 +93,7 @@ public class NotificationChannelService {
     public boolean sendTest(long projectId, long actorId) {
         access.requireRole(projectId, actorId, ProjectRole.LEADER);
         Credentials credentials = credentialsOf(projectId)
-                .orElseThrow(() -> ApiException.conflict("No enabled DingTalk notification channel."));
+                .orElseThrow(() -> ApiException.conflict("没有已启用的钉钉通知渠道。"));
         String title = credentials.hasKeyword() ? credentials.keyword() + " ForgePilot 通知测试"
                 : "ForgePilot 通知测试";
         return sender.send(credentials, title, "### " + title + "\n\n通知配置可用。");
@@ -118,7 +118,7 @@ public class NotificationChannelService {
     static void requireDingTalkUrl(String url) {
         if (url == null || !url.startsWith(DINGTALK_ORIGIN)) {
             throw ApiException.unprocessable(
-                    "The webhook URL must be a DingTalk robot address under " + DINGTALK_ORIGIN);
+                    "Webhook 地址必须是 " + DINGTALK_ORIGIN + " 下的钉钉机器人地址。");
         }
     }
 

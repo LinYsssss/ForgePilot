@@ -177,10 +177,10 @@ const canSubmitBatch = computed(
     && emptyRoleRows.value === 0,
 );
 
-/** 后端逐行校验失败时返回 `Member row {index} ...`；解析不出来就只显示原文。 */
+/** 后端逐行校验失败时返回「第 N 行成员…」（N 从 1 计）；解析不出来就只显示原文。 */
 function locateFailedRow(message: string): number | null {
-  const match = /^Member row (\d+)\b/.exec(message);
-  return match === null ? null : Number(match[1]);
+  const match = /^第 (\d+) 行成员/.exec(message);
+  return match === null ? null : Number(match[1]) - 1;
 }
 
 async function addSelected(): Promise<void> {

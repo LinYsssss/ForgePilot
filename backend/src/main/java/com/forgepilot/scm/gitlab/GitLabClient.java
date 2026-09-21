@@ -55,7 +55,7 @@ public class GitLabClient {
                         identity.authorId(), identity.authorUsername(), files);
             }
         }
-        throw unavailable("GitLab changed the merge request while its diff was being read.");
+        throw unavailable("读取 diff 期间 GitLab MR 已变化。");
     }
 
     public void merge(ScmRepository repository, int number, String expectedHeadSha) {
@@ -137,7 +137,7 @@ public class GitLabClient {
                 }
             }
             if (versions.size() < PAGE_SIZE) {
-                throw malformed("GitLab returned no diff version matching the current merge request.");
+                throw malformed("GitLab 未返回与当前 MR 匹配的 diff 版本。");
             }
         }
     }
@@ -160,7 +160,7 @@ public class GitLabClient {
                 characters += path.length() + (patch == null ? 0 : patch.length());
                 if (characters > ChangedFile.MAX_TOTAL_CHARS) {
                     throw ApiException.unprocessable(
-                            "This merge request's diff is larger than this deployment stores.");
+                            "该 MR 的 diff 超过本部署的存储上限。");
                 }
                 files.add(changed);
             }
@@ -179,7 +179,7 @@ public class GitLabClient {
             return null;
         }
         if (!patch.isTextual()) {
-            throw malformed("GitLab's diff has an invalid diff body.");
+            throw malformed("GitLab 返回的 diff 正文无效。");
         }
         return patch.asString();
     }
@@ -200,7 +200,7 @@ public class GitLabClient {
     private static MrIdentity identity(JsonNode node, int requestedNumber) {
         int iid = requiredInteger(node, "iid");
         if (iid != requestedNumber) {
-            throw malformed("GitLab returned a different merge request IID.");
+            throw malformed("GitLab 返回了不同的 MR IID。");
         }
         JsonNode refs = node.path("diff_refs");
         JsonNode author = node.path("author");
@@ -216,23 +216,23 @@ public class GitLabClient {
         try {
             JsonNode response = call.get();
             if (response == null) {
-                throw malformed("GitLab returned an empty response.");
+                throw malformed("GitLab 返回了空响应。");
             }
             return response;
         } catch (RestClientResponseException response) {
             if (response.getStatusCode().value() == 429 || response.getStatusCode().is5xxServerError()) {
-                throw unavailable("GitLab is temporarily unable to provide the merge request.");
+                throw unavailable("GitLab 暂时无法提供该 MR。");
             }
             throw new ApiException(HttpStatus.BAD_GATEWAY, "provider_error",
-                    "GitLab refused the authoritative merge request read.");
+                    "GitLab 拒绝了权威 MR 读取。");
         } catch (ResourceAccessException network) {
-            throw unavailable("GitLab is temporarily unable to provide the merge request.");
+            throw unavailable("GitLab 暂时无法提供该 MR。");
         }
     }
 
     private static void requireArray(JsonNode node, String label) {
         if (!node.isArray()) {
-            throw malformed("GitLab returned malformed " + label + ".");
+            throw malformed("GitLab 返回的 " + label + " 格式不正确。");
         }
     }
 
@@ -243,11 +243,11 @@ public class GitLabClient {
     private static String requiredText(JsonNode parent, String field, String label) {
         JsonNode node = parent.path(field);
         if (!node.isTextual()) {
-            throw malformed("GitLab's merge request is missing " + label + ".");
+            throw malformed("GitLab 返回的 MR 缺少 " + label + "。");
         }
         String value = node.asString();
         if (value.isBlank()) {
-            throw malformed("GitLab's merge request has an empty " + label + ".");
+            throw malformed("GitLab 返回的 MR 的 " + label + " 为空。");
         }
         return value;
     }
@@ -259,11 +259,11 @@ public class GitLabClient {
     private static String requiredValue(JsonNode parent, String field, String label) {
         JsonNode node = parent.path(field);
         if (!node.isValueNode() || node.isNull()) {
-            throw malformed("GitLab's merge request is missing " + label + ".");
+            throw malformed("GitLab 返回的 MR 缺少 " + label + "。");
         }
         String value = node.asString();
         if (value.isBlank()) {
-            throw malformed("GitLab's merge request has an empty " + label + ".");
+            throw malformed("GitLab 返回的 MR 的 " + label + " 为空。");
         }
         return value;
     }
@@ -271,7 +271,7 @@ public class GitLabClient {
     private static int requiredInteger(JsonNode parent, String field) {
         JsonNode node = parent.path(field);
         if (!node.isIntegralNumber() || !node.canConvertToInt()) {
-            throw malformed("GitLab's merge request is missing " + field + ".");
+            throw malformed("GitLab 返回的 MR 缺少 " + field + "。");
         }
         return node.asInt();
     }
@@ -279,7 +279,7 @@ public class GitLabClient {
     private static boolean requiredBoolean(JsonNode parent, String field) {
         JsonNode node = parent.path(field);
         if (!node.isBoolean()) {
-            throw malformed("GitLab's diff is missing " + field + ".");
+            throw malformed("GitLab 返回的 diff 缺少 " + field + "。");
         }
         return node.asBoolean();
     }
@@ -290,7 +290,7 @@ public class GitLabClient {
             return false; // GitLab before 18.4 did not expose these fields.
         }
         if (!node.isBoolean()) {
-            throw malformed("GitLab's diff has an invalid " + field + ".");
+            throw malformed("GitLab 返回的 diff 的 " + field + " 无效。");
         }
         return node.asBoolean();
     }
@@ -300,7 +300,7 @@ public class GitLabClient {
         try {
             return Instant.parse(value);
         } catch (DateTimeParseException malformed) {
-            throw malformed("GitLab's merge request has an invalid " + field + ".");
+            throw malformed("GitLab 返回的 MR 的 " + field + " 无效。");
         }
     }
 

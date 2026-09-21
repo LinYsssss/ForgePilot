@@ -21,13 +21,13 @@ public class KnowledgeUploadValidator {
 
     public void validate(String title, String text) {
         if (title == null || title.isBlank()) {
-            throw ApiException.unprocessable("A document needs a title.");
+            throw ApiException.unprocessable("文档需要标题。");
         }
         if (title.length() > MAX_TITLE_LENGTH) {
-            throw ApiException.unprocessable("The title is longer than " + MAX_TITLE_LENGTH + " characters.");
+            throw ApiException.unprocessable("标题超过 " + MAX_TITLE_LENGTH + " 个字符。");
         }
         if (text == null || text.isBlank()) {
-            throw ApiException.unprocessable("The document has no readable text.");
+            throw ApiException.unprocessable("文档没有可读文本。");
         }
         rejectNulByte(text);
         rejectUnencodableText(text);
@@ -39,7 +39,7 @@ public class KnowledgeUploadValidator {
      */
     private void rejectNulByte(String text) {
         if (text.indexOf('\0') >= 0) {
-            throw ApiException.unprocessable("The document text contains a NUL byte.");
+            throw ApiException.unprocessable("文档文本包含 NUL 字节。");
         }
     }
 
@@ -53,7 +53,7 @@ public class KnowledgeUploadValidator {
         CharsetEncoder encoder = StandardCharsets.UTF_8.newEncoder();
         if (!encoder.canEncode(text)) {
             throw ApiException.unprocessable(
-                    "The document text is not valid Unicode; it contains an unpaired surrogate.");
+                    "文档文本不是合法的 Unicode（含未配对的代理项 unpaired surrogate）。");
         }
     }
 
@@ -62,7 +62,7 @@ public class KnowledgeUploadValidator {
         int bytes = text.getBytes(StandardCharsets.UTF_8).length;
         if (bytes > MAX_TEXT_BYTES) {
             throw ApiException.unprocessable(
-                    "The document is " + bytes + " bytes, over the " + MAX_TEXT_BYTES + " byte limit.");
+                    "文档大小 " + bytes + " 字节，超过上限 " + MAX_TEXT_BYTES + " 字节（limit）。");
         }
     }
 }

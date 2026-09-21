@@ -44,11 +44,11 @@ class AiGatewayConfigurationTest extends PostgresTestBase {
         assertThatThrownBy(() -> gateway.chat("prompt", null, AiUseCase.REQUIREMENT_QUALITY,
                 AiCallContext.ofProject(project)))
                 .isInstanceOf(ApiException.class)
-                .hasMessage("The AI provider is not configured.");
+                .hasMessage("AI 服务尚未配置。");
         assertThatThrownBy(() -> gateway.embed(List.of("text"), "stub-embedding-model",
                 AiCallContext.ofProject(project)))
                 .isInstanceOf(ApiException.class)
-                .hasMessage("The AI provider is not configured.");
+                .hasMessage("AI 服务尚未配置。");
 
         // 什么都没尝试，因此什么都不记录：ai_call_log 存的是对 provider 的**尝试**，
         // 而不是配置错误。

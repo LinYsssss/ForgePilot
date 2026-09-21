@@ -129,7 +129,7 @@ class ChangedFileLimitTest extends ScmTestBase {
                 .isInstanceOfSatisfying(ApiException.class, refused -> {
                     assertThat(refused.getStatus()).isEqualTo(HttpStatus.UNPROCESSABLE_ENTITY);
                     assertThat(refused.getMessage())
-                            .isEqualTo("This pull request's diff is larger than this deployment stores.");
+                            .isEqualTo("该 PR 的 diff 超过本部署的存储上限。");
                 });
 
         assertThat(pullRequestCount(fixture)).isZero();

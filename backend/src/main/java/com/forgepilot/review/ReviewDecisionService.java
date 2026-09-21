@@ -43,6 +43,14 @@ import tools.jackson.databind.node.ObjectNode;
  *
  * <p>决策不可覆盖、不可撤销、不可改写，因此这里没有更新路径，
  * 也没有任何途径能走到一条更新路径上去。
+ *
+ * <p><strong>一个有意接受的代价</strong>：{@code APPROVE} 在<em>持有 {@code pull_request}
+ * 行锁的同一事务内</em>同步调用远端合并（先读 head、再合并、失败时再一次只读确认，
+ * 每次读超时 20 秒）。这段时间该 PR 的行锁与连接池五个连接之一都被占着。之所以不搬到
+ * 提交之后，是因为 PRD 5 要求「Provider 确认合并后才提交本地通过决定」——远端失败必须
+ * 让本地决定整体回滚（{@code ReviewDecisionTest.failedRemoteMergeDoesNotCommitApproval}），
+ * 而事务外做不到这一点。APPROVE 是低频人工动作，锁住一个 PR 一分钟以内可接受；
+ * 远端已合并而本地回滚的窗口仍靠人工核查，见 PRD 7。
  */
 @Service
 public class ReviewDecisionService {
@@ -82,7 +90,7 @@ public class ReviewDecisionService {
         // 放在鉴权之后，使项目外的调用方无从得知任何信息，
         // 连「你的请求体格式是对的」这件事都不会泄露。
         if (decision != ReviewDecision.APPROVE && decision != ReviewDecision.REQUEST_CHANGES) {
-            throw ApiException.unprocessable("A decision is either APPROVE or REQUEST_CHANGES.");
+            throw ApiException.unprocessable("决定只能是 APPROVE 或 REQUEST_CHANGES。");
         }
 
         // 单独读出父级 id，以便在加载 Review 本身之前就把锁拿到手。
@@ -116,7 +124,7 @@ public class ReviewDecisionService {
         if (updated != 1) {
             // 那六项条件在片刻之前还成立，现在不成立了。这里既不写入也不重试：
             // 一次最终的人工裁定，不是可以替调用方去重新尝试的东西。
-            throw ApiException.conflict("This review was decided or moved on concurrently.");
+            throw ApiException.conflict("该审查已被并发地决定或推进。");
         }
 
         Review decided = reviews.findByProjectIdAndId(projectId, reviewId)
@@ -158,28 +166,28 @@ public class ReviewDecisionService {
     private void checkPreconditions(Review review, String currentHead, String currentFingerprint,
             Long currentRevisionId) {
         if (review.getStatus() != ReviewStatus.COMPLETED) {
-            throw ApiException.conflict("Only a completed review can be decided.");
+            throw ApiException.conflict("只有已完成的审查可以作决定。");
         }
         if (review.getDecision() != ReviewDecision.PENDING) {
-            throw ApiException.conflict("This review already carries a final decision.");
+            throw ApiException.conflict("该审查已有最终决定。");
         }
         if (!currentHead.equals(review.getHeadSha())) {
-            throw ApiException.conflict("The pull request has moved to a different head since this review.");
+            throw ApiException.conflict("PR 的 head 在本次审查之后已变化。");
         }
         if (!currentFingerprint.equals(review.getReviewInputFingerprint())) {
-            throw ApiException.conflict("The pull request's review inputs have changed since this review.");
+            throw ApiException.conflict("PR 的审查输入在本次审查之后已变化。");
         }
         // 有意做成 NULL 安全的：「两侧都没有需求修订」算作匹配，
         // 这里用 equals() 比较，与 SQL 里 IS NOT DISTINCT FROM 表达的是同一条规则。
         if (!Objects.equals(currentRevisionId, review.getRequirementRevisionId())) {
-            throw ApiException.conflict("The pull request now points at a different requirement revision.");
+            throw ApiException.conflict("PR 现在关联的需求修订已变化。");
         }
         // 从数据行中推导，对照该 PR 当前的 head。改 base、改关联、改需求修订
         // 或重新同步 diff 都解不开它；只有一个新的 head SHA 才能。
         if (reviews.existsByProjectIdAndPullRequestIdAndHeadShaAndDecision(
                 review.getProjectId(), review.getPullRequestId(), currentHead,
                 ReviewDecision.REQUEST_CHANGES)) {
-            throw ApiException.conflict("This head already has changes requested; only a new head clears it.");
+            throw ApiException.conflict("该 head 已被退回修改，只有新的 head 才能解除。");
         }
     }
 

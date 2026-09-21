@@ -19,7 +19,7 @@ public class ApiException extends RuntimeException {
      * 二者必须不可区分，否则状态码会泄露别的项目是否存在该资源。
      */
     public static ApiException notFound() {
-        return new ApiException(HttpStatus.NOT_FOUND, "not_found", "Resource not found.");
+        return new ApiException(HttpStatus.NOT_FOUND, "not_found", "资源不存在。");
     }
 
     /**
@@ -27,7 +27,7 @@ public class ApiException extends RuntimeException {
      * 因此不会泄露任何新信息。
      */
     public static ApiException forbidden() {
-        return new ApiException(HttpStatus.FORBIDDEN, "forbidden", "This operation is not allowed for your role.");
+        return new ApiException(HttpStatus.FORBIDDEN, "forbidden", "当前角色不允许执行此操作。");
     }
 
     /** 与当前状态冲突的请求，例如并发的 LEADER 转移。 */

@@ -129,7 +129,7 @@ public class RequirementService {
         Requirement requirement = requireForUpdate(projectId, requirementId);
         if (requirement.getStatus() != RequirementStatus.DRAFT) {
             throw ApiException.conflict(
-                    "This requirement has left DRAFT; publish a new revision instead of editing in place.");
+                    "需求已离开草稿状态，请发布新修订而不是原地编辑。");
         }
         RequirementRevision revision = requirement.getCurrentRevision();
         revision.editProse(content.title(), content.background(), content.description());
@@ -147,13 +147,13 @@ public class RequirementService {
         access.requireRole(projectId, actorId, ProjectRole.LEADER);
         Requirement requirement = requireForUpdate(projectId, requirementId);
         if (requirement.getStatus() == RequirementStatus.DRAFT) {
-            throw ApiException.conflict("A DRAFT requirement is edited in place, not published as a revision.");
+            throw ApiException.conflict("草稿需求应原地编辑，不能发布修订。");
         }
         if (isTerminal(requirement.getStatus())) {
-            throw ApiException.conflict("This requirement is in a terminal state and can no longer change.");
+            throw ApiException.conflict("需求已处于终态，不能再修改。");
         }
         if (changeReason == null || changeReason.isBlank()) {
-            throw ApiException.unprocessable("Publishing a revision requires a changeReason.");
+            throw ApiException.unprocessable("发布修订必须填写变更原因（changeReason）。");
         }
         Set<String> usedKeys = new HashSet<>(criteria.findKeysOfRequirement(projectId, requirementId));
         RequirementRevision published = revisions.save(new RequirementRevision(projectId, requirementId,
@@ -170,8 +170,7 @@ public class RequirementService {
         access.requireRole(projectId, actorId, ProjectRole.LEADER);
         Requirement requirement = requireForUpdate(projectId, requirementId);
         if (!ALLOWED_TARGETS.get(requirement.getStatus()).contains(target)) {
-            throw ApiException.unprocessable("A " + requirement.getStatus()
-                    + " requirement cannot move to " + target + ".");
+            throw ApiException.unprocessable("需求状态 " + requirement.getStatus() + " 不能转换为 " + target + "。");
         }
         requirement.setStatus(target);
         return detail(requirement, requirement.getCurrentRevision());
@@ -183,7 +182,7 @@ public class RequirementService {
         access.requireRole(projectId, actorId, ProjectRole.LEADER);
         Requirement requirement = requireForUpdate(projectId, requirementId);
         if (isTerminal(requirement.getStatus())) {
-            throw ApiException.conflict("A terminal requirement cannot be reassigned.");
+            throw ApiException.conflict("终态需求不能重新指派。");
         }
         if (reviewerId != null) {
             access.requireRole(projectId, reviewerId, ProjectRole.REVIEWER, ProjectRole.LEADER);
@@ -202,7 +201,7 @@ public class RequirementService {
         Requirement requirement = requireForUpdate(projectId, requirementId);
         if (requirement.getStatus() != RequirementStatus.READY
                 && requirement.getStatus() != RequirementStatus.IN_DEVELOPMENT) {
-            throw ApiException.conflict("Only a READY or IN_DEVELOPMENT requirement can be assigned.");
+            throw ApiException.conflict("只有 READY 或 IN_DEVELOPMENT 状态的需求可以指派。");
         }
         access.requireRole(projectId, assigneeId, ProjectRole.DEVELOPER, ProjectRole.LEADER);
         requirement.setAssigneeId(assigneeId);
@@ -231,8 +230,7 @@ public class RequirementService {
         access.requireRole(projectId, actorId, ProjectRole.LEADER);
         Requirement requirement = requireForUpdate(projectId, requirementId);
         if (requirement.getStatus() != RequirementStatus.CANCELED) {
-            throw ApiException.conflict("Only a canceled requirement can be deleted; this one is "
-                    + requirement.getStatus() + ".");
+            throw ApiException.conflict("只有已取消的需求可以删除，当前状态为 " + requirement.getStatus() + "。");
         }
         requirement.markDeleted(Instant.now(), actorId);
         requirements.flush();
@@ -302,7 +300,7 @@ public class RequirementService {
                 AcceptanceCriterion row = current.remove(input.acKey());
                 if (row == null) {
                     throw ApiException.unprocessable(
-                            "That acceptance criterion key does not belong to this requirement.");
+                            "该验收条件标识不属于本需求。");
                 }
                 row.edit(sortOrder, input.text());
                 rows.add(row);
@@ -316,7 +314,7 @@ public class RequirementService {
     /** 条目要保留的那个 key；若本需求从未用过它，或请求中重复出现，则拒绝。 */
     private static String take(Set<String> available, String requested) {
         if (!available.remove(requested)) {
-            throw ApiException.unprocessable("That acceptance criterion key does not belong to this requirement.");
+            throw ApiException.unprocessable("该验收条件标识不属于本需求。");
         }
         return requested;
     }

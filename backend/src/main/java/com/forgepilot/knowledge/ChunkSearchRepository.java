@@ -36,12 +36,11 @@ public class ChunkSearchRepository {
      */
     public void writeEmbedding(long projectId, long chunkId, float[] vector) {
         if (vector.length == 0) {
-            throw ApiException.unprocessable("An embedding cannot be empty.");
+            throw ApiException.unprocessable("向量不能为空。");
         }
         Integer established = establishedDimension(projectId);
         if (established != null && established != vector.length) {
-            throw ApiException.unprocessable("This project already stores " + established
-                    + "-dimension embeddings; refusing to write a " + vector.length + "-dimension one.");
+            throw ApiException.unprocessable("该项目已存储 " + established + " 维向量，拒绝写入 " + vector.length + " 维向量。");
         }
         int updated = jdbc.update(
                 "update knowledge_chunk set embedding = ?::vector, dimension = ? "

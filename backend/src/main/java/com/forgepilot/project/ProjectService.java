@@ -73,7 +73,7 @@ public class ProjectService {
         access.requireRole(projectId, actorId, ProjectRole.LEADER);
         Project project = projects.findByIdForUpdate(projectId).orElseThrow(ApiException::notFound);
         if (project.getStatus() == ProjectStatus.ARCHIVED) {
-            throw ApiException.conflict("This project is already archived.");
+            throw ApiException.conflict("该项目已归档。");
         }
         project.archive();
     }
@@ -84,7 +84,7 @@ public class ProjectService {
         access.requireRole(projectId, actorId, ProjectRole.LEADER);
         Project project = projects.findByIdForUpdate(projectId).orElseThrow(ApiException::notFound);
         if (project.getStatus() != ProjectStatus.ARCHIVED) {
-            throw ApiException.conflict("This project is not archived.");
+            throw ApiException.conflict("该项目未归档。");
         }
         project.unarchive();
     }

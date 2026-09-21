@@ -83,7 +83,7 @@ class OutboundUrlPolicyTest {
                     // One answer for every reason, so a rejection cannot be used to
                     // map which internal addresses exist.
                     assertThat(failure.getMessage())
-                            .isEqualTo("That address is not reachable from this deployment.");
+                            .isEqualTo("该地址不允许从本部署访问。");
                 });
     }
 }

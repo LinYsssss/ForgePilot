@@ -149,8 +149,7 @@ public class PullRequestSyncService {
         }
         if (incoming == null) {
             throw ApiException.unprocessable(
-                    "The delivery carries no source timestamp, so it cannot be ordered "
-                            + "against what is already stored.");
+                    "投递缺少来源时间戳，无法与已存记录排序。");
         }
         return incoming.isBefore(current);
     }
@@ -173,12 +172,12 @@ public class PullRequestSyncService {
     private String manifest(List<ChangedFile> changedFiles) {
         String manifest = json.writeValueAsString(ChangedFile.canonicalOrder(changedFiles));
         if (manifest.length() > ChangedFile.MAX_TOTAL_CHARS) {
-            throw ApiException.unprocessable("This pull request's diff is larger than this deployment stores.");
+            throw ApiException.unprocessable("该 PR 的 diff 超过本部署的存储上限。");
         }
         return manifest;
     }
 
     private static ApiException unauthenticated() {
-        return new ApiException(HttpStatus.UNAUTHORIZED, "unauthorized", "The delivery could not be verified.");
+        return new ApiException(HttpStatus.UNAUTHORIZED, "unauthorized", "投递无法通过验证。");
     }
 }

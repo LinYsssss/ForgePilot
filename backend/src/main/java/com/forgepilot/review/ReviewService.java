@@ -86,8 +86,7 @@ public class ReviewService {
         return switch (review.getStatus()) {
             case PENDING, RUNNING -> review;
             case COMPLETED -> throw ApiException.conflict(
-                    "This review is already complete. A completed review is never re-run; "
-                            + "push a new commit or publish a new requirement revision to review again.");
+                    "该审查已完成，不会重跑；请推送新提交或发布新需求修订后再审查。");
             case FAILED -> retry(projectId, review);
         };
     }
@@ -226,7 +225,7 @@ public class ReviewService {
     private Review retry(long projectId, Review failed) {
         claims.discardAbandonedFindings(projectId, failed.getId());
         if (claims.retryFailed(projectId, failed.getId()) != 1) {
-            throw ApiException.conflict("This review is no longer failed; somebody else retried it.");
+            throw ApiException.conflict("该审查已不处于失败状态，已被他人重试。");
         }
         Review reset = reviews.findByProjectIdAndId(projectId, failed.getId())
                 .orElseThrow(ApiException::notFound);

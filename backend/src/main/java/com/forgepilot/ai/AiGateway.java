@@ -100,7 +100,7 @@ public class AiGateway {
         String redacted = PromptSanitizer.redact(prompt);
         if (redacted.length() > promptCharBudget) {
             throw new ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "ai_prompt_too_large",
-                    "The complete AI prompt exceeds the configured character budget.");
+                    "完整的 AI Prompt 超出了配置的字符预算。");
         }
         ObjectNode request = json.createObjectNode();
         request.put("model", chatModel);
@@ -304,12 +304,12 @@ public class AiGateway {
      */
     private static ApiException unavailable() {
         return new ApiException(HttpStatus.BAD_GATEWAY, "ai_unavailable",
-                "The AI provider call did not succeed.");
+                "AI 服务调用未成功。");
     }
 
     private static ApiException unconfigured() {
         return new ApiException(HttpStatus.SERVICE_UNAVAILABLE, "ai_unconfigured",
-                "The AI provider is not configured.");
+                "AI 服务尚未配置。");
     }
 
     /** 2xx 但响应体里没有所要的内容。从不重试，也绝不静默当成空结果。 */

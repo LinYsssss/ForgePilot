@@ -160,8 +160,7 @@ class RequirementQualityService {
         List<QualityReport.RuleFinding> found = new ArrayList<>();
         if (isBlank(revision.getBackground()) && isBlank(revision.getDescription())) {
             found.add(new QualityReport.RuleFinding(QualityReport.Rule.MISSING_DESCRIPTION, null,
-                    "This revision has neither background nor description, so a review has only "
-                            + "the title to hold a change against."));
+                    "本修订既无背景也无描述，审查时只能拿标题去对照变更。"));
         }
         Map<String, String> firstUseOfText = new HashMap<>();
         for (AcceptanceCriterion criterion : acceptanceCriteria) {
@@ -170,17 +169,14 @@ class RequirementQualityService {
             String earlier = firstUseOfText.putIfAbsent(criterion.getText().strip(), criterion.getAcKey());
             if (earlier != null) {
                 found.add(new QualityReport.RuleFinding(QualityReport.Rule.DUPLICATE_CRITERION,
-                        criterion.getAcKey(), criterion.getAcKey() + " repeats the text of " + earlier
-                                + ", so the same problem will be reported twice under two keys."));
+                        criterion.getAcKey(), criterion.getAcKey() + " 与 " + earlier + " 文本重复，同一问题会在两个标识下被报告两次。"));
             }
         }
         // 网关会先掩码凭据形状，再执行预算检查，因此这里也用脱敏后的长度
         // 决定是否跳过 AI。向 sanitizer 索要无限预算，只做脱敏而不做裁剪。
         if (promptLength > promptCharBudget) {
             found.add(new QualityReport.RuleFinding(QualityReport.Rule.PROMPT_BUDGET_EXCEEDED, null,
-                    "This requirement makes a " + promptLength + " character prompt, above the "
-                            + promptCharBudget + " character budget. AI analysis was skipped; the "
-                            + "prompt was not truncated and sent for partial analysis."));
+                    "本需求生成的 Prompt 有 " + promptLength + " 个字符，超过 " + promptCharBudget + " 字符预算。已跳过 AI 分析；不会截断后做部分分析。"));
         }
         return found;
     }
@@ -254,7 +250,7 @@ class RequirementQualityService {
      */
     private static ApiException malformed() {
         return new ApiException(HttpStatus.BAD_GATEWAY, "ai_malformed_result",
-                "The AI provider answered with a structure this check cannot read.");
+                "AI 服务返回的结构无法解析为质量检查结果。");
     }
 
     // ------------------------------------------------------------------- 落库

@@ -14,7 +14,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** Owns membership and role-set mutations; account facts stay behind {@link UserDirectory}. */
+/** 成员关系与角色集合的全部写操作；账号事实只经 {@link UserDirectory} 只读读取。 */
 @Service
 public class ProjectMemberService {
 
@@ -52,10 +52,10 @@ public class ProjectMemberService {
         String query = rawQuery.trim();
         boolean numericId = !query.isEmpty() && query.chars().allMatch(Character::isDigit);
         if (query.length() < 2 && !numericId) {
-            throw ApiException.unprocessable("Search needs at least two characters.");
+            throw ApiException.unprocessable("搜索至少需要两个字符。");
         }
         if (page < 0 || size < 1 || size > 20) {
-            throw ApiException.unprocessable("Invalid candidate page.");
+            throw ApiException.unprocessable("分页参数无效。");
         }
         Set<Long> memberIds = members.findByProjectIdOrderByIdAsc(projectId).stream()
                 .map(ProjectMember::getUserId).collect(Collectors.toSet());
@@ -79,13 +79,13 @@ public class ProjectMemberService {
             BatchMember row = requested.get(index);
             AccountView account = accounts.get(row.userId());
             if (!duplicateCheck.add(row.userId())) {
-                throw rowError(index, "is duplicated.");
+                throw rowError(index, "重复。");
             }
             if (account == null || !account.enabled()) {
-                throw rowError(index, "does not name an enabled account.");
+                throw rowError(index, "不是有效的启用账号。");
             }
             if (existing.contains(row.userId())) {
-                throw rowError(index, "is already a project member.");
+                throw rowError(index, "已经是项目成员。");
             }
             validateAssignableRoles(index, row.roles());
         }
@@ -104,10 +104,10 @@ public class ProjectMemberService {
         ProjectMember target = members.findByProjectIdAndUserId(projectId, targetUserId)
                 .orElseThrow(ApiException::notFound);
         if (requestedRoles == null || requestedRoles.isEmpty()) {
-            throw ApiException.unprocessable("A project member needs at least one role.");
+            throw ApiException.unprocessable("项目成员至少需要一个角色。");
         }
         if (requestedRoles.contains(ProjectRole.LEADER) != target.hasRole(ProjectRole.LEADER)) {
-            throw ApiException.unprocessable("Use the Leader transfer action to change the project Leader.");
+            throw ApiException.unprocessable("更换项目负责人请使用负责人转移操作。");
         }
         target.replaceRoles(EnumSet.copyOf(requestedRoles));
         return MemberResponse.of(target, users.byId(targetUserId).orElseThrow(ApiException::notFound));
@@ -120,7 +120,7 @@ public class ProjectMemberService {
         ProjectMember target = members.findByProjectIdAndUserId(projectId, targetUserId)
                 .orElseThrow(ApiException::notFound);
         if (incumbent.getUserId().equals(target.getUserId())) {
-            throw ApiException.unprocessable("The target is already the project Leader.");
+            throw ApiException.unprocessable("目标成员已经是项目负责人。");
         }
         if (incumbent.getRoles().size() == 1) {
             incumbent.addRole(ProjectRole.DEVELOPER);
@@ -158,7 +158,7 @@ public class ProjectMemberService {
                 .orElseThrow(ApiException::notFound);
         if (target.hasRole(ProjectRole.LEADER)) {
             throw ApiException.conflict(
-                    "The project Leader cannot be removed; transfer the Leader role first.");
+                    "不能移除项目负责人，请先转移负责人角色。");
         }
 
         ProjectMemberRemoving removing = new ProjectMemberRemoving(projectId, targetUserId);
@@ -174,12 +174,12 @@ public class ProjectMemberService {
 
     private static void validateAssignableRoles(int index, Set<ProjectRole> roles) {
         if (roles == null || roles.isEmpty() || roles.contains(ProjectRole.LEADER)) {
-            throw rowError(index, "needs Developer and/or Reviewer roles; Leader is transferred separately.");
+            throw rowError(index, "需要开发者和/或审查者角色；负责人须另行转移。");
         }
     }
 
     private static ApiException rowError(int index, String message) {
-        return ApiException.unprocessable("Member row " + index + " " + message);
+        return ApiException.unprocessable("第 " + (index + 1) + " 行成员" + message);
     }
 
     public record BatchMember(long userId, Set<ProjectRole> roles) {

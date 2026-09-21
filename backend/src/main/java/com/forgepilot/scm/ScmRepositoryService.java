@@ -90,7 +90,7 @@ class ScmRepositoryService {
                 || !targetInstance.equals(repository.getInstanceIdentity());
         if (identityMoves && pullRequests.existsByProjectIdAndRepositoryId(projectId, repositoryId)) {
             throw ApiException.conflict(
-                    "This repository already has pull requests, so its identity can no longer change.");
+                    "该仓库已有 PR，身份不可再更改。");
         }
 
         if (identityMoves) {

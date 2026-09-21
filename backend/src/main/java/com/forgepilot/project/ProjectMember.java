@@ -94,7 +94,7 @@ public class ProjectMember {
 
     public void replaceRoles(Collection<ProjectRole> newRoles) {
         if (newRoles == null || newRoles.isEmpty()) {
-            throw new IllegalArgumentException("A project member needs at least one role.");
+            throw new IllegalArgumentException("项目成员至少需要一个角色。");
         }
         this.roles.clear();
         this.roles.addAll(newRoles);

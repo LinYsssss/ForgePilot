@@ -11,7 +11,10 @@ import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 import tools.jackson.databind.JsonNode;
 
-/** Provider calls made with a one-time personal token. The token is never returned or stored. */
+/**
+ * 用一次性个人 Token 调 Provider 的两个只读接口：当前用户与仓库访问级别。
+ * Token 只活在本次请求内，既不落库也不回显；出站地址先过 {@link OutboundUrlPolicy}。
+ */
 @Component
 class ScmIdentityVerifier {
 
@@ -58,18 +61,18 @@ class ScmIdentityVerifier {
         try {
             JsonNode response = client.get().uri(path).retrieve().body(JsonNode.class);
             if (response == null) {
-                throw ApiException.unprocessable("The SCM provider returned an empty response.");
+                throw ApiException.unprocessable("SCM 平台返回了空响应。");
             }
             return response;
         } catch (RestClientException failure) {
-            throw ApiException.unprocessable("The SCM identity or repository access could not be verified.");
+            throw ApiException.unprocessable("无法验证 SCM 身份或仓库访问权限。");
         }
     }
 
     private static String required(JsonNode node, String field) {
         JsonNode value = node.path(field);
         if (!value.isValueNode() || value.isNull() || value.asString().isBlank()) {
-            throw ApiException.unprocessable("The SCM provider did not return a stable user identity.");
+            throw ApiException.unprocessable("SCM 平台未返回稳定的用户身份。");
         }
         return value.asString();
     }

@@ -79,7 +79,7 @@ class KnowledgeIngestionProcessorTest extends PostgresTestBase {
         KnowledgeDocument failed = documents.findByProjectIdAndId(fixture.project, document).orElseThrow();
         assertThat(failed.getStatus()).isEqualTo(KnowledgeStatus.FAILED);
         assertThat(failed.getFailureReason())
-                .isEqualTo("Document processing failed (IllegalStateException).")
+                .isEqualTo("文档处理失败（IllegalStateException）。")
                 .doesNotContain("secret");
         assertThat(chunks.findByProjectIdAndDocumentIdOrderBySeqAsc(fixture.project, document)).isEmpty();
     }

@@ -87,7 +87,7 @@ public class RequirementAttachmentService {
     private static void requireSupportedFileName(String fileName) {
         String lower = fileName.toLowerCase(Locale.ROOT);
         if (!lower.endsWith(".txt") && !lower.endsWith(".md")) {
-            throw ApiException.unprocessable("Requirement documents must use .txt or .md.");
+            throw ApiException.unprocessable("需求文档只支持 .txt 或 .md。");
         }
     }
 

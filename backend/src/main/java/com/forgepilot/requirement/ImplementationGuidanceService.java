@@ -175,7 +175,7 @@ class ImplementationGuidanceService {
 
     private static ApiException malformed() {
         return new ApiException(HttpStatus.BAD_GATEWAY, "ai_malformed_result",
-                "The AI provider answered with a structure this guidance cannot read.");
+                "AI 服务返回的结构无法解析为实现建议。");
     }
 
     private record GuidanceAnswer(List<String> checklist, List<String> rules, List<String> risks) {

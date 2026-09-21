@@ -32,7 +32,7 @@ import tools.jackson.databind.ObjectMapper;
 public class RateLimitFilter extends OncePerRequestFilter {
 
     private static final ApiError TOO_MANY =
-            new ApiError("too_many_requests", "Too many requests. Try again shortly.", "");
+            new ApiError("too_many_requests", "请求过于频繁，请稍后再试。", "");
 
     private final String name;
     private final RateLimiter limiter;

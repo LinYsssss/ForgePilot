@@ -13,7 +13,14 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
-/** One serial consumer of durable PENDING documents in the current single-backend deployment. */
+/**
+ * 串行消费 PENDING 知识文档的唯一后台处理器（ARCHITECTURE.md 5）。
+ *
+ * <p>每轮只领一条：读取后立即释放事务，在不占数据库连接的情况下调 Embedding provider，
+ * 再用一个事务写入全部 chunk、Profile 与向量并标记 READY。任一步失败都回滚派生行，
+ * 并在新事务里标记 FAILED（带受控原因）；清理本身失败则保留 PENDING 等下一轮。
+ * 单后端部署靠 fixed-delay 调度天然串行，不引入租约或任务表。
+ */
 @Component
 public class KnowledgeIngestionProcessor {
 
@@ -55,7 +62,7 @@ public class KnowledgeIngestionProcessor {
             // No transaction or connection is held while waiting for the provider.
             List<float[]> embeddings = ai.embed(pieces, model, AiCallContext.ofProject(pending.getProjectId()));
             if (embeddings.size() != pieces.size()) {
-                throw ApiException.unprocessable("The provider returned an unexpected embedding count.");
+                throw ApiException.unprocessable("服务返回的向量数量与输入不符。");
             }
             transaction.executeWithoutResult(status -> documents
                     .lockByProjectIdAndId(pending.getProjectId(), pending.getId())
@@ -72,8 +79,8 @@ public class KnowledgeIngestionProcessor {
                     }));
         } catch (RuntimeException failure) {
             // The result transaction has ended; partial chunks have already rolled back.
-            String reason = "Document processing failed (" + (failure instanceof ApiException api
-                    ? api.getCode() : failure.getClass().getSimpleName()) + ").";
+            String reason = "文档处理失败（" + (failure instanceof ApiException api
+                    ? api.getCode() : failure.getClass().getSimpleName()) + "）。";
             log.warn("Knowledge document {} in project {}: {}", pending.getId(), pending.getProjectId(), reason);
             try {
                 transaction.executeWithoutResult(status -> documents

@@ -89,7 +89,7 @@ class KnowledgeGuardTest extends PostgresTestBase {
         // project would fail with 22000 instead.
         assertThatThrownBy(() -> chunks.writeEmbedding(fixture.project, second, new float[] {1f, 2f, 3f}))
                 .isInstanceOf(ApiException.class)
-                .hasMessageContaining("4-dimension");
+                .hasMessageContaining("4 维");
 
         chunks.writeEmbedding(fixture.project, second, new float[] {0.2f, 0.3f, 0.4f, 0.5f});
         assertThat(chunks.search(fixture.project, null, new float[] {0.1f, 0.2f, 0.3f, 0.4f}, 5))

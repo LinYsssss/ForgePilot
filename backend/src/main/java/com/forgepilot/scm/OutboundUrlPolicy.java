@@ -118,6 +118,6 @@ public class OutboundUrlPolicy {
     }
 
     private static ApiException denied() {
-        return ApiException.unprocessable("That address is not reachable from this deployment.");
+        return ApiException.unprocessable("该地址不允许从本部署访问。");
     }
 }

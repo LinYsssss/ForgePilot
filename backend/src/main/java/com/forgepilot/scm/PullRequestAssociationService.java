@@ -71,7 +71,7 @@ class PullRequestAssociationService {
         // 调用方能据以行动的答案。在这里，来自别的项目的 id 与从未签发过的 id
         // 不可区分，因此都不会泄露另一个项目的内容。
         if (requirementId != null && !requirements.existsInProject(projectId, requirementId)) {
-            throw ApiException.unprocessable("That requirement does not belong to this project.");
+            throw ApiException.unprocessable("该需求不属于本项目。");
         }
 
         Long previous = pullRequest.getRequirementId();
@@ -103,8 +103,7 @@ class PullRequestAssociationService {
             throw ApiException.forbidden();
         }
         if (decisions.hasFinalDecisionOnHead(projectId, pullRequest.getId(), pullRequest.getHeadSha())) {
-            throw ApiException.conflict("This head already carries a final review decision; "
-                    + "push a new commit, or ask the project leader to change the association.");
+            throw ApiException.conflict("该 head 已有最终审查决定；请推送新提交，或由项目负责人修改关联。");
         }
     }
 

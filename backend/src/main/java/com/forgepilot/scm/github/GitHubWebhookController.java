@@ -119,19 +119,19 @@ class GitHubWebhookController {
     /** 与签名错误同一形态：调用方无法从差异中学到任何东西。 */
     private static ApiException unverifiable() {
         return new ApiException(HttpStatus.UNAUTHORIZED, "unauthorized",
-                "The delivery could not be verified.");
+                "投递无法通过验证。");
     }
 
     /** 到这一步签名已通过校验，因此可以说明具体哪里出了问题。 */
     private static int pullRequestNumber(JsonNode payload) {
         JsonNode number = payload.path("number");
         if (!number.isIntegralNumber()) {
-            throw ApiException.unprocessable("The delivery has no pull request number.");
+            throw ApiException.unprocessable("投递中没有 PR 编号。");
         }
         return number.asInt();
     }
 
     private static ApiException unauthenticated() {
-        return new ApiException(HttpStatus.UNAUTHORIZED, "unauthorized", "The delivery could not be verified.");
+        return new ApiException(HttpStatus.UNAUTHORIZED, "unauthorized", "投递无法通过验证。");
     }
 }

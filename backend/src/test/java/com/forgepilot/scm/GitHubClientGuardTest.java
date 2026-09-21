@@ -121,18 +121,18 @@ class GitHubClientGuardTest extends ScmTestBase {
         return Stream.of(
                 new Case("base.sha is absent", pullRequest("""
                         "base":{},"head":{"sha":"%s","ref":"feat/x"},"user":{"id":424242,"login":"octocat"}"""
-                        .formatted(HEAD_SHA)), "is missing base.sha"),
+                        .formatted(HEAD_SHA)), "缺少 base.sha"),
                 new Case("the whole base object is absent", pullRequest("""
                         "head":{"sha":"%s","ref":"feat/x"},"user":{"id":424242,"login":"octocat"}"""
-                        .formatted(HEAD_SHA)), "is missing base.sha"),
+                        .formatted(HEAD_SHA)), "缺少 base.sha"),
                 new Case("base.sha is null", pullRequest("""
                         "base":{"sha":null},"head":{"sha":"%s","ref":"feat/x"},\
                         "user":{"id":424242,"login":"octocat"}""".formatted(HEAD_SHA)),
-                        "is missing base.sha"),
+                        "缺少 base.sha"),
                 new Case("base.sha is a container", pullRequest("""
                         "base":{"sha":{"value":"%s"}},"head":{"sha":"%s","ref":"feat/x"},\
                         "user":{"id":424242,"login":"octocat"}""".formatted(BASE_SHA, HEAD_SHA)),
-                        "is missing base.sha"),
+                        "缺少 base.sha"),
                 // The historical bug from the other side: a payload that carries a
                 // field literally named "base.sha" and no "sha" must still be
                 // refused. A guard that looked the label up as a field name would
@@ -140,38 +140,38 @@ class GitHubClientGuardTest extends ScmTestBase {
                 new Case("base carries a field literally named base.sha", pullRequest("""
                         "base":{"base.sha":"%s"},"head":{"sha":"%s","ref":"feat/x"},\
                         "user":{"id":424242,"login":"octocat"}""".formatted(BASE_SHA, HEAD_SHA)),
-                        "is missing base.sha"),
+                        "缺少 base.sha"),
                 new Case("base.sha is blank", pullRequest("""
                         "base":{"sha":"   "},"head":{"sha":"%s","ref":"feat/x"},\
                         "user":{"id":424242,"login":"octocat"}""".formatted(HEAD_SHA)),
-                        "has an empty base.sha"),
+                        "base.sha 为空"),
                 new Case("head.sha is absent", pullRequest("""
                         "base":{"sha":"%s"},"head":{"ref":"feat/x"},"user":{"id":424242,"login":"octocat"}"""
-                        .formatted(BASE_SHA)), "is missing head.sha"),
+                        .formatted(BASE_SHA)), "缺少 head.sha"),
                 new Case("head.ref is absent", pullRequest("""
                         "base":{"sha":"%s"},"head":{"sha":"%s"},"user":{"id":424242,"login":"octocat"}"""
-                        .formatted(BASE_SHA, HEAD_SHA)), "is missing head.ref"),
+                        .formatted(BASE_SHA, HEAD_SHA)), "缺少 head.ref"),
                 new Case("user.id is absent", pullRequest("""
                         "base":{"sha":"%s"},"head":{"sha":"%s","ref":"feat/x"},"user":{"login":"octocat"}"""
-                        .formatted(BASE_SHA, HEAD_SHA)), "is missing user.id"),
+                        .formatted(BASE_SHA, HEAD_SHA)), "缺少 user.id"),
                 new Case("user.id is null", pullRequest("""
                         "base":{"sha":"%s"},"head":{"sha":"%s","ref":"feat/x"},\
                         "user":{"id":null,"login":"octocat"}""".formatted(BASE_SHA, HEAD_SHA)),
-                        "is missing user.id"),
+                        "缺少 user.id"),
                 new Case("the whole user object is absent", pullRequest("""
                         "base":{"sha":"%s"},"head":{"sha":"%s","ref":"feat/x"}"""
-                        .formatted(BASE_SHA, HEAD_SHA)), "is missing user.id"),
+                        .formatted(BASE_SHA, HEAD_SHA)), "缺少 user.id"),
                 new Case("user.login is absent", pullRequest("""
                         "base":{"sha":"%s"},"head":{"sha":"%s","ref":"feat/x"},"user":{"id":424242}"""
-                        .formatted(BASE_SHA, HEAD_SHA)), "is missing user.login"),
+                        .formatted(BASE_SHA, HEAD_SHA)), "缺少 user.login"),
                 new Case("title is absent", """
                         {"number":7,"updated_at":"2026-08-21T12:00:00Z","base":{"sha":"%s"},\
                         "head":{"sha":"%s","ref":"feat/x"},"user":{"id":424242,"login":"octocat"}}"""
-                        .formatted(BASE_SHA, HEAD_SHA), "is missing title"),
+                        .formatted(BASE_SHA, HEAD_SHA), "缺少 title"),
                 new Case("updated_at is absent", """
                         {"number":7,"title":"A pull request","base":{"sha":"%s"},\
                         "head":{"sha":"%s","ref":"feat/x"},"user":{"id":424242,"login":"octocat"}}"""
-                        .formatted(BASE_SHA, HEAD_SHA), "is missing updated_at"));
+                        .formatted(BASE_SHA, HEAD_SHA), "缺少 updated_at"));
     }
 
     @ParameterizedTest(name = "{0}")
@@ -194,16 +194,16 @@ class GitHubClientGuardTest extends ScmTestBase {
     static Stream<Case> malformedFileLists() {
         return Stream.of(
                 new Case("filename is absent", """
-                        [{"status":"modified","patch":"@@"}]""", "is missing filename"),
+                        [{"status":"modified","patch":"@@"}]""", "缺少 filename"),
                 new Case("filename is null", """
-                        [{"filename":null,"status":"modified","patch":"@@"}]""", "is missing filename"),
+                        [{"filename":null,"status":"modified","patch":"@@"}]""", "缺少 filename"),
                 new Case("filename is blank", """
-                        [{"filename":"  ","status":"modified","patch":"@@"}]""", "has an empty filename"),
+                        [{"filename":"  ","status":"modified","patch":"@@"}]""", "filename 为空"),
                 new Case("status is absent", """
-                        [{"filename":"src/a.txt","patch":"@@"}]""", "is missing status"),
+                        [{"filename":"src/a.txt","patch":"@@"}]""", "缺少 status"),
                 // Only the second page is malformed, so the refusal has to survive
                 // pagination rather than only ever looking at the first response.
-                new Case("a later page is malformed", null, "is missing filename"));
+                new Case("a later page is malformed", null, "缺少 filename"));
     }
 
     @ParameterizedTest(name = "{0}")

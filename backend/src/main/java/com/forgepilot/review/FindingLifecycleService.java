@@ -99,7 +99,7 @@ public class FindingLifecycleService {
         FindingStatus from = finding.getStatus();
         Move move = MOVES.get(from).get(target);
         if (move == null) {
-            throw ApiException.conflict("A finding cannot move from " + from + " to " + target + ".");
+            throw ApiException.conflict("Finding 不能从 " + from + " 转换为 " + target + "。");
         }
         if (member.getRoles().stream().noneMatch(move.allowed()::contains)) {
             throw ApiException.forbidden();
@@ -114,7 +114,7 @@ public class FindingLifecycleService {
             default -> decisions.moveFinding(projectId, findingId, from.name(), target.name());
         };
         if (updated != 1) {
-            throw ApiException.conflict("This finding is no longer in " + from + ".");
+            throw ApiException.conflict("该 Finding 已不处于 " + from + " 状态。");
         }
 
         // 与移动处于同一个事务：状态变了却没有审计行，或者审计行描述了一次

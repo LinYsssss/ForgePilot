@@ -44,12 +44,12 @@ class SecurityConfig {
      * 这是 API.md 明令禁止的。
      */
     private static final ApiError UNAUTHENTICATED =
-            new ApiError("unauthorized", "Authentication is required.", "");
+            new ApiError("unauthorized", "请先登录。", "");
     private static final ApiError BAD_CREDENTIALS =
-            new ApiError("unauthorized", "Invalid username or password.", "");
+            new ApiError("unauthorized", "用户名或密码错误。", "");
     /** 访问被拒的唯一来源就是缺失或错误的 CSRF token。 */
     private static final ApiError FORBIDDEN =
-            new ApiError("forbidden", "The request was rejected.", "");
+            new ApiError("forbidden", "请求被拒绝。", "");
 
     static final String LOGIN_PATH = "/api/auth/login";
     static final String REGISTER_PATH = "/api/auth/register";
