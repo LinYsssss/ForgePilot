@@ -31,7 +31,9 @@ was deployed to the existing `fp-demo` stack. V14 applied successfully; the orig
 PostgreSQL container, volume and baseline record counts were retained. Container,
 loopback and public health checks passed, and served assets matched the running
 frontend image. See the [deployment record](../../.trellis/tasks/archive/2026-09/09-07-review-collaboration/deployment.md)
-and current test report for the exact evidence and remaining manual checks.
+and current test report for the exact evidence and remaining manual checks. The
+currently deployed commit is `10cec66` (2026-09-21); its record is in
+`.trellis/tasks/archive/2026-09/09-21-review-followups/deployment.md`.
 
 ## 2. Build and test gates
 
@@ -112,7 +114,7 @@ State one more scope boundary honestly, because the arm names invite a stronger 
 
 ## 5. Production revalidation evidence
 
-The deployed `4121cea` application was revalidated serially against 15 existing
+The application deployed at the time, `4121cea`, was revalidated serially against 15 existing
 real GitHub PR snapshots. All 15 Reviews completed; all 45 AI calls succeeded
 and referenced the correct Review ID; all PR head, input-fingerprint and
 requirement-revision snapshots matched. This is operational reliability and

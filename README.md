@@ -29,7 +29,8 @@ ForgePilot 是一个面向软件研发流程的轻量级 AI 研发协作与代�
 | 知识 | PostgreSQL 15 + pgvector，按 `project_id` 与当前 Requirement 双重硬过滤 |
 | 评测 | 三臂对照实验，holdout 只跑一次 |
 
-验证使用 Testcontainers 真实 PostgreSQL 15 + pgvector。2026-09-20 部署版本
+验证使用 Testcontainers 真实 PostgreSQL 15 + pgvector。当前部署版本为 `10cec66`（2026-09-21，
+统一错误体与中文文案等审查修复）。2026-09-20 部署版本
 `4121cea` 的后端全套 416 项测试、前端 lint / typecheck / build 与 63 项测试全部
 通过，现有 PostgreSQL 数据和 V14 schema 保留。部署后 15 个真实 GitHub PR
 快照全部完成复验，45 次 AI 调用全部成功并关联到对应 Review。论文引用口径、
