@@ -58,4 +58,4 @@ human decision loop. These guides describe the resulting runtime conventions.
 
 ---
 
-**Language**: All documentation should be written in **English**.
+**Language**: these spec guides are written in English. Code comments, Javadoc, user-facing error messages and everything under `docs/` are written in Chinese; that is the repository's actual convention and new code follows it.

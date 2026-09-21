@@ -4,7 +4,78 @@
 
 登录、注册与两个 webhook 端点另有按客户端地址计的限流，超出配额返回 **429** 与 `{"code":"too_many_requests"}`；该响应由过滤器直接写出，不经 MVC。配额见 `.env.example` 的三个 `FORGEPILOT_*_PER_*` 变量。
 
-下文列出本轮变更涉及的需求、知识与审查端点；其余端点的行为见 [ARCHITECTURE.md](./ARCHITECTURE.md) 与对应 `*Controller`。
+框架层面的失败同样落在这一结构里：请求体解析失败、路径或参数类型不匹配、缺少必填参数为 **400** `bad_request`；未知路径为 **404** `not_found`；方法或媒体类型不支持分别为 **405** `method_not_allowed`、**415** `unsupported_media_type`；请求体校验失败为 **422** `invalid_request`；未预见的失败为 **500** `internal_error`。除三个过滤器响应外，每个错误体都带可在日志中检索的 `traceId`。
+
+## 端点索引
+
+全部 70 个端点，按控制器分组；「谁」列写的是服务层实际校验的角色（成员 = 项目任一成员）。下文各小节只详述其中有额外契约的端点，其余行为见 [ARCHITECTURE.md](./ARCHITECTURE.md) 与对应 `*Controller`。
+
+| 端点 | 谁 | 成功 | 说明 |
+|---|---|---|---|
+| `POST /api/auth/register` | 匿名，限流 | 201 | 注册 |
+| `POST /api/auth/login` | 匿名，限流 | 200 | 表单登录（Spring Security 处理） |
+| `POST /api/auth/logout` | 已登录 | 204 | 登出 |
+| `GET /api/auth/me` | 已登录 | 200 | 当前账户；同时下发 XSRF-TOKEN |
+| `PATCH /api/auth/profile` | 已登录 | 200 | 改显示名 |
+| `POST /api/auth/password` | 已登录 | 204 | 改密，其他会话失效 |
+| `GET /api/projects` | 已登录 | 200 | 我参与的项目 |
+| `POST /api/projects` | 已登录 | 201 | 创建项目，创建者成为 LEADER |
+| `GET /api/projects/{projectId}` | 成员 | 200 | 项目与我的角色 |
+| `POST /api/projects/{projectId}/archive` `unarchive` | LEADER | 204 | 归档 / 恢复 |
+| `GET /api/projects/{projectId}/members` | 成员 | 200 | 成员目录 |
+| `GET /api/projects/{projectId}/members/candidates` | LEADER | 200 | 搜索可添加账号，分页 |
+| `POST /api/projects/{projectId}/members/batch` | LEADER | 201 | 原子批量添加 |
+| `PATCH /api/projects/{projectId}/members/{userId}/roles` | LEADER | 200 | 改角色集合 |
+| `POST /api/projects/{projectId}/members/leader-transfer` | LEADER | 204 | 转移负责人 |
+| `DELETE /api/projects/{projectId}/members/{userId}` | LEADER | 204 | 移除成员 |
+| `GET /api/projects/{projectId}/requirements` | 成员 | 200 | 需求列表 |
+| `POST /api/projects/{projectId}/requirements` | LEADER | 201 | 创建 DRAFT 需求 |
+| `GET /api/projects/{projectId}/requirements/{id}` | 成员 | 200 | 需求详情 |
+| `PATCH /api/projects/{projectId}/requirements/{id}` | LEADER | 200 | 原地编辑 DRAFT |
+| `DELETE /api/projects/{projectId}/requirements/{id}` | LEADER | 204 | 软删已取消需求 |
+| `GET /api/projects/{projectId}/requirements/{id}/revisions` | 成员 | 200 | 修订历史 |
+| `POST /api/projects/{projectId}/requirements/{id}/revisions` | LEADER | 201 | 发布新修订，须 `changeReason` |
+| `POST /api/projects/{projectId}/requirements/{id}/status` | LEADER | 200 | 状态转换 |
+| `POST /api/projects/{projectId}/requirements/{id}/assignee` | LEADER | 200 | 指派开发负责人 |
+| `POST /api/projects/{projectId}/requirements/{id}/reviewer` | LEADER | 200 | 指派/清空审查人 |
+| `GET /api/projects/{projectId}/requirements/{id}/attachments` | 成员 | 200 | 附件元数据 |
+| `POST /api/projects/{projectId}/requirements/{id}/attachments` | LEADER | 201 | 上传 `.txt/.md` 附件 |
+| `GET .../requirements/{id}/attachments/{documentId}/content` `download` | 成员 | 200 | 读取 / 下载附件 |
+| `POST .../requirements/{id}/attachments/{documentId}/promote` | LEADER | 201 | 提升为项目知识 |
+| `POST /api/projects/{projectId}/requirements/{id}/guidance` | LEADER，被指派 DEVELOPER | 200 | 一次性实现建议，不落库 |
+| `POST /api/projects/{projectId}/requirements/{id}/quality` | LEADER | 200 | 需求质量检查 |
+| `GET /api/projects/{projectId}/requirements/{id}/review-activity` | 成员 | 200 | 派生评审活动 |
+| `GET /api/projects/{projectId}/review-activity` | 成员 | 200 | 全项目活动，按需求 id |
+| `GET /api/projects/{projectId}/requirements/{id}/coverage` | 成员 | 200 | AC 覆盖度 |
+| `GET /api/projects/{projectId}/review-calibration` | 成员 | 200 | 置信度校准视图 |
+| `GET /api/projects/{projectId}/knowledge/documents` | 成员 | 200 | 知识列表（元数据） |
+| `POST /api/projects/{projectId}/knowledge/documents` | LEADER | 201 | 上传，返回 PENDING |
+| `GET .../knowledge/documents/{id}/content` `download` | 成员 | 200 | 公共原文 |
+| `POST .../knowledge/documents/{id}/promote` | LEADER | 201 | 附件提升（知识入口） |
+| `DELETE .../knowledge/documents/{id}` | LEADER | 204 | 硬删 |
+| `GET /api/projects/{projectId}/scm/repositories` | 成员 | 200 | 仓库配置（无凭据） |
+| `POST /api/projects/{projectId}/scm/repositories` | LEADER | 201 | 注册仓库 |
+| `PATCH /api/projects/{projectId}/scm/repositories/{id}` | LEADER | 200 | 更新凭据 / 严格模式 |
+| `GET /api/projects/{projectId}/pull-requests/{id}` | 成员 | 200 | PR 快照与作者映射 |
+| `PUT /api/projects/{projectId}/pull-requests/{id}/requirement` | LEADER，本人 PR 的 DEVELOPER | 200 | 设置 / 清除关联 |
+| `POST /api/projects/{projectId}/pull-requests/{id}/reviews` | LEADER、REVIEWER，本人 PR 的 DEVELOPER | 202 | 触发 / 重试 Review |
+| `GET /api/projects/{projectId}/pull-requests/{id}/reviews` | 成员 | 200 | 该 PR 的 Review 历史 |
+| `GET /api/projects/{projectId}/reviews` | 成员 | 200 | 项目审查列表 |
+| `GET /api/projects/{projectId}/reviews/{id}` | 成员 | 200 | 审查详情 |
+| `POST /api/projects/{projectId}/reviews/{id}/decision` | 指定审查人、LEADER | 200 | 一次性最终决定 |
+| `POST /api/projects/{projectId}/findings/{id}/status` | 按状态矩阵 | 200 | Finding 状态流转 |
+| `GET /api/projects/{projectId}/findings/{id}/events` | 成员 | 200 | Finding 审计 |
+| `GET /api/projects/{projectId}/scm/binding-options` `bindings` | 成员 | 200 | 可选身份 / 绑定历史 |
+| `POST /api/projects/{projectId}/scm/bindings` | 成员 | 201 | 绑定自己的身份 |
+| `POST .../scm/bindings/{id}/approve` `reject` | LEADER | 204 | 审批待审绑定 |
+| `POST .../scm/bindings/{id}/revoke` | 绑定本人 | 204 | 撤销 |
+| `GET /api/scm/identities` | 已登录 | 200 | 我的身份 |
+| `POST /api/scm/identities/verify` | 已登录 | 201 | 一次性 Token 验证 |
+| `PATCH /api/scm/identities/{id}` | 已登录 | 200 | 改标签 / 用途 |
+| `DELETE /api/scm/identities/{id}` | 已登录 | 204 | 吊销 |
+| `GET` `PUT` `DELETE /api/projects/{projectId}/notifications/dingtalk` | LEADER | 200 / 200 / 204 | 钉钉渠道配置 |
+| `POST /api/projects/{projectId}/notifications/dingtalk/test` | LEADER | 200 | 测试消息 |
+| `POST /api/scm/github/webhook` `gitlab/webhook` | 签名 / Token 验证，限流 | 202 | 投递入口 |
 
 ## 账户
 

@@ -19,7 +19,7 @@ npm run test -- --run
 npm run build
 ```
 
-2026-09-08 审查修复后四条命令全部通过；产物 JS 258.41 kB（gzip 84.43 kB）、CSS 69.00 kB（gzip 12.26 kB）。现有 journey 同时覆盖重开的抑制项回主列表、PR 解除关联后历史 Review 的负责人归属。
+2026-09-21 四条命令全部通过（Vitest 63 用例 / 18 文件）；产物 JS 263.09 kB（gzip 85.94 kB）、CSS 69.00 kB（gzip 12.26 kB）。现有 journey 同时覆盖重开的抑制项回主列表、PR 解除关联后历史 Review 的负责人归属。
 
 ## 信息架构
 

@@ -186,4 +186,6 @@ READY 后正文与 AC 锁定；修改由 LEADER 创建新的不可变 Revision �
 - **PostgreSQL 最低版本为 15**，来自复合外键列级 `ON DELETE SET NULL` 与 `UNIQUE NULLS NOT DISTINCT` 两处不可替代的语法。
 - Embedding 换 Profile 需维护窗口与 reindex，**不承诺**无停机切换。
 - GitHub 先跑通主线，GitLab 后验证同一 contract，用以证明 Adapter 的实际价值。
+- **知识文档 Embedding 失败后没有重试端点**：`FAILED` 文档带受控原因保留在列表里，只能删除后重新上传；不做自动重试或重新排队，避免一条坏文档反复消耗 provider 调用。
+- **列表端点不分页**：需求、审查、知识、Finding 列表按项目全量返回，只有成员候选搜索分页。MVP 项目规模下够用，规模增长后须先在这里加分页。
 - 评测语料为**人工构造的演示缺陷**，非真实企业缺陷，论文中须诚实说明；且 holdout 仅 12 例，结论必须给出置信区间或明确的不确定性说明，不得把小样本上的差值当作强证据。

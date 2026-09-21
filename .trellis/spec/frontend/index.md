@@ -35,4 +35,4 @@ that no code follows does not belong here; remove it or implement it.
 
 ---
 
-**Language**: All documentation should be written in **English**.
+**Language**: these spec guides are written in English. Code comments, UI copy and everything under `docs/` are written in Chinese; that is the repository's actual convention and new code follows it.

@@ -20,7 +20,7 @@ Three places, because they run at different times:
 
 | Producer | Covers | File |
 |---|---|---|
-| `common.ApiExceptionHandler` (`@RestControllerAdvice`) | anything thrown from a Controller or Service | `common/ApiExceptionHandler.java` |
+| `common.ApiExceptionHandler` (`@RestControllerAdvice`) | anything thrown from a Controller or Service, **and** the Spring MVC pre-controller failures (unreadable body, argument type mismatch, missing parameter → 400 `bad_request`; unknown path → 404 `not_found`; 405 / 415; bean validation → 422 `invalid_request`) plus an `Exception` catch-all → 500 `internal_error` | `common/ApiExceptionHandler.java` |
 | The security filter chain's entry point and access-denied handler | 401 and 403 | `auth/SecurityConfig.java` |
 | `common.RateLimitFilter` | 429 | `common/RateLimitFilter.java` |
 
@@ -32,6 +32,10 @@ example — it sets the status, content type, charset, and serialises `ApiError`
 itself, and it is wired into two different chains (`auth/SecurityConfig.java`,
 `scm/ScmWebhookSecurityConfig.java`) precisely because neither of them can
 delegate.
+
+User-facing `message` text is Chinese; `code` stays a stable snake_case token
+the frontend may branch on. Tests assert on the code or on a stable fragment
+(a field name such as `head.sha`), not on whole sentences.
 
 ## Raising a failure
 
