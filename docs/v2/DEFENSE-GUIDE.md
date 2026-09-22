@@ -131,6 +131,17 @@ python3 docs/thesis/verify-production-revalidation.py
 Do not combine its 100% completion rate with the formal evaluation's precision
 or recall. The production run did not independently adjudicate its new Findings.
 
+Two further live exercises ran on 2026-09-22 against the deployed `6162166`: the
+15 demo-repository PRs were re-reviewed under the evidence-anchoring validator
+(with one real cross-round suppression and one real GitHub merge), and 24 real
+upstream `halo-dev/halo` pull requests were replayed on a fork with every Finding
+adjudicated by hand. Narrative, datasets and verifier are under
+[`docs/thesis/LIVE-EXERCISES.md`](../thesis/LIVE-EXERCISES.md):
+
+```bash
+python3 docs/thesis/verify-live-exercises.py
+```
+
 ## 6. Secret and cleanup rules
 
 - `.env`, the private corpus, and formal runtime outputs are ignored by Git.
