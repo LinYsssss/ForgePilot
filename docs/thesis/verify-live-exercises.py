@@ -8,8 +8,8 @@ from pathlib import Path
 HERE = Path(__file__).parent
 DEMO = HERE / "demo-rerun-20260922.csv"
 HALO = HERE / "halo-replay-20260922.csv"
-DEMO_SHA256 = "8a7564ea65432742f2237cf98791e14ad46460f05c5cd512fba46d6ade5e19fe"
-HALO_SHA256 = "bcb3249cb227841b234cac91d6f32cca2c581e0f770318a5310558c172c9bfaf"
+DEMO_SHA256 = "b9409497b9d544192e648f910b3cc6b5203342731dc5b0113847a56d76bc61fb"
+HALO_SHA256 = "25ce560b1d34d15ebfaf6c914010c5afd10071e41dc9caed7ea9e149cc193681"
 
 
 def load(path):
