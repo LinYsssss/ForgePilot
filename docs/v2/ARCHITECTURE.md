@@ -438,7 +438,7 @@ AiGateway.embed(texts, embeddingConfig)
 
 `ai` 负责 HTTP、认证、超时、一次有限重试、调用元数据、Token/延迟与错误分类。
 它**不知道** Requirement/Finding/Review 等业务类型，也不暴露 tool loop。
-业务 Prompt 归 `requirement` 与 `review` 各自所有；Requirement Quality 与一次性 Implementation Guidance 共享 AI Gateway 但使用不同 schema。不建 Prompt Registry，不建万能 ContextBuilder。
+业务 Prompt 归 `requirement` 与 `review` 各自所有；Requirement Quality 与一次性 Implementation Guidance 共享 AI Gateway 但使用不同 schema。不建 Prompt Registry，不建万能 ContextBuilder。三类 Prompt 都要求模型散文（Finding 的说明与建议、质量意见、实现建议）用简体中文；逐字引用、路径、标识符与枚举值保持原样。
 
 Requirement Quality 先运行确定性规则并按脱敏后的完整 Prompt 计算预算。预算内只调用一次 AI；超预算时生成 `PROMPT_BUDGET_EXCEEDED`、跳过 AI，以 `quality-2` 保存并返回 `ai=null` 的规则结果，不把截断后的部分需求交给模型，也不改变 Requirement 状态。历史结果不迁移。
 
