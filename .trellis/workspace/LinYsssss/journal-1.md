@@ -556,3 +556,26 @@ Mapped Spring MVC pre-controller failures into ApiError, localized 104 user-faci
 ### Status
 
 [OK] **Completed**
+
+
+## Session 19: Thesis materials: demo rerun and Halo replay
+
+**Date**: 2026-09-23
+**Task**: Thesis materials: demo rerun and Halo replay
+**Branch**: `main`
+
+### Summary
+
+Added docs/thesis LIVE-EXERCISES.md with two SHA-256 pinned datasets and a standard-library verifier covering the 2026-09-22 demo-repository rerun (anchoring validator, one real suppression, one real merge) and the 24-PR halo-dev/halo replay with hand-adjudicated Findings; linked from the thesis README and defense guide.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `fcf14c7` | (see git log) |
+| `430b0a3` | (see git log) |
+| `62dc159` | (see git log) |
+
+### Status
+
+[OK] **Completed**
