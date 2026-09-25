@@ -39,6 +39,11 @@ import com.forgepilot.scm.ChangedFile;
  * 参与任何自动门禁或状态流转：它未经校准。</li>
  * </ul>
  *
+ * <p>Finding 的类型不由模型选：引用了本次修订某条验收条件的是 {@code REQUIREMENT}，
+ * 否则是 {@code CODE_QUALITY}，由校验器按 {@code acId} 推导。让模型另报一个类型，
+ * 等于给同一个事实两个可以互相矛盾的来源——实测里它们时常矛盾，矛盾的那条 finding
+ * 只能整条丢弃。
+ *
  * <p>两个 schema 重复了 finding 的结构，而不是共享一个片段。这次重复是刻意的：
  * 每一个都是一段可以从头读到尾、并直接粘进校验器的字面量，
  * 这在这里比消掉九行重复更有价值。{@code ReviewPipelineIntegrationTest}
@@ -53,7 +58,7 @@ final class ReviewPrompts {
      * 存进 {@code review.prompt_version}。只要任一条指令或任一个 schema 变了，
      * 它就必须跟着变：一份存下来的报告只有对着产生它的那个 Prompt 才可解读。
      */
-    static final String VERSION = "review-3";
+    static final String VERSION = "review-4";
 
     /** 存进 {@code review.engine}。Review Engine 恰好只有一个（AGENTS.md）。 */
     static final String ENGINE = "forgepilot-review";
@@ -74,10 +79,9 @@ final class ReviewPrompts {
                   "items": {
                     "type": "object",
                     "additionalProperties": false,
-                    "required": ["type", "category", "path", "line", "evidence", "explanation",
+                    "required": ["category", "path", "line", "evidence", "explanation",
                       "suggestion", "confidence", "acId", "sourceIds"],
                     "properties": {
-                      "type": {"type": "string", "enum": ["CODE_QUALITY", "REQUIREMENT"]},
                       "category": {"type": "string", "enum": ["CORRECTNESS", "SECURITY",
                         "ERROR_HANDLING", "CONCURRENCY", "PERFORMANCE", "API_CONTRACT",
                         "TEST_COVERAGE", "MAINTAINABILITY", "REQUIREMENT_GAP"]},
@@ -92,7 +96,8 @@ final class ReviewPrompts {
                       "confidence": {"type": "string", "enum": ["HIGH", "MEDIUM", "LOW"], \
             "description": "How sure you are that this finding is real. A coarse band, never a \
             calibrated probability."},
-                      "acId": {"type": ["integer", "null"]},
+                      "acId": {"type": ["integer", "null"], "description": "The acceptance \
+            criterion this finding is about, or null when it concerns none of them."},
                       "sourceIds": {"type": "array", "items": {"type": "integer"}}
                     }
                   }
@@ -139,10 +144,9 @@ final class ReviewPrompts {
                   "items": {
                     "type": "object",
                     "additionalProperties": false,
-                    "required": ["type", "category", "path", "line", "evidence", "explanation",
+                    "required": ["category", "path", "line", "evidence", "explanation",
                       "suggestion", "confidence", "acId", "sourceIds"],
                     "properties": {
-                      "type": {"type": "string", "enum": ["CODE_QUALITY", "REQUIREMENT"]},
                       "category": {"type": "string", "enum": ["CORRECTNESS", "SECURITY",
                         "ERROR_HANDLING", "CONCURRENCY", "PERFORMANCE", "API_CONTRACT",
                         "TEST_COVERAGE", "MAINTAINABILITY", "REQUIREMENT_GAP"]},
@@ -157,7 +161,8 @@ final class ReviewPrompts {
                       "confidence": {"type": "string", "enum": ["HIGH", "MEDIUM", "LOW"], \
             "description": "How sure you are that this finding is real. A coarse band, never a \
             calibrated probability."},
-                      "acId": {"type": ["integer", "null"]},
+                      "acId": {"type": ["integer", "null"], "description": "The acceptance \
+            criterion this finding is about, or null when it concerns none of them."},
                       "sourceIds": {"type": "array", "items": {"type": "integer"}}
                     }
                   }
@@ -175,8 +180,8 @@ final class ReviewPrompts {
 
             Write a path exactly as it appears in its heading below, letter case included. Give a \
             line number only when the patch shows that line on its new side, and null otherwise. \
-            Cite a source id only from the numbered project knowledge below. A REQUIREMENT finding \
-            names the acId it is about; a CODE_QUALITY finding names none.""";
+            Cite a source id only from the numbered project knowledge below. Give a finding the acId \
+            of the acceptance criterion it is about, and null when it concerns none of them.""";
 
     /**
      * 输出语言。只约束模型自己的散文——{@code explanation} 与 {@code suggestion}——
@@ -363,11 +368,10 @@ final class ReviewPrompts {
     }
 
     /**
-     * 一个被召回的知识分块，以 Prompt 所需的形态呈现：回答可以引用的那个 id，
-     * 以及它可以据以推理的文本。片段的哈希**刻意**不在这里——
+     * 一个被召回的知识分块：回答可以引用的那个 id、它可以据以推理的文本，以及历史
+     * Review 上下文里返回的、完整且不可变的定位信息。片段的哈希**刻意**不在这里——
      * 它属于 {@code basis_hash}，永远不属于模型。
      */
-    /** 在历史 Review 上下文中返回的、完整且不可变的知识定位信息。 */
     record KnowledgeExcerpt(long sourceId, long documentId, long chunkId, String excerpt, double score) {
     }
 }

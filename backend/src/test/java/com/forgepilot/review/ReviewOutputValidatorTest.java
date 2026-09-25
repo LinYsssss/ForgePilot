@@ -2,6 +2,7 @@ package com.forgepilot.review;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.tuple;
 
 import java.util.List;
 import java.util.Map;
@@ -97,6 +98,19 @@ class ReviewOutputValidatorTest {
 
         assertThat(output.findings()).isEmpty();
         assertThat(output.warnings()).anyMatch(warning -> warning.contains("999"));
+    }
+
+    /**
+     * The type follows the acId alone. A label contradicting it used to cost the whole
+     * anchored finding, which was the most common drop in the Halo replay before review-4.
+     */
+    @Test
+    void theFindingTypeFollowsTheCitedCriterionNotTheModelsLabel() {
+        ReviewOutput output = valid("", finding("CODE_QUALITY", FILE, 3, "class A {}", "\"acId\":11,") + ","
+                + finding("REQUIREMENT", FILE, 3, "class A {}", ""));
+
+        assertThat(output.findings()).extracting(FindingCandidate::findingType, FindingCandidate::acId)
+                .containsExactly(tuple(FindingType.REQUIREMENT, 11L), tuple(FindingType.CODE_QUALITY, null));
     }
 
     // ---------------------------------------------------------------- findings

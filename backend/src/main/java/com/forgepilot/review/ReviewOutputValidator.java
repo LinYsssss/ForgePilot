@@ -47,9 +47,16 @@ public class ReviewOutputValidator {
      */
     private static final int MAX_PROSE = 2000;
 
-    /** A valid unified-diff hunk header, including the optional one-line counts. */
+    /** 合法的 unified diff hunk 头，含可省略的单行计数。 */
     private static final Pattern HUNK_HEADER = Pattern.compile(
             "^@@ -(\\d{1,9})(?:,(\\d{1,9}))? \\+(\\d{1,9})(?:,(\\d{1,9}))? @@.*$");
+
+    /**
+     * 整条丢弃一条 Finding 的那几种警告。重复项不算：它与留下的那条是同一个 key。
+     * 「no usable type」只出现在 {@code review-4} 之前的历史审查里。
+     */
+    private static final Pattern DROPPED_FINDING = Pattern.compile(
+            "^dropped a (?:REQUIREMENT |CODE_QUALITY )?finding (?:for |with no usable type)");
 
     private final ObjectMapper json;
 
@@ -181,11 +188,11 @@ public class ReviewOutputValidator {
     }
 
     private FindingCandidate readFinding(JsonNode item, Context context, List<String> warnings) {
-        FindingType type = typeOf(stringOrNull(item, "type"));
-        if (type == null) {
-            warnings.add("dropped a finding with no usable type");
-            return null;
-        }
+        // 类型由 acId 推导而不由模型另报（见 ReviewPrompts）：引用了本修订验收条件的是
+        // REQUIREMENT，没有引用的是 CODE_QUALITY。
+        Long acId = integralOrNull(item, "acId");
+        Context.Ac criterion = acId == null ? null : context.acceptanceCriterion(acId);
+        FindingType type = acId == null ? FindingType.CODE_QUALITY : FindingType.REQUIREMENT;
         String path = stringOrNull(item, "path");
         ChangedFile file = context.visibleFile(path);
         if (file == null) {
@@ -205,20 +212,11 @@ public class ReviewOutputValidator {
             return null;
         }
 
-        Long acId = integralOrNull(item, "acId");
-        Context.Ac criterion = null;
-        if (type == FindingType.REQUIREMENT) {
-            criterion = acId == null ? null : context.acceptanceCriterion(acId);
-            if (criterion == null) {
-                warnings.add("dropped a REQUIREMENT finding for " + path + ": acceptance criterion " + acId
-                        + " does not belong to the revision under review");
-                return null;
-            }
-        } else if (acId != null) {
-            // ck_finding_code_quality_has_no_ac 会拒绝这一行，并把整批插入一起带走。
-            // 这两个字段到底哪个错了，在这里无从得知，
-            // 而猜一个，就等于凭空造出一条没人报告过的 finding。
-            warnings.add("dropped a CODE_QUALITY finding for " + path + ": it cited acceptance criterion " + acId);
+        if (acId != null && criterion == null) {
+            // 引用了不属于本修订的验收条件：这条断言正是架在那条引用上的，
+            // 与引用了未召回的 sourceId 同理，删掉引用修不好它。
+            warnings.add("dropped a REQUIREMENT finding for " + path + ": acceptance criterion " + acId
+                    + " does not belong to the revision under review");
             return null;
         }
 
@@ -373,10 +371,9 @@ public class ReviewOutputValidator {
     }
 
     /**
-     * Anchors a verbatim excerpt to source text reconstructed from the patch's new
-     * side. Diff markers are deliberately not source: an added line {@code +return x;}
-     * is indexed as {@code return x;}. Each hunk is searched independently, so a
-     * quotation cannot bridge omitted source between two hunks.
+     * 把逐字引用锚定到由 patch 新侧还原出的源码上。diff 标记刻意不算源码：新增行
+     * {@code +return x;} 按 {@code return x;} 建索引。每个 hunk 单独搜索，因此一段引用
+     * 无法跨过两个 hunk 之间被省略的源码拼接起来。
      */
     private static AnchoredEvidence anchor(String excerpt, ChangedFile file) {
         if (file.patch() == null) {
@@ -413,9 +410,8 @@ public class ReviewOutputValidator {
     }
 
     /**
-     * Reconstructs only visible new-side source. A malformed hunk header makes the
-     * patch unverifiable; an incomplete final hunk is still useful because batch
-     * truncation intentionally exposes a line-complete prefix.
+     * 只还原可见的新侧源码。hunk 头不合法则整个 patch 无从核验；最后一个 hunk 不完整
+     * 仍然可用，因为分批截断有意只暴露按整行截取的前缀。
      */
     private static List<SourceHunk> sourceHunks(String patch) {
         List<SourceHunk> hunks = new ArrayList<>();
@@ -456,8 +452,7 @@ public class ReviewOutputValidator {
             } else if (row.startsWith("-") && oldRemaining > 0) {
                 oldRemaining--;
             } else if (!row.startsWith("\\")) {
-                // A line-complete truncated patch ends with an annotation rather
-                // than pretending the remaining hunk exists.
+                // 按整行截断的 patch 以一条标注结尾，而不是假装剩下的 hunk 还在。
                 oldRemaining = 0;
                 newRemaining = 0;
             }
@@ -528,6 +523,16 @@ public class ReviewOutputValidator {
         }
     }
 
+    /** 审查详情据此告诉审查人：有几条 Finding 因无法核实而没有出现在报告里。 */
+    static boolean dropsFinding(String warning) {
+        return DROPPED_FINDING.matcher(warning).lookingAt();
+    }
+
+    /** 模型报的行号被逐字引用的真实位置纠正（Finding 与 AC 证据都算）。 */
+    static boolean correctsLine(String warning) {
+        return warning.startsWith("corrected the line of ");
+    }
+
     private static String stringOrNull(JsonNode item, String field) {
         JsonNode value = item.path(field);
         return value.isString() ? value.stringValue() : null;
@@ -542,15 +547,6 @@ public class ReviewOutputValidator {
         for (AcVerdict verdict : AcVerdict.values()) {
             if (verdict.name().equals(name)) {
                 return verdict;
-            }
-        }
-        return null;
-    }
-
-    private static FindingType typeOf(String name) {
-        for (FindingType type : FindingType.values()) {
-            if (type.name().equals(name)) {
-                return type;
             }
         }
         return null;

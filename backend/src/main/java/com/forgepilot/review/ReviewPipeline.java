@@ -142,7 +142,7 @@ public class ReviewPipeline {
         Context input = new Context(review.getRequirementId(), review.getRequirementRevisionId(),
                 requirementText, criteria, excerptHashesOf(recalled), changedFiles);
         Plan plan = batcher.plan(changedFiles, ai.promptCharBudget(),
-                // The largest possible index is conservative for every real batch, including 10+.
+                // 用可能的最大批次序号来估长度，对任何真实批次（含两位数序号）都偏保守。
                 files -> ReviewPrompts.batch(input, recalled,
                         new Batch(Math.max(1, changedFiles.size()), files)).length());
         Context context = input.withVisibleFiles(reviewedFiles(plan));
@@ -227,11 +227,6 @@ public class ReviewPipeline {
 
     // ------------------------------------------------------------------ 上下文
 
-    /**
-     * 把修订的文本拼成一个确定性的字符串。它不只是 Prompt 的需求段落——
-     * 它同时也是每一个 {@code basis_hash} 的输入，因此它的拼装方式必须固定不变：
-     * 改动这里的拼接，会静默地丢掉产品中所有被继承的抑制项。
-     */
     private JsonNode snapshotOf(Review review) {
         if (review.getContextSnapshotJson() == null) {
             throw ApiException.conflict("该审查没有不可变输入快照。");
@@ -239,6 +234,11 @@ public class ReviewPipeline {
         return json.readTree(review.getContextSnapshotJson());
     }
 
+    /**
+     * 把修订的文本拼成一个确定性的字符串。它不只是 Prompt 的需求段落——
+     * 它同时也是每一个 {@code basis_hash} 的输入，因此它的拼装方式必须固定不变：
+     * 改动这里的拼接，会静默地丢掉产品中所有被继承的抑制项。
+     */
     private static String requirementTextOf(JsonNode snapshot) {
         JsonNode requirement = snapshot.path("requirement");
         if (requirement.isMissingNode() || requirement.isNull()) {
@@ -355,7 +355,7 @@ public class ReviewPipeline {
         };
     }
 
-    /** Preserve the failing phase without carrying raw provider/SQL payloads into worker logs. */
+    /** 保留失败发生在哪个阶段，但不把 provider 或 SQL 的原始报文带进 worker 日志。 */
     private static <T> T atStage(String stage, Supplier<T> operation) {
         try {
             return operation.get();
