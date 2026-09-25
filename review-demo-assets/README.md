@@ -4,7 +4,7 @@
 
 ## 目录
 
-- `requirements/`：独立需求文档、项目知识、操作说明与测试账号说明。
+- `requirements/`：独立需求文档、项目知识与操作说明。测试账号清单只保存在部署机本地，不入仓库。
 - `repositories/<仓库>/main/`：各项目 `main` 分支的代码快照。
 - `repositories/<仓库>/review-branches/`：每仓 5 个审查分支的代码快照；每个分支包含其 `review-materials/PR-xx.md`。
 
