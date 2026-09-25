@@ -58,7 +58,7 @@ const packageJson = JSON.parse(await readFile(new URL("../package.json", import.
 const dependencies = { ...packageJson.dependencies, ...packageJson.devDependencies };
 for (const name of forbiddenDependencies) {
   if (name in dependencies) {
-    failures.push(`package.json: forbidden Phase 1 dependency ${name}`);
+    failures.push(`package.json: forbidden runtime dependency ${name}`);
   }
 }
 

@@ -8,7 +8,4 @@ import org.springframework.data.jpa.repository.JpaRepository;
 interface ProjectDeletionRecordRepository extends JpaRepository<ProjectDeletionRecord, Long> {
 
     List<ProjectDeletionRecord> findByProjectIdOrderByIdAsc(long projectId);
-
-    List<ProjectDeletionRecord> findByProjectIdAndResourceTypeOrderByIdAsc(
-            long projectId, DeletedResourceType resourceType);
 }

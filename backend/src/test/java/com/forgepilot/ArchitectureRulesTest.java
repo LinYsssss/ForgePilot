@@ -23,7 +23,7 @@ class ArchitectureRulesTest {
     private static final Set<String> FORBIDDEN_FEATURES = Set.of(
             "agent", "patch", "mq", "rag", "repo", "pullrequest", "context", "assistant", "finding");
     /** ARCHITECTURE.md 1.1 认可的仅有的那几个子包；其余一切都住在功能包自身里。 */
-    private static final Set<String> ALLOWED_SUBPACKAGES = Set.of("scm.github", "scm.gitlab", "ai.openai");
+    private static final Set<String> ALLOWED_SUBPACKAGES = Set.of("scm.github", "scm.gitlab");
     private static final JavaClasses PRODUCTION_CLASSES = new ClassFileImporter()
             .withImportOption(ImportOption.Predefined.DO_NOT_INCLUDE_TESTS)
             .importPackages("com.forgepilot");

@@ -62,10 +62,6 @@ export function projectMembersRoute(projectId: number): RouteLocationRaw {
   return { name: "project-members", params: { id: String(projectId) } };
 }
 
-export function projectSettingsRoute(projectId: number): RouteLocationRaw {
-  return { name: "repositories", query: { [PROJECT_QUERY_KEY]: String(projectId) } };
-}
-
 export function workspaceRoute(projectId?: number): RouteLocationRaw {
   return projectId === undefined
     ? { name: "workspace" }
