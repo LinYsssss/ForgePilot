@@ -2,6 +2,7 @@ package com.forgepilot.review;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 import com.forgepilot.common.ApiException;
@@ -20,7 +21,8 @@ import org.springframework.transaction.annotation.Transactional;
  * 但其实不是的：LEADER <strong>不能</strong>认领 finding，
  * 也<strong>不能</strong>把它标记为已修复。PRD.md 3 中
  * “Finding 认领、标记已修复”那一行的 LEADER 列就是 ❌，
- * 而这两步是开发者对自己工作的自我记录。因为“LEADER 理应什么都能干”
+ * 而这两步是开发者对自己工作的自我记录——标记已修复因此只属于认领它的那个人。
+ * 因为“LEADER 理应什么都能干”
  * 就去放宽它，等于授予了规格明确保留的权限；
  * 收紧是安全方向，放宽不是。
  *
@@ -102,6 +104,10 @@ public class FindingLifecycleService {
             throw ApiException.conflict("Finding 不能从 " + from + " 转换为 " + target + "。");
         }
         if (member.getRoles().stream().noneMatch(move.allowed()::contains)) {
+            throw ApiException.forbidden();
+        }
+        if (move.action() == FindingAction.MARK_FIXED && !Objects.equals(finding.getAssigneeId(), actorId)) {
+            // 「已修复」是认领人对自己工作的记录；另一个开发者不能替他宣布修好了。
             throw ApiException.forbidden();
         }
 

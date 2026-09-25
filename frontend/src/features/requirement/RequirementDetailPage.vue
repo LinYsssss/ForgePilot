@@ -412,6 +412,11 @@ function saveContent(): Promise<void> {
 }
 
 function transitionTo(status: RequirementStatus): Promise<void> {
+  // 已完成与已取消都没有出口，误点一次就再也改不回来。
+  if (isTerminal(status)
+    && !window.confirm(`确认把需求置为「${REQUIREMENT_STATUS_LABELS[status]}」？之后不能再改回。`)) {
+    return Promise.resolve();
+  }
   return run((ids) => changeStatus(ids.projectId, ids.requirementId, status));
 }
 

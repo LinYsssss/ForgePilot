@@ -30,7 +30,8 @@ public class ProjectService {
      */
     @Transactional
     public ProjectResponse create(String name, long creatorId) {
-        Project project = projects.save(new Project(name, creatorId));
+        // 归档确认要求逐字重输项目名，首尾空白混进去就成了一个几乎输不对的名字。
+        Project project = projects.save(new Project(name.strip(), creatorId));
         members.save(new ProjectMember(project.getId(), creatorId, Set.of(ProjectRole.LEADER)));
         return ProjectResponse.of(project, Set.of(ProjectRole.LEADER));
     }

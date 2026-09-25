@@ -1197,6 +1197,7 @@ describe("three-role journey through the real App and router", () => {
     const doneButton = wrapper
       .findAll("button")
       .find((button) => button.text() === "置为 已完成");
+    vi.stubGlobal("confirm", vi.fn(() => true));
     await doneButton?.trigger("click");
     await flushPromises();
     expect(lastCall("POST", "/api/projects/3/requirements/12/status")?.body).toBe(

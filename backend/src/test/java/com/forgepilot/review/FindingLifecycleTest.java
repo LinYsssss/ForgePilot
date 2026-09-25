@@ -185,6 +185,18 @@ class FindingLifecycleTest extends PostgresTestBase {
     }
 
     @Test
+    void onlyTheClaimantMayMarkAFindingFixed() {
+        Scenario scenario = new Scenario();
+        long otherDeveloper = account("other-developer");
+        scenario.member(otherDeveloper, "DEVELOPER");
+        long claimed = scenario.finding(FindingStatus.IN_PROGRESS, FindingContinuity.NEW, null);
+
+        assertThat(statusOf(() -> lifecycle.move(scenario.projectId, otherDeveloper, claimed,
+                FindingStatus.FIXED, null))).isEqualTo(HttpStatus.FORBIDDEN);
+        assertThat(statusOf(claimed)).isEqualTo("IN_PROGRESS");
+    }
+
+    @Test
     void claimingAssignsTheClaimantAndNobodyElse() {
         Scenario scenario = new Scenario();
         long finding = scenario.finding(FindingStatus.CONFIRMED, FindingContinuity.NEW, null);
@@ -469,14 +481,15 @@ class FindingLifecycleTest extends PostgresTestBase {
             return finding(FindingStatus.REJECTED, FindingContinuity.SUPPRESSED, origin);
         }
 
+        /** IN_PROGRESS 只能经认领进入，因此这里的 IN_PROGRESS 夹具总带着认领人 {@link #developer}。 */
         private long finding(FindingStatus status, FindingContinuity continuity, Long carriedFrom) {
             return jdbc.queryForObject("insert into finding (project_id, review_id, review_attempt, "
                     + "finding_type, path, line, evidence, status, finding_key, evidence_hash, "
-                    + "basis_hash, continuity, carried_from_finding_id) "
+                    + "basis_hash, continuity, carried_from_finding_id, assignee_id) "
                     + "values (?, ?, 1, 'CODE_QUALITY', 'src/Main.java', 12, 'the evidence', ?, ?, "
-                    + "'evidence-hash', 'basis-hash', ?, ?) returning id", Long.class,
+                    + "'evidence-hash', 'basis-hash', ?, ?, ?) returning id", Long.class,
                     projectId, reviewId, status.name(), "key-" + SEQUENCE.incrementAndGet(),
-                    continuity.name(), carriedFrom);
+                    continuity.name(), carriedFrom, status == FindingStatus.IN_PROGRESS ? developer : null);
         }
     }
 }
