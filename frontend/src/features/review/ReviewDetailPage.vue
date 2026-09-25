@@ -37,6 +37,8 @@ import { parseReviewContext } from "./context";
 import {
   shortSha,
   pullRequestLabel,
+  FINDING_CATEGORY_LABELS,
+  FINDING_STATUS_LABELS,
   AC_VERDICT_LABELS,
   AC_VERDICT_TONES,
   REVIEW_DECISION_LABELS,
@@ -821,6 +823,11 @@ function eventsErrorFor(findingId: number): string | null {
         <h2 id="findings-title" class="panel-title">Finding（{{ detail.findings.length }} 条）</h2>
         <p class="field-hint">一次性全部渲染，不分页也不虚拟化。</p>
 
+        <p v-if="detail.validation && (detail.validation.droppedFindings > 0 || detail.validation.correctedLines > 0)"
+          class="field-hint validation-summary">
+          校验器丢弃了 {{ detail.validation.droppedFindings }} 条无法核实引用的 Finding，按逐字引用纠正了
+          {{ detail.validation.correctedLines }} 处行号；丢弃的内容不保留。
+        </p>
         <p v-if="findingError" class="alert" role="alert">{{ findingError }}</p>
         <p v-if="detail.findings.length === 0" class="empty-state">这条 Review 没有 Finding。</p>
 
@@ -869,6 +876,20 @@ function eventsErrorFor(findingId: number): string | null {
               @select="selectFinding(finding)"
               @update-comment="setFindingComment(finding.id, $event)"
             />
+          </ul>
+        </details>
+
+        <details v-if="detail.notReported.length > 0" class="not-reported-findings">
+          <summary>上一轮报告、本轮未再报告（{{ detail.notReported.length }} 条）</summary>
+          <p class="field-hint">未再报告不等于已修复：可能已修好，也可能是模型这一轮没有报。以下为上一轮的记录与状态。</p>
+          <ul class="path-list">
+            <li v-for="finding in detail.notReported" :key="finding.id">
+              <code>{{ finding.path }}{{ finding.line === null ? "" : ":" + finding.line }}</code>
+              <span v-if="finding.category" class="badge">{{ FINDING_CATEGORY_LABELS[finding.category] }}</span>
+              <span class="badge">{{ FINDING_STATUS_LABELS[finding.status] }}</span>
+              <span v-if="finding.acKey" class="badge">{{ finding.acKey }}</span>
+              <p v-if="finding.explanation" class="muted">{{ finding.explanation }}</p>
+            </li>
           </ul>
         </details>
       </section>
@@ -1059,6 +1080,10 @@ function eventsErrorFor(findingId: number): string | null {
 
 .snapshot-pr-bar strong {
   margin-right: auto;
+}
+
+.not-reported-findings > summary {
+  cursor: pointer;
 }
 
 .suppressed-findings {

@@ -399,6 +399,8 @@ function reviewDetail(review: ReviewRow): unknown {
     },
     acVerdicts: [{ acId: 91, acKey: "AC-1", verdict: "AT_RISK" }],
     findings: review.findings,
+    notReported: [],
+    validation: { droppedFindings: 0, correctedLines: 0 },
     engine: "forgepilot-review",
     promptVersion: "v1",
     model: "test-model",

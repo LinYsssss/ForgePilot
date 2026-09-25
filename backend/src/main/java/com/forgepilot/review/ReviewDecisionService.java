@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.stream.Stream;
 
 import com.forgepilot.common.ApiException;
 import com.forgepilot.project.ProjectAccessService;
@@ -18,6 +19,7 @@ import com.forgepilot.review.ReviewViews.ProjectReviewRow;
 import com.forgepilot.review.ReviewViews.FindingView;
 import com.forgepilot.review.ReviewViews.ReviewDetail;
 import com.forgepilot.review.ReviewViews.ReviewSummary;
+import com.forgepilot.review.ReviewViews.ValidationSummary;
 import com.forgepilot.scm.PullRequestDecisionActions;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -63,10 +65,12 @@ public class ReviewDecisionService {
     private final ObjectMapper json;
     private final RequirementDirectory requirements;
     private final ApplicationEventPublisher events;
+    private final FindingContinuityCalculator continuity;
 
     ReviewDecisionService(ReviewRepository reviews, FindingRepository findings,
             DecisionRepository decisions, ProjectAccessService access, PullRequestDecisionActions scmActions,
-            ObjectMapper json, RequirementDirectory requirements, ApplicationEventPublisher events) {
+            ObjectMapper json, RequirementDirectory requirements, ApplicationEventPublisher events,
+            FindingContinuityCalculator continuity) {
         this.reviews = reviews;
         this.findings = findings;
         this.decisions = decisions;
@@ -75,6 +79,7 @@ public class ReviewDecisionService {
         this.json = json;
         this.requirements = requirements;
         this.events = events;
+        this.continuity = continuity;
     }
 
     /**
@@ -200,7 +205,10 @@ public class ReviewDecisionService {
         PullRequestInputs inputs = inputsOf(projectId, review.getPullRequestId());
 
         List<Finding> rows = findings.findByProjectIdAndReviewIdOrderByIdAsc(projectId, reviewId);
-        Map<Long, String> acKeys = acKeysOf(projectId, rows);
+        // 只有已完成的一轮才谈得上「本轮没有再报告」：未完成的审查还没有任何 Finding。
+        List<Finding> notReported = review.getStatus() == ReviewStatus.COMPLETED
+                ? continuity.notReported(projectId, review.getPullRequestId(), reviewId) : List.of();
+        Map<Long, String> acKeys = acKeysOf(projectId, Stream.concat(rows.stream(), notReported.stream()).toList());
         JsonNode summary = parse(review.getSummaryJson());
 
         return new ReviewDetail(review.getId(), review.getPullRequestId(), review.getHeadSha(),
@@ -212,6 +220,8 @@ public class ReviewDecisionService {
                 summary == null ? null : summary.get("coverage"),
                 summary == null ? null : summary.get("acVerdicts"),
                 rows.stream().map(finding -> view(finding, acKeys)).toList(),
+                notReported.stream().map(finding -> view(finding, acKeys)).toList(),
+                validationOf(summary),
                 review.getEngine(), review.getPromptVersion(), review.getModel(),
                 review.getExecutionAttempt());
     }
@@ -290,6 +300,27 @@ public class ReviewDecisionService {
                 finding.getAcId() == null ? null : acKeys.get(finding.getAcId()),
                 finding.getAssigneeId(), finding.getCarriedFromFindingId(), finding.getFindingKey(),
                 finding.getEvidenceHash(), finding.getBasisHash());
+    }
+
+    /**
+     * 校验器删改了什么，按它自己的措辞归类计数。没有摘要（尚未完成）时为 null，
+     * 与「完成了且一条都没删」区分开。
+     */
+    private static ValidationSummary validationOf(JsonNode summary) {
+        if (summary == null) {
+            return null;
+        }
+        int dropped = 0;
+        int corrected = 0;
+        for (JsonNode warning : summary.path("warnings")) {
+            String text = warning.asString();
+            if (ReviewOutputValidator.dropsFinding(text)) {
+                dropped++;
+            } else if (ReviewOutputValidator.correctsLine(text)) {
+                corrected++;
+            }
+        }
+        return new ValidationSummary(dropped, corrected);
     }
 
     /** 缺席就保持缺席：一份空快照与一份不存在的快照不是同一个答案。 */

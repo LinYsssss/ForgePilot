@@ -122,6 +122,11 @@ export interface Coverage {
   notReviewed: string[];
 }
 
+export interface ValidationSummary {
+  droppedFindings: number;
+  correctedLines: number;
+}
+
 export interface ReviewDetail {
   id: number;
   pullRequestId: number;
@@ -141,6 +146,10 @@ export interface ReviewDetail {
   coverage: Coverage | null;
   acVerdicts: AcVerdictRow[] | null;
   findings: Finding[];
+  /** 上一轮报告过、本轮没有再报告的 Finding。读取时比较得出，不等于已修复。 */
+  notReported: Finding[];
+  /** 校验器丢弃的 Finding 数与纠正的行号数；审查未完成时为 null。 */
+  validation: ValidationSummary | null;
   engine: string | null;
   promptVersion: string | null;
   model: string | null;

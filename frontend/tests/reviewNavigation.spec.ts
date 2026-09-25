@@ -18,6 +18,7 @@ function review(projectId: number, id: number, status: ReviewDetail["status"] = 
     decisionComment: null, decisionBlockReason: null, isCurrent: true,
     contextSnapshot: null, coverage: null, acVerdicts: [],
     engine: null, promptVersion: null, model: null, executionAttempt: 1,
+    notReported: [], validation: null,
     findings: [{
       id: id + 1000, findingType: "CODE_QUALITY", path: "src/a.ts", line: 1,
       evidence: "return value;", category: "CORRECTNESS", explanation: null,
