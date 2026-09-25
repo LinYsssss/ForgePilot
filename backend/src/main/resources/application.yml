@@ -56,6 +56,10 @@ forgepilot:
     embedding-api-key: ${FORGEPILOT_EMBEDDING_API_KEY:${FORGEPILOT_AI_API_KEY:}}
     timeout: ${FORGEPILOT_AI_TIMEOUT:120s}
     prompt-char-budget: ${FORGEPILOT_AI_PROMPT_CHAR_BUDGET:60000}
+    # 0 让同一输入尽量得到同一回答；留空则不发送该字段，交给 provider 默认值。
+    temperature: ${FORGEPILOT_AI_TEMPERATURE:0}
+    # 429 之后、那一次重试之前的等待。
+    rate-limit-backoff: 5s
   knowledge:
     ingestion-interval-ms: 1000
     embedding:

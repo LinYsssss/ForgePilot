@@ -103,6 +103,7 @@ class AiGatewayTest extends PostgresTestBase {
         registry.add("forgepilot.ai.embedding-api-key", () -> EMBEDDING_API_KEY);
         registry.add("forgepilot.ai.chat-model", () -> CHAT_MODEL);
         registry.add("forgepilot.ai.timeout", () -> TIMEOUT.toMillis() + "ms");
+        registry.add("forgepilot.ai.rate-limit-backoff", () -> "10ms");
     }
 
     @Autowired
@@ -209,6 +210,8 @@ class AiGatewayTest extends PostgresTestBase {
         assertThat(BODIES).singleElement().satisfies(body -> {
             assertThat(body).contains("\"model\":\"" + CHAT_MODEL + "\"");
             assertThat(body).contains("\"json_schema\"");
+            // Left to the provider's default, the same diff is answered differently each run.
+            assertThat(body).contains("\"temperature\":0.0");
         });
         assertThat(callLogs.findByProjectIdOrderByIdAsc(fixture.project))
                 .singleElement()

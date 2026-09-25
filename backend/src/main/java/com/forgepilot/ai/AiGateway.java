@@ -57,6 +57,8 @@ public class AiGateway {
     private final String chatModel;
     private final Duration timeout;
     private final int promptCharBudget;
+    private final Double temperature;
+    private final Duration rateLimitBackoff;
 
     AiGateway(AiCallLogRepository callLogs, ObjectMapper json, PlatformTransactionManager transactions,
             @Value("${forgepilot.ai.base-url:}") String baseUrl,
@@ -69,7 +71,13 @@ public class AiGateway {
             // 7.2 为构造审查 Prompt 的分批器规定了唯一的字符预算 60000。
             // 这里复用该数字而不是另造一个；权威文档中再没有第二处以字符为
             // 单位约束载荷大小。
-            @Value("${forgepilot.ai.prompt-char-budget:60000}") int promptCharBudget) {
+            @Value("${forgepilot.ai.prompt-char-budget:60000}") int promptCharBudget,
+            // 不设就由 provider 用它自己的默认值，而同一段 diff 在默认温度下每次答得不一样，
+            // finding_key 的跨轮匹配与人工驳回的继承都会随之漂移。正式评测用的也是 0。
+            // 留空表示不发送该字段，给不接受它的 provider 留一条路。
+            @Value("${forgepilot.ai.temperature:0}") String temperature,
+            // 429 说明 provider 此刻在限流，立刻重试几乎必然再被拒；先等一等，重试次数不变。
+            @Value("${forgepilot.ai.rate-limit-backoff:5s}") Duration rateLimitBackoff) {
         this.callLogs = callLogs;
         this.json = json;
         this.chatRoute = new ProviderRoute(baseUrl, apiKey);
@@ -77,6 +85,8 @@ public class AiGateway {
         this.chatModel = chatModel;
         this.timeout = timeout;
         this.promptCharBudget = promptCharBudget;
+        this.temperature = temperature.isBlank() ? null : Double.valueOf(temperature.strip());
+        this.rateLimitBackoff = rateLimitBackoff;
         this.http = HttpClient.newBuilder().connectTimeout(timeout).build();
         this.ownTransaction = new TransactionTemplate(transactions);
         this.ownTransaction.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
@@ -91,7 +101,7 @@ public class AiGateway {
         return chat(prompt, schema, useCase, context, NO_CHECK);
     }
 
-    /** The owner can stop an abandoned operation before each HTTP attempt, including retries. */
+    /** 每次 HTTP 尝试（含重试）之前都先执行 {@code beforeAttempt}，调用方借此叫停一个已被放弃的操作。 */
     public String chat(String prompt, String schema, AiUseCase useCase, AiCallContext context,
             Runnable beforeAttempt) {
         if (chatModel.isBlank()) {
@@ -104,6 +114,9 @@ public class AiGateway {
         }
         ObjectNode request = json.createObjectNode();
         request.put("model", chatModel);
+        if (temperature != null) {
+            request.put("temperature", temperature);
+        }
         request.putArray("messages").addObject()
                 .put("role", "user")
                 .put("content", redacted);
@@ -166,6 +179,9 @@ public class AiGateway {
                 recordAttempt(failed(context, useCase, model, startedAt, "HTTP " + response.statusCode()));
                 if (!AiFailurePolicy.isTransient(response.statusCode())) {
                     throw unavailable();
+                }
+                if (response.statusCode() == 429 && attempt < AiFailurePolicy.MAX_ATTEMPTS) {
+                    pause(rateLimitBackoff);
                 }
             } catch (HttpTimeoutException noAnswer) {
                 // 7.2：“超时按瞬时失败处理”，因此这里落到重试分支——
@@ -232,6 +248,15 @@ public class AiGateway {
     private static AiCallLog failed(AiCallContext context, AiUseCase useCase, String model,
             long startedAt, String error) {
         return AiCallLog.failure(context, useCase, model, elapsedMs(startedAt), AiCallStatus.FAILED, error);
+    }
+
+    private static void pause(Duration duration) {
+        try {
+            Thread.sleep(duration);
+        } catch (InterruptedException interrupted) {
+            Thread.currentThread().interrupt();
+            throw unavailable();
+        }
     }
 
     private static int elapsedMs(long startedAt) {
