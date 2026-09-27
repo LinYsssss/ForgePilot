@@ -63,7 +63,7 @@
 | `GET /api/projects/{projectId}/reviews` | 成员 | 200 | 项目审查列表 |
 | `GET /api/projects/{projectId}/reviews/{id}` | 成员 | 200 | 审查详情 |
 | `POST /api/projects/{projectId}/reviews/{id}/decision` | 指定审查人、LEADER | 200 | 一次性最终决定 |
-| `POST /api/projects/{projectId}/findings/{id}/status` | 按状态矩阵 | 200 | Finding 状态流转 |
+| `POST /api/projects/{projectId}/findings/{id}/status` | 按状态矩阵 | 200 | Finding 状态流转；标记已修复仅限认领人 |
 | `GET /api/projects/{projectId}/findings/{id}/events` | 成员 | 200 | Finding 审计 |
 | `GET /api/projects/{projectId}/scm/binding-options` `bindings` | 成员 | 200 | 可选身份 / 绑定历史 |
 | `POST /api/projects/{projectId}/scm/bindings` | 成员 | 201 | 绑定自己的身份 |
@@ -218,6 +218,9 @@ GitHub 默认 `apiBase=https://api.github.com`；GitLab 默认 `https://gitlab.c
   - `REQUEST_CHANGES` 不调用远端写接口，保留 PR/MR 与分支。`APPROVE` 合并被审查的 SHA，Provider 确认合并后才提交本地决定；不会把需求改为 `DONE`。
 - `GET /api/projects/{projectId}/reviews/{reviewId}`
   - 新增 `decisionBlockReason: string|null`，仅表示调用人权限和需求状态限制。
+  - `validation: {droppedFindings, correctedLines}|null`：校验器整条丢弃的 Finding 数（引用锚不上 diff、引用了不属于本修订的验收条件等）与按逐字引用纠正的行号数；审查未完成时为 null。丢弃的内容不回显。
+  - `notReported: Finding[]`：上一轮已完成审查报告过、本轮没有再报告的 Finding，结构同 `findings`；只对已完成的一轮计算，不落库，不等于已修复。
+  - Finding 的 `findingType` 由是否引用本修订的验收条件推导（`review-4` 起），不由模型给出。
   - 前端仅在该字段显式为 null，且 `isCurrent=true`、`status=COMPLETED`、`decision=PENDING`、无 head 退回闸门时展示决定按钮。
 - `GET /api/projects/{projectId}/pull-requests/{pullRequestId}/reviews`
   - 返回现有 `{id,headSha,requirementRevisionId,status,decision,isCurrent,createdAt}[]`，按创建时间、ID 从旧到新排序。

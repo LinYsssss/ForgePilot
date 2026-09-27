@@ -32,8 +32,9 @@ PostgreSQL container, volume and baseline record counts were retained. Container
 loopback and public health checks passed, and served assets matched the running
 frontend image. See the [deployment record](../../.trellis/tasks/archive/2026-09/09-07-review-collaboration/deployment.md)
 and current test report for the exact evidence and remaining manual checks. The
-currently deployed commit is `10cec66` (2026-09-21); its record is in
-`.trellis/tasks/archive/2026-09/09-21-review-followups/deployment.md`.
+currently deployed commit is `ea51e6a` (2026-09-25; later commits change documentation
+only). Its record, which also backfills the undocumented 2026-09-23 deployment, is in
+`.trellis/tasks/archive/2026-09/09-25-review-quality-round/deployment.md`.
 
 ## 2. Build and test gates
 
@@ -110,6 +111,8 @@ python3 evaluation/tools/formal_evaluation.py report \
 
 Compare the resulting `formal-summary.json` and per-arm score files with the preserved artifact hashes. Failed and `NOT_RUN` cases remain explicit; the tool never converts them into empty successful predictions. The report deliberately has no composite score and states that the 12-case holdout and hand-constructed demonstration defects limit generalization.
 
+State the corpus's own weakness as plainly. In all 31 defect cases the acceptance criterion names the defect's category, file and line range, the requirement background names the category, and every arm's prompt opens with a descriptive case id. The strict metrics therefore largely measure label agreement. `docs/thesis/EVALUATION-SENSITIVITY.md` re-scores the frozen outputs with the frozen scorer under looser rules and reports one de-leaked rerun under a new identity (`sensitivity-deleaked-38-v1`): location-level recall is 71% / 90% / 97% with the hints and 68% / 77% / 84% without them. It is post-hoc and does not replace the table above. Recompute it with `python3 docs/thesis/verify-evaluation-sensitivity.py`.
+
 State one more scope boundary honestly, because the arm names invite a stronger reading than the experiment supports. The third arm supplies **every knowledge file of the case verbatim** — `run_development.py` reads them from the case fixture on disk and renders them all into the prompt. It performs no embedding call, no TopK retrieval, and never touches the running application. So the measured effect is *"project knowledge in context helps the model find requirement violations"*, **not** *"ForgePilot's pgvector retrieval helps"*. The retrieval path is a product capability with its own tests; it is not what these numbers evaluate. Claiming otherwise would over-read the experiment.
 
 ## 5. Production revalidation evidence
@@ -141,6 +144,13 @@ adjudicated by hand. Narrative, datasets and verifier are under
 ```bash
 python3 docs/thesis/verify-live-exercises.py
 ```
+
+Section 5 of the same document is a two-round stability rerun on 2026-09-25 (37 PRs,
+`review-4`, temperature 0). In 33 of the 37 PRs both rounds sent byte-identical batch
+prompts, yet only 6 reports came out identical: the provider is not deterministic even at
+temperature 0, so say so rather than promising reproducible findings. Deriving the finding
+type from the cited criterion removed the 9 findings per Halo round that had been dropped
+for contradicting labels. Recompute with `python3 docs/thesis/verify-stability.py`.
 
 ## 6. Secret and cleanup rules
 

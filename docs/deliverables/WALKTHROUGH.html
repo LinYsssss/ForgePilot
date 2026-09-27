@@ -968,7 +968,7 @@ sync.apply(repository, github.fetch(repository, pullRequestNumber(payload)));</c
       与此配套的是两个<strong>朝相反方向移动</strong>的版本常量，很容易改错：
     </p>
     <ul>
-      <li><code>ReviewPrompts.VERSION</code>——schema 变了就要递增，现在是 <code>"review-2"</code>。</li>
+      <li><code>ReviewPrompts.VERSION</code>——schema 变了就要递增，现在是 <code>"review-4"</code>。</li>
       <li><code>FindingKeys.RULE_VERSION</code>——<strong>必须保持 <code>"1"</code></strong>。它进 <code>basis_hash</code>，一改就让全部历史 finding 的血缘断掉。</li>
     </ul>
   </div>
@@ -1072,6 +1072,7 @@ events.publishEvent(new ReviewDecided(projectId, reviewId));</code></pre>
 
 <footer class="end">
   <p>2026-09-20 补充：第 11 站已加入 diff 新侧逐字证据锚定与行号纠正规则；2026-09-08 主干走查快照和正式评测证据未改写。</p>
+  <p>2026-09-25 补充：第 11 站的 Finding 类型改由是否引用本修订的验收条件推导，模型不再自报类型（<code>review-4</code>）；网关 chat 调用默认温度 0；审查详情显示校验器丢弃与纠行的计数，以及上一轮报告、本轮未再报告的 Finding。</p>
   <p>
     这份走查覆盖<strong>主干</strong>：一次 PR 从到达到审查完成，并说明人工决定、按 SHA 合并和提交后通知的边界。
     需求管理、知识入库、成员与 SCM 身份绑定的完整操作另见使用手册。

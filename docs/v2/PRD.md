@@ -62,7 +62,7 @@ flowchart LR
 | 修改 PR↔需求关联 | ✅ | 仅本人 PR，且当前 head 尚无任何人工终局 Decision | ❌ |
 | 触发/重试 Review（含版本过期后的重审） | ✅ | 仅本人 PR | ✅ |
 | Finding 确认 / 拒绝 | ✅ | ❌ | ✅ |
-| Finding 认领、标记已修复 | ❌ | ✅ | ❌ |
+| Finding 认领、标记已修复 | ❌ | ✅（标记已修复仅限认领人） | ❌ |
 | Finding 验证通过 / 打回 | ✅ | ❌ | ✅ |
 | Review 终局 APPROVE / REQUEST_CHANGES | ✅ | ❌ | 仅需求指定且角色仍有效的审查人 |
 | 取消需求 | ✅ | ❌ | ❌ |
@@ -142,7 +142,7 @@ READY 后正文与 AC 锁定；修改由 LEADER 创建新的不可变 Revision �
 终态：CLOSED；REJECTED（普通驳回不可逆）
 ```
 
-该状态机是**人工处理生命周期**，与跨 Review 血缘 `continuity`（`NEW / PERSISTING / SUPPRESSED`）正交，两者不得混入同一字段或同一 UI 标签。继承而来的抑制项以 `status=REJECTED + continuity=SUPPRESSED` 落库；被重新打开后 `continuity` 仍保留 `SUPPRESSED`（血缘事实不因当前状态改变而消失），并回到主列表正常显示。
+上一轮报告、本轮没有再报告的 Finding 在审查详情单列提示，**不等于已修复**，也不改变任何状态。该状态机是**人工处理生命周期**，与跨 Review 血缘 `continuity`（`NEW / PERSISTING / SUPPRESSED`）正交，两者不得混入同一字段或同一 UI 标签。继承而来的抑制项以 `status=REJECTED + continuity=SUPPRESSED` 落库；被重新打开后 `continuity` 仍保留 `SUPPRESSED`（血缘事实不因当前状态改变而消失），并回到主列表正常显示。
 
 ### Review Decision
 
@@ -157,15 +157,15 @@ READY 后正文与 AC 锁定；修改由 LEADER 创建新的不可变 Revision �
 
 | # | 规则 | 依据 |
 |---|---|---|
-| P1 | PR 关联需求：分支名/标题解析 `REQ-<n>` 优先，页面下拉框可改可清除；LEADER 始终可改，本人 PR 的 DEVELOPER 在当前 head 尚无人工终局 Decision 时可改；解析失败不阻断入库，Review 标记"未关联需求" | §6 P1 |
-| P2 | 一个 Requirement 可有多个 PR；一个 PR 至多关联一个 Requirement | §6 P2 |
-| P3 | 需求附件只在所属需求的 AI 场景可见；跨需求共享必须显式提升为项目知识 | §6 P3 |
+| P1 | PR 关联需求：分支名/标题解析 `REQ-<n>` 优先，页面下拉框可改可清除；LEADER 始终可改，本人 PR 的 DEVELOPER 在当前 head 尚无人工终局 Decision 时可改；解析失败不阻断入库，Review 标记"未关联需求" | ARCHITECTURE §1.3、§2.1 |
+| P2 | 一个 Requirement 可有多个 PR；一个 PR 至多关联一个 Requirement | ARCHITECTURE §2.1 |
+| P3 | 需求附件只在所属需求的 AI 场景可见；跨需求共享必须显式提升为项目知识 | ARCHITECTURE §2.3 |
 | P4 | Review 身份 = (PR, head SHA, Diff fingerprint, 需求版本)；当前有效性还须匹配 PR 当前输入；终局 Decision 闸门只认 (PR, head SHA)；Decision 写一次；FAILED 重试复用同一行，COMPLETED 永不覆盖 | ARCHITECTURE §3.1 |
 | P5 | 大 PR 分批审查但只产出一份报告；未审查文件必须显式呈现，禁止静默截断 | ARCHITECTURE §3.4 |
 | P6 | AI 返回非法结构时 Review 判定失败，**绝不生成"成功空报告"** | ARCHITECTURE §3.5 |
 | P7 | 人工决策全部留痕（actor、时间、备注），可追溯 | ARCHITECTURE §2.1 |
 | P8 | Review 保存审查时的 requirement_id、requirement_revision_id 与不可变上下文快照；历史结果不得通过 PR 当前关联反查语义 | ARCHITECTURE §2.1/3.5 |
-| P9 | 单个 PR APPROVE 确认合并被审查的 SHA 并结束当前 Review；Requirement DONE 必须由 LEADER 在确认全部关联工作完成后执行 | §6 P2 |
+| P9 | 单个 PR APPROVE 确认合并被审查的 SHA 并结束当前 Review；Requirement DONE 必须由 LEADER 在确认全部关联工作完成后执行 | §5 Review Decision |
 | P10 | 上一轮已驳回且源码证据与权威判定依据均未变的 Finding，本轮自动抑制、不要求重复驳回；抑制不跨 PR，且不得自动认定"本轮未报告 = 已修复" | ARCHITECTURE §3.6 |
 | P11 | "本人 PR" 按 Provider + 实例 + 稳定外部用户 ID 与成员当前活动绑定判定，**禁止按用户名授权**；身份由本人用一次性 Token 向 Provider 验证，Token 不落库；项目默认自动生效，可由 LEADER 开启严格审批 | ARCHITECTURE §2.1 |
 
@@ -175,7 +175,8 @@ READY 后正文与 AC 锁定；修改由 LEADER 创建新的不可变 Revision �
 
 - **需求状态转换不单独留痕**：`DRAFT→READY`、指派、`CANCELED`、`DONE` 的转换本身不写审计行。这是明确接受的取舍，不是遗漏——§6 P7 的「人工决策全部留痕」因此不覆盖需求状态机。
 - **超限 changed-file 投递不留痕**：整条按 422 拒绝，运维看不到「有 PR 因过大被拒」。
-- **Finding 行号连续性**：`finding_key` 包含 patch 新侧行号；无关插入或空提交造成行号整体移动时，同一证据可能被判为 `NEW`，无法继承上一轮的 `SUPPRESSED`。彻底修正需要调整跨 Review key/hash 规则并处理历史数据，当前作为已知限制保留。
+- **Finding 行号、类别与证据文本连续性**：`finding_key` 包含 patch 新侧行号与模型给出的类别，`evidence_hash` 基于逐字引用。无关插入造成行号整体移动、同一问题换了类别标签、或引用少了行首缩进时，同一证据都可能被判为 `NEW`，无法继承上一轮的 `SUPPRESSED`（2026-09-23 的一轮里 38 条 `NEW` 有 22 条只是类别换了）。彻底修正需要调整跨 Review key/hash 规则并处理历史数据，当前作为已知限制保留。
+- **PR/MR 不记录开关与合并状态**：在平台上直接合并或关闭的 PR 仍按最后一次审查计入需求评审活动，需要 LEADER 解除关联；只有经本系统 APPROVE 的合并会体现为 `APPROVED`。
 - **语义检索没有向量索引**，走顺序扫描的精确余弦序。冻结的 Embedding Profile 是 4096 维，超过 pgvector 0.8.6 全部精确索引形态的维度上限，可建的两种形态都是有损预筛，因此选择不建。
 - **浏览器点击闭环、1440/768/390 三档宽度与 `prefers-reduced-motion` 两种模式为人工验收**，未自动化。
 - **远端合并与本地数据库无法原子提交**。合并响应不明时仅做只读确认，仍无法确认则返回 `merge_outcome_unknown`，由人工核查远端后处理；没有补偿任务或消息投递保证。

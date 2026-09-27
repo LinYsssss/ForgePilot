@@ -385,6 +385,7 @@
   <h2><span class="hn">5</span>前端测试结果</h2>
   <p><strong>2026-09-08 审查修复后：44 个用例，15 个测试文件，全部通过。</strong>本次测试开始于 07:03:30 UTC，耗时 44.24 秒。另有 lint（策略检查）、typecheck（<code>vue-tsc</code>）与 <code>vite build</code> 三道门同时通过。</p>
   <p><strong>2026-09-20 补充：</strong>当前工作树的 lint、typecheck、production build 均通过；Vitest 为 <strong>63 项 / 18 个文件</strong>，全部通过。构建产物为 JS 263.09 kB、CSS 69.00 kB（gzip 85.94 / 12.26 kB）。这组数字不回写上面的历史快照。</p>
+  <p><strong>2026-09-25 补充：</strong>lint、typecheck、production build 均通过；Vitest 仍为 <strong>63 项 / 18 个文件</strong>，全部通过。构建产物为 JS 264.43 kB、CSS 69.07 kB。</p>
 
   <div class="tw"><table>
     <thead><tr><th>测试文件</th><th class="n">用例</th><th>它锁住什么</th></tr></thead>
@@ -723,6 +724,7 @@ python3 evaluation/tools/postfreeze_provider_correction.py verify</code></pre>
     未通过项、未覆盖项与已知缺陷均如实记录于第 8、9 章。
   </p>
   <p>2026-09-20 补充结果来自当前工作树：后端完整 419 项、前端 63 项及四道门均通过；证据锚定与超预算修复的 59 项定向测试通过。正式评测冻结、holdout 台账和原始输出未修改或重跑。</p>
+  <p>2026-09-25 补充：Finding 类型推导（<code>review-4</code>）、网关温度与 429 退避、校验摘要与「本轮未再报告」、认领人限制之后，固定容器路径下的 <code>./mvnw -B -ntp verify</code> 完整运行通过 <strong>421 项</strong>，0 失败、0 错误、0 跳过；新增的两项分别锁住「类型只看 acId」与「非认领人不能标记已修复」，另有一项断言 chat 请求带温度。<code>verify-freeze</code> 与订正校验仍通过。</p>
   <p>
     配套文档：《ForgePilot 需求规格说明书》（含需求追溯矩阵，本报告的测试类可反查到需求编号）、
     《ForgePilot 使用与代码手册》、《跟着一次 PR 走完 ForgePilot》、《ForgePilot 安全设计说明》。

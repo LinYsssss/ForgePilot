@@ -650,7 +650,7 @@
       <tr><td class="f">POST /api/scm/*/webhook</td><td><strong>无</strong>（公开）</td><td>HMAC 覆盖原始字节 · 常数时间比较 · 保护块统一答案 · 不降级 · 60 次／分限流</td><td class="f">WebhookSignatureVerifierTest · GitHub/GitLabWebhookIngestionTest</td></tr>
       <tr><td class="f">POST /api/auth/register</td><td>无</td><td>BCrypt · 输入长度约束 · 5 次／10 分限流</td><td class="f">AuthApiTest</td></tr>
       <tr><td class="f">POST /api/auth/login</td><td>无</td><td>失败不可区分 · traceId 为空 · 20 次／分限流（在认证之前）</td><td class="f">AuthApiTest · RateLimiterTest</td></tr>
-      <tr><td class="f">其余 57 个 API 端点</td><td>会话 + CSRF</td><td>单一授权入口 · 项目隔离复合键 · 404/403 不可区分</td><td class="f">ProjectAuthorizationTest · BatchOneApiTest</td></tr>
+      <tr><td class="f">其余 67 个 API 端点</td><td>会话 + CSRF</td><td>单一授权入口 · 项目隔离复合键 · 404/403 不可区分</td><td class="f">ProjectAuthorizationTest · BatchOneApiTest</td></tr>
       <tr><td class="f">出站至 provider</td><td>—</td><td>协议白名单 · 主机白名单 · 内网地址拒绝 · 每次重校验</td><td class="f">OutboundUrlPolicyTest · GitHubClientGuardTest</td></tr>
       <tr><td class="f">出站至模型服务</td><td>—</td><td>单一出口 · 凭据掩码 · 预算裁剪 · 输出逐项核验</td><td class="f">PromptSanitizerTest · ReviewOutputValidatorTest</td></tr>
       <tr><td class="f">出站至钉钉</td><td>—</td><td>origin 钉死在 <code>oapi.dingtalk.com</code> · 加签 · 只发计数不发正文 · 失败不影响审查</td><td class="f">DingTalkSenderTest · NotificationChannelTest</td></tr>
@@ -754,6 +754,7 @@
     第 10 章的十一条残余风险为已知的未防护或仅部分缓解项。
   </p>
   <p>2026-09-20 补充：模型源码引用已在写入前逐字锚定到 diff 新侧并校正行号；历史安全快照与正式评测证据保持原样。</p>
+  <p>2026-09-25 补充：前端 nginx 下发 <code>Strict-Transport-Security</code> 与 <code>Referrer-Policy</code>，代理响应的 Cookie 追加 <code>SameSite=Lax</code>（09-21）。演示测试账号清单曾随 <code>c63d654</code> 进入公开仓库，10 个账号已全部轮换并移出仓库，历史提交中的旧密码已失效（09-25）。「标记已修复」收紧为仅限认领人（09-25）。</p>
   <p>
     配套文档：《ForgePilot 需求规格说明书》（NFR-S1–S11 及其追溯）、《ForgePilot 测试报告》、
     《ForgePilot 使用与代码手册》、《跟着一次 PR 走完 ForgePilot》。

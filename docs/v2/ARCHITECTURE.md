@@ -16,7 +16,7 @@
 
 ```text
 com.forgepilot
-├── common        # API error、paging、clock、纯安全工具
+├── common        # 统一错误体（ApiError / ApiException / ApiExceptionHandler）与按客户端地址限流
 ├── auth          # 登录、Cookie/Session、Spring Security
 ├── project       # Project、Member、Role、ProjectAccessService
 ├── requirement   # Requirement、AC、附件关系、质量检查、一次性实现建议
@@ -42,14 +42,14 @@ LEADER 还可以调用 `POST /api/projects/{projectId}/notifications/dingtalk/te
 `common` 的时机。
 
 不强制四层：每个 feature 只建实际需要的类，不为目录对称创建空的 `domain/application/infrastructure/web`。
-仅两处例外允许子包——`scm.github` / `scm.gitlab`（provider 协议差异）、`ai.openai`（外部协议）。
+只有 `scm.github` / `scm.gitlab` 两个子包（provider 协议差异）。
 
 `review` 包的目标形态（示例，非强制清单）：
 
 ```text
 review/  ReviewController · ReviewService · ReviewRepository · Review · Finding
-         FindingRepository · FindingLifecycleService · ReviewContextBuilder
-         ReviewEngine · ChangedFileBatcher · ReviewOutputValidator
+         FindingRepository · FindingLifecycleService · ReviewExecutor
+         ReviewPipeline · ReviewPrompts · ChangedFileBatcher · ReviewOutputValidator
 ```
 
 ### 1.2 职责边界
@@ -71,6 +71,7 @@ common, project, requirement                 ←  scm
 common, project, ai                          ←  knowledge
 common, project, knowledge, ai               ←  requirement
 common, project, scm, knowledge, requirement, ai  ←  review
+common, project, scm, review                 ←  notification
 ```
 
 - 业务模块**不依赖 auth**：Controller 从登录上下文取 `userId` 后作为参数传入业务 Service。
@@ -90,7 +91,7 @@ common, project, scm, knowledge, requirement, ai  ←  review
 3. `scm` 的编译期依赖不含 `review`。
 4. 跨 feature 不直接注入对方 `*Repository`。
 5. Controller 不直连跨模块 Repository。
-6. 子包必须在允许清单内（仅 `scm.github`、`scm.gitlab`、`ai.openai`）。
+6. 子包必须在允许清单内（仅 `scm.github`、`scm.gitlab`）。
 
 `ArchitectureRulesTest` 另有两条**反重言式**测试：用 `*.fixture` 包里故意违规的类证明上述规则真的会失败，而不是因为匹配不到任何类而空过。
 
@@ -121,7 +122,7 @@ common, project, scm, knowledge, requirement, ai  ←  review
 | `finding` | Review 问题当前态与跨轮血缘 | project_id、review_id、`review_attempt`、requirement_id、requirement_revision_id、ac_id、finding_type、path、line、evidence、`category`、`explanation`、`suggestion`、`confidence`（后四列可空——早于该能力产生的 Finding 确实没有这些内容；`category` 是 `finding_key` 的输入，其余三列一律不得进入任何 hash，见 3.6）、status、assignee_id（nullable，→ project_member）、fingerprint(`finding_key`)、evidence_hash、`basis_hash`、continuity、carried_from_finding_id；永久父 FK `(project_id,review_id,review_attempt) → review(project_id,id,execution_attempt)`——父子关系与 attempt 围栏合一，过期 Worker 的插入由数据库而非应用检查拒绝；血缘 FK `(project_id,carried_from_finding_id)`；`UNIQUE(project_id,id)`、`UNIQUE(review_id,finding_key)`；`category` 与 `confidence` 各有容忍 NULL 的 CHECK 封闭词表，但越界值必须在写库前被映射掉——走到 CHECK 的值中止的是整批插入而不是单行；CHECK 与约束触发器保证父子上下文 NULL-safe 一致 |
 | `finding_event` | Finding 人工状态与指派审计 | project_id、finding_id（复合 FK）、actor_id（→ `user_account`）、action、from/to、comment、created_at |
 | `ai_call_log` | 评测与故障定位 | project_id、review_id、requirement_id、requirement_revision_id（三者均可空且使用含 project_id 的复合 FK）、use_case、model、token、latency、status、error |
-| `project_deletion_record` | 三类删除的可追溯留痕 | project_id、resource_type（`KNOWLEDGE_DOCUMENT/PROJECT_MEMBER/REQUIREMENT` 封闭 CHECK 词表）、resource_id（**故意无外键**：硬删之后没有可指向的目标，见）、actor_user_id（→ `user_account`）、detail、created_at；`project_id` 与 `actor_user_id` 均有外键，项目隔离靠前者 |
+| `project_deletion_record` | 三类删除的可追溯留痕 | project_id、resource_type（`KNOWLEDGE_DOCUMENT/PROJECT_MEMBER/REQUIREMENT` 封闭 CHECK 词表）、resource_id（**故意无外键**：硬删之后没有可指向的目标，见表下「不建」一段）、actor_user_id（→ `user_account`）、detail、created_at；`project_id` 与 `actor_user_id` 均有外键，项目隔离靠前者 |
 | `project_notification_channel` | 项目的对外通知渠道与其凭据 | project_id（→ `project`）、channel（`DINGTALK` 封闭 CHECK 词表）、encrypted_webhook_url、encrypted_secret（二者均为 AES-256-GCM 密文，与 `scm_repository` 同一把密钥、同一个 cipher，且**永不回显**——钉钉机器人的 `access_token` 就写在 URL 里，拿到 URL 即等于拿到发消息的权限；`encrypted_secret` **可空**，NULL 表示该渠道不加签，与「密钥是空串」是两回事——钉钉的安全设置只在创建机器人时可选，强制要求加签换不来更安全的部署，只会换来无法部署，代价记在 SECURITY 残余风险第 10 条）、enabled、created_at/updated_at；`(project_id, channel)` unique |
 
 **不建**：`scm_connection`（并入 `scm_repository`）、`review_task/report/issue`、`review_decision`（Decision 在 `review` 行上且只写一次）、`webhook_delivery`、通用 `audit_event`（多态 entity_id 无法被 2.3 的复合外键约束）、任何 vector 影子表。`audit_event` 这一条有且仅有一个例外：`project_deletion_record`。它记录的是**删除**，被引对象按定义已经不存在，因此那条理由不适用——不是没加外键，是没有可加外键的目标；能约束的 `project_id` 与 `actor_user_id` 都约束了，`resource_type` 是三值封闭词表。这不放宽禁令：任何针对**存活**实体的多态审计表仍然不建。执行恢复不另建任务表，使用 Review 上的 attempt/token/lease fencing 元数据。
@@ -339,7 +340,7 @@ Decision 是一次性人工终局事实，只允许 `PENDING → APPROVE | REQUE
 
 `REQUEST_CHANGES` 仅写本地决定，保留远端 PR/MR 和分支。`APPROVE` 在同一数据库事务内调用 `scm.PullRequestDecisionActions.merge(projectId, pullRequestId, expectedHeadSha)`，SCM 门面选择 Provider，`scm` 仍不依赖 `review`。两端先读取远端 head，再把被审查的 SHA 交给合并接口作并发条件，并验证真实合并结果；GitLab 使用 `should_remove_source_branch=false`。响应丢失、不可解析或 5xx 后只读确认，不自动重复合并写入；仍不明时返回 503 `merge_outcome_unknown` 并回滚本地决定。已合并且 head 匹配的人工重试可完成本地记录。远端写入与数据库不能原子提交，因此远端已合并、本地回滚的窗口仍需人工核查，没有新增补偿系统。
 
-V14 只增加 nullable `requirement.reviewer_id` 和项目成员复合外键；当前共 14 个迁移、21 张业务表。旧需求保持空审查人并由 LEADER 接手。角色变化无需改写历史引用：查询与决策按当前角色判定有效性，失去资格的 `reviewerId` 可保留但 `reviewerName` 返回 null；成员移除则在原清理事务内置空该引用。
+`requirement.reviewer_id` 可空，并以项目成员复合外键约束；未指定审查人的需求由 LEADER 接手。角色变化无需改写历史引用：查询与决策按当前角色判定有效性，失去资格的 `reviewerId` 可保留但 `reviewerName` 返回 null；成员移除则在原清理事务内置空该引用。
 
 ### 人工决定通知
 
@@ -405,25 +406,29 @@ sequenceDiagram
 
 - 每条 AC 最终必须有 `COVERED | NOT_FOUND | AT_RISK`；模型漏项由 Validator 补 `NOT_FOUND`。
 - `acId` 必须属于当前 Requirement Revision；`sourceId` 必须在本次召回白名单；`filePath` 必须在 changed files 内。
+- Finding 类型不由模型给出：引用了本修订验收条件的是 `REQUIREMENT`，未引用的是 `CODE_QUALITY`（`review-4` 起）。引用了不属于本修订的验收条件则整条丢弃。
 - Finding `evidence` 与批次 AC `excerpt` 必须逐字存在于对应 changed file 的合法 unified-diff hunk 新侧源码中；diff 的 `+`/空格标记、删除行、元数据与截断标记都不是源码。只归一化 CRLF/LF，不裁剪或折叠空白，也不允许跨 hunk 拼接引用。
 - 引用无命中时丢弃该 Finding/AC evidence 并记录 warning；唯一命中时以真实起始行纠正模型的错误或空行号；多处命中仅在模型行号等于候选时消歧，否则保留已验证引用但不输出伪精确行号。`finding_key` 使用锚定后的行号，`evidence_hash` 仍基于原始逐字引用。
 - Finding 证据保存不可变 excerpt + hash，历史 Review 不受知识文档后续变更影响。
-- Finding 跨轮血缘（`continuity`、`evidence_hash`、`basis_hash`、`carried_from_finding_id`、`finding_key`）规则见；`evidence_hash` 必须基于确定性源码证据，`basis_hash` 必须基于所引用 AC/Requirement Revision、知识 excerpt/hash 与确定性规则版本，二者均禁止哈希模型生成的描述。只有两者均未变才允许继承历史误报抑制。
+- Finding 跨轮血缘（`continuity`、`evidence_hash`、`basis_hash`、`carried_from_finding_id`、`finding_key`）规则见 3.6；`evidence_hash` 必须基于确定性源码证据，`basis_hash` 必须基于所引用 AC/Requirement Revision、知识 excerpt/hash 与确定性规则版本，二者均禁止哈希模型生成的描述。只有两者均未变才允许继承历史误报抑制。
 - Review 创建时保存 `head_sha`、`review_input_fingerprint`、`requirement_id`、`requirement_revision_id` 及 Requirement/AC/Knowledge evidence/truncation 的不可变上下文快照；历史页面禁止通过 PR 当前关联反推审查语义。页面以当前 PR 的 head/fingerprint/revision 对比快照派生“当前/已过期”，不写 `INVALIDATED` 状态。
 - Requirement 进入 READY 后正文与 AC 锁定，修改须由 LEADER 创建新的不可变 Revision；旧 Review **永不失效、永不覆盖**，上下文变更后构成新的 Review 身份，页面显示"审查已过期"由人工触发重审。`review` 不设 `INVALIDATED` 状态——执行状态与语义有效性是两个维度。
 - 非法 JSON 允许**一次** format-repair；仍失败则 FAILED，**绝不生成"成功空报告"**。
+- 被丢弃的断言写入 `summary_json.warnings`；审查详情按校验器的措辞归类，返回整条丢弃的 Finding 数与纠正的行号数，使一份被缩短的报告在页面上可见。
 
 ### 3.6 Finding 跨 Review 连续性
 
 每条 Review 保存自己的 Finding 快照，历史行不可覆盖。连续性计算只在同一 Pull Request 内进行，按以下确定性规则执行：
 
 1. `finding_key` 同时用于批内去重和跨 Review 匹配。`CODE_QUALITY` 使用大小写敏感 path + 归一化位置 + 类别；`REQUIREMENT` 还必须加入 `requirement_id + ac_key`。`ac_key` 是跨 Revision 稳定业务身份，不得用数据库行 id 或显示顺序代替。
-2. `evidence_hash` 只覆盖确定性源码证据：统一换行并去除易变行号，但不得对 Python/YAML 等缩进敏感内容做通用空白折叠。`basis_hash` 覆盖被引用 Requirement/AC 内容、知识 excerpt/hash 和确定性规则版本。两个 hash 均不得包含 LLM 自由文本——V9 追加的 `explanation`、`suggestion`、`confidence` 三列正是这条禁令的适用对象：它们是回答里唯一允许随措辞变动的输出，一旦进入任一 hash，同一个问题就会在每轮换个说法后变成「新问题」，跨轮抑制与血缘同时失效，且要到下一轮才看得出来。`category` 例外且只是例外：它是封闭词表而非自由文本，本就是 `finding_key` 的输入，V9 不改变它进 key 的算法（仍用模型给的原始字符串归一化后参与），只是额外把映射后的词表值落库。
+2. `evidence_hash` 只覆盖确定性源码证据：统一换行并去除易变行号，但不得对 Python/YAML 等缩进敏感内容做通用空白折叠。`basis_hash` 覆盖被引用 Requirement/AC 内容、知识 excerpt/hash 和确定性规则版本。两个 hash 均不得包含 LLM 自由文本——`explanation`、`suggestion`、`confidence` 三列正是这条禁令的适用对象：它们是回答里唯一允许随措辞变动的输出，一旦进入任一 hash，同一个问题就会在每轮换个说法后变成「新问题」，跨轮抑制与血缘同时失效，且要到下一轮才看得出来。`category` 例外且只是例外：它是封闭词表而非自由文本，是 `finding_key` 的输入——进 key 的是模型给的原始字符串归一化后的值，落库的是映射后的词表值。
 3. `PERSISTING/NEW/NOT_REPORTED` 只比较同一 PR 紧邻的上一条 `COMPLETED` Review，按 `(created_at,id)` 确定性排序。匹配项仍存在时，新 Finding 为 `PERSISTING` 且从 `OPEN` 开始；上一轮存在、本轮未报告只查询派生 `NOT_REPORTED`，不落库、不自动判定修复。
 4. `SUPPRESSED` 在同一 PR 全部历史中查该 `finding_key` 最近一次人工判定，按 `(finding_event.created_at,finding_event.id)` 排序。只有结果为 `REJECTED` 且 `evidence_hash`、`basis_hash` 都相同时，新 Finding 才以 `status=REJECTED + continuity=SUPPRESSED` 落库。
 5. 计算优先级固定为 `SUPPRESSED > PERSISTING > NEW`。`carried_from_finding_id` 在 SUPPRESSED 时指向最近有效人工驳回的 Finding，在 PERSISTING 时指向紧邻上一条 COMPLETED Review 的匹配 Finding；来源必须属于同一 PR，由 Service 不变式和集成测试保证。
 
 普通 `REJECTED` 不可重开；只有继承的 `SUPPRESSED` Finding 可经审计事件重开。重开后 `continuity` 仍为 `SUPPRESSED`，但状态回到 `OPEN` 并出现在主列表。
+
+派生的 `NOT_REPORTED` 由审查详情的 `notReported` 返回：只对已完成的一轮计算，只作提示，不自动判定修复。
 
 ---
 
@@ -432,11 +437,11 @@ sequenceDiagram
 ### 4.1 唯一技术入口
 
 ```text
-AiGateway.chat(prompt, schema, useCase)
-AiGateway.embed(texts, embeddingConfig)
+AiGateway.chat(prompt, schema, useCase, context[, beforeAttempt])
+AiGateway.embed(texts, model, context[, beforeAttempt])
 ```
 
-`ai` 负责 HTTP、认证、超时、一次有限重试、调用元数据、Token/延迟与错误分类。
+`ai` 负责 HTTP、认证、超时、一次有限重试、调用元数据、Token/延迟与错误分类。`context` 是不透明的调用归属（项目、Review、需求修订），`beforeAttempt` 在每次 HTTP 尝试前执行，供 Review 续租。chat 请求默认带 `temperature: 0`（`FORGEPILOT_AI_TEMPERATURE`，留空则不发送）；429 之后先等待 `rate-limit-backoff`（默认 5 s）再做那一次重试。
 它**不知道** Requirement/Finding/Review 等业务类型，也不暴露 tool loop。
 业务 Prompt 归 `requirement` 与 `review` 各自所有；Requirement Quality 与一次性 Implementation Guidance 共享 AI Gateway 但使用不同 schema。不建 Prompt Registry，不建万能 ContextBuilder。三类 Prompt 都要求模型散文（Finding 的说明与建议、质量意见、实现建议）用简体中文；逐字引用、路径、标识符与枚举值保持原样。
 
@@ -510,7 +515,7 @@ AI 置信度、Finding 人工状态、Review Decision 在 UI 上必须明确分�
 
 审查详情复用 PR 历史与上一轮详情展示轮次、上次退回理由和当前决定；需求详情按当前退回活动读取对应理由。PR/MR 的远端编号、标题、作者账号与平台成员映射分别展示。知识页以阅读/下载为主要动作，索引元数据收入折叠详情；公共原文请求失败与原文已删除分别提示，已有历史摘录仍可阅读。切换项目或文档时用请求序号防止旧响应覆盖当前内容。
 
-视觉与动效契约（设计令牌、组件规范、动效基线、`prefers-reduced-motion`、设计漂移检查）定义在 `.trellis/spec/frontend/`，不在本文重复。页面按纵向切片随各 Phase 交付，不集中堆到最后一个 Phase。
+视觉与动效契约（设计令牌、组件规范、动效基线、`prefers-reduced-motion`、设计漂移检查）定义在 `.trellis/spec/frontend/`，不在本文重复。
 
 ---
 
@@ -546,7 +551,8 @@ HTTP timeout + 一次有限 retry + Review FAILED + 人工 retry 足够覆盖当
 | 单文件 patch 最大字符 | 60000 | 超出按行截断并标注 |
 | 单 Batch 输入预算 | 60000 字符 | `ChangedFileBatcher` 分批依据 |
 | LLM 单次调用超时 | 120 s | 超时按瞬时失败处理 |
-| LLM 重试次数 | 1 | 仅瞬时错误（429/5xx/网络） |
+| LLM 重试次数 | 1 | 仅瞬时错误（429/5xx/网络）；429 先等待 5 s |
+| Chat 温度 | 0 | 可配置；留空则不发送 |
 | 并发 Review 上限 | 2 | 有界执行器线程数；资源更紧的部署可显式降为 1 |
 | 单文件上传上限 | 5 MB | `KnowledgeUploadValidator` |
 | 检索 TopK | 8 | project-scoped |

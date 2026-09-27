@@ -29,8 +29,8 @@ ForgePilot 是一个面向软件研发流程的轻量级 AI 研发协作与代�
 | 知识 | PostgreSQL 15 + pgvector，按 `project_id` 与当前 Requirement 双重硬过滤 |
 | 评测 | 三臂对照实验，holdout 只跑一次 |
 
-验证使用 Testcontainers 真实 PostgreSQL 15 + pgvector。当前部署版本为 `10cec66`（2026-09-21，
-统一错误体与中文文案等审查修复）。2026-09-20 部署版本
+验证使用 Testcontainers 真实 PostgreSQL 15 + pgvector。当前部署版本为 `ea51e6a`（2026-09-25，
+Finding 类型由验收条件引用推导的 `review-4`、温度 0、校验摘要与认领人限制；其后只有文档与论文材料提交）。2026-09-20 部署版本
 `4121cea` 的后端全套 416 项测试、前端 lint / typecheck / build 与 63 项测试全部
 通过，现有 PostgreSQL 数据和 V14 schema 保留。部署后 15 个真实 GitHub PR
 快照全部完成复验，45 次 AI 调用全部成功并关联到对应 Review。论文引用口径、
@@ -98,6 +98,8 @@ cd frontend && npm ci && npm run lint && npm run typecheck && npm run test -- --
 | Diff + 需求/AC + 项目知识 | **32.26%** | **32.26%** | **90%** |
 
 这三臂证明的是「把需求与项目知识放进上下文有用」，而不是「某条检索管线有效」——评测工具链不经过后端。
+
+**效度说明**：语料的缺陷 AC 写出了缺陷的类别、文件与行号，严格口径主要衡量标签对齐。只比文件与行号时三臂召回率为 71% / 90% / 97%；去掉这些提示重跑一次后为 68% / 77% / 84%——方向不变、幅度变小。详见[效度分析](docs/thesis/EVALUATION-SENSITIVITY.md)，它是事后分析，不替换上表。
 
 holdout 仅 12 例，样本偏小，结论为描述性而非总体推断；语料为人工构造的演示缺陷，非真实企业缺陷。配置冻结、语料清单、holdout 台账与原始输出是**不可变证据**，不得删除、覆盖或重跑。复现步骤见[答辩复现指南](docs/v2/DEFENSE-GUIDE.md)。
 

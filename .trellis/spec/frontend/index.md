@@ -28,7 +28,7 @@ Precision Review Console direction.
 
 ## How these guidelines evolve
 
-These files describe the conventions the Phase 1 frontend actually implements.
+These files describe the conventions the frontend actually implements.
 Update the relevant guide in the same change that introduces a new convention,
 token, or boundary, and reference the real file that demonstrates it. A rule
 that no code follows does not belong here; remove it or implement it.

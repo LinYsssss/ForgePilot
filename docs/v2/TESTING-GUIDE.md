@@ -118,7 +118,7 @@ docker exec fp-demo-postgres-1 psql -U forgepilot -d forgepilot \
 
 **预期**：第 6 次返回 **429**，而不是 500 或成功。10 分钟后恢复。
 
-> 这一条限流只针对未认证的登录与注册两个写端点，已认证成员的批量添加成员等操作不受影响。
+> 限流只作用于登录、注册与两个 webhook 端点，已认证成员的批量添加成员等操作不受影响。
 
 ### A3 用户名唯一
 
@@ -434,7 +434,7 @@ READY 的文档 `chunks` 应大于 0。
 
 **预期**：逐个成功，**每个文件各自一个事务**——其中一个失败不影响其他。
 
-**验证**：故意混入一个超大或格式不支持的文件，确认其余仍然成功、失败的那个状态为 `FAILED` 且 `failure_reason` 非空。
+**验证**：故意混入一个超大或格式不支持的文件：它在上传时就被 422 拒绝、不产生文档行，其余文件照常成功。`FAILED` 只出现在后台切块或 Embedding 失败时，带受控的 `failure_reason`，且没有重试端点（PRD §7）。
 
 ### D4 知识文档硬删除
 
@@ -591,7 +591,7 @@ from knowledge_document order by id;"
 
 **操作**：在需求详情页生成实现建议。由 LEADER 或**被指派的** DEVELOPER 触发。
 
-**预期**：生成一份实现建议。**每条需求只能生成一次**，再次尝试应被拒绝。
+**预期**：生成一份实现建议。「一次性」指不保存结果、不做多轮对话；可以再次生成，每次都是独立的一次调用。未被指派的 DEVELOPER 触发应返回 403。
 
 **验证**：
 
@@ -771,8 +771,8 @@ from ai_call_log order by id desc limit 10;"
 
 ```bash
 docker exec fp-demo-postgres-1 psql -U forgepilot -d forgepilot -c "
-select id, project_id, review_id, requirement_revision_id, ac_id,
-       status, continuity, confidence, left(title,50) as title
+select id, project_id, review_id, requirement_revision_id, ac_id, finding_type,
+       category, status, continuity, confidence, left(explanation,50) as explanation
 from finding order by id;"
 ```
 
@@ -804,7 +804,7 @@ from finding order by id;"
 
 **预期**：都成功。
 
-**关键**：这两步是 **DEVELOPER 专属**，LEADER 和 REVIEWER **做不了**。用 LEADER 账号尝试应返回 403。
+**关键**：这两步是 **DEVELOPER 专属**，LEADER 和 REVIEWER **做不了**。用 LEADER 账号尝试应返回 403；**标记已修复只属于认领人**，另一个 DEVELOPER 替他标记同样返回 403。
 
 ### G5 复验通过与打回（LEADER / REVIEWER）
 
@@ -838,7 +838,7 @@ REJECTED  → OPEN（仅限 continuity=SUPPRESSED 的继承驳回项）
 
 ```bash
 docker exec fp-demo-postgres-1 psql -U forgepilot -d forgepilot -c "
-select id, finding_id, from_status, to_status, actor_user_id, note, created_at
+select id, finding_id, action, from_status, to_status, actor_id, comment, created_at
 from finding_event order by id;"
 ```
 
@@ -883,7 +883,9 @@ order by rv.id;"
 
 **关键**：抑制**不跨 PR**，且**不得**把「本轮没有再报告」自动认定为「已修复」。
 
-> 已知限制：`finding_key` 含 patch 新侧行号，无关插入造成行号整体移动时，同一条证据可能被判为 `NEW` 而继承不到上一轮的 `SUPPRESSED`。
+> 已知限制：`finding_key` 含 patch 新侧行号与模型给出的类别，无关插入造成行号整体移动、或同一问题换了类别标签时，都可能被判为 `NEW` 而继承不到上一轮的 `SUPPRESSED`。
+>
+> 审查详情的 Finding 区会单列「上一轮报告、本轮未再报告」的 Finding，并显示校验器丢弃了几条无法核实引用的 Finding、纠正了几处行号。未再报告**不等于**已修复。
 
 ### H3 重开被抑制项
 
@@ -1014,7 +1016,7 @@ from project_notification_channel order by id;"
 
 **操作**：对已归档项目尝试新建需求、上传知识、触发审查。
 
-**预期**：被拒绝。
+**预期**：**不会**被拒绝。归档只改项目状态并把它移入「已归档」分组，不冻结写入——这是 SECURITY 残余风险第 6 条记录的有意取舍。
 
 ### J3 恢复项目
 
@@ -1071,7 +1073,7 @@ select * from project_deletion_record order by id;"
 | 修改 PR↔需求关联 | ✅ | 仅本人 PR，且当前 head 无终局 Decision | ❌ |
 | 触发/重试 Review | ✅ | 仅本人 PR | ✅ |
 | Finding 确认 / 拒绝 | ✅ | ❌ | ✅ |
-| **Finding 认领、标记已修复** | **❌** | **✅** | **❌** |
+| **Finding 认领、标记已修复** | **❌** | **✅（标记已修复仅限认领人）** | **❌** |
 | Finding 验证通过 / 打回 | ✅ | ❌ | ✅ |
 | Review 终局 APPROVE / REQUEST_CHANGES | ✅ | ❌ | 仅指定有效审查人 |
 | 取消需求 | ✅ | ❌ | ❌ |
@@ -1288,7 +1290,7 @@ SQL
 2. **模型置信度未经校准**，只分三档，不参与任何门禁或状态流转。
 3. **需求状态转换不单独留痕**。
 4. **超限 changed-file 投递不留痕**。
-5. **Finding 行号连续性**：`finding_key` 含 patch 新侧行号，无关插入造成行号移动时同一证据可能被判为 `NEW`。
+5. **Finding 连续性**：`finding_key` 含 patch 新侧行号与模型给出的类别，行号整体移动或类别换了标签时同一证据可能被判为 `NEW`；证据引用少了行首缩进同样继承不到抑制。
 6. **一个项目一个仓库**；仓库产生 PR 后身份冻结。
 7. **进程内 Review 执行不提供消息队列级持久性**，靠 reconciliation 兜底，且 reconciliation 不补建缺失 Review。
 8. **浏览器点击闭环、1440/768/390 三档宽度与 `prefers-reduced-motion` 两种模式为人工验收**，未自动化。
