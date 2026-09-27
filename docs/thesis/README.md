@@ -12,13 +12,20 @@ Trellis 任务归档，正式三臂评测继续由不可变的 `evaluation/` 证
 | [demo-rerun-20260922.csv](./demo-rerun-20260922.csv) | 演示仓重跑 15 个审查的逐例数据，含与上轮的 key 匹配、连续性与警告分类 |
 | [halo-replay-20260922.csv](./halo-replay-20260922.csv) | Halo 重放 24 个 PR 的逐例数据，含上游 PR 号、关联 issue、AC 裁定与人工判定 |
 | [verify-live-exercises.py](./verify-live-exercises.py) | 复算上述两组数据的全部汇总值并校验哈希 |
+| [stability-20260925.csv](./stability-20260925.csv) | 2026-09-25 稳定性复测：同一批 PR 相邻两轮审查的逐 PR 对比（叙述见 LIVE-EXERCISES 第五节） |
+| [verify-stability.py](./verify-stability.py) | 复算稳定性复测的全部汇总值并校验哈希 |
+| [EVALUATION-SENSITIVITY.md](./EVALUATION-SENSITIVITY.md) | 正式三臂评测的效度分析：语料里的定位提示、三种匹配口径下的重算，以及一次去提示敏感性实验 |
+| [evaluation-sensitivity-20260925.csv](./evaluation-sensitivity-20260925.csv) | 冻结结果与去提示实验的逐例匹配数（不透明编号，不含用例 ID） |
+| [verify-evaluation-sensitivity.py](./verify-evaluation-sensitivity.py) | 复算上述全部汇总值，并断言原规则一列与冻结报告相等 |
 
 复算命令：
 
 ```bash
 python3 docs/thesis/verify-production-revalidation.py
 python3 docs/thesis/verify-live-exercises.py
+python3 docs/thesis/verify-stability.py
+python3 docs/thesis/verify-evaluation-sensitivity.py
 ```
 
-生产复验衡量运行完成率、审计关联、快照一致性、覆盖记账与时延；线上演练衡量校验器纠行、跨轮抑制、闭环合并与第三方代码上的 Finding 精确率。模型质量的
-精确率、召回率和需求违规召回率必须引用正式三臂评测，两组证据不能合并分母。
+生产复验衡量运行完成率、审计关联、快照一致性、覆盖记账与时延；线上演练衡量校验器纠行、跨轮抑制、闭环合并、第三方代码上的 Finding 精确率与相邻两轮的稳定性。模型质量的
+精确率、召回率和需求违规召回率必须引用正式三臂评测，各组证据不能合并分母；引用正式评测时同时说明效度分析里的定位提示与口径问题。
