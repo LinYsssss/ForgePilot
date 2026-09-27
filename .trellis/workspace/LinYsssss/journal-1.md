@@ -579,3 +579,31 @@ Added docs/thesis LIVE-EXERCISES.md with two SHA-256 pinned datasets and a stand
 ### Status
 
 [OK] **Completed**
+
+
+## Session 20: Review quality round: review-4, validity analysis, stability rerun
+
+**Date**: 2026-09-27
+**Task**: Review quality round: review-4, validity analysis, stability rerun
+**Branch**: `main`
+
+### Summary
+
+Rotated the leaked test-account passwords; derived finding type from acId (review-4), temperature 0 and 429 backoff, validation summary and not-reported findings on the review page, claimant-only MARK_FIXED; deployed ea51e6a; added the evaluation validity analysis with a de-leaked rerun and a two-round stability rerun; synced all docs flagged by the 09-24 audit.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `2c36889` | (see git log) |
+| `0885c0a` | (see git log) |
+| `99058f3` | (see git log) |
+| `3a6d2a3` | (see git log) |
+| `84740b2` | (see git log) |
+| `ea51e6a` | (see git log) |
+| `1e346aa` | (see git log) |
+| `a9d8733` | (see git log) |
+
+### Status
+
+[OK] **Completed**
