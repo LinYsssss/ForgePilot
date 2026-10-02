@@ -70,8 +70,8 @@ final class ReviewViews {
      * 这正是对 {@code notReviewed} 的要求——
      * 未被审查的文件绝不能被静默丢弃。
      *
-     * <p>{@code notReported} 是上一轮报告过、本轮没有再报告的 Finding（ARCHITECTURE.md 3.6.3
-     * 的派生 NOT_REPORTED）：读取时比较得出，不落库，<strong>不等于已修复</strong>。
+     * <p>{@code notReported} 从上一轮的 key 差集再排除本轮同位置/同需求 AC 的候选，
+     * 仅粗粒度收窄提示，不改变 3.6.3 的血缘：读取时推导，不落库，<strong>不等于已修复</strong>。
      */
     record ReviewDetail(
             long id,
@@ -101,8 +101,8 @@ final class ReviewViews {
 
     /**
      * 校验器对这一轮回答的删改：整条丢弃的 Finding 数（引用锚不上 diff、引用了不属于
-     * 本修订的验收条件等），以及按逐字引用纠正过的行号数。丢弃的内容本身不回显——
-     * 警告按设计不保存模型原文。
+     * 本修订的验收条件等），以及 Finding 的纠行事件数（含分批候选，不含 AC 证据）。
+     * 事件数不等于最终 Finding 数。丢弃的内容本身不回显——警告按设计不保存模型原文。
      */
     record ValidationSummary(int droppedFindings, int correctedLines) {
     }

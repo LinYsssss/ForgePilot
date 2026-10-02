@@ -11,6 +11,7 @@ import com.forgepilot.project.ProjectMember;
 import com.forgepilot.project.ProjectRole;
 import com.forgepilot.review.ReviewViews.FindingEventView;
 import com.forgepilot.review.ReviewViews.FindingStatusResult;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,7 +22,8 @@ import org.springframework.transaction.annotation.Transactional;
  * 但其实不是的：LEADER <strong>不能</strong>认领 finding，
  * 也<strong>不能</strong>把它标记为已修复。PRD.md 3 中
  * “Finding 认领、标记已修复”那一行的 LEADER 列就是 ❌，
- * 而这两步是开发者对自己工作的自我记录——标记已修复因此只属于认领它的那个人。
+ * 而这两步是开发者对自己工作的记录。已有认领时只能由认领人标记修复；
+ * 成员退出导致认领清空时，其他开发者可接续，角色要求和操作审计不变。
  * 因为“LEADER 理应什么都能干”
  * 就去放宽它，等于授予了规格明确保留的权限；
  * 收紧是安全方向，放宽不是。
@@ -106,9 +108,12 @@ public class FindingLifecycleService {
         if (member.getRoles().stream().noneMatch(move.allowed()::contains)) {
             throw ApiException.forbidden();
         }
-        if (move.action() == FindingAction.MARK_FIXED && !Objects.equals(finding.getAssigneeId(), actorId)) {
-            // 「已修复」是认领人对自己工作的记录；另一个开发者不能替他宣布修好了。
-            throw ApiException.forbidden();
+        if (move.action() == FindingAction.MARK_FIXED && finding.getAssigneeId() != null
+                && !Objects.equals(finding.getAssigneeId(), actorId)) {
+            // 成员退出时 RemovedMemberClaimListener 会清空认领；此时允许上面已验过角色的
+            // 开发者接续处理，不自动认领，实际操作者仍由下方 finding_event 留痕。
+            throw new ApiException(HttpStatus.FORBIDDEN, "forbidden",
+                    "只有认领人可以标记已修复。");
         }
 
         int updated = switch (move.action()) {

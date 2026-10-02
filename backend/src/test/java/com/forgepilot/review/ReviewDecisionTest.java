@@ -414,6 +414,52 @@ class ReviewDecisionTest extends PostgresTestBase {
                 .extracting(ReviewViews.ReviewSummary::id).containsExactly(first, second);
     }
 
+    @Test
+    void theDetailNarrowsMissingKeysWithoutChangingTheirHistory() {
+        Scenario scenario = new Scenario();
+        long requirement = scenario.requirement();
+        long revision = scenario.currentRevisionOf(requirement);
+        long ac = scenario.criterion(revision);
+        long first = scenario.completedReview("head-1", "fp-1", requirement, revision);
+        scenario.finding(first, "quality-before", "A.java", 3, FindingType.CODE_QUALITY, null);
+        long gone = scenario.finding(first, "gone", "B.java", 7, FindingType.CODE_QUALITY, null);
+        long unknownLine = scenario.finding(first, "unknown-before", "C.java", null, FindingType.CODE_QUALITY, null);
+        scenario.finding(first, "requirement-before", "R.java", 4, FindingType.REQUIREMENT, ac);
+        long unknownAc = scenario.finding(first, "no-ac-before", "U.java", 4, FindingType.REQUIREMENT, null);
+
+        long nextRevision = scenario.publishRevision(requirement);
+        long nextAc = scenario.criterion(nextRevision);
+        scenario.moveTo("head-2", "fp-2");
+        long second = scenario.completedReview("head-2", "fp-2", requirement, nextRevision);
+        scenario.finding(second, "quality-after", "A.java", 3, FindingType.CODE_QUALITY, null);
+        scenario.finding(second, "unknown-after", "C.java", null, FindingType.CODE_QUALITY, null);
+        long currentRequirement = scenario.finding(second, "requirement-after", "R.java", 9,
+                FindingType.REQUIREMENT, nextAc);
+        scenario.finding(second, "no-ac-after", "U.java", 4, FindingType.REQUIREMENT, null);
+        jdbc.update("update review set summary_json = ?::jsonb where id = ?", """
+                {"warnings":["corrected the line of a CODE_QUALITY finding for A.java to 3",
+                  "corrected the line of AC evidence for criterion 1 in R.java to 9",
+                  "kept a REQUIREMENT finding for A.java as CODE_QUALITY"]}
+                """, second);
+
+        ReviewViews.ReviewDetail detail = decisions.detail(scenario.projectId, scenario.developer, second);
+        assertThat(detail.notReported()).extracting(ReviewViews.FindingView::id)
+                .containsExactly(gone, unknownLine, unknownAc);
+        assertThat(detail.validation()).isEqualTo(new ReviewViews.ValidationSummary(0, 1));
+        assertThat(decisions.detail(scenario.projectId, scenario.developer, first).findings()).hasSize(5);
+        assertThat(detail.findings()).allMatch(finding -> finding.continuity() == FindingContinuity.NEW);
+
+        // 不同需求也可有 AC-1，不能因为同名同位置就遮蔽上一轮的需求问题。
+        long otherRequirement = scenario.requirement();
+        long otherRevision = scenario.currentRevisionOf(otherRequirement);
+        long otherAc = scenario.criterion(otherRevision);
+        scenario.moveTo("head-3", "fp-3");
+        long third = scenario.completedReview("head-3", "fp-3", otherRequirement, otherRevision);
+        scenario.finding(third, "other-requirement", "R.java", 9, FindingType.REQUIREMENT, otherAc);
+        assertThat(decisions.detail(scenario.projectId, scenario.developer, third).notReported())
+                .extracting(ReviewViews.FindingView::id).contains(currentRequirement);
+    }
+
     // --------------------------------------------------------------------- http
 
     @Test
@@ -665,6 +711,24 @@ class ReviewDecisionTest extends PostgresTestBase {
         private long currentRevisionOf(long requirementId) {
             return jdbc.queryForObject("select current_revision_id from requirement where id = ?",
                     Long.class, requirementId);
+        }
+
+        private long criterion(long revisionId) {
+            return jdbc.queryForObject("insert into acceptance_criterion (project_id, requirement_revision_id, "
+                    + "ac_key, sort_order, text) values (?, ?, 'AC-1', 0, 'criterion') returning id",
+                    Long.class, projectId, revisionId);
+        }
+
+        private long finding(long reviewId, String key, String path, Integer line, FindingType type, Long acId) {
+            // 从父行复制上下文，夹具也必须遵守不可变父子快照与 attempt 外键。
+            return jdbc.queryForObject("""
+                    insert into finding (project_id, review_id, review_attempt, requirement_id,
+                        requirement_revision_id, ac_id, finding_type, path, line, evidence,
+                        finding_key, evidence_hash, basis_hash, status, continuity)
+                    select project_id, id, execution_attempt, requirement_id, requirement_revision_id,
+                        ?, ?, ?, ?, 'source', ?, 'evidence', 'basis', 'OPEN', 'NEW'
+                    from review where project_id = ? and id = ? returning id
+                    """, Long.class, acId, type.name(), path, line, key, projectId, reviewId);
         }
 
         private long completedReview(String headSha, String fingerprint, Long requirementId,

@@ -209,6 +209,10 @@ public class ReviewDecisionService {
         List<Finding> notReported = review.getStatus() == ReviewStatus.COMPLETED
                 ? continuity.notReported(projectId, review.getPullRequestId(), reviewId) : List.of();
         Map<Long, String> acKeys = acKeysOf(projectId, Stream.concat(rows.stream(), notReported.stream()).toList());
+        // 只收窄展示提示：类别/行号漂移不代表同一 AC 没再被报告，血缘和抑制仍严格按 key。
+        notReported = notReported.stream()
+                .filter(previous -> rows.stream().noneMatch(current -> sameProblem(previous, current, acKeys)))
+                .toList();
         JsonNode summary = parse(review.getSummaryJson());
 
         return new ReviewDetail(review.getId(), review.getPullRequestId(), review.getHeadSha(),
@@ -288,6 +292,24 @@ public class ReviewDecisionService {
             keys.put(((Number) row[0]).longValue(), (String) row[1]);
         }
         return keys;
+    }
+
+    /** 粗粒度提示去重，不证明语义等价，也不参与任何血缘或人工状态计算。 */
+    private static boolean sameProblem(Finding previous, Finding current, Map<Long, String> acKeys) {
+        if (previous.getFindingType() != current.getFindingType()
+                || previous.getPath() == null || previous.getPath().isBlank()
+                || !previous.getPath().equals(current.getPath())) {
+            return false;
+        }
+        if (previous.getFindingType() == FindingType.REQUIREMENT) {
+            String previousKey = previous.getAcId() == null ? null : acKeys.get(previous.getAcId());
+            String currentKey = current.getAcId() == null ? null : acKeys.get(current.getAcId());
+            // AC-1 只在同一个需求内稳定；两个未知 AC 或不同需求的同名 AC 不能相互遮蔽。
+            return previous.getRequirementId() != null
+                    && previous.getRequirementId().equals(current.getRequirementId())
+                    && previousKey != null && !previousKey.isBlank() && previousKey.equals(currentKey);
+        }
+        return previous.getLine() != null && previous.getLine().equals(current.getLine());
     }
 
     private static FindingView view(Finding finding, Map<Long, String> acKeys) {

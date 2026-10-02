@@ -17,8 +17,8 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
 /**
- * 把模型的一次回答，变成一个对本次 Review 自身上下文而言为真的
- * {@link ReviewOutput}，或者变成一个 FAILED 裁定（ARCHITECTURE.md 3.5）。
+ * 将模型回答转换为通过结构、引用归属与源码证据锚定校验的
+ * {@link ReviewOutput}，或 FAILED 裁定（ARCHITECTURE.md 3.5）；不证明模型的语义判断为真。
  *
  * <p>这里的一切由两条规则塑形：
  *
@@ -53,7 +53,8 @@ public class ReviewOutputValidator {
 
     /**
      * 整条丢弃一条 Finding 的那几种警告。重复项不算：它与留下的那条是同一个 key。
-     * 「no usable type」只出现在 {@code review-4} 之前的历史审查里。
+     * 「dropped ... with no usable type」兼容 review-4 之前的历史拒绝措辞。
+     * review-5 的类型兜底以 kept 开头，不计作丢弃。
      */
     private static final Pattern DROPPED_FINDING = Pattern.compile(
             "^dropped a (?:REQUIREMENT |CODE_QUALITY )?finding (?:for |with no usable type)");
@@ -188,11 +189,11 @@ public class ReviewOutputValidator {
     }
 
     private FindingCandidate readFinding(JsonNode item, Context context, List<String> warnings) {
-        // 类型由 acId 推导而不由模型另报（见 ReviewPrompts）：引用了本修订验收条件的是
-        // REQUIREMENT，没有引用的是 CODE_QUALITY。
         Long acId = integralOrNull(item, "acId");
         Context.Ac criterion = acId == null ? null : context.acceptanceCriterion(acId);
-        FindingType type = acId == null ? FindingType.CODE_QUALITY : FindingType.REQUIREMENT;
+        FindingType reportedType = typeOf(stringOrNull(item, "type"));
+        FindingType type = reportedType == null
+                ? (acId == null ? FindingType.CODE_QUALITY : FindingType.REQUIREMENT) : reportedType;
         String path = stringOrNull(item, "path");
         ChangedFile file = context.visibleFile(path);
         if (file == null) {
@@ -218,6 +219,17 @@ public class ReviewOutputValidator {
             warnings.add("dropped a REQUIREMENT finding for " + path + ": acceptance criterion " + acId
                     + " does not belong to the revision under review");
             return null;
+        }
+
+        // 外来 AC 已在上方拒绝，不能靠删引用把虚构依据洗成合法的代码质量问题。
+        // 缺失类型兼容 review-4；矛盾时仅保留不带 AC 断言的较弱类型，证据仍须通过锚定。
+        if (reportedType == null) {
+            warnings.add("kept a finding for " + path + " as " + type + ": no usable type; inferred from acId");
+        } else if ((type == FindingType.REQUIREMENT) != (criterion != null)) {
+            warnings.add("kept a " + type + " finding for " + path
+                    + " as CODE_QUALITY: its type and acceptance criterion disagree");
+            type = FindingType.CODE_QUALITY;
+            criterion = null;
         }
 
         List<String> excerptHashes = citedExcerptHashes(item, context, warnings, path);
@@ -528,9 +540,9 @@ public class ReviewOutputValidator {
         return DROPPED_FINDING.matcher(warning).lookingAt();
     }
 
-    /** 模型报的行号被逐字引用的真实位置纠正（Finding 与 AC 证据都算）。 */
+    /** 只计 Finding 的纠行事件（含分批候选），AC 证据的纠行不是 Finding 数量。 */
     static boolean correctsLine(String warning) {
-        return warning.startsWith("corrected the line of ");
+        return warning.startsWith("corrected the line of a ");
     }
 
     private static String stringOrNull(JsonNode item, String field) {
@@ -541,6 +553,15 @@ public class ReviewOutputValidator {
     private static Long integralOrNull(JsonNode item, String field) {
         JsonNode value = item.path(field);
         return value.isIntegralNumber() ? value.longValue() : null;
+    }
+
+    private static FindingType typeOf(String name) {
+        for (FindingType type : FindingType.values()) {
+            if (type.name().equals(name)) {
+                return type;
+            }
+        }
+        return null;
     }
 
     private static AcVerdict verdictOf(String name) {
