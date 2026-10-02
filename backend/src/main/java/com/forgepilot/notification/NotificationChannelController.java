@@ -70,7 +70,7 @@ class NotificationChannelController {
      *
      * <p>{@code secret} 可以缺失或为空，表示这个渠道不加签。钉钉的三种安全设置只在
      * <em>创建</em>机器人时可选，已存在的机器人在很多客户端里改不了，因此强制要求加签
-     * 换不来更安全的部署，只会换来无法部署。代价记在 SECURITY.md 的残余风险里，
+     * 换不来更安全的部署，只会换来无法部署。代价记在 docs/deliverables/SECURITY.html 的残余风险里，
      * 配置表单也在做选择的那个位置直说。
      */
     record ConfigureRequest(

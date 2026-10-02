@@ -852,8 +852,8 @@ docker compose -p fp-demo up --detach --wait backend frontend</code></pre>
         <tr><td class="f">RequirementAttachmentService</td><td>附件的唯一拥有者。文档上的 scope 只是投影，归属事实在关系表。</td></tr>
         <tr><td class="f">RequirementQualityService</td><td>需求质量检查：先跑确定性规则，完整 Prompt 在脱敏后处于预算内时调用<strong>一次</strong>结构化 AI；超预算则跳过 AI，仍保存并返回规则结果。结果归属具体修订，<code>QUALITY_VERSION</code> 现为 <code>quality-2</code>。</td></tr>
         <tr><td class="f">QualityReport</td><td>质量检查结果。含 <code>DUPLICATE_CRITERION</code>（两条 AC 文本完全相同会让同一缺陷以两个 key 报告两次，而抑制按 key 生效）与 <code>PROMPT_BUDGET_EXCEEDED</code>（不截断后做部分分析，而是返回 <code>ai=null</code> 的确定性报告）。</td></tr>
-        <tr><td class="f">ImplementationGuidanceService</td><td>一次性、知识增强的实现建议。只读当前需求、其 AC 与当前需求可见的知识。</td></tr>
-        <tr><td class="f">ImplementationGuidance</td><td>建议结果，点名具体修订。</td></tr>
+        <tr><td class="f">ImplementationGuidanceService</td><td>一次性、知识增强的实现建议。只读已保存需求、其 AC 与当前需求可见的知识；<code>guidance-2</code> 输出概览、待确认事项、带验证办法的清单、规则与风险，不读取仓库源码或保存正文。</td></tr>
+        <tr><td class="f">ImplementationGuidance</td><td>建议结果，携带需求修订与建议版本；标识适用范围，不保证建议正确。</td></tr>
         <tr><td class="f">RemovedMemberAssignmentListener</td><td>成员离开项目时清除需求开发与审查人指派，并把清理数量写入现有删除审计。</td></tr>
       </tbody>
     </table></div>
@@ -999,8 +999,8 @@ docker compose -p fp-demo up --detach --wait backend frontend</code></pre>
         <tr><td class="f">ReviewExecutorConfig</td><td>线程池与调度器。并发上限<strong>冻结为 2</strong>，依据是 4 GB 主机上的实测（两个 300 文件 Review、各带 3,989,101 字符清单，无截断、无重启、无 OOM）。</td></tr>
         <tr><td class="f">ReviewPipeline <span class="lb"></span></td><td><b>它做什么：</b>一次审查的完整流程编排。<br><b>为什么这么写：</b>完整流程：从被抢占的行到落库的报告。小 PR 与大 PR<strong>走完全相同的路径</strong>——「让批次直接下结论」的捷径正是被明令禁止的第二条流水线。</td></tr>
         <tr><td class="f">ChangedFileBatcher <span class="lb"></span></td><td><b>它做什么：</b>把变更文件切成若干批，因为大 PR 一次塞不进模型。<br><b>为什么这么写：</b>把变更文件切批并运行分批阶段。批次只产出候选与证据。第一个「解析不过、修复也救不回来」的批次让<strong>整次 Review</strong> 失败并丢弃已有产出——只报告了五个批次中三个的 Review 看上去是完整的，而它对另外两个的判断是错的。</td></tr>
-        <tr><td class="f">ReviewPrompts <span class="lb"></span></td><td><b>它做什么：</b>发给模型的两段提示词和两个输出格式定义。<br><b>为什么这么写：</b>两个 Prompt 与两个 schema，以常量形式存在。三条承重规则都为了让抑制机制保持诚实。<code>VERSION</code> 现为 <code>review-4</code>。</td></tr>
-        <tr><td class="f">ReviewOutputValidator <span class="lb"></span></td><td><b>它做什么：</b>检查模型的回答是否可用，不可用就判定失败。<br><b>为什么这么写：</b>把模型回答变成对本次 Review 上下文<strong>为真</strong>的结果，或变成 FAILED 裁定。Finding 与 AC 引用必须逐字存在于对应 diff hunk 的新侧源码；唯一命中纠正行号，多处命中无法消歧时不输出精确行号，编造、删除侧或跨 hunk 引用被丢弃并记入 warnings。结构非法只给<strong>一次</strong>格式修复；校验发生在写入<strong>之前</strong>。</td></tr>
+        <tr><td class="f">ReviewPrompts <span class="lb"></span></td><td><b>它做什么：</b>发给模型的两段提示词和两个输出格式定义。<br><b>为什么这么写：</b>两个 Prompt 与两个 schema，以常量形式存在。三条承重规则都为了让抑制机制保持诚实。<code>VERSION</code> 源码现为 <code>review-5</code>（2026-09-30，尚未部署）。</td></tr>
+        <tr><td class="f">ReviewOutputValidator <span class="lb"></span></td><td><b>它做什么：</b>检查模型的回答是否可用，不可用就判定失败。<br><b>为什么这么写：</b>把模型回答变成通过结构、引用归属和源码证据锚定校验的结果，或变成 FAILED 裁定；<strong>不保证模型的语义判断为真</strong>。Finding 与 AC 引用必须逐字存在于对应 diff hunk 的新侧源码；唯一命中纠正行号，多处命中无法消歧时不输出精确行号，编造、删除侧或跨 hunk 引用被丢弃并记入 warnings。结构非法只给<strong>一次</strong>格式修复；校验发生在写入<strong>之前</strong>。</td></tr>
         <tr><td class="f">ReviewOutput</td><td>校验后的结果。FAILED 的 Review <strong>根本没有</strong> Report 而不是有一个空的——「绝无残缺报告」因此是关于类型的事实。</td></tr>
         <tr><td class="f">AcVerdict</td><td><code>COVERED</code> / <code>NOT_FOUND</code> / <code>AT_RISK</code>。<strong>只有综合阶段有资格下裁定</strong>；被审查修订的每一条 AC 最终都有裁定，模型跳过的填成 <code>NOT_FOUND</code>，所以沉默的模型永远无法把报告缩短。</td></tr>
         <tr><td class="f">ReviewReconciliationScheduler</td><td>把「已落库但不再推进」的 Review 放回轨道。它的唯一查询 FROM 子句里<strong>有且仅有 <code>review</code> 一张表</strong>——由 review 驱动的结果集必然是已存在行的子集，所以无论条件写得多错都不可能产出一个从未创建的 Review。</td></tr>
@@ -1432,7 +1432,7 @@ python3 evaluation/tools/formal_evaluation.py report \
   <div class="note red">
     <span class="label">三 · 两个朝相反方向移动的版本常量</span>
     <p>
-      <code>ReviewPrompts.VERSION</code> 现为 <code>"review-4"</code>，schema 变化时递增。
+      <code>ReviewPrompts.VERSION</code> 源码现为 <code>"review-5"</code>（2026-09-30，尚未部署），schema 变化时递增。
       <code>FindingKeys.RULE_VERSION</code> <strong>必须保持 <code>"1"</code></strong>——它进 <code>basis_hash</code>，
       一改就让全部历史 Finding 的血缘断掉。
     </p>
@@ -1567,6 +1567,8 @@ python3 evaluation/tools/score.py --selftest</code></pre>
   </p>
   <p>2026-09-20 补充：输出校验新增 diff 新侧逐字证据锚定与真实行号纠正；需求质量检查超预算时跳过 AI。此补充不改写上述 2026-09-08 快照或正式评测证据。</p>
   <p>2026-09-25 补充：框架级错误进入统一错误体、用户可见文案统一为中文（09-21）；审查输出改为中文（09-23）；Finding 类型改由 acId 推导、chat 默认温度 0、429 先退避再重试、审查详情显示校验摘要与「本轮未再报告」、标记已修复仅限认领人（09-25，<code>review-4</code>）。</p>
+  <p>2026-09-30 源码补充（尚未部署）：<code>review-5</code> 恢复模型 type，类型与合法 AC 矛盾时保留为无 AC 的代码质量类，外来引用仍拒绝；详情只按同位置/同需求 AC 粗略排除重复提示，不改变血缘。无人认领时开发者可接续标记修复，其他开发者不再看到无权按钮。纠行计数仅含 Finding（含分批候选），不代表最终 Finding 数。旧实验与上述历史快照不变，未进行新一轮真实模型复测。</p>
+  <p>2026-10-01 源码补充（尚未部署）：实现建议新增概览和待确认事项，清单要求说明适用 AC 与验证办法；资料与技术信息默认折叠。先保存草稿/发布修订再生成，保存后旧建议及晚到回答失效；重新生成失败保留仍适用的旧建议。支持本地复制/Markdown 下载，刷新后不保留正文。建议版本为 <code>guidance-2</code>，尚未进行真实模型样例质量验证。</p>
   <p>
     更权威的单一定义处在仓库里：架构与数据模型见 <code>docs/v2/ARCHITECTURE.md</code>，
     产品规则见 <code>docs/v2/PRD.md</code>，端点契约见 <code>docs/v2/API.md</code>，

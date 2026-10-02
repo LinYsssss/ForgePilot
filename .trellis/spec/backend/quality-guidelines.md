@@ -82,6 +82,63 @@ Regression anchors are `ReviewOutputValidatorTest`, `ChangedFileBatcherTest`,
 boundary changes, cover at least the base case, the rejected case, and any
 correction/nullable-output case in those tests.
 
+### Scenario: review type correction and detail-only hints
+
+#### 1. Scope / Trigger
+
+Changing a model label or a read-time hint must not rewrite authoritative lineage,
+relax citation checks, or accidentally grant a human action to another role.
+
+#### 2. Signatures
+
+- `ReviewOutputValidator.readFinding(...)` normalizes model `type`/`acId` before keys.
+- `ReviewDecisionService.detail(...)` derives `notReported` and `validation`.
+- `FindingLifecycleService.move(...)` authorizes and audits `MARK_FIXED`.
+
+#### 3. Contracts
+
+`review-5` asks for explicit type in both schemas. Only contradictions with a
+**valid** AC can downgrade to CODE_QUALITY; absent/unknown type falls back to acId.
+A foreign AC is rejected before any downgrade. Preserve parent Review context;
+remove the downgraded AC from both the candidate and its key/basis inputs.
+
+Detail-only coarse matching requires equal type/path plus non-null line for code
+quality, or equal requirementId and non-empty ac_key for requirements. It never
+feeds lineage or suppression. `correctedLines` counts Finding correction events,
+including batch candidates, not AC evidence or final-finding cardinality.
+
+#### 4. Validation & Error Matrix
+
+| Input/state | Outcome |
+|---|---|
+| Type contradicts valid/absent AC | CODE_QUALITY, no AC, `kept ...` warning |
+| Foreign AC or unanchored quotation | Drop finding; existing rejection warning |
+| Same AC key in different requirements, unknown locator | Do not hide historical hint |
+| Developer marking another person's claim fixed | 403 / forbidden, explicit claimant message |
+| Developer marking an unassigned IN_PROGRESS finding fixed | Allow; audit actor, do not silently claim |
+| No developer role | Existing 403; the unassigned exception grants no role |
+
+#### 5. Good / Base / Bad Cases
+
+Valid type/citation pairs remain unchanged. Same-requirement AC keys may match
+across revisions. Two null positions or two unrelated AC-1 labels must not match.
+
+#### 6. Tests Required
+
+`ReviewOutputValidatorTest` covers contradictions separately: after downgrade,
+identical fixtures share a key and would correctly deduplicate in one answer.
+`ReviewPipelineIntegrationTest` checks both schema equality **and** required type.
+`ReviewDecisionTest` checks hints/summary without changing saved rows;
+`FindingLifecycleTest` checks claimant/null-claim authorization and audit actor.
+`frontend/tests/journey.spec.ts` checks the corresponding button visibility.
+
+#### 7. Wrong vs Correct
+
+Wrong: clear a foreign acId before checking its revision, or reuse the coarse
+view matcher for SUPPRESSED. Correct: validate the citation first, then normalize
+only valid pairs; keep coarse matching inside detail assembly and preserve all
+key/hash algorithms. A retained quotation does not prove the model's claim true.
+
 ### Outbound calls are stubbed, never credentialed
 
 CI holds no AI provider key, no SCM token and no repository secret, and

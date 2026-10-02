@@ -1,87 +1,75 @@
 # Directory Structure
 
-The Phase 1 frontend is a deliberately small Vue 3 application. The tree
-expresses the application shell and its boundaries; it does not pre-create
-business feature modules that are not yet authorized.
+The frontend implements ForgePilot's product workflows in feature-owned Vue
+components. The shell, router, shared request boundary and finite polling
+composable are shared; there is no separate placeholder-page tree.
 
 ## Directory layout
 
 ```text
 frontend/
-├── README.md                  # local commands and boundaries
-├── index.html                 # Vite document entry
-├── package.json
-├── package-lock.json
-├── vite.config.ts             # Vite and Vitest configuration
-├── tsconfig.json              # project reference
-├── tsconfig.app.json          # strict application/test compiler options
-├── scripts/
-│   └── lint.mjs               # foundation policy checks
+├── README.md
+├── index.html
+├── package.json / package-lock.json
+├── vite.config.ts              # Vite and Vitest configuration
+├── tsconfig.json / tsconfig.app.json
+├── scripts/lint.mjs            # policy checks
+├── public/brand/               # application icon and horizontal lockup
 ├── src/
-│   ├── main.ts                # application bootstrap and global styles
-│   ├── App.vue                # root component
-│   ├── env.d.ts               # Vue SFC ambient declarations
-│   ├── app/
-│   │   ├── router.ts          # router factory
-│   │   └── routes.ts          # approved paths and top-level navigation
+│   ├── main.ts / App.vue       # bootstrap, global styles and root component
+│   ├── env.d.ts
+│   ├── app/router.ts / routes.ts
 │   ├── components/
-│   │   ├── AppShell.vue       # document landmarks, navigation, route transition
-│   │   └── motion/
-│   │       ├── CyberParticleField.vue # bounded ambient canvas lifecycle
-│   │       └── cyberParticles.ts      # deterministic particle helpers
-│   ├── lib/
-│   │   └── http.ts            # same-origin request boundary
-│   ├── styles/
-│   │   ├── tokens.css         # shared theme and reusable visual values
-│   │   └── base.css           # global foundation and responsive rules
-│   └── views/
-│       └── FoundationPlaceholderPage.vue
-└── tests/
-    ├── routes.spec.ts         # route and semantic shell contract
-    ├── http.spec.ts           # request boundary contract
-    ├── motion.spec.ts         # full/reduced-motion contract
-    └── cyberParticles.spec.ts # particle bounds and deterministic behavior
+│   │   ├── AppShell.vue
+│   │   └── motion/             # decorative canvas lifecycle and helpers
+│   ├── composables/useFinitePolling.ts
+│   ├── features/
+│   │   ├── auth/               # login, account settings and shared session
+│   │   ├── project/            # projects and member management
+│   │   ├── requirement/        # requirements, AC editor, guidance and status
+│   │   ├── knowledge/          # documents and ingestion status
+│   │   ├── scm/                # repository and identity integration
+│   │   ├── review/             # review pages, findings, context and diff
+│   │   ├── notification/       # API helper used by repository settings
+│   │   └── workspace/          # read-only aggregation of existing APIs
+│   ├── lib/http.ts / datetime.ts
+│   └── styles/tokens.css / base.css
+└── tests/                      # behavior, boundary and journey contracts
 ```
 
 `Dockerfile`, `.dockerignore`, and `nginx.conf` are deployment files at the
-frontend root; they are not imported by application code. Static assets, when
-needed, belong in a dedicated `public/` directory and must have an explicit
-product use.
+frontend root, not application imports. `dist/` and `node_modules/` are generated
+and ignored. Static assets belong in `public/` and need an explicit product use.
 
 ## Module organization
 
-- `app/` owns application-wide routing and navigation constants.
-- `components/` contains reusable, presentation-focused Vue components. Motion
-  components remain decorative, typed, bounded, and free of business state.
-- `views/` contains route-level components. Phase 1 views are placeholders and
-  must not manufacture business data or actions.
-- `lib/` contains framework-neutral utilities and I/O boundaries. `http.ts`
-  is the single JSON request entry point.
-- `styles/` owns the B Precision Review Console tokens and global foundation
-  styles. Components consume semantic custom properties rather than defining
-  their own visual scale.
-- `tests/` mirrors public contracts, not implementation details.
+- `app/` owns routing, approved product paths and navigation constants.
+- `components/` owns reusable presentation; motion stays decorative and bounded.
+- `features/<feature>/` keeps each route page, local components, API types and
+  helpers together. A feature need not have a page: notification has only an API
+  helper and does not introduce another top-level menu.
+- `composables/` holds the shared lifecycle primitive; feature-specific state
+  stays in its owner rather than in a generic store.
+- `lib/http.ts` is the single JSON request boundary. `styles/` owns semantic
+  tokens and base rules; views do not define a second visual scale.
+- `tests/` exercises public contracts rather than mirroring every source file.
 
-When an authorized feature is introduced, keep its route view, components,
-composables, and types in a bounded feature directory rather than adding an
-unrelated top-level menu or utility. Do not create empty business directories
-in Phase 1, and do not move the existing shell merely for symmetry.
+Do not add empty layers or move the existing shell merely for symmetry. Product
+paths are defined in `app/routes.ts`, not inferred from directory names.
 
 ## Naming conventions
 
-- Vue single-file components use PascalCase (`AppShell.vue`).
-- General TypeScript modules use concise lowercase names that describe one
-  boundary (`router.ts`, `routes.ts`, `http.ts`); composables use `useX.ts`.
+- Vue SFCs use PascalCase (`AppShell.vue`).
+- TypeScript modules describe their boundary (`routes.ts`, `http.ts`);
+  composables use `useX.ts`.
 - Tests use the source contract name plus `.spec.ts`.
-- Exported immutable collections/constants use descriptive `UPPER_SNAKE_CASE`
-  names (`TOP_LEVEL_NAVIGATION`); functions use `camelCase`.
-- Use relative imports consistent with the current Vite configuration. Do not
-  add path aliases or barrel files without a concrete module-boundary need.
+- Exported immutable collections use `UPPER_SNAKE_CASE`; functions use camelCase.
+- Keep relative imports; no aliases or barrel files without a concrete need.
 
 ## Reference examples
 
-- [AppShell.vue](../../../frontend/src/components/AppShell.vue) demonstrates
-  the document shell and navigation boundary.
-- [routes.ts](../../../frontend/src/app/routes.ts) is the source of truth for
-  the product paths and compatibility redirects.
-- [http.ts](../../../frontend/src/lib/http.ts) is the only request utility.
+- [AppShell.vue](../../../frontend/src/components/AppShell.vue) owns the shell.
+- [routes.ts](../../../frontend/src/app/routes.ts) owns product paths and redirects.
+- [http.ts](../../../frontend/src/lib/http.ts) owns request semantics.
+- [useFinitePolling.ts](../../../frontend/src/composables/useFinitePolling.ts)
+  owns bounded polling, not endpoint or page-state decisions.

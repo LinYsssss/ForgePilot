@@ -116,8 +116,8 @@ because the client now guards it.
 
 - Adding a seventh top-level navigation item or a general Assistant/Agent/Patch/
   Metrics/AI Logs page beyond the six product entries.
-- Putting placeholder business data, forms, buttons, or review conclusions in
-  a Phase 1 view.
+- Putting placeholder business data in a real view or presenting a locally
+  invented action as a server-supported workflow.
 - Hiding important content behind animation, hover-only affordances, or a
   color-only badge.
 - Recreating header/navigation markup in each view instead of using

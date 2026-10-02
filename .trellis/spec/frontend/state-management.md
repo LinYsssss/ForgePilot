@@ -1,9 +1,8 @@
 # State Management
 
-The Phase 1 shell deliberately has no global store. Vue `ref`, `computed`,
-and component props are sufficient for local presentation state, and the
-router is the source of truth for URL state. Pinia and other state libraries
-are not installed.
+The application deliberately has no external state-store library. Vue `ref`,
+`computed`, feature-owned session state and component props handle mutable state;
+the router is the source of truth for URL state. Pinia is not installed.
 
 ## State categories
 
@@ -14,9 +13,11 @@ are not installed.
   Vue Router rather than copying it into a second store.
 - **Server state:** request data through `requestJson<T>` and keep the result,
   loading state, and error state with the view/feature that owns the request.
-  Phase 1 has no server-backed business state or cache.
-- **Shared application state:** only router configuration and immutable
-  navigation constants are shared in the foundation (`routes.ts`).
+  Requirements, reviews, project membership and knowledge records come from the
+  backend; no shared client cache replaces those authoritative records.
+- **Shared application state:** navigation constants live in `routes.ts`.
+  `features/auth/session.ts` owns the shared account ref, exposes a readonly
+  computed value through `useSession`, and updates it only through auth actions.
 
 Derived values should be `computed` from one authoritative source. Do not
 duplicate route params, server records, or status fields merely to make a
@@ -36,9 +37,9 @@ contract.
 
 ## Server state
 
-There is no automatic cache, optimistic mutation, or query invalidation in
-Phase 1. Review execution and knowledge ingestion are the one authorized polling
-case: `useFinitePolling` schedules the next read only after the previous read
+There is no automatic query cache or query invalidation layer. Review execution
+and knowledge ingestion use the shared `useFinitePolling`: it schedules the next
+read only after the previous read
 settles, runs only while the displayed record is PENDING/RUNNING, pauses while
 the page is hidden, and stops at terminal state or unmount. Three consecutive
 failures stop automatic reads and expose a manual retry. Feature callbacks still
@@ -78,6 +79,58 @@ rendered identity and outgoing decision target. It also proves old errors and
 Polling refreshes only the result record/list. It must not call a detail page's
 initial `load()` because that function resets comments, filters, selected evidence,
 attachment inputs, and other local edits.
+
+## Scenario: one-shot advice for mutable drafts
+
+### 1. Scope / Trigger
+
+A generated suggestion must stay attached to the saved content it describes,
+not whichever form happens to be visible when a slow response arrives.
+
+### 2. Signatures
+
+`generateGuidance(projectId, requirementId)` calls `POST .../guidance`.
+`RequirementDetailPage.vue` owns `draftContent`, `invalidateGuidance`,
+`runGuidance`, and the shared copy/download Markdown formatter.
+
+### 3. Contracts
+
+Keep checklist/rules/risks as string arrays. The additional summary/questions/
+guidanceVersion fields may be absent with an older service; absence is not an
+empty assessment. Knowledge similarity is retrieval relevance, not correctness.
+The server reads saved content only and stores no suggestion history.
+
+### 4. Validation & Error Matrix
+
+| Situation | Required behavior |
+|---|---|
+| Unsaved draft or unpublished edits | Disable generation, explain why; never save automatically |
+| Same revisionId after a DRAFT save | Invalidate both old result and in-flight request |
+| Old success/error/finally arrives | Do not change the newer request's result/error/pending state |
+| Response names a different revision | Discard it and ask the user to refresh |
+| Regeneration fails without content change | Keep and identify the previous valid suggestion |
+| Clipboard absent or denied | Report failure and offer Markdown download |
+
+### 5. Good / Base / Bad Cases
+
+A fresh unchanged form can generate even when optional prose is null or empty.
+Saving a DRAFT must invalidate by request generation, not just revisionId.
+Do not render missing questions as “no questions”, or silently keep advice after
+known saved content changed.
+
+### 6. Tests Required
+
+`frontend/tests/requirement.spec.ts` holds an old answer across a same-id draft
+save and a newer generation, checks the new pending flag, legacy fields and
+failure retention, and compares clipboard text with the downloaded Blob.
+`ImplementationGuidanceTest` owns response structure, roles and gateway calls.
+
+### 7. Wrong vs Correct
+
+Wrong: `guidance.value = await generateGuidance(...)` followed by an unconditional
+`pending = false`. Correct: capture the request generation, guard success/catch/
+finally, and advance it on save, reload and unmount. Use one formatter for both
+copy and download so neither loses the revision or reference context.
 
 ## Common mistakes
 

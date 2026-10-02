@@ -1,14 +1,13 @@
 # Quality Guidelines
 
 Frontend quality is enforced by a small, reproducible command set and by the
-B Precision Review Console design contract. Phase 1 checks the shell and its
-high-risk boundaries; it does not add low-value tests for framework behavior or
-placeholder getters.
+Precision Review Console design contract. Tests cover real product journeys and
+high-risk boundaries, not framework behavior or trivial getters.
 
 ## Forbidden patterns
 
-- Business workflows, fake records, authentication UI, review conclusions, or
-  extra top-level navigation in Phase 1.
+- Fabricated business records, review conclusions or permissions, and extra
+  top-level navigation outside the approved product routes.
 - `axios`, `pinia`, Tailwind, a UI component suite, charting libraries, or a
   second request/state runtime without an approved design change.
 - Raw color literals outside `src/styles/tokens.css`, arbitrary visual values,

@@ -30,7 +30,7 @@ import org.springframework.stereotype.Component;
  * 一并作为查询参数附在 webhook URL 后面。
  *
  * <p>渠道<strong>可以不加签</strong>：此时 URL 原样使用，不附任何加签参数。那一档的防护
- * 只剩 URL 本身的保密性，代价记在 SECURITY.md 的残余风险里。
+ * 只剩 URL 本身的保密性，代价记在 docs/deliverables/SECURITY.html 的残余风险里。
  *
  * <p><strong>本类不抛异常。</strong>推送失败返回 {@code false} 并记一行日志，
  * 不重试、不上报。理由写在 {@code package-info}：通知是旁路，让它的失败影响到审查，

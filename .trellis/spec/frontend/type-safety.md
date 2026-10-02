@@ -10,7 +10,7 @@ files.
 - Keep a type next to the boundary that owns it while it is used by one
   feature/module.
 - Promote a type to a shared module only when multiple authorized consumers
-  share the same API contract; do not create a catch-all `types.ts` in Phase 1.
+  share the same API contract; do not create a catch-all `types.ts`.
 - Use Vue Router's `RouteRecordRaw` for route definitions and `as const` for
   immutable route/navigation contracts (`PRODUCT_ROUTE_PATHS` and
   `TOP_LEVEL_NAVIGATION`).
@@ -19,12 +19,12 @@ files.
 
 ## Boundary validation
 
-Phase 1 has no runtime schema library. `requestJson<T>` provides a compile-time
+The project has no runtime schema library. `requestJson<T>` provides a compile-time
 caller contract and parses JSON, but it cannot prove that an external response
-matches `T`; the deliberate cast is confined to that I/O boundary. When a
-business endpoint is introduced, add explicit runtime validation at the
-boundary if its threat or compatibility model requires it, and document the
-chosen library/contract before adding it.
+matches `T`; the deliberate cast is confined to that I/O boundary. Explicit
+runtime narrowing exists for historical Review context, as documented below.
+Add further validation only when the owning boundary's contract requires it;
+never turn unchecked data into trusted view state with a cast.
 
 Use `unknown` for caught errors and untrusted values, then narrow with a type
 guard or an explicit status/body check. Do not silently coerce malformed data

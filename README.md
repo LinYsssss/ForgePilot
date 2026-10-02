@@ -29,10 +29,9 @@ ForgePilot 是一个面向软件研发流程的轻量级 AI 研发协作与代�
 | 知识 | PostgreSQL 15 + pgvector，按 `project_id` 与当前 Requirement 双重硬过滤 |
 | 评测 | 三臂对照实验，holdout 只跑一次 |
 
-验证使用 Testcontainers 真实 PostgreSQL 15 + pgvector。当前部署版本为 `ea51e6a`（2026-09-25，
-Finding 类型由验收条件引用推导的 `review-4`、温度 0、校验摘要与认领人限制；其后只有文档与论文材料提交）。2026-09-20 部署版本
-`4121cea` 的后端全套 416 项测试、前端 lint / typecheck / build 与 63 项测试全部
-通过，现有 PostgreSQL 数据和 V14 schema 保留。部署后 15 个真实 GitHub PR
+验证使用 Testcontainers 真实 PostgreSQL 15 + pgvector。源码已完成 `review-5` 的类型、详情提示与认领人规则修正，尚未部署；最新自动化验证见[测试报告](docs/deliverables/TEST-REPORT.html)。
+
+最近一次部署记录为 `ea51e6a`（2026-09-25，`review-4`、温度 0、校验摘要与认领人限制），不要把当前源码状态当作线上版本。2026-09-20 的 `4121cea` 部署保留了现有 PostgreSQL 数据和 V14 schema；随后 15 个真实 GitHub PR
 快照全部完成复验，45 次 AI 调用全部成功并关联到对应 Review。论文引用口径、
 逐例数据和复算脚本见[生产复验结果](docs/thesis/PRODUCTION-REVALIDATION.md)，
 正式三臂评测仍使用下文所述的不可变证据。
@@ -75,8 +74,8 @@ docker compose up --build --detach --wait
 各自的开发命令：
 
 ```bash
-cd backend  && ./mvnw -B -ntp verify        # 需要 JDK 21 与可用的 Docker（Testcontainers）
-cd frontend && npm ci && npm run lint && npm run typecheck && npm run test -- --run && npm run build
+(cd backend && ./mvnw -B -ntp verify)        # 需要 JDK 21 与可用的 Docker（Testcontainers）
+(cd frontend && npm ci && npm run lint && npm run typecheck && npm run test -- --run && npm run build)
 ```
 
 ## 核心边界

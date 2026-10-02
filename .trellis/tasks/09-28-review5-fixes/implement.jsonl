@@ -1,0 +1,5 @@
+{"file":".trellis/spec/backend/quality-guidelines.md","reason":"输出校验、容器验证与外部调用 stub 边界"}
+{"file":".trellis/spec/backend/database-guidelines.md","reason":"真实 PostgreSQL 测试与历史迁移不可变"}
+{"file":".trellis/spec/backend/error-handling.md","reason":"既有 403 错误体与中文消息"}
+{"file":".trellis/spec/frontend/component-guidelines.md","reason":"复用 FindingCard/session，保持前后端权限一致"}
+{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"四道前端验证，不扩张测试工程"}

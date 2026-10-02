@@ -482,16 +482,17 @@ free -m</code></pre>
     如果是单个地址在刷，那就是它该做的事，不要动。
   </p>
   <p>
-    计数在<strong>进程内</strong>，重启后端即清空——这是最快的解除手段，代价是所有会话不受影响但配额全部重置。
+    计数在<strong>进程内</strong>，重启后端会清空配额，但<strong>进程内登录会话也会失效，需要重新登录</strong>。不要把重启当作常规解除限流的手段，应先排查共享代理地址或异常流量。
   </p>
 
   <h3>6.2 webhook 投递不到／PR 没有产生 Review</h3>
   <p>按这个顺序查，每一步都能把范围砍一半：</p>
   <ol>
     <li>provider 侧的投递记录：它有没有发出来，收到了什么状态码。</li>
-    <li>收到 <strong>401</strong> → 签名校验没过。webhook 密钥不匹配，或者 5.3 说的密钥被换过。</li>
-    <li>收到 <strong>429</strong> → 撞了 60 次／分的配额。<strong>两个 provider 都不重试投递，被限就是丢了。</strong>把配额调大。</li>
-    <li>收到 <strong>2xx</strong> 但没有 Review → 投递被接受但认定为无关（仓库未绑定、事件类型不关心、或 PR 变更量超过上限被整体拒绝）。查后端日志里对应的 traceId。</li>
+    <li>收到 <strong>401</strong> → 投递无法验证，可能是未知仓库、载荷不完整、签名或密钥不匹配；不能仅凭状态码区分这些原因。</li>
+    <li>收到 <strong>429</strong> → 撞了默认 60 次／分的配额。先检查真实客户端地址解析与异常流量，确认误限再调配额；不要假设 provider 一定自动重投。</li>
+    <li>收到 <strong>422</strong> → 已通过验证，但 PR 编号、快照或 diff 存储上限等业务输入不合法。用错误体的 traceId 查对应后端日志。</li>
+    <li>收到 <strong>2xx</strong> 但没有新增 Review → 可能是无关事件、重复投递复用已有 Review，或旧快照被忽略。对照 provider 的事件类型、PR head 与既有审查；不能把 2xx 当作模型已完成，也不能把超限拒绝归入 2xx。</li>
   </ol>
 
   <h3>6.3 Review 一直 PENDING</h3>

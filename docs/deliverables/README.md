@@ -39,6 +39,8 @@
 
 2026-09-08 六份 HTML 已同步指定审查人、退回理由与轮次、按审查 SHA 合并、提交后通知、公共知识阅读及 V14。后续代码审查修复了开发指派目标资格、历史 Review 的负责人归属和重开 Finding 的分组；提交 `746e40b` 的后端全套、前端四项门、评测契约及两次空库启动 CI 全部通过，现有 `fp-demo` 已完成保留数据的 V14 升级，公网检查通过。详见 [代码审查记录](../../.trellis/tasks/archive/2026-09/09-07-review-collaboration/code-review.md) 与 [部署记录](../../.trellis/tasks/archive/2026-09/09-07-review-collaboration/deployment.md)。六份 HTML 保留其 2026-09-08 快照日期；其中“真实浏览器及外部 SCM 尚未执行”这一历史边界，已被后续 15 个真实 GitHub PR 演练和 2026-09-20 部署后复验补充。当前论文引用口径与可复算数据见[生产复验结果](../thesis/PRODUCTION-REVALIDATION.md)；真实 GitLab 与钉钉联调仍不由该结果证明，容量及正式评测继续保留原始日期和历史证据。
 
+2026-09-30 源码补充（尚未部署）：`review-5` 恢复 type，合法引用与类型矛盾时保留为无 AC 的代码质量类；详情按同位置/同需求 AC 粗略收窄「未再报告」，不改变血缘；无人认领时开发者可接续标记修复，按钮按认领人过滤；纠行只计 Finding（含分批候选）。旧快照与 A/B 轮数据保留，未触发新的真实模型复测。验证结果见 TEST-REPORT 的对应日期补充。
+
 2026-09-21 至 09-25 补充：框架级错误进入统一错误体、用户可见文案统一为中文；审查输出改为中文（`review-3`）；Finding 类型改由 acId 推导（`review-4`）、chat 默认温度 0、审查详情显示校验摘要与「本轮未再报告」、标记已修复仅限认领人。MANUAL、WALKTHROUGH、SECURITY、TEST-REPORT 已追加对应补充段，快照日期不变。
 
 2026-09-20 补充：Review 输出校验现要求 Finding `evidence` 与 AC `excerpt` 逐字锚定到 diff 新侧源码，并按真实命中纠正或消除行号；需求质量检查在完整 Prompt 超预算时跳过 AI，以 `quality-2` 保存 `ai=null` 的确定性结果。五份直接相关 HTML 已追加相同说明；2026-09-08 的快照数字、正式评测冻结、holdout 台账、原始输出与生产复验数据均未覆盖或重跑。

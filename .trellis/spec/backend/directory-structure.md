@@ -18,13 +18,13 @@ backend/
     ├── main/
     │   ├── java/com/forgepilot/
     │   │   ├── ForgePilotApplication.java    # bootstrap class
-    │   │   └── {ai,auth,common,knowledge,project,requirement,review,scm}/
+    │   │   └── {ai,auth,common,knowledge,notification,project,requirement,review,scm}/
     │   │       ├── package-info.java         # boundary documentation
     │   │       └── feature classes           # flat package-owned implementation
     │   └── resources/
     │       ├── application.yml               # default configuration
     │       ├── application-capacity.yml      # measurement profile only
-    │       └── db/migration/V1__foundation.sql
+    │       └── db/migration/                  # append-only V1–V14 schema history
     └── test/java/com/forgepilot/
         ├── ArchitectureRulesTest.java        # architecture rules + counter-probes
         ├── FoundationDatabaseTest.java       # real PostgreSQL/pgvector test
@@ -77,4 +77,4 @@ The nine allowed top-level packages and the rule against building empty
 - [ForgePilotApplication.java](../../../backend/src/main/java/com/forgepilot/ForgePilotApplication.java)
   is the bootstrap class and the root-package exception to the feature rule.
 - [review/package-info.java](../../../backend/src/main/java/com/forgepilot/review/package-info.java)
-  states the single-engine boundary delivered by batch 3.
+  states the single-engine boundary; delivery history remains in archived tasks.

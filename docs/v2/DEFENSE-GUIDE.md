@@ -35,6 +35,9 @@ and current test report for the exact evidence and remaining manual checks. The
 currently deployed commit is `ea51e6a` (2026-09-25; later commits change documentation
 only). Its record, which also backfills the undocumented 2026-09-23 deployment, is in
 `.trellis/tasks/archive/2026-09/09-25-review-quality-round/deployment.md`.
+The working tree now contains the review-5 fixes but has not been deployed; see
+`docs/deliverables/TEST-REPORT.html` for the latest local verification, not a new
+production or model-quality claim.
 
 ## 2. Build and test gates
 

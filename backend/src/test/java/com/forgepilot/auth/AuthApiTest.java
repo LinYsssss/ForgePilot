@@ -237,7 +237,7 @@ class AuthApiTest extends PostgresTestBase {
      * <p>登录那条测试绿着并不能推出这条也绿：两个限流器是<strong>同一个</strong>
      * {@code OncePerRequestFilter} 子类的两个实例装在同一条链上，而该基类默认按
      * <em>类名</em>做「本请求已过此过滤器」的标记，于是第二个实例会在每个请求上
-     * 整个跳过自己。这种失效是静默的——注册���常 201，配额形同虚设。
+     * 整个跳过自己。这种失效是静默的——注册照常 201，配额形同虚设。
      */
     @Test
     void repeatedRegistrationsFromOneAddressAreRateLimited() throws Exception {
