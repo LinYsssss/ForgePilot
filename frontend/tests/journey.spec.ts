@@ -606,7 +606,7 @@ function handleRequirement(
     return json({ requirementId: 12, revisionId: server.revisionId, revisionSeq: 1, qualityVersion: "v1", checkedAt: "2026-08-21T04:00:00Z", rules: [], ai: null });
   }
   if (path === "/api/projects/3/requirements/12/guidance" && method === "POST") {
-    return json({ requirementId: 12, revisionId: server.revisionId, revisionSeq: 1, checklist: ["先统一错误语义"], rules: [], risks: ["补路由测试"], knowledgeSources: [] });
+    return json({ requirementId: 12, revisionId: server.revisionId, revisionSeq: 1, guidanceVersion: "guidance-2", summary: "沿用现有错误返回约定。", questions: [], checklist: ["先统一错误语义"], rules: [], risks: ["补路由测试"], knowledgeSources: [] });
   }
   if (path === "/api/projects/3/requirements/12/status" && method === "POST") {
     const payload = JSON.parse(body ?? "{}") as { status: string };
@@ -1111,6 +1111,19 @@ describe("three-role journey through the real App and router", () => {
     expect(wrapper.findAll('[data-action="CONFIRM"]')).toHaveLength(0);
     expect(wrapper.findAll('[data-action="REJECT"]')).toHaveLength(0);
     expect(wrapper.findAll('[data-action="REOPEN"]')).toHaveLength(0);
+
+    // 同一开发者、同一状态，只改变认领人；角色允许不能掩盖认领限制。
+    const claimedFinding = server.reviews.find((review) => review.id === 501)?.findings.find((finding) => finding.id === 903);
+    if (!claimedFinding) throw new Error("missing claimed finding fixture");
+    for (const [assignee, visible] of [[3, false], [null, true], [2, true]] as const) {
+      claimedFinding.assigneeId = assignee;
+      await router.push("/reviews?project=3");
+      await router.push("/reviews/501?project=3");
+      await flushPromises();
+      const card = wrapper.findAll(".finding").find((finding) => finding.text().includes("发现 903"));
+      expect(card).toBeDefined();
+      expect(card?.find('[data-action="MARK_FIXED"]').exists()).toBe(visible);
+    }
 
     await wrapper.find('[data-action="CLAIM"]').trigger("click");
     await flushPromises();

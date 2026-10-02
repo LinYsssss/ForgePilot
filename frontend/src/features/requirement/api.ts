@@ -100,6 +100,10 @@ export interface ImplementationGuidance {
   rules: string[];
   risks: string[];
   knowledgeSources: GuidanceKnowledgeSource[];
+  /** 新版建议的增量字段；旧服务缺失时不伪造概览或「无待确认事项」。 */
+  summary?: string;
+  questions?: string[];
+  guidanceVersion?: string;
 }
 
 export interface GuidanceKnowledgeSource { documentId: number; chunkSeq: number; title: string; excerpt: string; similarity: number; }

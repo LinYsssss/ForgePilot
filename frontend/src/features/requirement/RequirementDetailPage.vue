@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from "vue";
+import { computed, onBeforeUnmount, ref, watch } from "vue";
 import { RouterLink, useRoute, useRouter } from "vue-router";
 
 import { parseId, requirementsRoute, reviewDetailRoute, PROJECT_QUERY_KEY } from "../../app/routes";
@@ -99,6 +99,8 @@ const qualityError = ref<string | null>(null);
 const guidance = ref<ImplementationGuidance | null>(null);
 const guidancePending = ref(false);
 const guidanceError = ref<string | null>(null);
+const guidanceCopyFeedback = ref<string | null>(null);
+let guidanceRequest = 0;
 const attachments = ref<KnowledgeDocument[]>([]);
 const attachmentFile = ref<File | null>(null);
 const attachmentPending = ref(false);
@@ -121,6 +123,28 @@ const canGenerateGuidance = computed(
       detail.value?.assigneeId !== null &&
       detail.value?.assigneeId === account.value?.id),
 );
+const hasUnsavedContent = computed(() => {
+  if (detail.value === null) return false;
+  const saved = toDraft(detail.value.currentRevision);
+  // 可选正文的空串与 null 等价；保存和脏状态使用同一份表单 payload。
+  return JSON.stringify(draftContent()) !== JSON.stringify({
+    ...saved,
+    background: saved.background || null,
+    description: saved.description || null,
+  });
+});
+const canRunGuidance = computed(() => canGenerateGuidance.value && detail.value !== null
+  && !loading.value && !actionPending.value && !guidancePending.value && !hasUnsavedContent.value);
+
+function invalidateGuidance(): void {
+  // DRAFT 原地保存仍是同一个 revisionId，必须同时撤销在途回答，不能只比版本号。
+  guidanceRequest++;
+  guidance.value = null;
+  guidancePending.value = false;
+  guidanceError.value = null;
+  guidanceCopyFeedback.value = null;
+}
+onBeforeUnmount(invalidateGuidance);
 
 function target(): { projectId: number; requirementId: number } | null {
   const pid = projectId.value;
@@ -158,9 +182,13 @@ function knowledgeStatusLabel(status: KnowledgeStatus): string {
 const hasContext = computed(() => target() !== null);
 
 function applyDetail(loaded: RequirementDetail): void {
-  if (detail.value?.currentRevision.id !== loaded.currentRevision.id) {
-    qualityReport.value = null;
-    guidance.value = null;
+  const previous = detail.value?.currentRevision;
+  const revisionChanged = previous?.id !== loaded.currentRevision.id;
+  if (revisionChanged) qualityReport.value = null;
+  // 服务器也可能返回同一草稿的新内容，不能仅凭相同 id 继续展示旧建议。
+  if (revisionChanged || (previous !== undefined
+    && JSON.stringify(toDraft(previous)) !== JSON.stringify(toDraft(loaded.currentRevision)))) {
+    invalidateGuidance();
   }
   detail.value = loaded;
   assigneeSelection.value = loaded.assigneeId;
@@ -185,7 +213,7 @@ async function load(): Promise<void> {
   returnedReviews.value = [];
   returnsError.value = null;
   qualityReport.value = null;
-  guidance.value = null;
+  invalidateGuidance();
   attachments.value = [];
   selectedDocument.value = null;
   documentError.value = null;
@@ -263,7 +291,7 @@ async function run(
     applyDetail(await action(ids));
     if (clearAdvice) {
       qualityReport.value = null;
-      guidance.value = null;
+      invalidateGuidance();
     }
     revisions.value = await listRevisions(ids.projectId, ids.requirementId);
   } catch (failure: unknown) {
@@ -291,17 +319,26 @@ async function runQualityCheck(): Promise<void> {
 
 async function runGuidance(): Promise<void> {
   const ids = target();
-  if (ids === null || !canGenerateGuidance.value) {
-    return;
-  }
+  const revisionId = detail.value?.currentRevision.id;
+  if (ids === null || revisionId === undefined || !canRunGuidance.value) return;
+  const request = ++guidanceRequest;
   guidancePending.value = true;
   guidanceError.value = null;
+  guidanceCopyFeedback.value = null;
   try {
-    guidance.value = await generateGuidance(ids.projectId, ids.requirementId);
+    const answer = await generateGuidance(ids.projectId, ids.requirementId);
+    if (request !== guidanceRequest) return;
+    if (answer.requirementId !== ids.requirementId || answer.revisionId !== revisionId) {
+      invalidateGuidance();
+      guidanceError.value = "需求版本已变化，请刷新页面后重新生成建议。";
+      return;
+    }
+    guidance.value = answer;
   } catch (failure: unknown) {
-    guidanceError.value = apiErrorMessage(failure);
+    if (request === guidanceRequest) guidanceError.value = apiErrorMessage(failure);
   } finally {
-    guidancePending.value = false;
+    // 保存后的旧错误与 finally 也不能清掉新请求的等待状态。
+    if (request === guidanceRequest) guidancePending.value = false;
   }
 }
 
@@ -362,14 +399,53 @@ function exportRequirement(): void {
     .map((criterion) => `- **${criterion.acKey}**：${criterion.text}`)
     .join("\n")}`);
 
-  const url = URL.createObjectURL(new Blob([`${sections.join("\n\n")}\n`], {
-    type: "text/markdown;charset=utf-8",
-  }));
+  downloadMarkdown(`${sections.join("\n\n")}\n`, `REQ-${loaded.id}-v${revision.seq}.md`);
+}
+
+function downloadMarkdown(text: string, fileName: string): void {
+  const url = URL.createObjectURL(new Blob([text], { type: "text/markdown;charset=utf-8" }));
   const link = document.createElement("a");
   link.href = url;
-  link.download = `REQ-${loaded.id}-v${revision.seq}.md`;
+  link.download = fileName;
   link.click();
   URL.revokeObjectURL(url);
+}
+
+function guidanceMarkdown(result: ImplementationGuidance): string {
+  const list = (items: string[], empty: string, numbered = false) => items.length === 0 ? empty
+    : items.map((item, index) => `${numbered ? `${index + 1}.` : "-"} ${item}`).join("\n");
+  return [
+    `# REQ-${result.requirementId} 实现建议`,
+    `需求修订：v${result.revisionSeq}（修订 ID ${result.revisionId}）\n建议版本：${result.guidanceVersion ?? "未记录"}`,
+    "基于生成时已保存的需求与本次参考资料；未读取仓库源码，不会自动执行，也不保证建议正确。",
+    `## 建议概览\n\n${result.summary ?? "旧版结果未提供概览。"}`,
+    `## 开始前需确认\n\n${result.questions === undefined ? "旧版结果未提供待确认事项。"
+      : list(result.questions, "本次未提出待确认事项。")}`,
+    `## 实施清单\n\n${list(result.checklist, "本次未提供可直接执行的步骤。", true)}`,
+    `## 项目规则\n\n${list(result.rules, "本次未提出额外规则。")}`,
+    `## 风险提示\n\n${list(result.risks, "本次未提出明确风险，不代表已确认无风险。")}`,
+    `## 本次参考资料\n\n${result.knowledgeSources.length === 0 ? "本次未召回知识资料。"
+      : result.knowledgeSources.map(source => `### ${source.title}\n\n文档 ${source.documentId} · 片段 ${source.chunkSeq}\n\n${source.excerpt}`).join("\n\n")}`,
+  ].join("\n\n") + "\n";
+}
+
+async function copyGuidance(): Promise<void> {
+  const result = guidance.value;
+  if (result === null) return;
+  guidanceCopyFeedback.value = null;
+  try {
+    await navigator.clipboard.writeText(guidanceMarkdown(result));
+    if (guidance.value === result) guidanceCopyFeedback.value = "建议已复制。";
+  } catch {
+    if (guidance.value === result) guidanceCopyFeedback.value = "复制失败，可下载 Markdown 保存建议。";
+  }
+}
+
+function exportGuidance(): void {
+  const result = guidance.value;
+  if (result !== null) {
+    downloadMarkdown(guidanceMarkdown(result), `REQ-${result.requirementId}-v${result.revisionSeq}-guidance.md`);
+  }
 }
 
 /**
@@ -395,13 +471,17 @@ async function removeRequirement(): Promise<void> {
   }
 }
 
-function saveContent(): Promise<void> {
-  const content: RevisionContent = {
+function draftContent(): RevisionContent {
+  return {
     title: draftTitle.value,
     background: draftBackground.value === "" ? null : draftBackground.value,
     description: draftDescription.value === "" ? null : draftDescription.value,
     acceptanceCriteria: draftCriteria.value,
   };
+}
+
+function saveContent(): Promise<void> {
+  const content = draftContent();
   return run(
     (ids) =>
       isDraft.value
@@ -722,13 +802,64 @@ function saveReviewer(): Promise<void> {
 
         <section class="panel guidance-section" aria-labelledby="guidance-title">
           <div class="section-action-head">
-            <div><p class="eyebrow">One-shot guidance</p><h2 id="guidance-title" class="panel-title">实现建议</h2></div>
-            <button v-if="canGenerateGuidance" type="button" class="button button-primary" :disabled="guidancePending" @click="runGuidance">生成建议</button>
+            <div><p class="eyebrow">开发准备</p><h2 id="guidance-title" class="panel-title">实现建议</h2></div>
+            <button v-if="canGenerateGuidance" type="button" class="button button-primary" :disabled="!canRunGuidance" @click="runGuidance">
+              {{ guidancePending ? "正在生成…" : guidance ? "重新生成" : "生成建议" }}
+            </button>
           </div>
-          <p class="field-hint">对当前不可变版本生成一次性实现建议；没有对话历史，也不会自动修改需求状态或代码。</p>
+          <p class="field-hint">基于已保存的需求与项目知识，不读取未保存内容或仓库源码，不会自动修改代码或需求状态。刷新后建议不保留，可先复制或下载。</p>
           <p v-if="!canGenerateGuidance" class="empty-state">项目负责人或该需求已指派的开发可以生成实现建议。</p>
+          <p v-if="canGenerateGuidance && hasUnsavedContent" class="field-hint guidance-unsaved">
+            请先{{ isDraft ? "保存草稿" : "发布修订" }}再生成；AI 不读取未保存内容。已有建议仍只针对已保存版本。
+          </p>
+          <p v-if="guidancePending" class="field-hint" role="status">
+            正在结合已保存的需求和项目知识生成建议，请稍候。{{ guidance ? "以下仍为上一份建议。" : "" }}
+          </p>
           <p v-if="guidanceError" class="alert" role="alert">{{ guidanceError }}</p>
-          <div v-if="guidance" class="guidance-result"><p class="muted">基于 v{{ guidance.revisionSeq }}（版本 {{ guidance.revisionId }}）与向量召回的项目知识。</p><h3 class="subsection-title">实现清单</h3><p v-if="guidance.checklist.length===0" class="muted">本次没有返回实现清单。</p><ul v-else class="advice-list"><li v-for="(item,index) in guidance.checklist" :key="index">{{item}}</li></ul><h3 class="subsection-title">相关规则</h3><p v-if="guidance.rules.length===0" class="muted">本次没有返回规则。</p><ul v-else class="advice-list"><li v-for="(item,index) in guidance.rules" :key="index">{{item}}</li></ul><h3 class="subsection-title">风险提示</h3><p v-if="guidance.risks.length===0" class="muted">本次没有返回风险提示。</p><ul v-else class="advice-list"><li v-for="(item,index) in guidance.risks" :key="index">{{item}}</li></ul><h3 class="subsection-title">实际召回的知识来源</h3><p v-if="guidance.knowledgeSources.length===0" class="muted">本次没有召回可展示的知识来源。</p><ol v-else class="advice-list"><li v-for="source in guidance.knowledgeSources" :key="`${source.documentId}-${source.chunkSeq}`"><strong>{{source.title}}</strong> <span class="badge badge-info">向量语义召回相似度 {{source.similarity.toFixed(3)}}</span><br /><span class="muted advice-prose">{{source.excerpt}}</span></li></ol></div>
+          <p v-if="guidanceError && guidance" class="field-hint">新建议生成失败，以下仍为上一份有效建议。</p>
+          <div v-if="guidance" class="guidance-result">
+            <p class="muted">基于已保存的需求 v{{ guidance.revisionSeq }}；请结合实际代码核对后使用。</p>
+            <div class="form-actions">
+              <button type="button" class="button button-quiet" data-guidance-copy @click="copyGuidance">复制建议</button>
+              <button type="button" class="button button-quiet" data-guidance-download @click="exportGuidance">下载 Markdown</button>
+            </div>
+            <p v-if="guidanceCopyFeedback" class="field-hint" role="status">{{ guidanceCopyFeedback }}</p>
+
+            <template v-if="guidance.summary !== undefined">
+              <h3 class="subsection-title">建议概览</h3>
+              <p class="advice-prose">{{ guidance.summary }}</p>
+            </template>
+            <template v-if="guidance.questions !== undefined">
+              <h3 class="subsection-title">开始前需确认</h3>
+              <p v-if="guidance.questions.length === 0" class="muted">本次未提出待确认事项，请自行核对需求是否完整。</p>
+              <ul v-else class="advice-list"><li v-for="(item, index) in guidance.questions" :key="index" class="advice-prose">{{ item }}</li></ul>
+            </template>
+            <h3 class="subsection-title">实施清单</h3>
+            <p v-if="guidance.checklist.length === 0" class="muted">本次未提供可直接执行的步骤，请先核对需求信息。</p>
+            <ol v-else class="advice-list guidance-steps"><li v-for="(item, index) in guidance.checklist" :key="index" class="advice-prose">{{ item }}</li></ol>
+            <h3 class="subsection-title">项目规则</h3>
+            <p v-if="guidance.rules.length === 0" class="muted">本次未提出额外规则。</p>
+            <ul v-else class="advice-list"><li v-for="(item, index) in guidance.rules" :key="index" class="advice-prose">{{ item }}</li></ul>
+            <h3 class="subsection-title">风险提示</h3>
+            <p v-if="guidance.risks.length === 0" class="muted">本次未提出明确风险，不代表已确认无风险。</p>
+            <ul v-else class="advice-list"><li v-for="(item, index) in guidance.risks" :key="index" class="advice-prose">{{ item }}</li></ul>
+
+            <details class="guidance-sources">
+              <summary>本次参考资料（{{ guidance.knowledgeSources.length }} 条）</summary>
+              <p class="field-hint">这些资料实际参与了本次生成，不代表每条建议都已得到验证。检索相似度表示相关程度，不是建议正确率。</p>
+              <p v-if="guidance.knowledgeSources.length === 0" class="muted">本次未召回知识资料。</p>
+              <ul v-else class="advice-list">
+                <li v-for="source in guidance.knowledgeSources" :key="`${source.documentId}-${source.chunkSeq}`">
+                  <strong>{{ source.title }}</strong> <span class="muted">检索相似度 {{ source.similarity.toFixed(3) }}</span>
+                  <p class="muted advice-prose">{{ source.excerpt }}</p>
+                </li>
+              </ul>
+            </details>
+            <details class="guidance-metadata">
+              <summary>版本详情</summary>
+              <p class="muted">需求修订 ID {{ guidance.revisionId }} · 建议版本 {{ guidance.guidanceVersion ?? "未记录（旧版服务）" }}</p>
+            </details>
+          </div>
         </section>
       </div>
       </section>
@@ -931,6 +1062,16 @@ function saveReviewer(): Promise<void> {
   padding: 0;
   list-style: none;
   line-height: 1.6;
+}
+
+.guidance-steps {
+  list-style: decimal;
+  padding-inline-start: var(--fp-space-6);
+}
+
+.guidance-sources,
+.guidance-metadata {
+  margin-top: var(--fp-space-5);
 }
 
 .document-reader {
