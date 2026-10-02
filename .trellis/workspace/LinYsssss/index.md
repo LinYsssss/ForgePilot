@@ -8,8 +8,8 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 20
-- **Last Active**: 2026-09-27
+- **Total Sessions**: 21
+- **Last Active**: 2026-10-02
 <!-- @@@/auto:current-status -->
 
 ---
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~609 | Active |
+| `journal-1.md` | ~647 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 21 | 2026-10-02 | 完成 review-5 与 AI 建议改进的本地交付 | `3248ffd`, `b56f670`, `26a20fa` | `fix/review-guidance-usability` |
 | 20 | 2026-09-27 | Review quality round: review-4, validity analysis, stability rerun | `2c36889`, `0885c0a`, `99058f3`, `3a6d2a3`, `84740b2`, `ea51e6a`, `1e346aa`, `a9d8733` | `main` |
 | 19 | 2026-09-23 | Thesis materials: demo rerun and Halo replay | `fcf14c7`, `430b0a3`, `62dc159` | `main` |
 | 18 | 2026-09-21 | Review follow-ups: unified error body, Chinese messages, javadoc and docs sync | `2487e94`, `56f2b05`, `3e730c5`, `166d564`, `98a6f03`, `d3dfca4`, `e7d6d00` | `main` |
