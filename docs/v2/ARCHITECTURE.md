@@ -449,6 +449,8 @@ Requirement Quality 先运行确定性规则并按脱敏后的完整 Prompt 计�
 
 Implementation Guidance 保持一次 embedding、项目/需求隔离下最多 8 条知识召回及一次 chat 的既有路径（网关瞬时重试规则不变）。`guidance-2` 在原 checklist/rules/risks 字符串数组上增加 summary/questions，并由服务端返回 guidanceVersion；输出仅作结构校验，不证明步骤、AC 关联或风险判断真实。不保存回答，不增加表或会话。页面通过内容脏状态与请求序号防止未保存输入、保存后的晚到回答被误用；DRAFT 可原地编辑，因此不能只靠 revisionId 判定仍适用。复制/导出复用同一浏览器端 Markdown 文本，知识摘录和检索相似度默认折叠。
 
+`guidance-3` 仅收紧文本指令：只提出阻碍实施的未知决策，区分确定约束与条件式建议，将适用知识硬约束落实到步骤，并合并重复动作/验证；不写入样例特例、不用硬条数截断，也不新增语义校验。响应 schema、检索与运行边界不变，真实效果须另以样例验证。
+
 ### 4.2 ReviewContext
 
 ```text

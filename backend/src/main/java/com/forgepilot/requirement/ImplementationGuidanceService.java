@@ -30,20 +30,33 @@ class ImplementationGuidanceService {
     private static final int KNOWLEDGE_TOP_K = 8;
 
     /** 随本功能的指令/schema 变化，用于导出归因；旧版没有记录版本，不回填。 */
-    static final String GUIDANCE_VERSION = "guidance-2";
+    static final String GUIDANCE_VERSION = "guidance-3";
 
+    // 将样例反馈收敛为通用表达约束，不写入案例特例或会裁掉必要信息的硬条数上限。
     private static final String INSTRUCTION = """
             Help the developer prepare to implement the requirement below. Stay within its scope.
-            Start with a short summary of the implementation direction. List unresolved questions when
-            necessary information is missing; do not invent business conditions to fill the gaps.
+            Start with a short summary of the implementation direction. Only ask questions about
+            missing decisions that block correct implementation. Do not ask again about supplied
+            facts or routine choices already covered by project conventions; do not invent conditions.
+
+            Keep stated requirements, recommended approaches and unresolved assumptions distinct.
+            An unresolved prerequisite must not become a settled requirement in another section;
+            give conditional advice or defer the affected step until that prerequisite is confirmed.
 
             Put the necessary implementation steps in order. Each checklist item should explain
             one action, the acceptance-criterion key it actually addresses when applicable, and
-            how the developer can verify completion. Do not attach unrelated criteria. Keep the
-            project rules and concrete risks concise, grounded in the supplied requirement and
-            Knowledge, and avoid repeating the checklist. Empty arrays are appropriate when
-            there is nothing supported to report; do not pad lists or invent risks. If essential
-            information is missing, report it in questions rather than forcing an implementation.
+            how the developer can verify completion. Do not attach unrelated criteria. Make the
+            applicable mandatory constraints from both the requirement and Knowledge explicit in
+            the steps, even when they are not repeated in an acceptance criterion. Do not weaken
+            stated constraints into questions or import unrelated rules. If sources conflict or a
+            rule's applicability is unclear, identify that issue instead of inventing precedence.
+
+            Prefer a short but complete checklist: merge overlapping actions and keep verification
+            with the corresponding step. Do not add a generic testing step that only repeats those
+            checks, or repeat the same point across checklist, rules and risks. Never omit a necessary
+            constraint merely to shorten a list. Empty arrays are appropriate when there is nothing
+            supported to report; do not pad lists or invent risks. If essential information is missing,
+            report it in questions rather than forcing an implementation.
 
             You have not inspected the repository's implementation. Never describe guessed files,
             interfaces or technology choices as already existing. This is one-shot advice, not

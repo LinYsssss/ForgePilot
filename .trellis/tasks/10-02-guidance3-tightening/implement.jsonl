@@ -1,0 +1,2 @@
+{"file":".trellis/spec/backend/quality-guidelines.md","reason":"复用AI网关与既有测试，保持请求/状态边界"}
+{"file":".trellis/spec/backend/error-handling.md","reason":"不改变已验证的结构错误与HTTP契约"}
