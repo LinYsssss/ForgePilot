@@ -32,12 +32,14 @@ PostgreSQL container, volume and baseline record counts were retained. Container
 loopback and public health checks passed, and served assets matched the running
 frontend image. See the [deployment record](../../.trellis/tasks/archive/2026-09/09-07-review-collaboration/deployment.md)
 and current test report for the exact evidence and remaining manual checks. The
-currently deployed commit is `ea51e6a` (2026-09-25; later commits change documentation
-only). Its record, which also backfills the undocumented 2026-09-23 deployment, is in
+currently deployed commit is `ff7c13f` (2026-10-02; review-5 and guidance-2), from
+`fix/review-guidance-usability`, not a merge into main. The latest
+[deployment record](../../.trellis/tasks/archive/2026-10/10-01-guidance-usability/deployment-20261002.md)
+records backup, image identities, the slow initial startup, public checks and one
+real guidance response with remaining content-quality issues. Browser interaction
+and a new PR-review round were not performed. The previous ea51e6a deployment and
+the 2026-09-23 backfill remain in
 `.trellis/tasks/archive/2026-09/09-25-review-quality-round/deployment.md`.
-The working tree now contains the review-5 fixes but has not been deployed; see
-`docs/deliverables/TEST-REPORT.html` for the latest local verification, not a new
-production or model-quality claim.
 
 ## 2. Build and test gates
 
