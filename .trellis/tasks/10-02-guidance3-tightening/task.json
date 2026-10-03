@@ -15,12 +15,12 @@
   "branch": "fix/review-guidance-usability",
   "base_branch": "main",
   "worktree_path": null,
-  "commit": null,
+  "commit": "54e2953",
   "pr_url": null,
   "subtasks": [],
   "children": [],
   "parent": null,
   "relatedFiles": [],
-  "notes": "",
+  "notes": "54e2953 已推送并部署；固定3条真实生成与限定Chromium交互检查完成。程序交互通过，内容目标仅部分达成，详见release-validation-20261003.md。未继续调Prompt、未重审PR、未合并main；原始证据保留在本机。",
   "meta": {}
 }

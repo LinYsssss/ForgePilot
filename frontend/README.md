@@ -19,7 +19,7 @@ npm run test -- --run
 npm run build
 ```
 
-四道门的最新结果见[测试报告](../docs/deliverables/TEST-REPORT.html)，不在此复制随提交漂移的测试数量和产物大小。当前 journey 覆盖重开的抑制项回主列表、PR 解除关联后的历史负责人归属，以及认领人/无人认领时的修复按钮权限。review-5 与 guidance-2 配套界面已随 `ff7c13f` 部署（2026-10-02），公网资源与 API 烟测通过，真实浏览器交互仍未验收；详见[部署记录](../.trellis/tasks/archive/2026-10/10-01-guidance-usability/deployment-20261002.md)。
+四道门的最新结果见[测试报告](../docs/deliverables/TEST-REPORT.html)，不在此复制随提交漂移的测试数量和产物大小。当前 journey 覆盖重开的抑制项回主列表、PR 解除关联后的历史负责人归属，以及认领人/无人认领时的修复按钮权限。前端镜像仍来自 `ff7c13f`，界面源码未因 guidance-3 改变；后端已更新到 `54e2953`。实现建议区已完成本地映射入口下的 Chromium 桌面/390px 交互验收，其他浏览器和模式未覆盖；详见[发布与验收记录](../.trellis/tasks/10-02-guidance3-tightening/release-validation-20261003.md)。
 
 ## 信息架构
 

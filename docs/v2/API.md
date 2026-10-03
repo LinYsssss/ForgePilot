@@ -199,7 +199,7 @@ GitHub 默认 `apiBase=https://api.github.com`；GitLab 默认 `https://gitlab.c
 
 - `POST /api/projects/{projectId}/requirements/{requirementId}/guidance`
   - 仅 LEADER 或该需求被指派的 DEVELOPER；读取服务端已保存内容，不接收未保存表单，不改变状态或保存建议正文。
-  - 响应：`{requirementId,revisionId,revisionSeq,checklist,rules,risks,knowledgeSources,summary,questions,guidanceVersion}`。源码建议版本为 `guidance-3`（尚未发布），响应结构与已部署的 `guidance-2` 相同；部署状态以 README 的记录为准。
+  - 响应：`{requirementId,revisionId,revisionSeq,checklist,rules,risks,knowledgeSources,summary,questions,guidanceVersion}`。当前建议版本为 `guidance-3`，响应结构与 `guidance-2` 相同；部署与样例验收范围见 README。
   - `summary` 是非空白概览，`questions` 是待确认事项；questions、checklist、rules、risks 均为字符串数组，可为空。空风险列表不证明没有风险。
   - 清单由 Prompt 要求说明动作、适用 AC 与验证办法；服务端只校验结构，不从散文提取或证明 AC 覆盖。缺字段、错误类型或空白概览返回 502 / `ai_malformed_result`，不增加格式修复轮。
   - `knowledgeSources` 是本次实际召回的参考资料，不代表逐条建议已经验证；similarity 仅表示检索相关程度。
