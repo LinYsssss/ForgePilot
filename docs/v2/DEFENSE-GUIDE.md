@@ -35,7 +35,7 @@ and current test report for the exact evidence and remaining manual checks. The
 currently deployed backend is `54e2953` (2026-10-03; review-5 and guidance-3), from
 `fix/review-guidance-usability`, not a merge into main. The frontend code did not
 change and its existing image was retained. The latest
-[release and acceptance record](../../.trellis/tasks/10-02-guidance3-tightening/release-validation-20261003.md)
+[release and acceptance record](../../.trellis/tasks/archive/2026-10/10-02-guidance3-tightening/release-validation-20261003.md)
 covers three real guidance requests and local Chromium checks at desktop/390px
 widths. Program interaction checks passed, but content goals were only partly met;
 no new PR-review round or formal evaluation was run. The previous
