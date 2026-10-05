@@ -21,6 +21,8 @@
 
 ## CI 与主线
 
-CI 的现有 evaluation job 新增依次运行论文复算脚本的步骤，保留原评分器和 holdout guard。托管 CI 与后续 PR 合并结果在实际发生后追加；当前不把本地通过当作已合并。
+CI 的现有 evaluation job 新增依次运行论文复算脚本的步骤，保留原评分器和 holdout guard。提交 `9eac5d0` 的 push CI `37348353754` 与 PR CI `37351102549` 均成功，新步骤 `Verify published thesis summaries without model calls` 已实际通过。
+
+跟踪入口：[PR #2](https://github.com/LinYsssss/ForgePilot/pull/2)。后续归档与会话记录不改变材料或应用代码；最终主线合并状态以该 PR 为准，不在发生前写成已合并。
 
 本轮没有新增模型请求、重审 PR、安装业务依赖或重建应用镜像。
