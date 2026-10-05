@@ -9,6 +9,8 @@
 *.vue text eol=lf
 *.sql text eol=lf
 *.sh text eol=lf
+# Thesis data is content-hashed; platform checkout must not change its bytes.
+docs/thesis/*.csv text eol=lf
 *.ps1 text eol=crlf
 
 *.png binary
