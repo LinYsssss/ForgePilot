@@ -1,0 +1,2 @@
+{"file":".trellis/spec/backend/quality-guidelines.md","reason":"定向回归只证明程序边界，真实模型质量另验"}
+{"file":".trellis/spec/backend/database-guidelines.md","reason":"使用真实PostgreSQL测试，不改迁移或历史数据"}

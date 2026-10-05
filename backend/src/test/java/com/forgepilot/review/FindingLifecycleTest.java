@@ -1,6 +1,7 @@
 package com.forgepilot.review;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
@@ -54,6 +55,12 @@ class FindingLifecycleTest extends PostgresTestBase {
 
     @Autowired
     private FindingLifecycleService lifecycle;
+
+    @Autowired
+    private FindingRepository findings;
+
+    @Autowired
+    private org.springframework.transaction.PlatformTransactionManager transactions;
 
     @Autowired
     private JdbcTemplate jdbc;
@@ -191,9 +198,24 @@ class FindingLifecycleTest extends PostgresTestBase {
         scenario.member(otherDeveloper, "DEVELOPER");
         long claimed = scenario.finding(FindingStatus.IN_PROGRESS, FindingContinuity.NEW, null);
 
+        assertThatThrownBy(() -> lifecycle.move(scenario.projectId, otherDeveloper, claimed,
+                FindingStatus.FIXED, null)).isInstanceOf(ApiException.class)
+                .hasMessage("只有认领人可以标记已修复。");
         assertThat(statusOf(() -> lifecycle.move(scenario.projectId, otherDeveloper, claimed,
                 FindingStatus.FIXED, null))).isEqualTo(HttpStatus.FORBIDDEN);
         assertThat(statusOf(claimed)).isEqualTo("IN_PROGRESS");
+
+        // 与成员退出同一清理入口；无认领只解除认领限制，不解除开发者角色要求。
+        new org.springframework.transaction.support.TransactionTemplate(transactions)
+                .executeWithoutResult(status -> findings.clearAssignee(scenario.projectId, scenario.developer));
+        assertThat(statusOf(() -> lifecycle.move(scenario.projectId, scenario.leader, claimed,
+                FindingStatus.FIXED, null))).isEqualTo(HttpStatus.FORBIDDEN);
+        lifecycle.move(scenario.projectId, otherDeveloper, claimed, FindingStatus.FIXED, null);
+        assertThat(statusOf(claimed)).isEqualTo("FIXED");
+        assertThat(lifecycle.history(scenario.projectId, otherDeveloper, claimed))
+                .extracting(ReviewViews.FindingEventView::actorId).containsExactly(otherDeveloper);
+        assertThat(jdbc.queryForObject("select assignee_id from finding where id = ?", Long.class, claimed))
+                .isNull();
     }
 
     @Test

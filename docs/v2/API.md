@@ -1,6 +1,6 @@
 # 账户、成员、SCM 身份与评审协作 API
 
-本文定义账户、成员目录、SCM 身份及评审协作的 HTTP 契约。所有写请求使用 Session Cookie + `X-XSRF-TOKEN`；错误体统一为 `{code,message,traceId}`。项目内资源对非成员返回 404，对已知项目但角色不足返回 403。
+本文定义账户、成员目录、SCM 身份及评审协作的 HTTP 契约。浏览器写请求使用 `X-XSRF-TOKEN`，需要登录的接口另通过 Session Cookie 认证；SCM webhook 使用提供方签名 / Token 验证，不依赖浏览器会话或 CSRF。错误体统一为 `{code,message,traceId}`。项目内资源对非成员返回 404，对已知项目但角色不足返回 403。
 
 登录、注册与两个 webhook 端点另有按客户端地址计的限流，超出配额返回 **429** 与 `{"code":"too_many_requests"}`；该响应由过滤器直接写出，不经 MVC。配额见 `.env.example` 的三个 `FORGEPILOT_*_PER_*` 变量。
 
@@ -8,7 +8,7 @@
 
 ## 端点索引
 
-全部 70 个端点，按控制器分组；「谁」列写的是服务层实际校验的角色（成员 = 项目任一成员）。下文各小节只详述其中有额外契约的端点，其余行为见 [ARCHITECTURE.md](./ARCHITECTURE.md) 与对应 `*Controller`。
+应用端点按控制器及安全过滤器分组（登录、登出由 Spring Security 处理，不含 Actuator）；「谁」列写的是服务层实际校验的角色（成员 = 项目任一成员）。下文各小节只详述其中有额外契约的端点，其余行为见 [ARCHITECTURE.md](./ARCHITECTURE.md) 与对应 `*Controller`。
 
 | 端点 | 谁 | 成功 | 说明 |
 |---|---|---|---|
@@ -63,7 +63,7 @@
 | `GET /api/projects/{projectId}/reviews` | 成员 | 200 | 项目审查列表 |
 | `GET /api/projects/{projectId}/reviews/{id}` | 成员 | 200 | 审查详情 |
 | `POST /api/projects/{projectId}/reviews/{id}/decision` | 指定审查人、LEADER | 200 | 一次性最终决定 |
-| `POST /api/projects/{projectId}/findings/{id}/status` | 按状态矩阵 | 200 | Finding 状态流转；标记已修复仅限认领人 |
+| `POST /api/projects/{projectId}/findings/{id}/status` | 按状态矩阵 | 200 | 标记已修复须有 DEVELOPER 角色，且认领人为空或为调用人；非认领人返回 403/forbidden「只有认领人可以标记已修复。」 |
 | `GET /api/projects/{projectId}/findings/{id}/events` | 成员 | 200 | Finding 审计 |
 | `GET /api/projects/{projectId}/scm/binding-options` `bindings` | 成员 | 200 | 可选身份 / 绑定历史 |
 | `POST /api/projects/{projectId}/scm/bindings` | 成员 | 201 | 绑定自己的身份 |
@@ -195,6 +195,18 @@ GitHub 默认 `apiBase=https://api.github.com`；GitLab 默认 `https://gitlab.c
   - 超预算时返回 `PROMPT_BUDGET_EXCEEDED`，不调用 AI、不做截断后的部分分析，报告仍正常保存且 `ai=null`。
   - 历史版本报告保持原样；DRAFT 正文编辑仍使当前修订上的旧质量结果失效。
 
+## 需求实现建议
+
+- `POST /api/projects/{projectId}/requirements/{requirementId}/guidance`
+  - 仅 LEADER 或该需求被指派的 DEVELOPER；读取服务端已保存内容，不接收未保存表单，不改变状态或保存建议正文。
+  - 响应：`{requirementId,revisionId,revisionSeq,checklist,rules,risks,knowledgeSources,summary,questions,guidanceVersion}`。当前建议版本为 `guidance-3`，响应结构与 `guidance-2` 相同；部署与样例验收范围见 README。
+  - `summary` 是非空白概览，`questions` 是待确认事项；questions、checklist、rules、risks 均为字符串数组，可为空。空风险列表不证明没有风险。
+  - 清单由 Prompt 要求说明动作、适用 AC 与验证办法；服务端只校验结构，不从散文提取或证明 AC 覆盖。缺字段、错误类型或空白概览返回 502 / `ai_malformed_result`，不增加格式修复轮。
+  - `knowledgeSources` 是本次实际召回的参考资料，不代表逐条建议已经验证；similarity 仅表示检索相关程度。
+  - 新增字段是增量扩展，前端兼容缺少这些字段的旧服务，但不把缺少 questions 解释成“没有待确认事项”。
+  - 页面在有未保存/未发布内容时禁止生成，并在保存成功、内容/版本变化后撤销旧建议和在途回答；DRAFT 的修订 ID 不变也须撤销。重新生成失败仅保留仍适用的旧建议。其他标签页的变化仍需刷新得知。
+  - 复制与 Markdown 下载只在浏览器本地执行，带需求/修订/建议版本及参考资料；刷新后建议不保留。Clipboard 不可用时提示下载，不提供后端历史接口。
+
 ## 需求审查人
 
 - `POST /api/projects/{projectId}/requirements/{requirementId}/reviewer`
@@ -218,10 +230,10 @@ GitHub 默认 `apiBase=https://api.github.com`；GitLab 默认 `https://gitlab.c
   - `REQUEST_CHANGES` 不调用远端写接口，保留 PR/MR 与分支。`APPROVE` 合并被审查的 SHA，Provider 确认合并后才提交本地决定；不会把需求改为 `DONE`。
 - `GET /api/projects/{projectId}/reviews/{reviewId}`
   - 新增 `decisionBlockReason: string|null`，仅表示调用人权限和需求状态限制。
-  - `validation: {droppedFindings, correctedLines}|null`：校验器整条丢弃的 Finding 数（引用锚不上 diff、引用了不属于本修订的验收条件等）与按逐字引用纠正的行号数；审查未完成时为 null。丢弃的内容不回显。
-  - `notReported: Finding[]`：上一轮已完成审查报告过、本轮没有再报告的 Finding，结构同 `findings`；只对已完成的一轮计算，不落库，不等于已修复。
-  - Finding 的 `findingType` 由是否引用本修订的验收条件推导（`review-4` 起），不由模型给出。
-  - 前端仅在该字段显式为 null，且 `isCurrent=true`、`status=COMPLETED`、`decision=PENDING`、无 head 退回闸门时展示决定按钮。
+  - `validation: {droppedFindings, correctedLines}|null`：整条丢弃的 Finding 数与 Finding 纠行事件数；纠行包含分批候选、不含 AC 证据，因此可大于最终 Finding 数。无摘要时为 null，丢弃内容不回显，类型降级后保留的项不算丢弃。
+  - `notReported: Finding[]`：上一轮已完成审查的 key 差集，再排除本轮同类型同文件的同位置（非空行号）/同需求同非空 ac_key 候选。只对已完成的一轮派生，不落库，不改变血缘/抑制，不等于已修复；这是粗粒度提示去重，不保证语义等价。
+  - Finding 的 `findingType` 在 `review-5` 起由模型显式给出并校验；合法引用与类型矛盾时保留 CODE_QUALITY、清空 AC 并记 warning，缺失/未知类型按 acId 兜底。外来 AC 仍整条拒绝；旧报告不回填。
+  - 前端仅在 `decisionBlockReason` 显式为 null，且 `isCurrent=true`、`status=COMPLETED`、`decision=PENDING`、无 head 退回闸门时展示决定按钮。
 - `GET /api/projects/{projectId}/pull-requests/{pullRequestId}/reviews`
   - 返回现有 `{id,headSha,requirementRevisionId,status,decision,isCurrent,createdAt}[]`，按创建时间、ID 从旧到新排序。
   - UI 从该序列推导轮次，按需读取上一轮详情中的退回理由，不增加轮次字段或历史表。

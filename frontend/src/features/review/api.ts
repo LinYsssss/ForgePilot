@@ -146,9 +146,9 @@ export interface ReviewDetail {
   coverage: Coverage | null;
   acVerdicts: AcVerdictRow[] | null;
   findings: Finding[];
-  /** 上一轮报告过、本轮没有再报告的 Finding。读取时比较得出，不等于已修复。 */
+  /** 上一轮 key 差集排除本轮同位置/同需求 AC 的候选；粗粒度提示，不等于已修复。 */
   notReported: Finding[];
-  /** 校验器丢弃的 Finding 数与纠正的行号数；审查未完成时为 null。 */
+  /** 整条丢弃数与 Finding 纠行事件数（含分批候选、不含 AC 证据）；无摘要时为 null。 */
   validation: ValidationSummary | null;
   engine: string | null;
   promptVersion: string | null;

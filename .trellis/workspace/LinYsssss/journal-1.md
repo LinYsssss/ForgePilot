@@ -607,3 +607,75 @@ Rotated the leaked test-account passwords; derived finding type from acId (revie
 ### Status
 
 [OK] **Completed**
+
+
+## Session 21: 完成 review-5 与 AI 建议改进的本地交付
+
+**Date**: 2026-10-02
+**Task**: 完成 review-5 与 AI 建议改进的本地交付
+**Branch**: `fix/review-guidance-usability`
+
+### Summary
+
+完成 review-5 分类/提示/权限修正、guidance-2 可读输出与版本保护、全仓文档整理；两项本地开发任务已归档，尚未推送或部署。
+
+### Main Changes
+
+- 保留历史评测与迁移，修正类型、未再报告提示和认领权限。
+- 实现建议新增概览/待确认、草稿失效保护、来源折叠、复制与 Markdown 导出。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `3248ffd` | (see git log) |
+| `b56f670` | (see git log) |
+| `26a20fa` | (see git log) |
+
+### Testing
+
+- [OK] 后端独立容器完整 verify：423项通过，0失败/错误/跳过，18分26秒。
+- [OK] 前端lint/typecheck、单worker 66项及build通过；首次工具超时和worker启动失败均保留记录。
+- [OK] 冻结/订正校验通过；未执行真实浏览器和模型建议样例。
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- 用户已另行授权推送部署：推送当前修复分支，CI通过后备份部署，再检查新版本；不直接合并main。
+
+
+## Session 22: 论文摘要与主线整合准备
+
+**Date**: 2026-10-05
+**Task**: 论文摘要与主线整合准备
+**Branch**: `fix/review-guidance-usability`
+
+### Summary
+
+整理既有建议验收为论文小节、4行公开摘要和只读复算，CI增加摘要校验；保留混合结论与私有原始资料，PR #2等待最终合并。
+
+### Main Changes
+
+- 归档guidance-3开发验收，修正引用；新增GUIDANCE-ACCEPTANCE材料及当前/历史索引。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `9eac5d0` | (see git log) |
+
+### Testing
+
+- [OK] 五个论文verifier、摘要反例、冻结/订正、链接/编码/diff检查通过。
+- [OK] 9eac5d0的push与PR CI均通过，新增摘要步骤实际执行。
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- 等待最终记录提交CI后正常合并PR #2；不新增模型调用、不重部署运行代码。

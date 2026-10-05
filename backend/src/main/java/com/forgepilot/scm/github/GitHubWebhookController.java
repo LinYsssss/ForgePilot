@@ -47,9 +47,8 @@ class GitHubWebhookController {
     }
 
     /**
-     * PR 提交之后返回 202。此时还没有 Review 需要创建，因此
-     * ARCHITECTURE.md 3.1 的“PR 与其 PENDING Review 均已提交之后”
-     * 在这里退化为前半句。
+     * 相关 PR 的快照与 PENDING Review 在同一同步事务提交后返回 202（ARCHITECTURE.md 3.1）；
+     * 无关事件验证后直接返回，不创建 Review，也不等待模型执行。
      */
     @PostMapping(PATH)
     @ResponseStatus(HttpStatus.ACCEPTED)

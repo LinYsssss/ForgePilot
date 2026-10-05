@@ -39,10 +39,10 @@ import com.forgepilot.scm.ChangedFile;
  * 参与任何自动门禁或状态流转：它未经校准。</li>
  * </ul>
  *
- * <p>Finding 的类型不由模型选：引用了本次修订某条验收条件的是 {@code REQUIREMENT}，
- * 否则是 {@code CODE_QUALITY}，由校验器按 {@code acId} 推导。让模型另报一个类型，
- * 等于给同一个事实两个可以互相矛盾的来源——实测里它们时常矛盾，矛盾的那条 finding
- * 只能整条丢弃。
+ * <p>Finding 的类型由模型说明，校验器再与 {@code acId} 核对。review-4 只按引用
+ * 推导类型，实测中模型会把代码质量问题硬挂到验收条件上，因此恢复显式类型。
+ * 类型与合法引用矛盾时，保留为不声称违反验收条件的 {@code CODE_QUALITY} 并记警告；
+ * 外来引用仍整条拒绝。保留已锚定的证据，不等于证明模型的判断为真。
  *
  * <p>两个 schema 重复了 finding 的结构，而不是共享一个片段。这次重复是刻意的：
  * 每一个都是一段可以从头读到尾、并直接粘进校验器的字面量，
@@ -58,7 +58,7 @@ final class ReviewPrompts {
      * 存进 {@code review.prompt_version}。只要任一条指令或任一个 schema 变了，
      * 它就必须跟着变：一份存下来的报告只有对着产生它的那个 Prompt 才可解读。
      */
-    static final String VERSION = "review-4";
+    static final String VERSION = "review-5";
 
     /** 存进 {@code review.engine}。Review Engine 恰好只有一个（AGENTS.md）。 */
     static final String ENGINE = "forgepilot-review";
@@ -79,9 +79,10 @@ final class ReviewPrompts {
                   "items": {
                     "type": "object",
                     "additionalProperties": false,
-                    "required": ["category", "path", "line", "evidence", "explanation",
+                    "required": ["type", "category", "path", "line", "evidence", "explanation",
                       "suggestion", "confidence", "acId", "sourceIds"],
                     "properties": {
+                      "type": {"type": "string", "enum": ["CODE_QUALITY", "REQUIREMENT"]},
                       "category": {"type": "string", "enum": ["CORRECTNESS", "SECURITY",
                         "ERROR_HANDLING", "CONCURRENCY", "PERFORMANCE", "API_CONTRACT",
                         "TEST_COVERAGE", "MAINTAINABILITY", "REQUIREMENT_GAP"]},
@@ -97,7 +98,7 @@ final class ReviewPrompts {
             "description": "How sure you are that this finding is real. A coarse band, never a \
             calibrated probability."},
                       "acId": {"type": ["integer", "null"], "description": "The acceptance \
-            criterion this finding is about, or null when it concerns none of them."},
+            criterion a REQUIREMENT finding is about; null for a CODE_QUALITY finding."},
                       "sourceIds": {"type": "array", "items": {"type": "integer"}}
                     }
                   }
@@ -144,9 +145,10 @@ final class ReviewPrompts {
                   "items": {
                     "type": "object",
                     "additionalProperties": false,
-                    "required": ["category", "path", "line", "evidence", "explanation",
+                    "required": ["type", "category", "path", "line", "evidence", "explanation",
                       "suggestion", "confidence", "acId", "sourceIds"],
                     "properties": {
+                      "type": {"type": "string", "enum": ["CODE_QUALITY", "REQUIREMENT"]},
                       "category": {"type": "string", "enum": ["CORRECTNESS", "SECURITY",
                         "ERROR_HANDLING", "CONCURRENCY", "PERFORMANCE", "API_CONTRACT",
                         "TEST_COVERAGE", "MAINTAINABILITY", "REQUIREMENT_GAP"]},
@@ -162,7 +164,7 @@ final class ReviewPrompts {
             "description": "How sure you are that this finding is real. A coarse band, never a \
             calibrated probability."},
                       "acId": {"type": ["integer", "null"], "description": "The acceptance \
-            criterion this finding is about, or null when it concerns none of them."},
+            criterion a REQUIREMENT finding is about; null for a CODE_QUALITY finding."},
                       "sourceIds": {"type": "array", "items": {"type": "integer"}}
                     }
                   }
@@ -180,8 +182,10 @@ final class ReviewPrompts {
 
             Write a path exactly as it appears in its heading below, letter case included. Give a \
             line number only when the patch shows that line on its new side, and null otherwise. \
-            Cite a source id only from the numbered project knowledge below. Give a finding the acId \
-            of the acceptance criterion it is about, and null when it concerns none of them.""";
+            Cite a source id only from the numbered project knowledge below. A REQUIREMENT finding \
+            names the acId of the acceptance criterion it actually concerns; a CODE_QUALITY finding \
+            names none. Do not attach an unrelated criterion merely to give a code-quality problem \
+            an acceptance-criterion reference.""";
 
     /**
      * 输出语言。只约束模型自己的散文——{@code explanation} 与 {@code suggestion}——
@@ -227,7 +231,7 @@ final class ReviewPrompts {
             """ + CITATION_RULES + "\n\n" + LANGUAGE + "\n\n" + UNTRUSTED;
 
     /**
-     * ARCHITECTURE.md 3.5 允许的那唯一一次格式修复，也是整条流水线上唯一的重试。
+     * ARCHITECTURE.md 3.5 允许的一次格式修复，与网关对瞬时 HTTP 故障的有界重试分开计数。
      * 它要的是**转换**，并禁止**改写**：一个被允许改变内容的修复就是第二意见，
      * 而第二意见就是第二次审查——这笔预算并不存在。
      */

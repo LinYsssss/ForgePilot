@@ -2,6 +2,7 @@
 import { computed } from "vue";
 
 import { formatDateTime } from "../../lib/datetime";
+import { useSession } from "../auth/session";
 import type { ProjectRole } from "../project/api";
 import type {
   Finding,
@@ -47,8 +48,13 @@ const emit = defineEmits<{
   updateComment: [comment: string];
 }>();
 
+const { account } = useSession();
 const moves = computed(() =>
-  availableMoves(props.finding.status, props.finding.continuity, props.roles),
+  availableMoves(props.finding.status, props.finding.continuity, props.roles).filter(
+    // 角色允许不等于本人可操作；成员退出后认领为空，开发者才可接续标记修复。
+    (move) => move.action !== "MARK_FIXED" || (account.value !== null &&
+      (props.finding.assigneeId === null || props.finding.assigneeId === account.value.id)),
+  ),
 );
 
 const locator = computed(() => {

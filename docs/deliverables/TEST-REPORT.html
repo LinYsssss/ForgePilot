@@ -149,7 +149,12 @@
     第 8、9 章刻意与前七章同等详细——一份只报告通过项的测试报告，
     读起来和「系统没有缺陷」一模一样，而那不是事实。
   </p>
-  <dl class="docmeta">
+  <div class="note amber">
+    <strong>当前结果与历史快照请分开阅读。</strong>
+    <p>下方数字和主体章节保留 2026-09-08 基线；后续失败、复验和发布记录按日期追加在报告末尾，不将旧快照改写成新结果。</p>
+    <p>近期自动化回归与 CI 已通过；实现建议区另完成了限定的 Chromium 桌面/390px 检查，但不代表全站或所有浏览器均已验收。模型内容目标仅部分达成，三例不能作为准确率或开发效率提升证据。最新部署见 <a href="../../README.md">项目入口</a>，可复算的建议验收小节见 <a href="../thesis/GUIDANCE-ACCEPTANCE.md">论文材料</a>。</p>
+  </div>
+  <dl class="docmeta" aria-label="2026年9月8日历史快照">
     <div><dt>后端</dt><dd>379<small>／50 类</small></dd></div>
     <div><dt>前端</dt><dd>44<small>／15 文件</small></dd></div>
     <div><dt>评测</dt><dd>48<small>项历史检查</small></dd></div>
@@ -725,6 +730,11 @@ python3 evaluation/tools/postfreeze_provider_correction.py verify</code></pre>
   </p>
   <p>2026-09-20 补充结果来自当前工作树：后端完整 419 项、前端 63 项及四道门均通过；证据锚定与超预算修复的 59 项定向测试通过。正式评测冻结、holdout 台账和原始输出未修改或重跑。</p>
   <p>2026-09-25 补充：Finding 类型推导（<code>review-4</code>）、网关温度与 429 退避、校验摘要与「本轮未再报告」、认领人限制之后，固定容器路径下的 <code>./mvnw -B -ntp verify</code> 完整运行通过 <strong>421 项</strong>，0 失败、0 错误、0 跳过；新增的两项分别锁住「类型只看 acId」与「非认领人不能标记已修复」，另有一项断言 chat 请求带温度。<code>verify-freeze</code> 与订正校验仍通过。</p>
+  <p>2026-09-30 补充（当前工作树，尚未提交或部署）：<code>review-5</code> 类型修正、详情提示与认领人规则修正后，固定 JDK 21 容器入口的一次全量 <code>./mvnw -B -ntp verify</code> 通过 <strong>422 项</strong>，0 失败、0 错误、0 跳过；没有再跑定向或第二次全量。前端 lint、typecheck、<strong>63 项 / 18 个文件</strong>测试与 build 均通过。模拟 DOM 提示 scrollTo/Canvas 未实现，构建提示插件耗时；这些不是失败，也不证明真实浏览器已验收。冻结及 endpoint 订正校验通过。未执行浏览器手工验收、部署、PR 空提交或真实模型 C 轮，旧实验数据与迁移未改。</p>
+  <p>同日追加全仓静态审计：现行文档的 161 条本地引用与 71 个 HTML 锚点检查通过；修正占位阶段规范、重复指南、路由清单、README 命令和运维说明。六个 Java 文件仅改注释，去注释后的可执行 token 一致，CI 配置结构不变，因此没有重复上述全量测试。953 个跟踪保护文件的摘要在整理前后相同，正式评测再次通过只读校验；没有删除业务代码或历史数据，也没有增加生产/浏览器验收结论。</p>
+  <p>2026-10-01 实现建议补充（当前工作树，尚未部署）：<code>guidance-2</code> 的首次后端全量 verify 被工具 600 秒时限中止，<strong>该次未完成完整门禁</strong>；随后 ImplementationGuidanceTest 定向 7 项通过，不能替代全量。前端 lint/typecheck 通过，首次 Vitest 有两个工作进程启动超时；改用单工作进程复验后 18 个文件、66 项测试全部通过，build 成功。冻结/订正校验通过；未执行真实浏览器或模型建议质量验证。</p>
+  <p>随后按用户要求逐项补验：使用独立测试容器运行原命令 <code>./mvnw -B -ntp verify</code>，于 2026-10-01 15:51 UTC 完整通过 <strong>423 项</strong>，0 失败、0 错误、0 跳过，耗时 <strong>18 分 26 秒</strong>；退出码 0，无 OOM。278 个后端输入文件的运行前后摘要一致，完整后端门禁已补齐。未重跑前端，未提交、部署或启动真实模型/浏览器验收。</p>
+  <p>2026-10-03 guidance-3 补充：提交 <code>54e2953</code> 的 CI 全部通过，仅更新后端。固定三个样例各真实生成一次，均为 HTTP 200；Chromium 153 在本地映射入口下验证了未保存禁用、生成状态、来源折叠、真实剪贴板/下载一致、同修订 ID 保存后的失效与受控失败保留，390px 无横向页面溢出。受控响应回放未增加模型调用。内容目标仅部分达成：REQ-3 问题/步骤变少，但正文由 1725 增至 1903 字符，仍存在约束弱化和重复。范围与未覆盖项见<a href="../../.trellis/tasks/archive/2026-10/10-02-guidance3-tightening/release-validation-20261003.md">验收记录</a>，不把三例当准确率评测。</p>
   <p>
     配套文档：《ForgePilot 需求规格说明书》（含需求追溯矩阵，本报告的测试类可反查到需求编号）、
     《ForgePilot 使用与代码手册》、《跟着一次 PR 走完 ForgePilot》、《ForgePilot 安全设计说明》。

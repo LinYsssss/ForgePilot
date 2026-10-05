@@ -540,6 +540,10 @@ class ReviewPipelineIntegrationTest extends PostgresTestBase {
         // where a model is told so.
         assertThat(findingProperties(batch).get("evidence").get("description").stringValue())
                 .contains("verbatim");
+        // 两份 schema 不能一起漏掉 type 后仍因整体相等而通过。
+        assertThat(findingItems(batch).get("required")).anyMatch(field -> "type".equals(field.stringValue()));
+        assertThat(findingProperties(batch).get("type").get("enum"))
+                .extracting(JsonNode::stringValue).containsExactly("CODE_QUALITY", "REQUIREMENT");
         assertThat(synthesis.get("properties").get("acVerdicts")).isNotNull();
         assertThat(batch.get("properties").get("acVerdicts"))
                 .as("a batch never produces a verdict, so it cannot be asked for one")

@@ -826,7 +826,7 @@ function eventsErrorFor(findingId: number): string | null {
         <p v-if="detail.validation && (detail.validation.droppedFindings > 0 || detail.validation.correctedLines > 0)"
           class="field-hint validation-summary">
           校验器丢弃了 {{ detail.validation.droppedFindings }} 条无法核实引用的 Finding，按逐字引用纠正了
-          {{ detail.validation.correctedLines }} 处行号；丢弃的内容不保留。
+          {{ detail.validation.correctedLines }} 处 Finding 行号（含分批阶段的候选）；计数不等于最终 Finding 数，丢弃的内容不保留。
         </p>
         <p v-if="findingError" class="alert" role="alert">{{ findingError }}</p>
         <p v-if="detail.findings.length === 0" class="empty-state">这条 Review 没有 Finding。</p>
@@ -881,7 +881,7 @@ function eventsErrorFor(findingId: number): string | null {
 
         <details v-if="detail.notReported.length > 0" class="not-reported-findings">
           <summary>上一轮报告、本轮未再报告（{{ detail.notReported.length }} 条）</summary>
-          <p class="field-hint">未再报告不等于已修复：可能已修好，也可能是模型这一轮没有报。以下为上一轮的记录与状态。</p>
+          <p class="field-hint">未再报告不等于已修复：可能已修好，也可能是模型这一轮没有报。此处按同类型、同文件的同位置或同需求验收条件粗略排除重复提示，不保证问题语义相同；完整记录请回看上一轮。</p>
           <ul class="path-list">
             <li v-for="finding in detail.notReported" :key="finding.id">
               <code>{{ finding.path }}{{ finding.line === null ? "" : ":" + finding.line }}</code>

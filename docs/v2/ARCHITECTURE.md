@@ -406,7 +406,7 @@ sequenceDiagram
 
 - 每条 AC 最终必须有 `COVERED | NOT_FOUND | AT_RISK`；模型漏项由 Validator 补 `NOT_FOUND`。
 - `acId` 必须属于当前 Requirement Revision；`sourceId` 必须在本次召回白名单；`filePath` 必须在 changed files 内。
-- Finding 类型不由模型给出：引用了本修订验收条件的是 `REQUIREMENT`，未引用的是 `CODE_QUALITY`（`review-4` 起）。引用了不属于本修订的验收条件则整条丢弃。
+- Finding 类型由模型显式给出，并与 `acId` 核对（`review-5` 起）：`REQUIREMENT` + 本修订合法 AC 保留为需求类，`CODE_QUALITY` + 无 AC 保留为代码质量类。类型与合法引用矛盾时保留为 `CODE_QUALITY`、去掉 AC 引用并记录 warning；缺失/未知类型兼容地按 acId 推导并记录 warning。**先验证引用归属**，不属于本修订的 AC 仍使整条 Finding 丢弃。类型修正不代替源码锚定，也不证明模型判断真实。
 - Finding `evidence` 与批次 AC `excerpt` 必须逐字存在于对应 changed file 的合法 unified-diff hunk 新侧源码中；diff 的 `+`/空格标记、删除行、元数据与截断标记都不是源码。只归一化 CRLF/LF，不裁剪或折叠空白，也不允许跨 hunk 拼接引用。
 - 引用无命中时丢弃该 Finding/AC evidence 并记录 warning；唯一命中时以真实起始行纠正模型的错误或空行号；多处命中仅在模型行号等于候选时消歧，否则保留已验证引用但不输出伪精确行号。`finding_key` 使用锚定后的行号，`evidence_hash` 仍基于原始逐字引用。
 - Finding 证据保存不可变 excerpt + hash，历史 Review 不受知识文档后续变更影响。
@@ -414,7 +414,7 @@ sequenceDiagram
 - Review 创建时保存 `head_sha`、`review_input_fingerprint`、`requirement_id`、`requirement_revision_id` 及 Requirement/AC/Knowledge evidence/truncation 的不可变上下文快照；历史页面禁止通过 PR 当前关联反推审查语义。页面以当前 PR 的 head/fingerprint/revision 对比快照派生“当前/已过期”，不写 `INVALIDATED` 状态。
 - Requirement 进入 READY 后正文与 AC 锁定，修改须由 LEADER 创建新的不可变 Revision；旧 Review **永不失效、永不覆盖**，上下文变更后构成新的 Review 身份，页面显示"审查已过期"由人工触发重审。`review` 不设 `INVALIDATED` 状态——执行状态与语义有效性是两个维度。
 - 非法 JSON 允许**一次** format-repair；仍失败则 FAILED，**绝不生成"成功空报告"**。
-- 被丢弃的断言写入 `summary_json.warnings`；审查详情按校验器的措辞归类，返回整条丢弃的 Finding 数与纠正的行号数，使一份被缩短的报告在页面上可见。
+- 被丢弃或修正的断言写入 `summary_json.warnings`；审查详情按校验器措辞归类，返回整条丢弃的 Finding 数与 Finding 纠行事件数（含分批候选，不含 AC 证据；不等于最终 Finding 数）。类型矛盾后保留的项不计作丢弃。
 
 ### 3.6 Finding 跨 Review 连续性
 
@@ -428,7 +428,7 @@ sequenceDiagram
 
 普通 `REJECTED` 不可重开；只有继承的 `SUPPRESSED` Finding 可经审计事件重开。重开后 `continuity` 仍为 `SUPPRESSED`，但状态回到 `OPEN` 并出现在主列表。
 
-派生的 `NOT_REPORTED` 由审查详情的 `notReported` 返回：只对已完成的一轮计算，只作提示，不自动判定修复。
+派生的 `NOT_REPORTED` 仍按 key 比较；详情 `notReported` 只对已完成的一轮计算，并在展示层进一步排除本轮同类型、同非空路径的同问题候选：需求类比较同 `requirement_id + ac_key`（键须非空，可跨修订），代码质量类比较同非空行号。不同需求的同名 AC、未知定位不匹配。此为粗粒度提示去重，不保证语义等价，不改变血缘/抑制，也不自动判定修复；完整记录可回看上一轮。
 
 ---
 
@@ -446,6 +446,10 @@ AiGateway.embed(texts, model, context[, beforeAttempt])
 业务 Prompt 归 `requirement` 与 `review` 各自所有；Requirement Quality 与一次性 Implementation Guidance 共享 AI Gateway 但使用不同 schema。不建 Prompt Registry，不建万能 ContextBuilder。三类 Prompt 都要求模型散文（Finding 的说明与建议、质量意见、实现建议）用简体中文；逐字引用、路径、标识符与枚举值保持原样。
 
 Requirement Quality 先运行确定性规则并按脱敏后的完整 Prompt 计算预算。预算内只调用一次 AI；超预算时生成 `PROMPT_BUDGET_EXCEEDED`、跳过 AI，以 `quality-2` 保存并返回 `ai=null` 的规则结果，不把截断后的部分需求交给模型，也不改变 Requirement 状态。历史结果不迁移。
+
+Implementation Guidance 保持一次 embedding、项目/需求隔离下最多 8 条知识召回及一次 chat 的既有路径（网关瞬时重试规则不变）。`guidance-2` 在原 checklist/rules/risks 字符串数组上增加 summary/questions，并由服务端返回 guidanceVersion；输出仅作结构校验，不证明步骤、AC 关联或风险判断真实。不保存回答，不增加表或会话。页面通过内容脏状态与请求序号防止未保存输入、保存后的晚到回答被误用；DRAFT 可原地编辑，因此不能只靠 revisionId 判定仍适用。复制/导出复用同一浏览器端 Markdown 文本，知识摘录和检索相似度默认折叠。
+
+`guidance-3` 仅收紧文本指令：只提出阻碍实施的未知决策，区分确定约束与条件式建议，将适用知识硬约束落实到步骤，并合并重复动作/验证；不写入样例特例、不用硬条数截断，也不新增语义校验。响应 schema、检索与运行边界不变，真实效果须另以样例验证。
 
 ### 4.2 ReviewContext
 
@@ -494,6 +498,7 @@ Requirement、文档、PR 标题、代码注释**全部是不可信数据**，�
 
 ```text
 /workspace
+/account
 /projects
 /projects/:id/members
 /requirements

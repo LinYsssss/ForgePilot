@@ -50,9 +50,10 @@ responses are parsed as JSON, and a bodiless success resolves to `undefined`.
 The boundary does not retry, synthesize an envelope, or call an AI/SCM service.
 
 Callers provide the expected response type and own loading/error presentation;
-they should not duplicate credential or header setup. A future runtime schema
-may validate an external payload at this boundary, but Phase 1 intentionally
-has no validation dependency.
+they should not duplicate credential or header setup. The project has no runtime
+validation dependency; `features/review/context.ts` validates the historical
+Review snapshot explicitly before rendering. Add further runtime validation only
+where the owning boundary requires it, not by casting an unchecked payload.
 
 CSRF protection is centralized in `requestJson`: unsafe same-origin requests
 read the `XSRF-TOKEN` cookie and send it as `X-XSRF-TOKEN`. Feature helpers must

@@ -100,17 +100,31 @@ class ReviewOutputValidatorTest {
         assertThat(output.warnings()).anyMatch(warning -> warning.contains("999"));
     }
 
-    /**
-     * The type follows the acId alone. A label contradicting it used to cost the whole
-     * anchored finding, which was the most common drop in the Halo replay before review-4.
-     */
+    /** 类型矛盾不应丢掉已锚定的证据，也不能凭空保留一个需求违规关联。 */
     @Test
-    void theFindingTypeFollowsTheCitedCriterionNotTheModelsLabel() {
-        ReviewOutput output = valid("", finding("CODE_QUALITY", FILE, 3, "class A {}", "\"acId\":11,") + ","
-                + finding("REQUIREMENT", FILE, 3, "class A {}", ""));
+    void aContradictingTypeAndCitationIsKeptAsCodeQuality() {
+        // 分开验证：二者降级后 key 相同，放在同一回答里会被正常去重。
+        for (String item : List.of(
+                finding("CODE_QUALITY", FILE, 3, "class A {}", "\"acId\":11,"),
+                finding("REQUIREMENT", FILE, 3, "class A {}", ""))) {
+            ReviewOutput output = valid("", item);
+            assertThat(output.findings()).extracting(FindingCandidate::findingType, FindingCandidate::acId)
+                    .containsExactly(tuple(FindingType.CODE_QUALITY, null));
+            FindingCandidate candidate = output.findings().getFirst();
+            assertThat(candidate.acKey()).isNull();
+            assertThat(candidate.requirementId()).isEqualTo(7L);
+            assertThat(candidate.basisHash()).isEqualTo(valid("",
+                    finding("CODE_QUALITY", FILE, 3, "class A {}", "")).findings().getFirst().basisHash());
+            assertThat(output.warnings()).anyMatch(warning -> warning.startsWith("kept a "));
+            assertThat(output.warnings()).noneMatch(ReviewOutputValidator::dropsFinding);
+        }
 
-        assertThat(output.findings()).extracting(FindingCandidate::findingType, FindingCandidate::acId)
-                .containsExactly(tuple(FindingType.REQUIREMENT, 11L), tuple(FindingType.CODE_QUALITY, null));
+        String missing = finding("REQUIREMENT", FILE, 3, "class A {}", "\"acId\":11,")
+                .replace("\"type\":\"REQUIREMENT\",", "");
+        assertThat(valid("", missing).findings()).extracting(FindingCandidate::findingType, FindingCandidate::acId)
+                .containsExactly(tuple(FindingType.REQUIREMENT, 11L));
+        assertThat(valid("", finding("UNKNOWN", FILE, 3, "class A {}", "")).findings())
+                .extracting(FindingCandidate::findingType).containsExactly(FindingType.CODE_QUALITY);
     }
 
     // ---------------------------------------------------------------- findings
@@ -141,6 +155,9 @@ class ReviewOutputValidatorTest {
                 .as("the verified quotation, not the model's guess, owns the line")
                 .isEqualTo(3);
         assertThat(output.warnings()).anyMatch(warning -> warning.contains("corrected") && warning.contains("3"));
+        assertThat(output.warnings()).anyMatch(ReviewOutputValidator::correctsLine);
+        assertThat(ReviewOutputValidator.correctsLine("corrected the line of AC evidence for criterion 11 in " + FILE))
+                .isFalse();
     }
 
     @Test

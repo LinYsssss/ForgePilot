@@ -1,0 +1,2 @@
+{"file":".trellis/spec/backend/quality-guidelines.md","reason":"保留已有检查与数据保护边界"}
+{"file":"docs/thesis/README.md","reason":"不混合样例、正式评测与历史基线分母"}

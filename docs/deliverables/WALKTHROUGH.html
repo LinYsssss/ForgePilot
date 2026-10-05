@@ -843,14 +843,14 @@ sync.apply(repository, github.fetch(repository, pullRequestNumber(payload)));</c
   <div class="plain">
     <span class="label">这一站在做什么</span>
     <p>
-      模型返回了一段 JSON。这一站把它变成一个<strong>对本次 Review 上下文而言为真</strong>的结果——
-      或者变成一个「失败」裁定。模型可能编造不存在的文件路径、引用别的修订的验收条件、
+      模型返回了一段 JSON。这一站把它变成一个<strong>通过结构、引用归属与证据锚定校验</strong>的结果——
+      或者变成一个「失败」裁定；通过校验不保证模型的语义判断为真。模型可能编造不存在的文件路径、引用别的修订的验收条件、
       或者返回压根不是 JSON 的东西。
     </p>
   </div>
 
   <p>
-    2026-09-20 起，这里的“为真”还包括源码引用本身：校验器从每个合法 unified-diff hunk
+    2026-09-20 起，校验还覆盖源码引用本身：校验器从每个合法 unified-diff hunk
     独立重建新侧源码，去掉 diff 标记后逐字查找 Finding <code>evidence</code> 与 AC <code>excerpt</code>。
     无命中会丢弃并记录 warning；唯一命中按真实起始行纠正模型行号；多处命中无法由模型行号消歧时，
     引用仍可保留，但行号为空。引用不能跨 hunk，删除行和截断标记也不能作为证据。
@@ -968,7 +968,7 @@ sync.apply(repository, github.fetch(repository, pullRequestNumber(payload)));</c
       与此配套的是两个<strong>朝相反方向移动</strong>的版本常量，很容易改错：
     </p>
     <ul>
-      <li><code>ReviewPrompts.VERSION</code>——schema 变了就要递增，现在是 <code>"review-4"</code>。</li>
+      <li><code>ReviewPrompts.VERSION</code>——schema 变了就要递增，源码现在是 <code>"review-5"</code>（2026-09-30，尚未部署）。</li>
       <li><code>FindingKeys.RULE_VERSION</code>——<strong>必须保持 <code>"1"</code></strong>。它进 <code>basis_hash</code>，一改就让全部历史 finding 的血缘断掉。</li>
     </ul>
   </div>
@@ -1073,6 +1073,7 @@ events.publishEvent(new ReviewDecided(projectId, reviewId));</code></pre>
 <footer class="end">
   <p>2026-09-20 补充：第 11 站已加入 diff 新侧逐字证据锚定与行号纠正规则；2026-09-08 主干走查快照和正式评测证据未改写。</p>
   <p>2026-09-25 补充：第 11 站的 Finding 类型改由是否引用本修订的验收条件推导，模型不再自报类型（<code>review-4</code>）；网关 chat 调用默认温度 0；审查详情显示校验器丢弃与纠行的计数，以及上一轮报告、本轮未再报告的 Finding。</p>
+  <p>2026-09-30 源码补充（尚未部署）：第 11 站现为 <code>review-5</code>，模型恢复输出 type，合法 AC 与类型矛盾时保留为无 AC 的代码质量类。详情的“未再报告”按同位置/同需求 AC 粗略收窄，不改变血缘与抑制；纠行只计 Finding（含分批候选）。认领清空后开发者可接续标记修复，前端同步隐藏无权按钮。未新增真实模型实验结果。</p>
   <p>
     这份走查覆盖<strong>主干</strong>：一次 PR 从到达到审查完成，并说明人工决定、按 SHA 合并和提交后通知的边界。
     需求管理、知识入库、成员与 SCM 身份绑定的完整操作另见使用手册。

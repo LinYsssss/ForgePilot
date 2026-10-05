@@ -1,6 +1,6 @@
 # Frontend
 
-ForgePilot 的 Vue 3 + TypeScript + Vite 前端，覆盖全部对外可用的后端工作流：
+ForgePilot 的 Vue 3 + TypeScript + Vite 前端，覆盖主要业务工作流：
 登录、显示名与改密、成员目录与多角色、用户 SCM 多身份、需求与验收条件、需求质量检查与一次性实现建议、项目知识与需求附件、
 GitHub/GitLab 仓库接入、指定审查人、审查发现与结构化证据、退回理由与轮次、人工通过合并、项目知识阅读下载。
 
@@ -19,7 +19,7 @@ npm run test -- --run
 npm run build
 ```
 
-2026-09-25 四条命令全部通过（Vitest 63 用例 / 18 文件）；产物 JS 264.43 kB、CSS 69.07 kB。现有 journey 同时覆盖重开的抑制项回主列表、PR 解除关联后历史 Review 的负责人归属。
+四道门的最新结果见[测试报告](../docs/deliverables/TEST-REPORT.html)，不在此复制随提交漂移的测试数量和产物大小。当前 journey 覆盖重开的抑制项回主列表、PR 解除关联后的历史负责人归属，以及认领人/无人认领时的修复按钮权限。前端镜像仍来自 `ff7c13f`，界面源码未因 guidance-3 改变；后端已更新到 `54e2953`。实现建议区已完成本地映射入口下的 Chromium 桌面/390px 交互验收，其他浏览器和模式未覆盖；详见[发布与验收记录](../.trellis/tasks/archive/2026-10/10-02-guidance3-tightening/release-validation-20261003.md)。
 
 ## 信息架构
 

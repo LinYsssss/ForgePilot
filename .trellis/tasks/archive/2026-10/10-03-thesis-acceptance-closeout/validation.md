@@ -1,0 +1,28 @@
+# 论文材料收口验证记录
+
+## 已完成的本地工作
+
+- 从哈希已核对的私有证据导出 4 行公开摘要：1 条 guidance-2 历史基线与 3 条 guidance-3 验收样例。
+- 新增 GUIDANCE-ACCEPTANCE.md、guidance-acceptance-20261003.csv、verify-guidance-acceptance.py；数据集 SHA-256 为 `07c5815935d7715f3c58095e79971a0de75bbdc266d1c351f0b002b8852c5b29`。
+- 小节保留正文 1725→1903（+178、+10.3%）及约束弱化/重复等负面观察，明确没有准确率或开发效率真值。
+- 原始回答、知识原文、截图、登录信息、数据库备份均未复制到仓库。
+- guidance-3 任务已归档，历史记录保持，只修元数据和链接；完成过程不等于内容目标全部达标。
+- 测试报告顶部增加当前/历史导航；当前入口不再把“未合并 main”当作部署事实，实际部署仍记 54e2953。
+
+## 本地验证
+
+现有四个及新增一个 `docs/thesis/verify-*.py` 全部通过。新的脚本只读公开 CSV 和小节中的标记表格，不读取私有文件或调用模型。
+
+在临时副本上验证两条反例，均按预期失败：
+- 论文表格把 1903 改为 9999，被识别为表格与 CSV 不一致。
+- CSV 增加一个换行，被识别为数据摘要哈希变化。
+
+临时副本自动清理，原始数据未改。另已通过 Python AST、变动文件编码、本地链接、diff 空白、正式 freeze 与 endpoint 订正校验。运行代码、前端依赖、Compose、迁移、evaluation 和旧 CSV 与基线无新增差异。
+
+## CI 与主线
+
+CI 的现有 evaluation job 新增依次运行论文复算脚本的步骤，保留原评分器和 holdout guard。提交 `9eac5d0` 的 push CI `37348353754` 与 PR CI `37351102549` 均成功，新步骤 `Verify published thesis summaries without model calls` 已实际通过。
+
+跟踪入口：[PR #2](https://github.com/LinYsssss/ForgePilot/pull/2)。后续归档与会话记录不改变材料或应用代码；最终主线合并状态以该 PR 为准，不在发生前写成已合并。
+
+本轮没有新增模型请求、重审 PR、安装业务依赖或重建应用镜像。

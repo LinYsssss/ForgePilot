@@ -77,15 +77,34 @@ const requirementDocument = {
   embeddingVersion: "v1",
 };
 
+const guidanceAnswer = {
+  requirementId: 12,
+  revisionId: 30,
+  revisionSeq: 1,
+  guidanceVersion: "guidance-2",
+  summary: "沿用现有约定，先统一错误语义。",
+  questions: ["需确认会话有效期。"],
+  checklist: ["先统一错误语义；对应 AC-3；验证错误口令与不存在用户的响应一致。"],
+  rules: ["保留统一错误返回"],
+  risks: ["路由回归"],
+  knowledgeSources: [{ documentId: 4, chunkSeq: 1, title: "登录规范", excerpt: "统一错误语义", similarity: 0.91 }],
+};
+
 const calls: RecordedCall[] = [];
 let attachmentStatuses: Array<"PENDING" | "READY"> = ["READY"];
 let attachmentReads = 0;
 
-function jsonResponse(body: unknown): Response {
+function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
-    status: 200,
+    status,
     headers: { "Content-Type": "application/json" },
   });
+}
+
+function deferredResponse() {
+  let resolve: (value: Response) => void = () => { throw new Error("response not initialized"); };
+  const promise = new Promise<Response>((complete) => { resolve = complete; });
+  return { promise, resolve };
 }
 
 function respond(path: string, method: string): Response {
@@ -144,15 +163,7 @@ function respond(path: string, method: string): Response {
     });
   }
   if (path === "/api/projects/3/requirements/12/guidance" && method === "POST") {
-    return jsonResponse({
-      requirementId: 12,
-      revisionId: 30,
-      revisionSeq: 1,
-      checklist: ["先统一错误语义"],
-      rules: ["保留统一错误返回"],
-      risks: ["路由回归"],
-      knowledgeSources: [{ documentId: 4, chunkSeq: 1, title: "登录规范", excerpt: "统一错误语义", similarity: 0.91 }],
-    });
+    return jsonResponse(guidanceAnswer);
   }
   if (path === "/api/projects/3/requirements/12") {
     return jsonResponse(method === "PATCH" ? { ...detail, updatedAt: "2026-08-21T03:00:00Z" } : detail);
@@ -160,7 +171,10 @@ function respond(path: string, method: string): Response {
   throw new Error(`unexpected request: ${method} ${path}`);
 }
 
-async function mountDetailPage(statuses: Array<"PENDING" | "READY"> = ["READY"]) {
+async function mountDetailPage(
+  statuses: Array<"PENDING" | "READY"> = ["READY"],
+  override?: (path: string, method: string) => Response | Promise<Response> | undefined,
+) {
   clearSession();
   calls.length = 0;
   attachmentStatuses = statuses;
@@ -174,7 +188,7 @@ async function mountDetailPage(statuses: Array<"PENDING" | "READY"> = ["READY"])
         method,
         body: typeof init?.body === "string" ? init.body : null,
       });
-      return Promise.resolve(respond(String(path), method));
+      return Promise.resolve(override?.(String(path), method) ?? respond(String(path), method));
     }),
   );
 
@@ -278,7 +292,96 @@ describe("requirement detail contract", () => {
     expect(calls.some((call) => call.path.endsWith("/guidance") && call.method === "POST")).toBe(true);
     expect(wrapper.get(".quality-report").text()).toContain("v1");
     expect(wrapper.get(".guidance-result").text()).toContain("统一错误语义");
-    expect(wrapper.get(".guidance-result").text()).toContain("向量语义召回相似度");
+    expect(wrapper.get(".guidance-result").text()).toContain("沿用现有约定");
+    expect(wrapper.get(".guidance-result").text()).toContain("需确认会话有效期");
+    expect(wrapper.get(".guidance-result").text()).toContain("guidance-2");
+    expect(wrapper.get(".guidance-steps li").text()).toContain("对应 AC-3");
+    expect(wrapper.get<HTMLDetailsElement>(".guidance-sources").element.open).toBe(false);
+    expect(wrapper.get(".guidance-sources").text()).toContain("不是建议正确率");
+  });
+  it("does not request unsaved content or let an old draft answer finish a newer request", async () => {
+    const first = deferredResponse();
+    const second = deferredResponse();
+    let requested = 0;
+    const wrapper = await mountDetailPage(["READY"], (path, method) => {
+      if (path.endsWith("/guidance")) return requested++ === 0 ? first.promise : second.promise;
+      if (path === "/api/projects/3/requirements/12" && method === "PATCH") {
+        // DRAFT 保存不换 revisionId，这条回归不能仅靠版本号不同而通过。
+        return jsonResponse({ ...detail, currentRevision: { ...revision, title: "新的已保存标题" } });
+      }
+      return undefined;
+    });
+    const generate = () => wrapper.get<HTMLButtonElement>(".guidance-section .section-action-head button");
+    await wrapper.get("#edit-title").setValue("未保存的标题");
+    expect(generate().element.disabled).toBe(true);
+    expect(wrapper.get(".guidance-unsaved").text()).toContain("保存草稿");
+    await generate().trigger("click");
+    expect(requested).toBe(0);
+
+    await wrapper.get("#edit-title").setValue(revision.title);
+    await generate().trigger("click");
+    expect(generate().text()).toContain("正在生成");
+    await wrapper.get("#edit-title").setValue("新的已保存标题");
+    await wrapper.get("form.requirement-form").trigger("submit");
+    await flushPromises();
+    await generate().trigger("click");
+    expect(requested).toBe(2);
+
+    first.resolve(jsonResponse(guidanceAnswer));
+    await flushPromises();
+    expect(wrapper.find(".guidance-result").exists()).toBe(false);
+    expect(generate().element.disabled).toBe(true);
+    expect(generate().text()).toContain("正在生成");
+    second.resolve(jsonResponse({ ...guidanceAnswer, summary: "针对新保存内容的建议。" }));
+    await flushPromises();
+    expect(wrapper.get(".guidance-result").text()).toContain("针对新保存内容的建议");
+  });
+
+  it("keeps valid advice on regeneration failure and shares one text for copy and download", async () => {
+    let fail = false;
+    const wrapper = await mountDetailPage(["READY"], (path) => path.endsWith("/guidance") && fail
+      ? jsonResponse({ message: "服务暂不可用" }, 502) : undefined);
+    await wrapper.get(".guidance-section .section-action-head button").trigger("click");
+    await flushPromises();
+
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    vi.stubGlobal("navigator", { clipboard: { writeText } });
+    const createObjectUrl = vi.fn((_blob: Blob) => "blob:guidance");
+    const revokeObjectUrl = vi.fn();
+    vi.stubGlobal("URL", { createObjectURL: createObjectUrl, revokeObjectURL: revokeObjectUrl });
+    vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => undefined);
+    await wrapper.get("[data-guidance-copy]").trigger("click");
+    await flushPromises();
+    expect(wrapper.get(".guidance-result").text()).toContain("建议已复制");
+    await wrapper.get("[data-guidance-download]").trigger("click");
+    const text = await createObjectUrl.mock.calls[0]?.[0].text();
+    expect(text).toBe(writeText.mock.calls[0]?.[0]);
+    expect(text).toContain("REQ-12");
+    expect(text).toContain("guidance-2");
+    expect(text).toContain("需确认会话有效期");
+    expect(text).toContain("登录规范");
+    expect(revokeObjectUrl).toHaveBeenCalledWith("blob:guidance");
+
+    writeText.mockRejectedValueOnce(new Error("clipboard denied"));
+    await wrapper.get("[data-guidance-copy]").trigger("click");
+    await flushPromises();
+    expect(wrapper.get(".guidance-result").text()).toContain("复制失败，可下载 Markdown");
+    fail = true;
+    await wrapper.get(".guidance-section .section-action-head button").trigger("click");
+    await flushPromises();
+    expect(wrapper.get(".guidance-result").text()).toContain(guidanceAnswer.summary);
+    expect(wrapper.get(".guidance-section").text()).toContain("以下仍为上一份有效建议");
+  });
+
+  it("renders legacy advice without inventing an empty questions assessment", async () => {
+    const wrapper = await mountDetailPage(["READY"], (path) => path.endsWith("/guidance")
+      ? jsonResponse({ ...guidanceAnswer, summary: undefined, questions: undefined, guidanceVersion: undefined })
+      : undefined);
+    await wrapper.get(".guidance-section .section-action-head button").trigger("click");
+    await flushPromises();
+    expect(wrapper.get(".guidance-result").text()).toContain("统一错误语义");
+    expect(wrapper.get(".guidance-result").text()).toContain("未记录（旧版服务）");
+    expect(wrapper.get(".guidance-result").text()).not.toContain("本次未提出待确认事项");
   });
 });
 

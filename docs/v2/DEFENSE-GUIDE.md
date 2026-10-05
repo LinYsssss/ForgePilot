@@ -32,8 +32,16 @@ PostgreSQL container, volume and baseline record counts were retained. Container
 loopback and public health checks passed, and served assets matched the running
 frontend image. See the [deployment record](../../.trellis/tasks/archive/2026-09/09-07-review-collaboration/deployment.md)
 and current test report for the exact evidence and remaining manual checks. The
-currently deployed commit is `ea51e6a` (2026-09-25; later commits change documentation
-only). Its record, which also backfills the undocumented 2026-09-23 deployment, is in
+currently deployed backend is `54e2953` (2026-10-03; review-5 and guidance-3), from
+`fix/review-guidance-usability`. Later documentation or merge commits do not
+change the identity of the image actually built. The frontend code did not
+change and its existing image was retained. The latest
+[release and acceptance record](../../.trellis/tasks/archive/2026-10/10-02-guidance3-tightening/release-validation-20261003.md)
+covers three real guidance requests and local Chromium checks at desktop/390px
+widths. Program interaction checks passed, but content goals were only partly met;
+no new PR-review round or formal evaluation was run. The previous
+[guidance-2 rollout](../../.trellis/tasks/archive/2026-10/10-01-guidance-usability/deployment-20261002.md)
+and the ea51e6a deployment remain as historical evidence; the latter is in
 `.trellis/tasks/archive/2026-09/09-25-review-quality-round/deployment.md`.
 
 ## 2. Build and test gates

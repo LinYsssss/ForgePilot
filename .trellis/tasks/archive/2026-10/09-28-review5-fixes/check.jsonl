@@ -1,0 +1,4 @@
+{"file":".trellis/spec/backend/quality-guidelines.md","reason":"检查 schema/validator 与承重断言"}
+{"file":".trellis/spec/backend/database-guidelines.md","reason":"检查状态审计、上下文和未改迁移"}
+{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"检查按钮权限、文案与四道门"}
+{"file":".trellis/spec/frontend/type-safety.md","reason":"不改 JSON 字段类型和缺席语义"}

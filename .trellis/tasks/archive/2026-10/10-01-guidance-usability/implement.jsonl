@@ -1,0 +1,5 @@
+{"file":".trellis/spec/backend/quality-guidelines.md","reason":"AI 输出边界、既有网关与单次全量验证"}
+{"file":".trellis/spec/backend/error-handling.md","reason":"沿用 ai_malformed_result 与中文受控错误"}
+{"file":".trellis/spec/frontend/state-management.md","reason":"异步响应归属与不建立新状态库"}
+{"file":".trellis/spec/frontend/component-guidelines.md","reason":"原生 details、既有样式令牌与文本显示"}
+{"file":".trellis/spec/frontend/type-safety.md","reason":"新增可缺省响应字段，不用断言绕过类型检查"}
