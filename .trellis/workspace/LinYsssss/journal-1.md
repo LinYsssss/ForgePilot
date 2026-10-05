@@ -645,3 +645,37 @@ Rotated the leaked test-account passwords; derived finding type from acId (revie
 ### Next Steps
 
 - 用户已另行授权推送部署：推送当前修复分支，CI通过后备份部署，再检查新版本；不直接合并main。
+
+
+## Session 22: 论文摘要与主线整合准备
+
+**Date**: 2026-10-05
+**Task**: 论文摘要与主线整合准备
+**Branch**: `fix/review-guidance-usability`
+
+### Summary
+
+整理既有建议验收为论文小节、4行公开摘要和只读复算，CI增加摘要校验；保留混合结论与私有原始资料，PR #2等待最终合并。
+
+### Main Changes
+
+- 归档guidance-3开发验收，修正引用；新增GUIDANCE-ACCEPTANCE材料及当前/历史索引。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `9eac5d0` | (see git log) |
+
+### Testing
+
+- [OK] 五个论文verifier、摘要反例、冻结/订正、链接/编码/diff检查通过。
+- [OK] 9eac5d0的push与PR CI均通过，新增摘要步骤实际执行。
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- 等待最终记录提交CI后正常合并PR #2；不新增模型调用、不重部署运行代码。
