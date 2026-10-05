@@ -1,0 +1,2 @@
+{"file":".trellis/spec/backend/quality-guidelines.md","reason":"标准库与既有CI验证，不引入模型调用或测试框架"}
+{"file":"docs/thesis/README.md","reason":"汇总可复算与各类证据分开解释"}

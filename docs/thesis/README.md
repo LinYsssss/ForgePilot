@@ -1,7 +1,16 @@
 # 论文引用材料
 
-本目录只保存适合写入论文、能够独立复算的结果摘要。完整运维记录留在
-Trellis 任务归档，正式三臂评测继续由不可变的 `evaluation/` 证据管理。
+本目录保存适合写入论文、能够独立复算**摘要汇总值**的材料。完整运维记录留在
+Trellis 任务归档，正式三臂评测继续由不可变的 `evaluation/` 证据管理。摘要可复算不代表模型输出可重现；私有原文的进一步核实需要作者提供相应证据。
+
+## 证据用途先分清
+
+- **正式三臂评测**：预先登记的主结果，不被后续小样例替换。
+- **敏感性分析**：事后分析语料提示与匹配口径的影响。
+- **生产复验、PR 演练与稳定性复测**：对应各自的历史版本与运行条件。
+- **实现建议验收**：最新三样例与限定浏览器检查，程序交互通过、内容目标部分达成；不是准确率或开发效率研究。
+
+## 材料索引
 
 | 材料 | 用途 |
 |---|---|
@@ -17,6 +26,9 @@ Trellis 任务归档，正式三臂评测继续由不可变的 `evaluation/` 证
 | [EVALUATION-SENSITIVITY.md](./EVALUATION-SENSITIVITY.md) | 正式三臂评测的效度分析：语料里的定位提示、三种匹配口径下的重算，以及一次去提示敏感性实验 |
 | [evaluation-sensitivity-20260925.csv](./evaluation-sensitivity-20260925.csv) | 冻结结果与去提示实验的逐例匹配数（不透明编号，不含用例 ID） |
 | [verify-evaluation-sensitivity.py](./verify-evaluation-sensitivity.py) | 复算上述全部汇总值，并断言原规则一列与冻结报告相等 |
+| [GUIDANCE-ACCEPTANCE.md](./GUIDANCE-ACCEPTANCE.md) | 实现建议模块的功能验收与输出观察，含三例、旧版对照、浏览器范围、图注与局限 |
+| [guidance-acceptance-20261003.csv](./guidance-acceptance-20261003.csv) | 四行公开摘要：一条历史基线与三条本轮样例，不含模型正文、知识原文或账号 |
+| [verify-guidance-acceptance.py](./verify-guidance-acceptance.py) | 只读复算摘要表与差值，校验 CSV 哈希及小节中的表格一致性 |
 
 复算命令：
 
@@ -25,6 +37,7 @@ python3 docs/thesis/verify-production-revalidation.py
 python3 docs/thesis/verify-live-exercises.py
 python3 docs/thesis/verify-stability.py
 python3 docs/thesis/verify-evaluation-sensitivity.py
+python3 docs/thesis/verify-guidance-acceptance.py
 ```
 
 生产复验衡量运行完成率、审计关联、快照一致性、覆盖记账与时延；线上演练衡量校验器纠行、跨轮抑制、闭环合并、第三方代码上的 Finding 精确率与相邻两轮的稳定性。模型质量的

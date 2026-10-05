@@ -75,6 +75,11 @@ jobs:
           score_dir="${RUNNER_TEMP}/forgepilot-phase1-scores"
           python3 evaluation/tools/score.py --manifest evaluation/manifest.quick.json --runs evaluation/reference-runs --out-dir "$score_dir"
           python3 evaluation/tools/score.py --compare-report "$score_dir/scores-reference.json" evaluation/fixtures/phase1-reference-score.json
+      - name: Verify published thesis summaries without model calls
+        run: |
+          for script in docs/thesis/verify-*.py; do
+            python3 "$script"
+          done
       - name: Reject holdout fixtures and results
         run: python3 evaluation/tools/score.py --guard-no-holdout --root .
 

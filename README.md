@@ -31,7 +31,7 @@ ForgePilot 是一个面向软件研发流程的轻量级 AI 研发协作与代�
 
 验证使用 Testcontainers 真实 PostgreSQL 15 + pgvector。`review-5` 与 `guidance-3` 已部署，最新自动化验证见[测试报告](docs/deliverables/TEST-REPORT.html)。
 
-最近一次后端部署为 `54e2953`（2026-10-03，来自 `fix/review-guidance-usability` 分支，未合并 main）；前端代码未变，继续使用原镜像。备份、三条真实建议和限定浏览器验收见[发布与验收记录](.trellis/tasks/archive/2026-10/10-02-guidance3-tightening/release-validation-20261003.md)：程序交互通过，内容目标仅部分达成，不能只按问题/步骤条数下降宣称整体更简洁。2026-09-20 的 `4121cea` 部署保留了现有 PostgreSQL 数据和 V14 schema；随后 15 个真实 GitHub PR
+最近一次后端部署为 `54e2953`（2026-10-03，构建来源为 `fix/review-guidance-usability` 分支）；前端代码未变，继续使用原镜像。备份、三条真实建议和限定浏览器验收见[发布与验收记录](.trellis/tasks/archive/2026-10/10-02-guidance3-tightening/release-validation-20261003.md)：程序交互通过，内容目标仅部分达成，不能只按问题/步骤条数下降宣称整体更简洁。2026-09-20 的 `4121cea` 部署保留了现有 PostgreSQL 数据和 V14 schema；随后 15 个真实 GitHub PR
 快照全部完成复验，45 次 AI 调用全部成功并关联到对应 Review。论文引用口径、
 逐例数据和复算脚本见[生产复验结果](docs/thesis/PRODUCTION-REVALIDATION.md)，
 正式三臂评测仍使用下文所述的不可变证据。
