@@ -17,12 +17,6 @@ import org.springframework.data.jpa.repository.Query;
  */
 public interface RequirementRepository extends JpaRepository<Requirement, Long> {
 
-    @EntityGraph(attributePaths = "currentRevision")
-    Optional<Requirement> findByProjectIdAndId(long projectId, long id);
-
-    @EntityGraph(attributePaths = "currentRevision")
-    List<Requirement> findByProjectIdOrderByIdAsc(long projectId);
-
     /**
      * 软删之后的取值口。产品面的每一条读取与写入都走带 {@code AndDeletedAtIsNull}
      * 的查询方法，写入（包括删除）还须先取得下面的 active 行锁。

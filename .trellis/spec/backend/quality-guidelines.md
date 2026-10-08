@@ -263,7 +263,7 @@ re-run of the approved capacity protocol before the change can be accepted.
 Run from the repository root. Expected results are stated per command.
 
 ```bash
-cd backend && ./mvnw -B -ntp verify   # ArchUnit + real-database test must pass
+(cd backend && ./mvnw -B -ntp verify) # ArchUnit + real-database test must pass
 
 # Exactly the nine allowed top-level production packages.
 find backend/src/main/java/com/forgepilot -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | sort
