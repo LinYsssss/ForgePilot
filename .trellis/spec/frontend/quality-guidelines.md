@@ -52,6 +52,13 @@ production build repeats that check before `vite build`. The focused tests
 cover route/shell semantics, the same-origin HTTP boundary, and reduced motion.
 Do not default to an unrelated full-repository test run.
 
+The lint script converts its module URL with `fileURLToPath`, then walks plain
+filesystem paths; `URL.pathname` retains escapes and is not a portable filename.
+Normalize `relative(root, path)` with `.split(sep).join("/")` before comparing
+policy paths such as `src/styles/tokens.css`. When changing this boundary, run
+lint from a checkout containing spaces, non-ASCII characters, `#` and `%`, and
+confirm an out-of-token color still fails in a nested directory with those names.
+
 ## Design drift checklist
 
 For every visual or component change, manually inspect the selected direction

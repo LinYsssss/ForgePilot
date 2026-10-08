@@ -1,9 +1,10 @@
 import { readFile, readdir } from "node:fs/promises";
-import { extname, join, relative } from "node:path";
+import { extname, join, relative, sep } from "node:path";
+import { fileURLToPath } from "node:url";
 
-const root = new URL("../", import.meta.url);
-const sourceRoot = new URL("../src/", import.meta.url);
-const testRoot = new URL("../tests/", import.meta.url);
+const root = fileURLToPath(new URL("../", import.meta.url));
+const sourceRoot = join(root, "src");
+const testRoot = join(root, "tests");
 const rootFiles = ["vite.config.ts", "index.html"];
 const allowedRawColorFile = "src/styles/tokens.css";
 const forbiddenDependencies = [
@@ -27,9 +28,9 @@ async function filesUnder(directory) {
   const entries = await readdir(directory, { withFileTypes: true });
   const files = [];
   for (const entry of entries) {
-    const path = join(directory.pathname, entry.name);
+    const path = join(directory, entry.name);
     if (entry.isDirectory()) {
-      files.push(...(await filesUnder(new URL(`${entry.name}/`, directory))));
+      files.push(...(await filesUnder(path)));
     } else if ([".css", ".ts", ".vue"].includes(extname(entry.name))) {
       files.push(path);
     }
@@ -41,11 +42,11 @@ const failures = [];
 const scannedFiles = [
   ...(await filesUnder(sourceRoot)),
   ...(await filesUnder(testRoot)),
-  ...rootFiles.map((name) => new URL(`../${name}`, import.meta.url).pathname),
+  ...rootFiles.map((name) => join(root, name)),
 ];
 for (const path of scannedFiles) {
   const content = await readFile(path, "utf8");
-  const displayPath = relative(root.pathname, path);
+  const displayPath = relative(root, path).split(sep).join("/");
   if (/\t|[ \t]+$/m.test(content)) {
     failures.push(`${displayPath}: tabs or trailing whitespace`);
   }
