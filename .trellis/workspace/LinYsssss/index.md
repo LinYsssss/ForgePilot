@@ -8,8 +8,8 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 22
-- **Last Active**: 2026-10-05
+- **Total Sessions**: 23
+- **Last Active**: 2026-10-12
 <!-- @@@/auto:current-status -->
 
 ---
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~681 | Active |
+| `journal-1.md` | ~717 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 23 | 2026-10-12 | 全面检查后的 A 组修复：评审活动 NPE、GitHub 错误映射、四处小修；A2/A5 仅规划 | - | `main` |
 | 22 | 2026-10-05 | 论文摘要与主线整合准备 | `9eac5d0` | `fix/review-guidance-usability` |
 | 21 | 2026-10-02 | 完成 review-5 与 AI 建议改进的本地交付 | `3248ffd`, `b56f670`, `26a20fa` | `fix/review-guidance-usability` |
 | 20 | 2026-09-27 | Review quality round: review-4, validity analysis, stability rerun | `2c36889`, `0885c0a`, `99058f3`, `3a6d2a3`, `84740b2`, `ea51e6a`, `1e346aa`, `a9d8733` | `main` |

@@ -679,3 +679,39 @@ Rotated the leaked test-account passwords; derived finding type from acId (revie
 ### Next Steps
 
 - 等待最终记录提交CI后正常合并PR #2；不新增模型调用、不重部署运行代码。
+
+
+## Session 23: 全面检查后的 A 组修复：评审活动 NPE、GitHub 错误映射、四处小修；A2/A5 仅规划
+
+**Date**: 2026-10-12
+**Task**: 全面检查后的 A 组修复：评审活动 NPE、GitHub 错误映射、四处小修；A2/A5 仅规划
+**Branch**: `main`
+
+### Summary
+
+按只读审查结论实施 A 组：三个轻量任务已改代码并补测试，两个复杂任务只写 prd/design/implement 待人工审阅；B 组语料问题未动。本机无 JDK 21 与 Docker，后端套件未执行。
+
+### Main Changes
+
+- review：ReviewActivityService.forProject 跳过软删需求的 PR（原为 NPE→500）；ReviewActivityTest 新增用例；API.md 资源删除一节补充
+- scm：GitHubClient.fetch 读取经 request() 包装，429/5xx/网络→503 provider_unavailable，其他 4xx→502 provider_error，files 非数组→422；GitHubClientGuardTest 新增 4 个用例；API.md webhook 行补充
+- ai/knowledge/scm/requirement：embed 空模型名→503 ai_unconfigured；deleteProjectKnowledge 改 count 查询；ScmSecretCipher.decrypt 对非 Base64/过短/篡改输入统一受控失败并新增 ScmSecretCipherTest；reviewerNames 风格统一
+- Trellis：A2 knowledge-ingestion-embedding-batching 与 A5 frontend-project-selection-composable 已建任务并写齐 prd/design/implement，状态 planning
+
+### Git Commits
+
+(No commits - planning session)
+
+### Testing
+
+- [OK] 未执行：./mvnw -B -ntp verify（本机无 JDK 21、无 Docker）；git diff --check 通过
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- 推送后由 CI 验证三个 in_progress 任务，通过后归档
+- 人工审阅 A2/A5 的 design.md 后再 task.py start
+- B 组语料真值更正需用户决定并同步重算 reference-runs 与 fixtures
