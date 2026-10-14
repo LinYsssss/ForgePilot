@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 24
+- **Total Sessions**: 25
 - **Last Active**: 2026-10-14
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~758 | Active |
+| `journal-1.md` | ~785 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 25 | 2026-10-14 | CI 全绿：审计修复三任务归档 | - | `fix/review-audit-fixes` |
 | 24 | 2026-10-14 | 推送 fix/review-audit-fixes：五个提交，待 CI 首次真实验证 | `6bdb750`, `30941a3`, `729b0e1`, `c0604cb`, `edc15b8` | `fix/review-audit-fixes` |
 | 23 | 2026-10-12 | 全面检查后的 A 组修复：评审活动 NPE、GitHub 错误映射、四处小修；A2/A5 仅规划 | - | `main` |
 | 22 | 2026-10-05 | 论文摘要与主线整合准备 | `9eac5d0` | `fix/review-guidance-usability` |

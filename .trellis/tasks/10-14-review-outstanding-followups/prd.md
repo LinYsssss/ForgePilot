@@ -13,8 +13,8 @@
 
 ## 二、待验证
 
-5. **CI 首次真实验证**：三个修复任务（`10-12-review-activity-soft-deleted-requirement`、`10-12-github-fetch-provider-error-mapping`、`10-12-small-fixes-ai-knowledge-scm-requirement`）已实现并提交在 `fix/review-audit-fixes`，本机无 JDK 21 与 Docker，从未编译或执行；CI backend job 是第一次真实执行，失败需按日志修复。
-6. **通过后归档**：三个任务 `task.py archive`；随后更新交付文档补充段（见第 4 项）。
+5. **CI 首次真实验证**：三个修复任务（`10-12-review-activity-soft-deleted-requirement`、`10-12-github-fetch-provider-error-mapping`、`10-12-small-fixes-ai-knowledge-scm-requirement`）已实现并提交在 `fix/review-audit-fixes`，本机无 JDK 21 与 Docker，从未编译或执行。**已验证通过**：CI run 38555642951（2026-10-14），backend verify、frontend、evaluation、compose-smoke 四个 job 全绿；逐项证据见三个任务的 `validation.md`。
+6. **通过后归档**：三个任务已随本次提交归档（`archive/2026-10/`）；交付文档补充段仍待部署后（见第 4 项）。
 
 ## 三、第二轮复核缺口（尚未深读的代码）
 

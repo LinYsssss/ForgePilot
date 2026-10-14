@@ -15,7 +15,7 @@
 
 - [x] `GitHubClientGuardTest` 新增（已编写，未执行）：PR 元数据读取由桩服务答 500 与 429 时，投递返回 503 且 `code=provider_unavailable`；答 404 时返回 502 且 `code=provider_error`；三种情形数据库均无写入。
 - [x] `GitHubClientGuardTest` 新增（已编写，未执行）：files 分页答非数组 JSON 时返回 422 且无写入。
-- [ ] 现有 GitHub 与 GitLab 的 ingestion / guard / merge 测试全部通过。（待 CI：本机无 JDK 21 与 Docker）
+- [x] 现有 GitHub 与 GitLab 的 ingestion / guard / merge 测试全部通过。（CI run 38555642951，2026-10-14，backend verify job 通过）
 - [x] `docs/v2/API.md` 已更新；`.trellis/spec/backend/error-handling.md` 登记了两家 Provider 共同的错误码。
 
 ## Notes

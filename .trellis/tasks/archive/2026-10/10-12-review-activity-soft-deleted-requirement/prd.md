@@ -14,7 +14,7 @@
 ## Acceptance Criteria
 
 - [x] `ReviewActivityTest` 新增用例（已编写，未执行）：一条需求挂两个 PR（一个有当前有效 APPROVED Review，一个无 Review），将该需求置为 CANCELED 并软删后，`forProject` 不抛异常，返回的 map 只含未删除需求；HTTP `GET .../review-activity` 返回 200 且不含该需求键；`forRequirement` 对该需求返回 404。
-- [ ] 现有 `ReviewActivityTest` 全部用例保持通过。（待 CI：本机无 JDK 21 与 Docker）
+- [x] 现有 `ReviewActivityTest` 全部用例保持通过。（CI run 38555642951，2026-10-14，backend verify job 通过）
 - [x] `docs/v2/API.md` 资源删除一节补充：软删需求不再出现在项目级 `review-activity` 聚合中，其关联 PR 的活动不计入任何需求。
 
 ## Notes

@@ -19,7 +19,7 @@
 ## Acceptance Criteria
 
 - [x] 新增 `ScmSecretCipherTest`（已编写，未执行）：往返加解密正确且两次加密 IV 不同；非 Base64、过短、篡改、错误密钥四种输入均抛 `IllegalStateException`。
-- [ ] `AiGatewayTest`、`KnowledgeServiceTest`、`KnowledgeIngestionProcessorTest`、`ResourceRemovalTest`、`RequirementLifecycleTest` 保持通过。（待 CI：本机无 JDK 21 与 Docker）
+- [x] `AiGatewayTest`、`KnowledgeServiceTest`、`KnowledgeIngestionProcessorTest`、`ResourceRemovalTest`、`RequirementLifecycleTest` 保持通过。（CI run 38555642951，2026-10-14，backend verify job 通过）
 - [x] 不新增端点、表、列；API.md 无需改动（`ai_unconfigured` 已是既有错误码）。
 
 ## Notes

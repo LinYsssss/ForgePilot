@@ -756,3 +756,30 @@ Rotated the leaked test-account passwords; derived finding type from acId (revie
 ### Next Steps
 
 - CI 通过后归档三个任务并写交付文档补充段；失败按日志修复
+
+
+## Session 25: CI 全绿：审计修复三任务归档
+
+**Date**: 2026-10-14
+**Task**: CI 全绿：审计修复三任务归档
+**Branch**: `fix/review-audit-fixes`
+
+### Summary
+
+run 38555642951 四个 job 全部通过（backend 430 项测试零失败）；三个修复任务写入 validation.md 并归档；遗留事项跟踪更新第 5、6 项。
+
+### Git Commits
+
+(No commits - planning session)
+
+### Testing
+
+- [OK] CI run 38555642951：backend verify 430/0/0、frontend 18 文件全过、evaluation 契约三项、compose 两次冷启动，全绿
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- 等用户决定：A2 内存方案、A5 设计、B 组语料更正、交付文档补充时机
