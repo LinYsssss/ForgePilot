@@ -48,6 +48,16 @@ Services throw `common.ApiException`, which carries its own status and code:
 | `ApiException.conflict(msg)` | 409 | refusals that need the resource's current state |
 | `ApiException.unprocessable(msg)` | 422 | refusals decidable from the request body alone |
 
+Provider-facing authoritative reads construct two more codes directly, the same
+way for both providers (`scm/github/GitHubClient.request`,
+`scm/gitlab/GitLabClient.request`): 429, 5xx and transport failures are 503
+`provider_unavailable`; any other rejection is 502 `provider_error`; a response
+that is missing an authoritative field or has the wrong shape is 422. An
+unwrapped `RestClientResponseException` would reach the catch-all as 500
+`internal_error`, which is exactly the answer this contract exists to prevent.
+`merge()` is not behind that wrapper: a 5xx there triggers a read-only
+confirmation and `merge_outcome_unknown`, not "unavailable".
+
 `notFound()` deliberately answers two different questions the same way. If a
 non-member got 403 for an existing project and 404 for a missing one, the status
 code would confirm that another project's id exists — see `design.md` §5 and

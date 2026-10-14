@@ -107,6 +107,9 @@ class GitHubClientGuardTest extends ScmTestBase {
     @BeforeEach
     void setUp() {
         mockMvc = MockMvcBuilders.webAppContextSetup(context).apply(springSecurity()).build();
+        // Each test states its own pull request; this only clears a failure status a
+        // previous test may have left on the stub, so no test inherits a 5xx by accident.
+        provider.servePullRequest(wellFormed());
         provider.serveFiles(FILES);
     }
 
@@ -321,6 +324,62 @@ class GitHubClientGuardTest extends ScmTestBase {
                 String.class, fixture.repository));
     }
 
+    /**
+     * Provider failures during the authoritative read follow the GitLab contract: a
+     * rate limit, a 5xx or a transport failure is 503 {@code provider_unavailable},
+     * any other rejection is 502 {@code provider_error}. Before the wrapper existed an
+     * unhandled {@code RestClientResponseException} became 500 {@code internal_error}
+     * with a stack trace, which is the one answer neither provider is allowed to give.
+     * Nothing is written in any of the three cases.
+     */
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("providerFailures")
+    void aProviderFailureDuringTheAuthoritativeReadIsMappedNotLeaked(ProviderFailure failure)
+            throws Exception {
+        Fixture fixture = new Fixture();
+        provider.failMetadataWith(failure.providerStatus());
+
+        MvcResult result = deliver(fixture, 7, status().is(failure.expectedStatus()));
+
+        JsonNode body = json.readTree(result.getResponse().getContentAsString());
+        assertThat(body.path("code").asString()).isEqualTo(failure.expectedCode());
+        assertNothingWasWritten(fixture);
+        provider.servePullRequest(wellFormed());
+    }
+
+    static Stream<ProviderFailure> providerFailures() {
+        return Stream.of(
+                new ProviderFailure("rate limited", 429, 503, "provider_unavailable"),
+                new ProviderFailure("server error", 500, 503, "provider_unavailable"),
+                new ProviderFailure("not found", 404, 502, "provider_error"));
+    }
+
+    /**
+     * Iterating a non-array {@code JsonNode} yields zero elements, so without the
+     * guard a provider that answered an object here would have produced a stored
+     * manifest of zero changed files and a fingerprint computed over it.
+     */
+    @Test
+    void aFileListThatIsNotAnArrayIsRefusedWithoutWritingAnything() throws Exception {
+        Fixture fixture = new Fixture();
+        provider.servePullRequest(wellFormed());
+        provider.serveFiles("{\"message\":\"not a list\"}");
+
+        MvcResult result = deliver(fixture, 7, status().isUnprocessableEntity());
+
+        assertThat(message(result)).contains("变更文件");
+        assertNothingWasWritten(fixture);
+    }
+
+    /** One provider failure: what the stub answers, and the status and code the delivery must get. */
+    record ProviderFailure(String name, int providerStatus, int expectedStatus, String expectedCode) {
+
+        @Override
+        public String toString() {
+            return name;
+        }
+    }
+
     // ------------------------------------------------------------------ helpers
 
     /** A rejection has to write nothing: 422 with a row stored would be worse than 500. */
@@ -429,6 +488,7 @@ class GitHubClientGuardTest extends ScmTestBase {
 
         private final HttpServer server;
         private volatile List<String> pullRequestVersions = List.of("{}");
+        private volatile int metadataStatus = 200;
         private volatile List<List<String>> fileAttempts = List.of(List.of("[]"));
         private final AtomicInteger metadataReads = new AtomicInteger();
         private final AtomicInteger fileReads = new AtomicInteger();
@@ -450,6 +510,13 @@ class GitHubClientGuardTest extends ScmTestBase {
 
         private void servePullRequests(String... versions) {
             pullRequestVersions = List.of(versions);
+            metadataStatus = 200;
+            metadataReads.set(0);
+        }
+
+        /** Every metadata read answers this status until the next servePullRequest(s). */
+        private void failMetadataWith(int status) {
+            metadataStatus = status;
             metadataReads.set(0);
         }
 
@@ -470,6 +537,7 @@ class GitHubClientGuardTest extends ScmTestBase {
         private void handle(HttpExchange exchange) throws IOException {
             URI uri = exchange.getRequestURI();
             String body;
+            int status = 200;
             if (uri.getPath().endsWith("/files")) {
                 int page = Integer.parseInt(uri.getQuery().replaceAll(".*page=", ""));
                 if (page == 1) fileAttempt.incrementAndGet();
@@ -478,10 +546,11 @@ class GitHubClientGuardTest extends ScmTestBase {
                 body = page <= pages.size() ? pages.get(page - 1) : "[]";
             } else {
                 body = pullRequestVersions.get(Math.min(metadataReads.getAndIncrement(), pullRequestVersions.size() - 1));
+                status = metadataStatus;
             }
             byte[] bytes = body.getBytes(UTF_8);
             exchange.getResponseHeaders().add("Content-Type", "application/json");
-            exchange.sendResponseHeaders(200, bytes.length);
+            exchange.sendResponseHeaders(status, bytes.length);
             try (OutputStream response = exchange.getResponseBody()) {
                 response.write(bytes);
             }

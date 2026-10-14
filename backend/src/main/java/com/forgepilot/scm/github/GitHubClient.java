@@ -5,6 +5,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Supplier;
 
 import com.forgepilot.common.ApiException;
 import com.forgepilot.scm.ChangedFile;
@@ -17,6 +18,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
+import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
 import tools.jackson.databind.JsonNode;
@@ -32,6 +34,11 @@ import tools.jackson.databind.JsonNode;
  *
  * <p>仓库以其数字 id 而非 {@code owner/repo} 来寻址：id 能在改名或转移后存活，
  * slug 不能。
+ *
+ * <p>权威读取的失败与 {@code GitLabClient} 走同一套映射：限流与 5xx、网络故障是
+ * 503 {@code provider_unavailable}，其他拒绝是 502 {@code provider_error}，
+ * 空响应或形状不对是 422。没有这层包装时，RestClient 的异常会一路漏到兜底处理器，
+ * 以 500 {@code internal_error} 加堆栈出现在日志里，而两家 Provider 本应遵循同一契约。
  */
 @Component
 public class GitHubClient {
@@ -71,11 +78,11 @@ public class GitHubClient {
     }
 
     private PullRequestMetadata metadata(RestClient client, String externalId, int number) {
-        JsonNode pullRequest = client.get()
+        JsonNode pullRequest = request(() -> client.get()
                 .uri("/repositories/{repository}/pulls/{number}", externalId, number)
                 .retrieve()
-                .body(JsonNode.class);
-        if (pullRequest == null || !pullRequest.isObject()) {
+                .body(JsonNode.class));
+        if (!pullRequest.isObject()) {
             throw ApiException.unprocessable("平台未返回 PR 元数据。");
         }
         return new PullRequestMetadata(
@@ -166,13 +173,18 @@ public class GitHubClient {
         int characters = 0;
         for (int page = 1; ; page++) {
             int current = page;
-            JsonNode batch = client.get()
+            JsonNode batch = request(() -> client.get()
                     .uri(uri -> uri.path("/repositories/{repository}/pulls/{number}/files")
                             .queryParam("per_page", PAGE_SIZE)
                             .queryParam("page", current)
                             .build(externalId, number))
                     .retrieve()
-                    .body(JsonNode.class);
+                    .body(JsonNode.class));
+            if (!batch.isArray()) {
+                // 迭代一个非数组节点得到零个元素：那会存下一份「零个变更文件」的清单
+                // 并据此算出指纹，而不是报告 provider 答了别的东西。
+                throw ApiException.unprocessable("平台返回的变更文件列表格式不正确。");
+            }
             for (JsonNode file : batch) {
                 JsonNode patch = file.path("patch");
                 // 「缺席」不等于「空」：二进制文件或超出 GitHub 自身 diff 上限的
@@ -191,6 +203,33 @@ public class GitHubClient {
                 return files;
             }
         }
+    }
+
+    /**
+     * 权威读取的唯一出口。只包装 {@link #fetch} 的读取，不包装 {@link #merge}：
+     * 合并有自己的分支——5xx 之后要做只读确认而不是报不可用——那段逻辑原样保留。
+     */
+    private static JsonNode request(Supplier<JsonNode> call) {
+        try {
+            JsonNode response = call.get();
+            if (response == null) {
+                throw ApiException.unprocessable("平台返回了空响应。");
+            }
+            return response;
+        } catch (RestClientResponseException response) {
+            if (response.getStatusCode().value() == 429 || response.getStatusCode().is5xxServerError()) {
+                throw unavailable();
+            }
+            throw new ApiException(HttpStatus.BAD_GATEWAY, "provider_error",
+                    "GitHub 拒绝了权威 PR 读取。");
+        } catch (ResourceAccessException network) {
+            throw unavailable();
+        }
+    }
+
+    private static ApiException unavailable() {
+        return new ApiException(HttpStatus.SERVICE_UNAVAILABLE, "provider_unavailable",
+                "GitHub 暂时无法提供该 PR。");
     }
 
     /**
