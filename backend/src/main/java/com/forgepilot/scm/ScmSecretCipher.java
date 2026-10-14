@@ -61,7 +61,17 @@ public class ScmSecretCipher {
     }
 
     public String decrypt(String stored) {
-        byte[] envelope = Base64.getDecoder().decode(stored);
+        byte[] envelope;
+        try {
+            envelope = Base64.getDecoder().decode(stored);
+        } catch (IllegalArgumentException notBase64) {
+            throw unreadable();
+        }
+        // 信封至少要装下随机 IV 和 GCM 认证标签。更短的输入在下面的 arraycopy 里会以
+        // 数组越界而不是密码学失败收场——那是一条绕过了本类受控措辞的 500。
+        if (envelope.length < IV_BYTES + TAG_BITS / Byte.SIZE) {
+            throw unreadable();
+        }
         byte[] iv = new byte[IV_BYTES];
         System.arraycopy(envelope, 0, iv, 0, IV_BYTES);
         byte[] ciphertext = new byte[envelope.length - IV_BYTES];
@@ -75,9 +85,13 @@ public class ScmSecretCipher {
             cipher.init(mode, new SecretKeySpec(key, "AES"), new GCMParameterSpec(TAG_BITS, iv));
             return cipher.doFinal(input);
         } catch (GeneralSecurityException failure) {
-            // 绝不携带密钥、明文或密文。
-            throw new IllegalStateException("An SCM credential could not be processed.");
+            throw unreadable();
         }
+    }
+
+    /** 同一句话覆盖所有失败形态；绝不携带密钥、明文或密文。 */
+    private static IllegalStateException unreadable() {
+        return new IllegalStateException("An SCM credential could not be processed.");
     }
 
     private static byte[] sha256(byte[] input) {

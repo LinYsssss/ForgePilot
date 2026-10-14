@@ -343,7 +343,7 @@ public class RequirementService {
     }
 
     private Map<Long, String> reviewerNames(long projectId, Stream<Long> userIds) {
-        var eligible = new java.util.HashSet<>(requirements.eligibleReviewerIds(projectId));
+        Set<Long> eligible = new HashSet<>(requirements.eligibleReviewerIds(projectId));
         return users.byIds(userIds.filter(Objects::nonNull).filter(eligible::contains).distinct().toList()).stream()
                 .collect(Collectors.toMap(AccountView::id, AccountView::displayName));
     }

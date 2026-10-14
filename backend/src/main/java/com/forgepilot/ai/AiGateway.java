@@ -144,6 +144,11 @@ public class AiGateway {
     }
 
     public List<float[]> embed(List<String> texts, String model, AiCallContext context, Runnable beforeAttempt) {
+        if (model == null || model.isBlank()) {
+            // 与 chat 对 chat-model 的处理一致：未配置 Embedding Profile 是部署问题，
+            // 答 503 ai_unconfigured，而不是把空模型名发给 provider 再把它的 4xx 当成 502。
+            throw unconfigured();
+        }
         ObjectNode request = json.createObjectNode();
         request.put("model", model);
         ArrayNode input = request.putArray("input");

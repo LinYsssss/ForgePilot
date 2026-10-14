@@ -146,7 +146,7 @@ public class KnowledgeService {
         if (document.getSourceType() == KnowledgeSourceType.REQUIREMENT_ATTACHMENT) {
             throw ApiException.conflict("该文档是需求 " + document.getSourceRequirementId() + " 的附件，请先在该需求下解除。");
         }
-        int removed = chunks.findByProjectIdAndDocumentIdOrderBySeqAsc(projectId, documentId).size();
+        long removed = chunks.countByProjectIdAndDocumentId(projectId, documentId);
         chunks.deleteByProjectIdAndDocumentId(projectId, documentId);
         chunks.flush();
         documents.delete(document);
