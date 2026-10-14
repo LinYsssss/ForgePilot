@@ -97,10 +97,16 @@ public class ReviewActivityService {
         activities.requirementIds(projectId)
                 .forEach(requirementId -> perRequirement.put(requirementId, new ArrayList<>()));
         for (CurrentReview row : activities.ofProject(projectId)) {
-            if (row.requirementId() != null) {
-                // PR 的复合外键已经证明了该需求就在本项目内，
-                // 因此这个列表必定存在。
-                perRequirement.get(row.requirementId()).add(activityOf(row));
+            if (row.requirementId() == null) {
+                continue;
+            }
+            // 复合外键保证该需求属于本项目，但它可能已被软删：作废需求的行保留着
+            // （ai_call_log 与 pull_request_requirement_event 挂在上面），而它的 PR
+            // 仍带着 requirement_id。软删需求已离开产品面，不在上面的键集里，它的 PR
+            // 也就不进入任何聚合——与 forRequirement 对它答 404 是同一条规则。
+            List<PullRequestActivity> subs = perRequirement.get(row.requirementId());
+            if (subs != null) {
+                subs.add(activityOf(row));
             }
         }
         Map<Long, ActivityView> views = new LinkedHashMap<>();

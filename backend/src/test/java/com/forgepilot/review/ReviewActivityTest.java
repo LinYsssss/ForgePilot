@@ -308,6 +308,35 @@ class ReviewActivityTest extends PostgresTestBase {
                 .isEqualTo(RequirementActivity.NO_PR);
     }
 
+    /**
+     * A voided requirement is soft-deleted and leaves the product surface, but its
+     * pull requests keep their {@code requirement_id}: the row stays so that
+     * {@code ai_call_log} and {@code pull_request_requirement_event} keep their facts
+     * (ARCHITECTURE.md 2.3). The project view has to skip those pull requests rather
+     * than fail on a requirement it no longer lists.
+     */
+    @Test
+    void aSoftDeletedRequirementWithLinkedPullRequestsIsLeftOutOfTheProjectView() throws Exception {
+        Fixture fixture = new Fixture();
+        long kept = fixture.requirement();
+        long voided = fixture.requirement();
+        long voidedRevision = fixture.currentRevision(voided);
+        fixture.pullRequestWith(voided, voidedRevision, PullRequestActivity.APPROVED);
+        fixture.pullRequestWith(voided, voidedRevision, PullRequestActivity.REVIEW_REQUIRED);
+        jdbc.update("update requirement set status = 'CANCELED', deleted_at = now(), deleted_by = ? where id = ?",
+                fixture.owner, voided);
+
+        Map<Long, ActivityView> views = activities.forProject(fixture.project, fixture.owner);
+
+        assertThat(views).containsOnlyKeys(kept);
+        assertThat(views.get(kept).activity()).isEqualTo(RequirementActivity.NO_PR);
+        assertNotFound(() -> activities.forRequirement(fixture.project, fixture.owner, voided));
+
+        JsonNode body = read(fixture, "/api/projects/" + fixture.project + "/review-activity");
+        assertThat(body.has(String.valueOf(kept))).isTrue();
+        assertThat(body.has(String.valueOf(voided))).isFalse();
+    }
+
     @Test
     void everyRowOfTheAggregationMatrixHolds() {
         Fixture fixture = new Fixture();
