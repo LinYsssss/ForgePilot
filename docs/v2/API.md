@@ -75,7 +75,7 @@
 | `DELETE /api/scm/identities/{id}` | 已登录 | 204 | 吊销 |
 | `GET` `PUT` `DELETE /api/projects/{projectId}/notifications/dingtalk` | LEADER | 200 / 200 / 204 | 钉钉渠道配置 |
 | `POST /api/projects/{projectId}/notifications/dingtalk/test` | LEADER | 200 | 测试消息 |
-| `POST /api/scm/github/webhook` `gitlab/webhook` | 签名 / Token 验证，限流 | 202 | 投递入口 |
+| `POST /api/scm/github/webhook` `gitlab/webhook` | 签名 / Token 验证，限流 | 202 | 投递入口；验签后读取 Provider 权威快照，Provider 429/5xx 或网络故障答 503 `provider_unavailable`，其他拒绝答 502 `provider_error`，响应缺少权威字段或形状不对答 422 |
 
 ## 账户
 
@@ -287,3 +287,4 @@ Embedding Profile 已在同一事务提交；`FAILED` 携带受控的 `failureRe
 - `DELETE /api/projects/{projectId}/requirements/{requirementId}`
   - **软删**。成功 204；需求从列表与详情消失，但行保留，因此 `ai_call_log` 与 `pull_request_requirement_event` 的审计与既成事实完好。
   - 仅 `CANCELED` 可删，其他状态返回 409；不额外要求「无 PR 关联且无 Finding」。
+  - 仍关联它的 PR 保留 `requirement_id`，但项目级 `review-activity` 不再为该需求产生分组，这些 PR 的活动不计入任何需求；需求级 `review-activity` 对它返回 404。
