@@ -715,3 +715,44 @@ Rotated the leaked test-account passwords; derived finding type from acId (revie
 - 推送后由 CI 验证三个 in_progress 任务，通过后归档
 - 人工审阅 A2/A5 的 design.md 后再 task.py start
 - B 组语料真值更正需用户决定并同步重算 reference-runs 与 fixtures
+
+
+## Session 24: 推送 fix/review-audit-fixes：五个提交，待 CI 首次真实验证
+
+**Date**: 2026-10-14
+**Task**: 推送 fix/review-audit-fixes：五个提交，待 CI 首次真实验证
+**Branch**: `fix/review-audit-fixes`
+
+### Summary
+
+全面检查后的 A 组修复分五个提交推送到 fix/review-audit-fixes；本机无 JDK 21 与 Docker，后端从未编译，CI 为第一次真实执行。遗留事项已记入 10-14-review-outstanding-followups。
+
+### Main Changes
+
+- fix(review)：软删需求不再使项目评审活动聚合 NPE
+- fix(scm)：GitHub 权威读取错误映射对齐 GitLab（503/502/422）
+- fix(backend)：embed 空模型名快速失败、删除留痕 count 查询、密文失败统一、风格修正
+- docs(api)：Provider 错误码与软删需求活动行为
+- chore(trellis)：A2/A5 规划与遗留事项跟踪任务
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `6bdb750` | (see git log) |
+| `30941a3` | (see git log) |
+| `729b0e1` | (see git log) |
+| `c0604cb` | (see git log) |
+| `edc15b8` | (see git log) |
+
+### Testing
+
+- [OK] 未执行：mvnw verify（本机无 JDK 21/Docker）；git diff --check 通过
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- CI 通过后归档三个任务并写交付文档补充段；失败按日志修复
