@@ -28,4 +28,4 @@
 - Repository 的 load 无 token；不顺手补（零行为变化）。
 - ProjectsPage 的 `loading` 初值 true，模板 `v-if="loading"` 依赖它。
 
-迁移后勾销：Workspace ☐ Requirements ☐ Reviews ☐ Knowledge ☐ Repository ☐ ProjectsPage ☐
+迁移后勾销：Workspace ✓ Requirements ✓ Reviews ✓ Knowledge ✓ Repository ✓ ProjectsPage ✓（2026-10-14 完成；本地 typecheck/lint/build 通过，行为由 CI 前端门验证）

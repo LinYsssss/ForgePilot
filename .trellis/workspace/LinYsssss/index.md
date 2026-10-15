@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 26
+- **Total Sessions**: 27
 - **Last Active**: 2026-10-14
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~822 | Active |
+| `journal-1.md` | ~859 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 27 | 2026-10-14 | 交付文档补充段、仓库卫生与前端项目选择抽取归档 | `cb48389`, `18fcd1b`, `9795e81` | `fix/review-audit-fixes` |
 | 26 | 2026-10-14 | 更正快速语料三处硬伤并完成知识入库分批，归档两任务 | `9de50a7`, `72c441e`, `b63bb37` | `fix/review-audit-fixes` |
 | 25 | 2026-10-14 | CI 全绿：审计修复三任务归档 | - | `fix/review-audit-fixes` |
 | 24 | 2026-10-14 | 推送 fix/review-audit-fixes：五个提交，待 CI 首次真实验证 | `6bdb750`, `30941a3`, `729b0e1`, `c0604cb`, `edc15b8` | `fix/review-audit-fixes` |

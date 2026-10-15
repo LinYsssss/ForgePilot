@@ -820,3 +820,40 @@ run 38555642951 四个 job 全部通过（backend 430 项测试零失败）；�
 ### Next Steps
 
 - A5 前端项目选择 composable 抽取；docs/hygiene 任务；跟进清单更新决策；开 PR
+
+
+## Session 27: 交付文档补充段、仓库卫生与前端项目选择抽取归档
+
+**Date**: 2026-10-14
+**Task**: 交付文档补充段、仓库卫生与前端项目选择抽取归档
+**Branch**: `fix/review-audit-fixes`
+
+### Summary
+
+A5 项目选择 composable 迁移六页并清理 31 个死导出（CI run 38673878678 前端 18 文件全过）；交付文档 2026-10-14 补充段与 TESTING-GUIDE K10；AGENTS.md/.gitattributes/.vite 卫生项；两任务归档。
+
+### Main Changes
+
+- frontend: useProjectSelection/useProjectList 抽取；projectPath 收敛 lib/http.ts；changeType 展示层中文化；workspaceRoute 与 31 个死导出移除
+- docs: README/MANUAL/OPERATIONS/SECURITY 2026-10-14 源码补充；TESTING-GUIDE K10（503 provider_unavailable）；TEST-REPORT 数字随最终 CI
+- hygiene: AGENTS.md JDK 措辞、.gitattributes 引用修正、.vite 残留清理
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `cb48389` | (see git log) |
+| `18fcd1b` | (see git log) |
+| `9795e81` | (see git log) |
+
+### Testing
+
+- [OK] CI run 38673878678 四 job 全绿：backend 432 项、frontend 18 文件、评测契约、空库 Compose 冷启动；本地 typecheck/lint/build 与 thesis verify（重检出后）通过
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- 开 PR（fix/review-audit-fixes → main）
