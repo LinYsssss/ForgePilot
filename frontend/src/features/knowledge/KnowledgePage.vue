@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from "vue";
+import { computed, ref, watch } from "vue";
 import { RouterLink, useRoute, useRouter } from "vue-router";
 
-import { parseId, knowledgeDocumentRoute, knowledgeRoute, PROJECT_QUERY_KEY } from "../../app/routes";
+import { parseId, knowledgeDocumentRoute, knowledgeRoute } from "../../app/routes";
+import { useProjectSelection } from "../../composables/useProjectSelection";
 import { formatDateTime } from "../../lib/datetime";
 import { apiErrorMessage } from "../../lib/http";
 import { useFinitePolling } from "../../composables/useFinitePolling";
-import { hasProjectRole, listProjects, type Project } from "../project/api";
 import {
   deleteProjectKnowledge,
   getKnowledgeContent,
@@ -20,8 +20,14 @@ import {
 
 const route = useRoute();
 const router = useRouter();
-const projectId = computed(() => parseId(route.query[PROJECT_QUERY_KEY]));
-const projects = ref<Project[]>([]);
+const {
+  projects,
+  selectedProjectId: projectId,
+  selectedProject,
+  isLeader,
+  error,
+  select,
+} = useProjectSelection({ routeName: "knowledge" });
 const documents = ref<KnowledgeDocument[]>([]);
 const selectedDocumentId = computed(() => parseId(route.query.document));
 const content = ref<KnowledgeDocumentContent | null>(null);
@@ -45,7 +51,6 @@ watch([projectId, selectedDocumentId], async ([project, document]) => {
   }
 }, { immediate: true });
 const loading = ref(false);
-const error = ref<string | null>(null);
 const files = ref<File[]>([]);
 const uploadPending = ref(false);
 const uploadError = ref<string | null>(null);
@@ -57,10 +62,6 @@ const uploadResults = ref<Array<{
 }>>([]);
 const deletePending = ref(false);
 let listToken = 0;
-const selectedProject = computed(
-  () => projects.value.find((project) => project.id === projectId.value) ?? null,
-);
-const isLeader = computed(() => hasProjectRole(selectedProject.value, "LEADER"));
 const summary = computed(() => ({
   ready: documents.value.filter((document) => document.status === "READY").length,
   pending: documents.value.filter((document) => document.status === "PENDING").length,
@@ -85,10 +86,7 @@ const pollingError = computed(() => polling.error.value === null
   : apiErrorMessage(polling.error.value));
 
 function selectProject(event: Event): void {
-  const id = parseId((event.target as HTMLSelectElement).value);
-  if (id !== null) {
-    void router.push({ name: "knowledge", query: { [PROJECT_QUERY_KEY]: String(id) } });
-  }
+  void select(parseId((event.target as HTMLSelectElement).value));
 }
 
 async function load(): Promise<void> {
@@ -166,13 +164,6 @@ async function remove(document: KnowledgeDocument): Promise<void> {
   }
 }
 
-onMounted(async () => {
-  try {
-    projects.value = await listProjects();
-  } catch (failure: unknown) {
-    error.value = apiErrorMessage(failure);
-  }
-});
 watch(projectId, load, { immediate: true });
 </script>
 

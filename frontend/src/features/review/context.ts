@@ -1,6 +1,6 @@
 import type { Coverage } from "./api";
 
-export interface ReviewContextRequirement {
+interface ReviewContextRequirement {
   id: number;
   revisionId: number;
   title: string;
@@ -8,13 +8,13 @@ export interface ReviewContextRequirement {
   description: string | null;
 }
 
-export interface ReviewContextCriterion {
+interface ReviewContextCriterion {
   id: number;
   acKey: string;
   text: string;
 }
 
-export interface ReviewContextPullRequest {
+interface ReviewContextPullRequest {
   provider: string;
   instance: string;
   repository: string;
@@ -31,7 +31,7 @@ export interface ReviewContextChangedFile {
   patch: string | null;
 }
 
-export interface ReviewContextKnowledge {
+interface ReviewContextKnowledge {
   sourceId: number;
   documentId: number;
   chunkId: number;
@@ -39,7 +39,7 @@ export interface ReviewContextKnowledge {
   score: number;
 }
 
-export interface ReviewContextSnapshot {
+interface ReviewContextSnapshot {
   requirement: ReviewContextRequirement | null;
   acceptanceCriteria: ReviewContextCriterion[];
   pullRequest: ReviewContextPullRequest;

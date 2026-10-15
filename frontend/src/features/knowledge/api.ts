@@ -1,6 +1,6 @@
-import { requestJson } from "../../lib/http";
+import { projectPath, requestJson } from "../../lib/http";
 
-export type KnowledgeSourceType = "PROJECT_KNOWLEDGE" | "REQUIREMENT_ATTACHMENT";
+type KnowledgeSourceType = "PROJECT_KNOWLEDGE" | "REQUIREMENT_ATTACHMENT";
 export type KnowledgeStatus = "PENDING" | "READY" | "FAILED";
 
 /** List model exposes metadata; content is fetched on demand. Raw embeddings never leave the server. */
@@ -23,8 +23,6 @@ export interface KnowledgeDocument {
 }
 
 interface KnowledgeDocumentInput { title: string; text: string; }
-
-function projectPath(projectId: number): string { return `/api/projects/${projectId}`; }
 
 export function listProjectKnowledge(projectId: number): Promise<KnowledgeDocument[]> {
   return requestJson<KnowledgeDocument[]>(`${projectPath(projectId)}/knowledge/documents`);

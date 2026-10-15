@@ -1,21 +1,19 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from "vue";
-import { RouterLink, useRoute, useRouter } from "vue-router";
+import { computed, ref, watch } from "vue";
+import { RouterLink } from "vue-router";
 import {
   knowledgeRoute,
   parseId,
   projectMembersRoute,
-  PROJECT_QUERY_KEY,
   repositoriesRoute,
   requirementsRoute,
   reviewDetailRoute,
   reviewsRoute,
-  workspaceRoute,
 } from "../../app/routes";
+import { useProjectSelection } from "../../composables/useProjectSelection";
 import { formatDateTime } from "../../lib/datetime";
 import { apiErrorMessage } from "../../lib/http";
 import { listProjectKnowledge, type KnowledgeDocument } from "../knowledge/api";
-import { listProjects, type Project } from "../project/api";
 import { requirementHandler, requirementPhase } from "../requirement/status";
 import { listRequirements, type RequirementSummary } from "../requirement/api";
 import {
@@ -29,10 +27,13 @@ import {
 import { FINDING_CONFIDENCE_LABELS, REVIEW_ACTIVITY_LABELS } from "../review/labels";
 import { listScmRepositories, type ScmRepository } from "../scm/api";
 
-const route = useRoute();
-const router = useRouter();
-const projectId = computed(() => parseId(route.query[PROJECT_QUERY_KEY]));
-const projects = ref<Project[]>([]);
+const {
+  projects,
+  selectedProjectId: projectId,
+  selectedProject: selected,
+  error,
+  select,
+} = useProjectSelection({ routeName: "workspace", autoSelectFirst: true });
 const requirements = ref<RequirementSummary[]>([]);
 const activity = ref<Record<string, ActivityView>>({});
 const reviews = ref<ProjectReviewRow[]>([]);
@@ -40,7 +41,6 @@ const knowledge = ref<KnowledgeDocument[]>([]);
 const repositories = ref<ScmRepository[]>([]);
 const calibration = ref<ReviewCalibration | null>(null);
 const loading = ref(false);
-const error = ref<string | null>(null);
 
 /**
  * 把一个 0..1 的比例格式化成百分比。`null` 是「没有样本」，不是 0%——
@@ -50,9 +50,6 @@ function percent(value: number | null): string {
   return value === null ? "—" : `${(value * 100).toFixed(0)}%`;
 }
 
-const selected = computed(
-  () => projects.value.find((project) => project.id === projectId.value) ?? null,
-);
 const embeddedChunks = computed(() =>
   knowledge.value.reduce((total, document) => total + document.embeddedChunkCount, 0),
 );
@@ -79,10 +76,7 @@ const activityDistribution = computed(() =>
 );
 
 function selectProject(event: Event): void {
-  const id = parseId((event.target as HTMLSelectElement).value);
-  if (id !== null) {
-    void router.push({ name: "workspace", query: { [PROJECT_QUERY_KEY]: String(id) } });
-  }
+  void select(parseId((event.target as HTMLSelectElement).value));
 }
 
 async function load(): Promise<void> {
@@ -120,20 +114,6 @@ async function load(): Promise<void> {
   }
 }
 
-onMounted(async () => {
-  try {
-    projects.value = await listProjects();
-  } catch (failure: unknown) {
-    error.value = apiErrorMessage(failure);
-    return;
-  }
-  // 首次进入没有项目 query 时补上列表里的第一个，工作台因此永远有上下文。
-  // 用 replace 而不是 push：默认选择不是一次用户导航，不该在历史里留一格。
-  // 用户手动切换后 query 有值，这个条件不再成立，因此默认规则不会覆盖他的选择。
-  if (projectId.value === null && projects.value.length > 0) {
-    await router.replace(workspaceRoute(projects.value[0].id));
-  }
-});
 watch(projectId, load, { immediate: true });
 </script>
 <template>

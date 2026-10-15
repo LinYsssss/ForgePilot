@@ -2,7 +2,7 @@ import { requestJson } from "../../lib/http";
 import type { RequirementStatus } from "./status";
 import type { KnowledgeDocument } from "../knowledge/api";
 
-export interface AcceptanceCriterion {
+interface AcceptanceCriterion {
   id: number;
   acKey: string;
   sortOrder: number;
@@ -66,13 +66,13 @@ export interface RevisionContent {
  * 命中的一条确定性规则。只有针对单条验收条件的规则才会设置 `acKey`，
  * 因此它是可空的，而不是缺席的。
  */
-export interface QualityRuleFinding {
+interface QualityRuleFinding {
   rule: "MISSING_DESCRIPTION" | "DUPLICATE_CRITERION" | "PROMPT_BUDGET_EXCEEDED";
   acKey: string | null;
   message: string;
 }
 
-export interface QualityAiIssue {
+interface QualityAiIssue {
   acKey: string | null;
   message: string;
 }
@@ -106,7 +106,7 @@ export interface ImplementationGuidance {
   guidanceVersion?: string;
 }
 
-export interface GuidanceKnowledgeSource { documentId: number; chunkSeq: number; title: string; excerpt: string; similarity: number; }
+interface GuidanceKnowledgeSource { documentId: number; chunkSeq: number; title: string; excerpt: string; similarity: number; }
 
 export interface RequirementDocumentContent {
   documentId: number;

@@ -1,16 +1,11 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from "vue";
-import { RouterLink, useRoute, useRouter } from "vue-router";
+import { computed, ref, watch } from "vue";
+import { RouterLink, useRouter } from "vue-router";
 
-import {
-  parseId,
-  requirementDetailRoute,
-  requirementsRoute,
-  PROJECT_QUERY_KEY,
-} from "../../app/routes";
+import { requirementDetailRoute } from "../../app/routes";
+import { useProjectSelection } from "../../composables/useProjectSelection";
 import { formatDateTime } from "../../lib/datetime";
 import { apiErrorMessage } from "../../lib/http";
-import { hasProjectRole, listProjects, type Project } from "../project/api";
 import { listReviewActivity, type ActivityView } from "../review/api";
 import {
   REVIEW_ACTIVITIES,
@@ -36,15 +31,19 @@ import {
   STATUS_TRANSITIONS,
 } from "./status";
 
-const route = useRoute();
 const router = useRouter();
 
-const projectId = computed(() => parseId(route.query[PROJECT_QUERY_KEY]));
-const projects = ref<Project[]>([]);
+const {
+  projects,
+  selectedProjectId: projectId,
+  selectedProject,
+  isLeader,
+  error: loadError,
+  select,
+} = useProjectSelection({ routeName: "requirements" });
 const requirements = ref<RequirementSummary[]>([]);
 const activity = ref<Record<string, ActivityView>>({});
 const loading = ref(false);
-const loadError = ref<string | null>(null);
 const search = ref("");
 const statusFilter = ref("");
 const activityFilter = ref("");
@@ -56,11 +55,6 @@ const criteria = ref<AcceptanceCriterionDraft[]>([{ text: "" }]);
 const creating = ref(false);
 const createError = ref<string | null>(null);
 let requirementsLoadToken = 0;
-
-const selectedProject = computed(
-  () => projects.value.find((project) => project.id === projectId.value) ?? null,
-);
-const isLeader = computed(() => hasProjectRole(selectedProject.value, "LEADER"));
 
 const filteredRequirements = computed(() => {
   const query = search.value.trim().toLocaleLowerCase();
@@ -80,18 +74,8 @@ const filteredRequirements = computed(() => {
 const selection = computed({
   get: () => projectId.value,
   set: (value: number | null) => {
-    if (value !== null) {
-      void router.push(requirementsRoute(value));
-    }
+    void select(value);
   },
-});
-
-onMounted(async () => {
-  try {
-    projects.value = await listProjects();
-  } catch (failure: unknown) {
-    loadError.value = apiErrorMessage(failure);
-  }
 });
 
 watch(

@@ -3,7 +3,7 @@ import { computed, ref, type ComputedRef } from "vue";
 import { HttpError, requestJson } from "../../lib/http";
 
 /** 每个认证端点都返回的 `{id, username}`（API.md）。 */
-export interface AccountView {
+interface AccountView {
   id: number;
   username: string;
   displayName: string;

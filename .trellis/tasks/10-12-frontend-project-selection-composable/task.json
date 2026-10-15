@@ -3,7 +3,7 @@
   "name": "frontend-project-selection-composable",
   "title": "前端项目选择逻辑抽取为共享 composable",
   "description": "六个页面各自实现加载项目列表、按 project 查询参数选中、计算 isLeader；三份 projectPath 重复。复杂任务：需 prd/design/implement 并经人工审阅。",
-  "status": "planning",
+  "status": "in_progress",
   "dev_type": null,
   "scope": null,
   "package": null,

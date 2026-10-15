@@ -184,7 +184,7 @@ export const PULL_REQUEST_ACTIVITIES: readonly PullRequestActivity[] = [
 ];
 
 /** PRD §3 矩阵中的一格：这一步叫什么，以及谁可以执行它。 */
-export interface FindingMove {
+interface FindingMove {
   target: FindingStatus;
   action: FindingAction;
   allowed: readonly ProjectRole[];
@@ -202,7 +202,7 @@ const BY_DEVELOPER: readonly ProjectRole[] = ["DEVELOPER"];
  * 也不能把它标记为已修复。把这两个按钮摆给 LEADER，只会换来服务端的 403；
  * 而展示一个规格明确保留的操作，正是 UI 教会用户「一个并不存在的权限」的方式。
  */
-export const FINDING_MOVES: Record<FindingStatus, readonly FindingMove[]> = {
+const FINDING_MOVES: Record<FindingStatus, readonly FindingMove[]> = {
   OPEN: [
     { target: "CONFIRMED", action: "CONFIRM", allowed: BY_REVIEWERS },
     { target: "REJECTED", action: "REJECT", allowed: BY_REVIEWERS },
@@ -253,4 +253,24 @@ export function pullRequestLabel(provider: string | undefined, number: number): 
   if (provider === "GITLAB") return `GitLab MR !${number}`;
   if (provider === "GITHUB") return `GitHub PR #${number}`;
   return `PR/MR #${number}`;
+}
+
+/**
+ * 改动类型来自两个 provider 各自的词表：GitHub 原样透传 `status`
+ * （added/removed/modified/renamed/copied/changed），GitLab 映射为
+ * added/deleted/renamed/modified——`ChangedFile` 明确不做归一化。
+ * 未知取值原样显示，不猜。
+ */
+const CHANGE_TYPE_LABELS: Record<string, string> = {
+  added: "新增",
+  removed: "删除",
+  deleted: "删除",
+  modified: "修改",
+  renamed: "重命名",
+  copied: "复制",
+  changed: "变更",
+};
+
+export function changeTypeLabel(changeType: string): string {
+  return CHANGE_TYPE_LABELS[changeType] ?? changeType;
 }

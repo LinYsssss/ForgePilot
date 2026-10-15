@@ -18,6 +18,10 @@ the router is the source of truth for URL state. Pinia is not installed.
 - **Shared application state:** navigation constants live in `routes.ts`.
   `features/auth/session.ts` owns the shared account ref, exposes a readonly
   computed value through `useSession`, and updates it only through auth actions.
+  `composables/useProjectSelection.ts` owns project-list loading and the
+  route-query selection for the six project-scoped pages; each page still owns
+  its data loading, error text and permission checks. It is instantiated per
+  page and never caches across pages.
 
 Derived values should be `computed` from one authoritative source. Do not
 duplicate route params, server records, or status fields merely to make a

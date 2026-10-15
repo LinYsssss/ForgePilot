@@ -1,8 +1,8 @@
 export const PARTICLE_MIN = 36;
 export const PARTICLE_MAX = 90;
 export const DPR_MAX = 2;
-export const RADIUS_MIN = 1;
-export const RADIUS_MAX = 3.8;
+const RADIUS_MIN = 1;
+const RADIUS_MAX = 3.8;
 
 export type ParticleColor = "cyan" | "purple" | "emerald" | "amber";
 

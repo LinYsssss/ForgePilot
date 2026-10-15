@@ -1,6 +1,6 @@
-export type DiffLineKind = "meta" | "hunk" | "context" | "addition" | "deletion";
+type DiffLineKind = "meta" | "hunk" | "context" | "addition" | "deletion";
 
-export interface DiffLine {
+interface DiffLine {
   key: string;
   kind: DiffLineKind;
   oldLine: number | null;

@@ -62,12 +62,6 @@ export function projectMembersRoute(projectId: number): RouteLocationRaw {
   return { name: "project-members", params: { id: String(projectId) } };
 }
 
-export function workspaceRoute(projectId?: number): RouteLocationRaw {
-  return projectId === undefined
-    ? { name: "workspace" }
-    : { name: "workspace", query: { [PROJECT_QUERY_KEY]: String(projectId) } };
-}
-
 export function knowledgeRoute(projectId: number): RouteLocationRaw {
   return { name: "knowledge", query: { [PROJECT_QUERY_KEY]: String(projectId) } };
 }

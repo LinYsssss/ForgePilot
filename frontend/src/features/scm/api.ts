@@ -2,8 +2,8 @@ import { requestJson } from "../../lib/http";
 
 export type ScmProvider = "GITHUB" | "GITLAB";
 export type ScmIdentityUsage = "WORK" | "PERSONAL" | "CLIENT" | "OTHER";
-export type ScmIdentityStatus = "VERIFIED" | "LEGACY_UNCONFIRMED" | "REVOKED";
-export type ScmBindingStatus =
+type ScmIdentityStatus = "VERIFIED" | "LEGACY_UNCONFIRMED" | "REVOKED";
+type ScmBindingStatus =
   | "PENDING_APPROVAL"
   | "ACTIVE"
   | "REJECTED"
@@ -92,7 +92,7 @@ export interface PullRequest {
   updatedAt: string;
 }
 
-export interface ScmRepositoryRegistration {
+interface ScmRepositoryRegistration {
   provider: ScmProvider;
   externalId: string;
   apiBase: string;

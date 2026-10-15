@@ -1,7 +1,7 @@
 import { requestJson } from "../../lib/http";
 
 export type ProjectRole = "LEADER" | "DEVELOPER" | "REVIEWER";
-export type ProjectStatus = "ACTIVE" | "ARCHIVED";
+type ProjectStatus = "ACTIVE" | "ARCHIVED";
 
 export const PROJECT_ROLES: readonly ProjectRole[] = ["LEADER", "DEVELOPER", "REVIEWER"];
 

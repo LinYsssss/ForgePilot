@@ -1,8 +1,9 @@
 # Directory Structure
 
 The frontend implements ForgePilot's product workflows in feature-owned Vue
-components. The shell, router, shared request boundary and finite polling
-composable are shared; there is no separate placeholder-page tree.
+components. The shell, router, shared request boundary and the polling and
+project-selection composables are shared; there is no separate placeholder-page
+tree.
 
 ## Directory layout
 
@@ -22,7 +23,7 @@ frontend/
 │   ├── components/
 │   │   ├── AppShell.vue
 │   │   └── motion/             # decorative canvas lifecycle and helpers
-│   ├── composables/useFinitePolling.ts
+│   ├── composables/useFinitePolling.ts / useProjectSelection.ts
 │   ├── features/
 │   │   ├── auth/               # login, account settings and shared session
 │   │   ├── project/            # projects and member management
@@ -48,8 +49,11 @@ and ignored. Static assets belong in `public/` and need an explicit product use.
 - `features/<feature>/` keeps each route page, local components, API types and
   helpers together. A feature need not have a page: notification has only an API
   helper and does not introduce another top-level menu.
-- `composables/` holds the shared lifecycle primitive; feature-specific state
-  stays in its owner rather than in a generic store.
+- `composables/` holds shared composables: bounded polling
+  (`useFinitePolling`) and the project list/route-query selection used by the
+  project-scoped pages (`useProjectSelection`, which also exports
+  `useProjectList` for the projects page); feature-specific state stays in its
+  owner rather than in a generic store.
 - `lib/http.ts` is the single JSON request boundary. `styles/` owns semantic
   tokens and base rules; views do not define a second visual scale.
 - `tests/` exercises public contracts rather than mirroring every source file.
@@ -73,3 +77,6 @@ paths are defined in `app/routes.ts`, not inferred from directory names.
 - [http.ts](../../../frontend/src/lib/http.ts) owns request semantics.
 - [useFinitePolling.ts](../../../frontend/src/composables/useFinitePolling.ts)
   owns bounded polling, not endpoint or page-state decisions.
+- [useProjectSelection.ts](../../../frontend/src/composables/useProjectSelection.ts)
+  owns project-list loading and route-query selection for the project-scoped
+  pages; each page keeps its own data loading and error text.

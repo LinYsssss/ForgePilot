@@ -4,6 +4,7 @@ import { computed, nextTick, ref, watch } from "vue";
 import type { Finding } from "./api";
 import type { ReviewContextChangedFile } from "./context";
 import { isFindingLine, parseUnifiedDiff } from "./diff";
+import { changeTypeLabel } from "./labels";
 
 const props = defineProps<{
   files: ReviewContextChangedFile[];
@@ -58,7 +59,7 @@ watch(
         @click="emit('selectPath', file.path)"
       >
         <span>{{ file.path }}</span>
-        <small>{{ file.changeType }}</small>
+        <small>{{ changeTypeLabel(file.changeType) }}</small>
       </button>
       <p v-if="files.length === 0" class="empty-state">快照中没有改动文件。</p>
     </aside>
@@ -66,7 +67,7 @@ watch(
     <div class="diff-content">
       <div v-if="activeFile" class="diff-toolbar">
         <code>{{ activeFile.path }}</code>
-        <span class="badge badge-neutral">{{ activeFile.changeType }}</span>
+        <span class="badge badge-neutral">{{ changeTypeLabel(activeFile.changeType) }}</span>
       </div>
       <p v-if="activeFile?.patch === null" class="empty-state">提供方没有返回这个文件的 patch。</p>
       <p v-else-if="activeFile === null" class="empty-state">选择一个文件查看不可变 patch。</p>

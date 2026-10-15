@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from "vue";
+import { computed, ref } from "vue";
 import { RouterLink } from "vue-router";
 
 import {
@@ -9,22 +9,24 @@ import {
   requirementsRoute,
   reviewsRoute,
 } from "../../app/routes";
+import { useProjectList } from "../../composables/useProjectSelection";
 import { formatDateTime } from "../../lib/datetime";
 import { apiErrorMessage } from "../../lib/http";
 import {
   archiveProject,
   createProject,
   hasProjectRole,
-  listProjects,
   PROJECT_ROLE_LABELS,
   PROJECT_STATUS_LABELS,
   unarchiveProject,
   type Project,
 } from "./api";
 
-const projects = ref<Project[]>([]);
-const loading = ref(true);
-const loadError = ref<string | null>(null);
+const {
+  projects,
+  loading,
+  error: loadError,
+} = useProjectList();
 
 const newName = ref("");
 const creating = ref(false);
@@ -47,16 +49,6 @@ const copied = ref(false);
 const archiveConfirmed = computed(
   () => archiveTarget.value !== null && archiveInput.value === archiveTarget.value.name,
 );
-
-onMounted(async () => {
-  try {
-    projects.value = await listProjects();
-  } catch (failure: unknown) {
-    loadError.value = apiErrorMessage(failure);
-  } finally {
-    loading.value = false;
-  }
-});
 
 async function create(): Promise<void> {
   creating.value = true;

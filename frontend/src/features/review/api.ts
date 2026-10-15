@@ -101,13 +101,13 @@ export interface Finding {
   basisHash: string | null;
 }
 
-export interface AcVerdictRow {
+interface AcVerdictRow {
   acId: number;
   acKey: string;
   verdict: AcVerdict;
 }
 
-export interface FileCoverage {
+interface FileCoverage {
   path: string;
   patchTruncated: boolean;
 }
@@ -122,7 +122,7 @@ export interface Coverage {
   notReviewed: string[];
 }
 
-export interface ValidationSummary {
+interface ValidationSummary {
   droppedFindings: number;
   correctedLines: number;
 }
@@ -181,13 +181,13 @@ export interface ProjectReviewRow {
   createdAt: string;
 }
 
-export interface ReviewRequested {
+interface ReviewRequested {
   reviewId: number;
   status: ReviewStatus;
   executionAttempt: number;
 }
 
-export interface DecisionResult {
+interface DecisionResult {
   decision: ReviewDecision;
   decisionBy: number | null;
   decisionAt: string | null;
@@ -309,7 +309,7 @@ export function getRequirementReviewActivity(
  * `verdict` 为 `null` 表示当前修订**还没有被审查过**，与 `NOT_FOUND`
  * （审查过了，但 diff 里没有东西实现它）不是一回事，界面上必须分开说。
  */
-export interface AcCoverage {
+interface AcCoverage {
   acKey: string;
   text: string;
   verdict: AcVerdict | null;
@@ -324,7 +324,7 @@ export interface RequirementCoverage {
 }
 
 /** 二项比例的 95% Wilson 区间；`null` 表示样本量为 0，没有区间可言。 */
-export interface Interval {
+interface Interval {
   low: number;
   high: number;
 }
@@ -335,7 +335,7 @@ export interface Interval {
  * `confirmedRate` 与 `interval` 在 `adjudicated` 为 0 时都是 `null`：一个没有样本的
  * 分箱既没有比例也没有区间，显示 0% 会被读成「模型在这一档上从来没对过」。
  */
-export interface CalibrationBin {
+interface CalibrationBin {
   confidence: FindingConfidence;
   adjudicated: number;
   confirmed: number;

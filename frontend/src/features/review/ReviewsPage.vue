@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from "vue";
+import { computed, ref, watch } from "vue";
 import { RouterLink, useRoute, useRouter } from "vue-router";
 
 import {
@@ -7,14 +7,14 @@ import {
   requirementDetailRoute,
   reviewDetailRoute,
   reviewsRoute,
-  PROJECT_QUERY_KEY,
   PULL_REQUEST_QUERY_KEY,
 } from "../../app/routes";
+import { useProjectSelection } from "../../composables/useProjectSelection";
 import { formatDateTime } from "../../lib/datetime";
 import { apiErrorMessage } from "../../lib/http";
 import { useFinitePolling } from "../../composables/useFinitePolling";
 import { useSession } from "../auth/session";
-import { hasProjectRole, listProjects, type Project } from "../project/api";
+import { hasProjectRole } from "../project/api";
 import { listRequirements, type RequirementSummary } from "../requirement/api";
 import { getPullRequest, type PullRequest } from "../scm/api";
 import {
@@ -45,15 +45,19 @@ const route = useRoute();
 const router = useRouter();
 const { account } = useSession();
 
-const projectId = computed(() => parseId(route.query[PROJECT_QUERY_KEY]));
+const {
+  projects,
+  selectedProjectId: projectId,
+  selectedProject,
+  error: projectError,
+  select,
+} = useProjectSelection({ routeName: "reviews" });
 const pullRequestId = computed(() => parseId(route.query[PULL_REQUEST_QUERY_KEY]));
 
-const projects = ref<Project[]>([]);
 const requirements = ref<RequirementSummary[]>([]);
 const projectReviews = ref<ProjectReviewRow[]>([]);
 const activity = ref<Record<string, ActivityView>>({});
 const projectLoading = ref(false);
-const projectError = ref<string | null>(null);
 
 const pullRequest = ref<PullRequest | null>(null);
 const pullRequestReviews = ref<ReviewSummary[]>([]);
@@ -70,16 +74,10 @@ const triggerMessage = ref<string | null>(null);
 let projectLoadToken = 0;
 let pullRequestLoadToken = 0;
 
-const selectedProject = computed(
-  () => projects.value.find((project) => project.id === projectId.value) ?? null,
-);
-
 const projectSelection = computed({
   get: () => projectId.value,
   set: (value: number | null) => {
-    if (value !== null) {
-      void router.push(reviewsRoute(value));
-    }
+    void select(value);
   },
 });
 
@@ -265,13 +263,6 @@ async function triggerReview(): Promise<void> {
   }
 }
 
-onMounted(async () => {
-  try {
-    projects.value = await listProjects();
-  } catch (failure: unknown) {
-    projectError.value = apiErrorMessage(failure);
-  }
-});
 </script>
 
 <template>

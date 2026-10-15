@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from "vue";
-import { useRoute, useRouter } from "vue-router";
-import { parseId, PROJECT_QUERY_KEY } from "../../app/routes";
+import { computed, ref, watch } from "vue";
+import { parseId } from "../../app/routes";
+import { useProjectSelection } from "../../composables/useProjectSelection";
 import { formatDateTime } from "../../lib/datetime";
 import { apiErrorMessage } from "../../lib/http";
 import {
@@ -11,7 +11,6 @@ import {
   sendNotificationTest,
   type NotificationChannel,
 } from "../notification/api";
-import { hasProjectRole, listProjects, type Project } from "../project/api";
 import {
   listScmRepositories,
   providerTokenPage,
@@ -26,13 +25,16 @@ import {
   type ScmRepositoryPatch,
 } from "./api";
 
-const route = useRoute();
-const router = useRouter();
-const projectId = computed(() => parseId(route.query[PROJECT_QUERY_KEY]));
-const projects = ref<Project[]>([]);
+const {
+  projects,
+  selectedProjectId: projectId,
+  selectedProject: selected,
+  isLeader,
+  error,
+  select,
+} = useProjectSelection({ routeName: "repositories" });
 const repository = ref<ScmRepository | null>(null);
 const loading = ref(false);
-const error = ref<string | null>(null);
 const pending = ref(false);
 const provider = ref<ScmProvider>("GITHUB");
 const externalId = ref("");
@@ -48,17 +50,10 @@ const notifyEnabled = ref(true);
 const notifyPending = ref(false);
 const notifyError = ref<string | null>(null);
 const notifyTestPending = ref(false);
-const selected = computed(
-  () => projects.value.find((project) => project.id === projectId.value) ?? null,
-);
-const isLeader = computed(() => hasProjectRole(selected.value, "LEADER"));
 const repositoryTokenPage = computed(() => providerTokenPage(provider.value, apiBase.value));
 
 function choose(event: Event): void {
-  const id = parseId((event.target as HTMLSelectElement).value);
-  if (id !== null) {
-    void router.push({ name: "repositories", query: { [PROJECT_QUERY_KEY]: String(id) } });
-  }
+  void select(parseId((event.target as HTMLSelectElement).value));
 }
 
 watch(provider, (value) => {
@@ -182,13 +177,6 @@ async function save(): Promise<void> {
   }
 }
 
-onMounted(async () => {
-  try {
-    projects.value = await listProjects();
-  } catch (failure: unknown) {
-    error.value = apiErrorMessage(failure);
-  }
-});
 watch(projectId, load, { immediate: true });
 </script>
 <template>

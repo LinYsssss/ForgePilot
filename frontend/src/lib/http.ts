@@ -1,5 +1,5 @@
 /** 所有 ForgePilot 端点共用的错误体结构（API.md）。 */
-export interface ApiError {
+interface ApiError {
   code: string;
   message: string;
   traceId: string;
@@ -15,7 +15,7 @@ export class HttpError extends Error {
   }
 }
 
-export type RequestJsonOptions = Omit<RequestInit, "credentials">;
+type RequestJsonOptions = Omit<RequestInit, "credentials">;
 
 const STATUSES_WITHOUT_BODY = new Set([204, 205, 304]);
 const WRITE_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
@@ -68,6 +68,11 @@ export function apiErrorMessage(error: unknown): string {
     return isApiError(error.body) ? error.body.message : error.message;
   }
   return error instanceof Error ? error.message : String(error);
+}
+
+/** 项目域下所有端点的路径前缀；三个 feature api 曾各抄一份。 */
+export function projectPath(projectId: number): string {
+  return `/api/projects/${projectId}`;
 }
 
 export async function requestJson<T>(
