@@ -91,7 +91,7 @@ git config --global user.email "<你的邮箱>"
 | H | H1–H6 | 审查决策与需求收尾 | G |
 | I | I1–I3 | 通知 | B |
 | J | J1–J5 | 归档、删除与隔离 | 全部 |
-| K | K1–K9 | 负向与边界 | 全部 |
+| K | K1–K10 | 负向与边界 | 全部 |
 
 ---
 
@@ -1146,6 +1146,12 @@ docker restart fp-demo-backend-1
 
 **预期**：历史 Review 展示的仍是**它当时**保存的 `requirement_id`、`requirement_revision_id` 与不可变上下文快照，**不得**通过 PR 当前关联反查语义。顶部负责人取该 Review 所属需求的当前指派，实际决定人取 `decisionBy`；解除关联也不会让历史审查改显示另一需求的负责人。
 
+### K10 Provider 不可用时投递返回 503
+
+**操作**：把项目仓库的 `apiBase` 临时改到一个不可达的地址（或断开出网），再推送一次触发 webhook 的事件；也可重投一条历史投递。
+
+**预期**：投递返回 **503**（`provider_unavailable`），**不落任何半成品数据**；恢复地址后重投即正常入库。两家 Provider 一致：限流、5xx 与网络错误归 503，其余 Provider HTTP 错误归 502 `provider_error`，响应形状不符归 422。合并（merge）失败不套用这组码。
+
 ---
 
 ## 13. 排错手册
@@ -1163,6 +1169,7 @@ gh api repos/<owner>/<repo>/hooks/$HOOK/deliveries \
 | **202** | 正常 | 往下查 `pull_request` 表 |
 | **401** | 签名校验失败 | 两侧 secret 不一致。重设新值、两边同时写 |
 | **422** | 被拒绝 | changed-file 超限。**这种情况不留痕** |
+| **503** | Provider 暂时不可用（`provider_unavailable`） | 稍后重投；持续出现则检查出网与 apiBase，见 K10 |
 | **5xx** | 后端异常 | `docker logs fp-demo-backend-1 --tail 200` |
 | 无投递记录 | hook 没建或没开 | 检查 `active` 与 `events` 是否含 `pull_request` |
 

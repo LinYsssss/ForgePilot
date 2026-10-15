@@ -698,6 +698,7 @@ curl -s http://127.0.0.1:18081/healthz <span class="c"># 本机能不能到 ngin
     不是本轮重新测量。2026-09-08 只同步 V14 与评审协作的配置、失败模式和操作步骤；
     健康检查命令取自 <code>compose.yaml</code>。
   </p>
+  <p>2026-10-14 源码补充（尚未部署）：Provider 读取失败的错误码与 GitLab 对齐——限流、5xx 与网络错误为 <strong>503 <code>provider_unavailable</code></strong>，其余 Provider HTTP 错误 502 <code>provider_error</code>，响应形状不符 422；合并（merge）不在此列。未配置 embedding 模型时向量请求返回 <strong>503 <code>ai_unconfigured</code></strong>：知识入库把该文档标为 FAILED 并保留原因，重传前需先配置模型。知识入库批大小由 <code>FORGEPILOT_KNOWLEDGE_EMBEDDING_BATCH_SIZE</code>（默认 64）控制，每批一行 <code>ai_call_log</code>，全部批次成功后单事务写入；调大前按第 7 章同一套内存口径评估。</p>
   <p>
     相关文档：架构与运行边界见 <code>docs/v2/ARCHITECTURE.md</code>，
     防护措施与残余风险见 <code>SECURITY.html</code>，

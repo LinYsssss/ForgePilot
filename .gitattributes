@@ -25,8 +25,8 @@ docs/thesis/*.csv text eol=lf
 #
 # Do NOT add a rule for workspace/*/index.md here — it is fully regenerated
 # every session, so a real conflict there is expected and safe to resolve by
-# picking either side (task state lives in task.json, not index.md). See
-# .trellis/spec/cli/backend/directory-structure.md for details.
+# picking either side (task state lives in task.json, not index.md). See the
+# Workspace System section of .trellis/workflow.md for details.
 .trellis/workspace/*/journal-*.md merge=union
 
 # Official Trellis skill templates intentionally contain Markdown hard-break

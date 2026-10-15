@@ -3,7 +3,7 @@
   "name": "docs-supplements-and-hygiene",
   "title": "交付文档补充段与仓库卫生",
   "description": "六份交付 HTML 追加本轮补充段；TESTING-GUIDE K 组补 Provider 503 负向用例；AGENTS.md JDK 措辞；.gitattributes 注释；清理空 node_modules/.vite。",
-  "status": "planning",
+  "status": "in_progress",
   "dev_type": null,
   "scope": null,
   "package": null,

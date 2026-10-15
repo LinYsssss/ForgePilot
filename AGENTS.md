@@ -37,7 +37,7 @@ Before planning or changing this repository, read these files completely:
 
 9 backend top-level packages, 21 business tables across 14 Flyway migrations, a 6-entry / 11-route frontend, GitHub and GitLab providers, and a completed three-arm evaluation. The latest backend full run, targeted rechecks and frontend gates are recorded in `docs/deliverables/TEST-REPORT.html`. Quote the structural counts; they are asserted by tests. Do **not** quote a test-case count from any document — run the suite and read it, or it will be stale.
 
-There is no JDK on this host. Backend builds and tests run through the pinned container path documented in `docs/v2/DEFENSE-GUIDE.md`.
+This host has no JDK 21 (only JDK 17 is installed). Backend builds and tests run through the pinned container path documented in `docs/v2/DEFENSE-GUIDE.md`.
 
 ## Product and architecture guardrails
 
