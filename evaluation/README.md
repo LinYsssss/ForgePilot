@@ -22,7 +22,7 @@ CI 每次运行的就是这一组契约检查，它保护的是评分口径本�
 2026-10-14 语料更正（`forgepilot-phase1-quick-v1` → `v2`，只动语料，冻结文件一字未动）：
 
 - `java-sql-resource-leak`：真值行号与 AC 提示从第 7 行改为第 4-5 行；原指向方法右花括号，缺陷实际在两条未关闭的资源获取行上。
-- `java-broken-build` → `java-clean-change`：原 fixture 本身就是语法错误的 Java 代码，无法支撑"零缺陷"真值（把语法错误定义为非缺陷不成立）；替换为无缺陷的新增类 `src/Adder.java`，继续承担"空 Finding 是合法完成结果"的验证职责。
+- `java-broken-build`：原 fixture 本身就是语法错误的 Java 代码，无法支撑"零缺陷"真值（把语法错误定义为非缺陷不成立）；替换为无缺陷的新增类 `src/Adder.java`，继续承担"空 Finding 是合法完成结果"的验证职责。id 与目录名保持不变：2026-08 归档运行证据（run.json/score.json）引用该 id，而冻结的 holdout guard 扫描全仓、要求 run/corpus 输出只引用当前 quick 集，归档快照与 score.py 均不可改，改名必然冲突。
 - `typescript-ambiguous-null`：移除写在 fixture 注释与 AC 文本中的评测元信息（"verifier evidence"），换成真实的非目标约束。
 
 类型标签（6 例 CODE_QUALITY）与别名口径刻意未改：它们与正式语料同构，属语料构造属性，由论文的效度分析如实说明，不在语料里打补丁。
@@ -32,7 +32,7 @@ python3 evaluation/tools/score.py --validate-corpus --manifest evaluation/manife
 python3 evaluation/tools/score.py --selftest
 python3 evaluation/tools/score.py --manifest evaluation/manifest.quick.json --runs evaluation/reference-runs --out-dir /tmp/forgepilot-scores
 python3 evaluation/tools/score.py --compare-report /tmp/forgepilot-scores/scores-reference.json evaluation/fixtures/phase1-reference-score.json
-python3 evaluation/tools/score.py --guard-no-holdout --root evaluation
+python3 evaluation/tools/score.py --guard-no-holdout --root .
 ```
 
 ## development 三臂试跑

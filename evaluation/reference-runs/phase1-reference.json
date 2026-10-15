@@ -71,7 +71,7 @@
       }
     },
     {
-      "caseId": "java-clean-change",
+      "caseId": "java-broken-build",
       "status": "COMPLETED",
       "failureKind": null,
       "failureReason": null,

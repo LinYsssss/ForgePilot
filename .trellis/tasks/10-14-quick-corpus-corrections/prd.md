@@ -14,7 +14,7 @@
 - **冻结文件一字不动**：`score.py`、`run_development.py`、`category-aliases.json`、`metrics.md`、三份 contract。
 - 类型标签（6 例 CODE_QUALITY）与别名口径不改：与正式语料同构，属构造属性，论文以效度分析说明。
 - `corpusVersion` 升为 `forgepilot-phase1-quick-v2`；`caseSetVersion` 不变（写死在冻结的 `score.py` 里）。
-- `java-broken-build` 改名 `java-clean-change`：manifest 校验要求 `fixture == cases/{id}`，目录随之改名；新 fixture 为无缺陷的新增类 `src/Adder.java`。
+- `java-broken-build` 的 fixture 原地替换为无缺陷的新增类 `src/Adder.java`；case id 与目录名保持不变（理由见 Notes 的 2026-10-14 决定）。
 - 参考运行与评分 fixture 按新真值同步重算，`--compare-report` 必须通过。
 
 ## Acceptance Criteria
@@ -28,3 +28,4 @@
 
 - 轻量任务，PRD-only。
 - 本机 Python 3.13 可用，评分口径的全部门在本地可执行；后端无关。
+- **决定（2026-10-14）**：case id 不改名。首次实现曾改名 `java-clean-change`，CI run 38668708941 的 holdout guard 失败：仓库内 2026-08 归档开发评测证据（run.json/score.json）引用 `java-broken-build`，冻结的 guard 以 `--root .` 扫描全仓并要求所有 run/corpus 输出只引用当前 quick 集；归档快照与 score.py 均不可改，故 quick 语料 id 是事实上的稳定键。内容级更正（干净 fixture、AC 文本、显示标题）全部保留，README 记录理由。

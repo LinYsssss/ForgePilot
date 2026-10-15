@@ -7,7 +7,7 @@
   "caseIds": [
     "java-sql-resource-leak",
     "typescript-ambiguous-null",
-    "java-clean-change",
+    "java-broken-build",
     "biz-fee-rate-hardcoded",
     "biz-status-machine-bypass",
     "eng-contract-drift-dual-encode",

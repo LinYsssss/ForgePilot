@@ -257,7 +257,7 @@
         "predicted": 1,
         "unexpected": []
       },
-      "caseId": "java-clean-change",
+      "caseId": "java-broken-build",
       "expected": 0,
       "matched": 0,
       "matchedPairs": [],

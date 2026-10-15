@@ -100,16 +100,16 @@
       ]
     },
     {
-      "id": "java-clean-change",
+      "id": "java-broken-build",
       "split": "development",
       "language": "JAVA",
-      "fixture": "cases/java-clean-change",
+      "fixture": "cases/java-broken-build",
       "fixtureLayout": "single",
       "selectionReason": "Clean development case; verifies an empty Finding set is a valid completed result and that a defect-free added class is not reported.",
       "requirement": {
         "title": "审查 java clean change 变更并保持代码契约",
         "background": "该 JAVA development 案例用于验证增量代码审查对 未标注新增缺陷 及明确非目标行为的识别边界。",
-        "description": "针对 java-clean-change 的 fixture/diff，检查变更是否满足下列 AC；模型只能基于真实代码证据给出覆盖、未发现或存在风险的结论。"
+        "description": "针对 java-broken-build 的 fixture/diff，检查变更是否满足下列 AC；模型只能基于真实代码证据给出覆盖、未发现或存在风险的结论。"
       },
       "acceptanceCriteria": [
         {
