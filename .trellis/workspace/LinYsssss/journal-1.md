@@ -783,3 +783,40 @@ run 38555642951 四个 job 全部通过（backend 430 项测试零失败）；�
 ### Next Steps
 
 - 等用户决定：A2 内存方案、A5 设计、B 组语料更正、交付文档补充时机
+
+
+## Session 26: 更正快速语料三处硬伤并完成知识入库分批，归档两任务
+
+**Date**: 2026-10-14
+**Task**: 更正快速语料三处硬伤并完成知识入库分批，归档两任务
+**Branch**: `fix/review-audit-fixes`
+
+### Summary
+
+快速语料三处更正落地（行号、干净 fixture、去元信息；case id 因冻结守卫与归档证据保持原名）；知识入库 embedding 改按批大小请求、单事务写入；CI run 38670011837 四项全绿，两任务归档。
+
+### Main Changes
+
+- evaluation: java-sql-resource-leak 真值行号改 4-5；java-broken-build fixture 换干净 Adder 类；typescript-ambiguous-null 去评测元信息；corpusVersion 升 v2
+- backend: KnowledgeIngestionProcessor 按 batch-size（默认 64）分批 embedding，全部批次成功后单事务写入，向量数不符整篇失败
+- trellis: 归档两任务，validation.md 记录本地门与 CI 证据
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `9de50a7` | (see git log) |
+| `72c441e` | (see git log) |
+| `b63bb37` | (see git log) |
+
+### Testing
+
+- [OK] 本地：validate-corpus/selftest/guard(--root .)/compare/unittest/dry-run 全过；CI run 38670011837：backend 432 tests、evaluation contract、frontend gates、compose smoke 全绿
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- A5 前端项目选择 composable 抽取；docs/hygiene 任务；跟进清单更新决策；开 PR
