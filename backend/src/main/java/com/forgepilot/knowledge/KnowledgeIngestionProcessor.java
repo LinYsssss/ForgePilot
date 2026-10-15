@@ -1,5 +1,6 @@
 package com.forgepilot.knowledge;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import com.forgepilot.ai.AiCallContext;
@@ -17,7 +18,9 @@ import org.springframework.transaction.support.TransactionTemplate;
  * 串行消费 PENDING 知识文档的唯一后台处理器（ARCHITECTURE.md 5）。
  *
  * <p>每轮只领一条：读取后立即释放事务，在不占数据库连接的情况下调 Embedding provider，
- * 再用一个事务写入全部 chunk、Profile 与向量并标记 READY。任一步失败都回滚派生行，
+ * 再用一个事务写入全部 chunk、Profile 与向量并标记 READY。向量按 {@code batch-size}
+ * 分批请求：一次发全部切片会撞上常见 provider 的单请求输入上限，并把整篇响应塞进
+ * 一次解析；每批一行 {@code ai_call_log}。任一步失败都回滚派生行，
  * 并在新事务里标记 FAILED（带受控原因）；清理本身失败则保留 PENDING 等下一轮。
  * 单后端部署靠 fixed-delay 调度天然串行，不引入租约或任务表。
  */
@@ -34,12 +37,14 @@ public class KnowledgeIngestionProcessor {
     private final String provider;
     private final String model;
     private final String version;
+    private final int batchSize;
 
     KnowledgeIngestionProcessor(KnowledgeDocumentRepository documents, KnowledgeChunkRepository chunks,
             ChunkSearchRepository vectors, AiGateway ai, PlatformTransactionManager transactions,
             @Value("${forgepilot.knowledge.embedding.provider:}") String provider,
             @Value("${forgepilot.knowledge.embedding.model:}") String model,
-            @Value("${forgepilot.knowledge.embedding.version:}") String version) {
+            @Value("${forgepilot.knowledge.embedding.version:}") String version,
+            @Value("${forgepilot.knowledge.embedding.batch-size:64}") int batchSize) {
         this.documents = documents;
         this.chunks = chunks;
         this.vectors = vectors;
@@ -48,6 +53,11 @@ public class KnowledgeIngestionProcessor {
         this.provider = provider;
         this.model = model;
         this.version = version;
+        if (batchSize < 1) {
+            throw new IllegalStateException(
+                    "forgepilot.knowledge.embedding.batch-size must be positive.");
+        }
+        this.batchSize = batchSize;
     }
 
     @Scheduled(fixedDelayString = "${forgepilot.knowledge.ingestion-interval-ms:1000}",
@@ -59,10 +69,24 @@ public class KnowledgeIngestionProcessor {
 
         try {
             List<String> pieces = KnowledgeService.split(pending.getText());
+            if (pieces.isEmpty()) {
+                // Unreachable through the upload validator, which refuses blank text;
+                // failing loudly still beats a READY document with zero chunks.
+                throw ApiException.unprocessable("文档没有可入库的文本。");
+            }
             // No transaction or connection is held while waiting for the provider.
-            List<float[]> embeddings = ai.embed(pieces, model, AiCallContext.ofProject(pending.getProjectId()));
-            if (embeddings.size() != pieces.size()) {
-                throw ApiException.unprocessable("服务返回的向量数量与输入不符。");
+            // One request per batch: a single call carrying every chunk would exceed
+            // common provider input limits on a large document and parse its entire
+            // response at once. Each batch writes its own ai_call_log row.
+            List<float[]> embeddings = new ArrayList<>(pieces.size());
+            for (int start = 0; start < pieces.size(); start += batchSize) {
+                List<String> batch = List.copyOf(
+                        pieces.subList(start, Math.min(start + batchSize, pieces.size())));
+                List<float[]> vectors = ai.embed(batch, model, AiCallContext.ofProject(pending.getProjectId()));
+                if (vectors.size() != batch.size()) {
+                    throw ApiException.unprocessable("服务返回的向量数量与输入不符。");
+                }
+                embeddings.addAll(vectors);
             }
             transaction.executeWithoutResult(status -> documents
                     .lockByProjectIdAndId(pending.getProjectId(), pending.getId())

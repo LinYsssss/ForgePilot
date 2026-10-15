@@ -7,6 +7,7 @@ import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -125,6 +126,59 @@ class KnowledgeIngestionProcessorTest extends PostgresTestBase {
         processor.processNext();
 
         assertThat(documents.findByProjectIdAndId(fixture.project, document)).isEmpty();
+        assertThat(chunks.findByProjectIdAndDocumentIdOrderBySeqAsc(fixture.project, document)).isEmpty();
+    }
+
+    /**
+     * 100,000 characters split into 84 chunks at the fixed 1,200-character budget,
+     * which is more than the default 64-per-request batch size — so the ingestion
+     * must reach the provider in two calls, never in one.
+     */
+    @Test
+    void aDocumentLargerThanOneBatchIsEmbeddedInBatchesAndWrittenWhole() {
+        Fixture fixture = new Fixture();
+        String text = "line\n".repeat(20_000);
+        long document = knowledge.createProjectKnowledge(fixture.project, fixture.leader, "large.md", text);
+        List<String> pieces = KnowledgeService.split(text);
+        assertThat(pieces).hasSizeGreaterThan(64);
+        List<Integer> batchSizes = new ArrayList<>();
+        when(ai.embed(anyList(), any(), any())).thenAnswer(call -> {
+            List<String> texts = call.getArgument(0);
+            batchSizes.add(texts.size());
+            return texts.stream().map(entry -> new float[] {0.1f, 0.2f, 0.3f, 0.4f}).toList();
+        });
+
+        processor.processNext();
+
+        assertThat(batchSizes).hasSize(2);
+        assertThat(batchSizes).allSatisfy(size -> assertThat(size).isLessThanOrEqualTo(64));
+        assertThat(batchSizes.stream().mapToInt(Integer::intValue).sum()).isEqualTo(pieces.size());
+        assertThat(documents.findByProjectIdAndId(fixture.project, document)).get()
+                .extracting(KnowledgeDocument::getStatus).isEqualTo(KnowledgeStatus.READY);
+        assertThat(chunks.findByProjectIdAndDocumentIdOrderBySeqAsc(fixture.project, document))
+                .hasSize(pieces.size());
+    }
+
+    @Test
+    void aVectorCountMismatchInALaterBatchFailsTheWholeDocumentWithoutChunks() {
+        Fixture fixture = new Fixture();
+        long document = knowledge.createProjectKnowledge(
+                fixture.project, fixture.leader, "mismatch.md", "line\n".repeat(20_000));
+        AtomicInteger calls = new AtomicInteger();
+        when(ai.embed(anyList(), any(), any())).thenAnswer(call -> {
+            List<String> texts = call.getArgument(0);
+            int count = calls.incrementAndGet() == 1 ? texts.size() : texts.size() - 1;
+            return java.util.stream.IntStream.range(0, count)
+                    .mapToObj(index -> new float[] {0.1f, 0.2f, 0.3f, 0.4f})
+                    .toList();
+        });
+
+        processor.processNext();
+
+        assertThat(documents.findByProjectIdAndId(fixture.project, document)).get().satisfies(failed -> {
+            assertThat(failed.getStatus()).isEqualTo(KnowledgeStatus.FAILED);
+            assertThat(failed.getFailureReason()).contains("unprocessable");
+        });
         assertThat(chunks.findByProjectIdAndDocumentIdOrderBySeqAsc(fixture.project, document)).isEmpty();
     }
 

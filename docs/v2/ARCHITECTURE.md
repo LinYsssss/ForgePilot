@@ -473,7 +473,7 @@ Requirement、文档、PR 标题、代码注释**全部是不可信数据**，�
 
 ## 5. Knowledge
 
-- 创建项目知识、需求附件和提升副本时，只在短事务中保存 `PENDING` 文档（附件关系与文档仍原子提交），HTTP 201 不等待 Embedding。单个 `KnowledgeIngestionProcessor` 按 ID 串行领取下一条 PENDING；读取后释放事务，在无数据库连接占用的情况下调用 provider，再以一个事务写入全部 chunk、Profile、向量并标记 READY。任一步失败都会回滚派生行并在新事务标记 FAILED；删除或状态已变化的文档在提交阶段被跳过。
+- 创建项目知识、需求附件和提升副本时，只在短事务中保存 `PENDING` 文档（附件关系与文档仍原子提交），HTTP 201 不等待 Embedding。单个 `KnowledgeIngestionProcessor` 按 ID 串行领取下一条 PENDING；读取后释放事务，在无数据库连接占用的情况下调用 provider——向量按可配置批大小（`batch-size`，默认 64）分批请求，每批一行 `ai_call_log`——全部批次成功后，再以一个事务写入全部 chunk、Profile、向量并标记 READY。任一步失败都会回滚派生行并在新事务标记 FAILED；删除或状态已变化的文档在提交阶段被跳过。
 - 应用调度池至少两个线程：文档处理的慢外部调用不得阻塞 Review reconciliation。当前单后端部署依靠单个 fixed-delay 调用保持文档串行；不引入分布式租约或任务表。
 - 检索 SQL 只读取 `knowledge_document.status='READY'` 的向量。页面只在存在 PENDING 文档时用共享的自调度轮询刷新状态，终态、隐藏或卸载后停止，并对连续失败提供有界重试与明确错误。
 - 公共原文通过 `GET .../knowledge/documents/{id}/content|download` 按需读取：成员身份、`project_id` 和 `source_type=PROJECT_KNOWLEDGE` 同时满足才返回。content 为 `{documentId,title,text}`，download 为 UTF-8 `text/plain` 附件；列表仍只返回元数据。需求附件只能通过所属需求入口读，不能借公共接口绕过归属检查。历史审查保存的摘录与当前原文分开呈现，删除原文不抹掉历史证据。

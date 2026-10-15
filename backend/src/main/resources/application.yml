@@ -66,6 +66,11 @@ forgepilot:
       provider: ${FORGEPILOT_KNOWLEDGE_EMBEDDING_PROVIDER:}
       model: ${FORGEPILOT_KNOWLEDGE_EMBEDDING_MODEL:}
       version: ${FORGEPILOT_KNOWLEDGE_EMBEDDING_VERSION:}
+      # How many chunks one embedding request may carry. A single request holding
+      # every chunk of a 5 MB document (~4,300 inputs) exceeds common provider
+      # per-request limits and parses tens of MB of vectors at once; batching
+      # bounds both. 0 fails startup.
+      batch-size: ${FORGEPILOT_KNOWLEDGE_EMBEDDING_BATCH_SIZE:64}
   review:
     # The concurrency limit has to sit on corePoolSize: a ThreadPoolExecutor only
     # grows past it once the queue is full, so with a bounded queue maxPoolSize
