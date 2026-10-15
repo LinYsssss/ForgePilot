@@ -1,6 +1,6 @@
 {
   "contractVersion": "forgepilot-evaluation-run-v1",
-  "corpusVersion": "forgepilot-phase1-quick-v1",
+  "corpusVersion": "forgepilot-phase1-quick-v2",
   "caseSetVersion": "phase1-quick-v1",
   "runKind": "SYNTHETIC_REFERENCE",
   "arm": "DIFF_REQUIREMENT_AC_KNOWLEDGE",
@@ -20,8 +20,8 @@
           "findingType": "CODE_QUALITY",
           "category": "RESOURCE_LEAK",
           "filePath": "src/App.java",
-          "lineStart": 7,
-          "lineEnd": 7
+          "lineStart": 4,
+          "lineEnd": 5
         }
       ],
       "acVerdicts": [
@@ -71,7 +71,7 @@
       }
     },
     {
-      "caseId": "java-broken-build",
+      "caseId": "java-clean-change",
       "status": "COMPLETED",
       "failureKind": null,
       "failureReason": null,

@@ -1,6 +1,6 @@
 {
   "schemaVersion": "forgepilot-evaluation-manifest-v1",
-  "corpusVersion": "forgepilot-phase1-quick-v1",
+  "corpusVersion": "forgepilot-phase1-quick-v2",
   "source": {
     "repository": "LinYsssss/reposage",
     "commit": "96137dd3b43e14c5e8881c99688663afd979cf4e",
@@ -22,7 +22,7 @@
       "acceptanceCriteria": [
         {
           "acKey": "AC-0001",
-          "text": "[RESOURCE_LEAK] 所有资源句柄、流和客户端响应都必须在成功与异常路径中正确关闭；重点核验 src/App.java 第 7-7 行。"
+          "text": "[RESOURCE_LEAK] 所有资源句柄、流和客户端响应都必须在成功与异常路径中正确关闭；重点核验 src/App.java 第 4-5 行。"
         },
         {
           "acKey": "AC-0002",
@@ -45,8 +45,8 @@
           "category": "RESOURCE_LEAK",
           "severity": "HIGH",
           "filePath": "src/App.java",
-          "lineStart": 7,
-          "lineEnd": 7
+          "lineStart": 4,
+          "lineEnd": 5
         }
       ],
       "nonFindings": [
@@ -72,7 +72,7 @@
         },
         {
           "acKey": "AC-0002",
-          "text": "非目标约束：must not block without verifier evidence"
+          "text": "非目标约束：函数命名与 export 方式本身不许报；缺陷仅为可能为空的 user 或 name 被未校验地解引用"
         }
       ],
       "expectedAcVerdicts": [
@@ -96,25 +96,25 @@
         }
       ],
       "nonFindings": [
-        "must not block without verifier evidence"
+        "非目标约束：函数命名与 export 方式本身不许报；缺陷仅为可能为空的 user 或 name 被未校验地解引用"
       ]
     },
     {
-      "id": "java-broken-build",
+      "id": "java-clean-change",
       "split": "development",
       "language": "JAVA",
-      "fixture": "cases/java-broken-build",
+      "fixture": "cases/java-clean-change",
       "fixtureLayout": "single",
-      "selectionReason": "Clean development case; verifies an empty Finding set is a valid completed result.",
+      "selectionReason": "Clean development case; verifies an empty Finding set is a valid completed result and that a defect-free added class is not reported.",
       "requirement": {
-        "title": "审查 java broken build 变更并保持代码契约",
+        "title": "审查 java clean change 变更并保持代码契约",
         "background": "该 JAVA development 案例用于验证增量代码审查对 未标注新增缺陷 及明确非目标行为的识别边界。",
-        "description": "针对 java-broken-build 的 fixture/diff，检查变更是否满足下列 AC；模型只能基于真实代码证据给出覆盖、未发现或存在风险的结论。"
+        "description": "针对 java-clean-change 的 fixture/diff，检查变更是否满足下列 AC；模型只能基于真实代码证据给出覆盖、未发现或存在风险的结论。"
       },
       "acceptanceCriteria": [
         {
           "acKey": "AC-0001",
-          "text": "非目标约束：broken build is an environment or build result, not a fabricated code defect"
+          "text": "非目标约束：该新增类是不含缺陷的纯函数，不得报告任何代码问题"
         }
       ],
       "expectedAcVerdicts": [
@@ -125,7 +125,7 @@
       ],
       "expectedFindings": [],
       "nonFindings": [
-        "broken build is an environment or build result, not a fabricated code defect"
+        "非目标约束：该新增类是不含缺陷的纯函数，不得报告任何代码问题"
       ]
     },
     {

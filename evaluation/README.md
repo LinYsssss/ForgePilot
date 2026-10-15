@@ -10,7 +10,7 @@
 
 CI 每次运行的就是这一组契约检查，它保护的是评分口径本身。
 
-- `manifest.quick.json`：冻结的 12 个 development case 及真值，来源提交固定为 `96137dd3b43e14c5e8881c99688663afd979cf4e`。
+- `manifest.quick.json`：12 个 development case 及真值，当前 `corpusVersion` 为 `forgepilot-phase1-quick-v2`（2026-10-14 更正，见下）；来源提交固定为 `96137dd3b43e14c5e8881c99688663afd979cf4e`。
 - `case-sets/phase1-quick.json`：quick corpus 唯一允许执行的 case set。
 - `cases/`：只包含上述 12 个 fixture；不包含任何保留集 fixture。
 - `contracts/`：manifest、run、score report 的 JSON Schema 与指标定义。
@@ -18,6 +18,14 @@ CI 每次运行的就是这一组契约检查，它保护的是评分口径本�
 - `fixtures/phase1-reference-score.json`：确定性重算 snapshot。
 - `tools/score.py`：仅使用 Python 标准库的 corpus validator、评分器、自测与 snapshot 比较器。
 - `results/`：运行时输出目录，除 `.gitkeep` 外不入库。
+
+2026-10-14 语料更正（`forgepilot-phase1-quick-v1` → `v2`，只动语料，冻结文件一字未动）：
+
+- `java-sql-resource-leak`：真值行号与 AC 提示从第 7 行改为第 4-5 行；原指向方法右花括号，缺陷实际在两条未关闭的资源获取行上。
+- `java-broken-build` → `java-clean-change`：原 fixture 本身就是语法错误的 Java 代码，无法支撑"零缺陷"真值（把语法错误定义为非缺陷不成立）；替换为无缺陷的新增类 `src/Adder.java`，继续承担"空 Finding 是合法完成结果"的验证职责。
+- `typescript-ambiguous-null`：移除写在 fixture 注释与 AC 文本中的评测元信息（"verifier evidence"），换成真实的非目标约束。
+
+类型标签（6 例 CODE_QUALITY）与别名口径刻意未改：它们与正式语料同构，属语料构造属性，由论文的效度分析如实说明，不在语料里打补丁。
 
 ```bash
 python3 evaluation/tools/score.py --validate-corpus --manifest evaluation/manifest.quick.json --case-set evaluation/case-sets/phase1-quick.json

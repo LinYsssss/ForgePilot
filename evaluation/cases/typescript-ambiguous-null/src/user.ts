@@ -1,4 +1,4 @@
 export function displayName(user?: { name?: string }) {
-  // Ambiguous: callers may guarantee user, so verifier evidence is required before blocking.
+  // Display name shown on the user card.
   return user.name.toUpperCase()
 }

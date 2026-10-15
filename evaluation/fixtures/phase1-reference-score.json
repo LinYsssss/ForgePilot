@@ -136,16 +136,16 @@
             "category": "RESOURCE_LEAK",
             "filePath": "src/App.java",
             "findingType": "CODE_QUALITY",
-            "lineEnd": 7,
-            "lineStart": 7,
+            "lineEnd": 5,
+            "lineStart": 4,
             "severity": "HIGH"
           },
           "predicted": {
             "category": "RESOURCE_LEAK",
             "filePath": "src/App.java",
             "findingType": "CODE_QUALITY",
-            "lineEnd": 7,
-            "lineStart": 7
+            "lineEnd": 5,
+            "lineStart": 4
           }
         }
       ],
@@ -218,7 +218,7 @@
       "missedExpected": [],
       "nonFindingAlerts": [],
       "nonFindings": [
-        "must not block without verifier evidence"
+        "非目标约束：函数命名与 export 方式本身不许报；缺陷仅为可能为空的 user 或 name 被未校验地解引用"
       ],
       "predicted": 1,
       "status": "COMPLETED",
@@ -257,7 +257,7 @@
         "predicted": 1,
         "unexpected": []
       },
-      "caseId": "java-broken-build",
+      "caseId": "java-clean-change",
       "expected": 0,
       "matched": 0,
       "matchedPairs": [],
@@ -265,7 +265,7 @@
       "missedExpected": [],
       "nonFindingAlerts": [],
       "nonFindings": [
-        "broken build is an environment or build result, not a fabricated code defect"
+        "非目标约束：该新增类是不含缺陷的纯函数，不得报告任何代码问题"
       ],
       "predicted": 0,
       "status": "COMPLETED",
@@ -850,7 +850,7 @@
     "temperature": 0
   },
   "contractVersion": "forgepilot-evaluation-score-report-v1",
-  "corpusVersion": "forgepilot-phase1-quick-v1",
+  "corpusVersion": "forgepilot-phase1-quick-v2",
   "execution": {
     "attempted": 12,
     "completed": 12,
