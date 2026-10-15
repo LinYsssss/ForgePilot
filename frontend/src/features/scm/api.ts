@@ -1,4 +1,4 @@
-import { requestJson } from "../../lib/http";
+import { projectPath, requestJson } from "../../lib/http";
 
 export type ScmProvider = "GITHUB" | "GITLAB";
 export type ScmIdentityUsage = "WORK" | "PERSONAL" | "CLIENT" | "OTHER";
@@ -138,10 +138,6 @@ export interface ScmBinding {
   accessCheckedAt: string | null;
   activatedAt: string | null;
   endedAt: string | null;
-}
-
-function projectPath(projectId: number): string {
-  return `/api/projects/${projectId}`;
 }
 
 export function listScmRepositories(projectId: number): Promise<ScmRepository[]> {

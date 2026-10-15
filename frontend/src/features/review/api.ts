@@ -1,4 +1,4 @@
-import { requestJson } from "../../lib/http";
+import { projectPath, requestJson } from "../../lib/http";
 
 /** 一次 Review 的执行状态（API.md）。与 `decision` 正交。 */
 export type ReviewStatus = "PENDING" | "RUNNING" | "COMPLETED" | "FAILED";
@@ -211,10 +211,6 @@ export interface FindingEvent {
 export interface ActivityView {
   activity: ReviewActivity;
   counts: Record<PullRequestActivity, number>;
-}
-
-function projectPath(projectId: number): string {
-  return `/api/projects/${projectId}`;
 }
 
 export function getReview(projectId: number, reviewId: number): Promise<ReviewDetail> {
