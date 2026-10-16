@@ -32,10 +32,13 @@ PostgreSQL container, volume and baseline record counts were retained. Container
 loopback and public health checks passed, and served assets matched the running
 frontend image. See the [deployment record](../../.trellis/tasks/archive/2026-09/09-07-review-collaboration/deployment.md)
 and current test report for the exact evidence and remaining manual checks. The
-currently deployed backend is `54e2953` (2026-10-03; review-5 and guidance-3), from
-`fix/review-guidance-usability`. Later documentation or merge commits do not
-change the identity of the image actually built. The frontend code did not
-change and its existing image was retained. The latest
+currently deployed backend and frontend are built from `3a251d7` (2026-10-16;
+provider error mapping, embedding batching, quick-corpus v2, and the frontend
+consolidation), the tip of `main` after the audit-fix branch merge; its
+[deployment record](../../.trellis/tasks/10-14-review-outstanding-followups/deployment-20261016.md)
+lists the image identities and checks. The previous backend-only deployment,
+`54e2953` (2026-10-03; review-5 and guidance-3), retained its frontend image.
+That round's
 [release and acceptance record](../../.trellis/tasks/archive/2026-10/10-02-guidance3-tightening/release-validation-20261003.md)
 covers three real guidance requests and local Chromium checks at desktop/390px
 widths. Program interaction checks passed, but content goals were only partly met;
@@ -74,7 +77,7 @@ python3 -m unittest \
   evaluation/tools/test_postfreeze_legacy_adapter.py \
   evaluation/tools/test_postfreeze_provider_correction.py
 python3 evaluation/tools/score.py --selftest
-python3 evaluation/tools/score.py --guard-no-holdout --root evaluation
+python3 evaluation/tools/score.py --guard-no-holdout --root .
 ```
 
 The last guard is for a source checkout. A machine holding the ignored post-freeze private corpus will intentionally fail that pre-holdout guard and should instead verify the configuration freeze and corpus integrity.
