@@ -14,13 +14,13 @@
     "build": "vue-tsc --noEmit -p tsconfig.app.json && vite build"
   },
   "dependencies": {
-    "vue": "3.5.41",
+    "vue": "3.5.44",
     "vue-router": "5.2.0"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "6.0.8",
     "@types/node": "24.13.1",
-    "@vue/compiler-sfc": "3.5.41",
+    "@vue/compiler-sfc": "3.5.44",
     "@vue/test-utils": "2.4.11",
     "jsdom": "30.0.1",
     "typescript": "6.0.2",
