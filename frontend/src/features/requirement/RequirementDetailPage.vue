@@ -3,7 +3,7 @@ import { computed, onBeforeUnmount, ref, watch } from "vue";
 import { RouterLink, useRoute, useRouter } from "vue-router";
 
 import { parseId, requirementsRoute, reviewDetailRoute, PROJECT_QUERY_KEY } from "../../app/routes";
-import { formatDateTime } from "../../lib/datetime";
+import { formatDateTime, formatRelativeDateTime } from "../../lib/datetime";
 import { apiErrorMessage } from "../../lib/http";
 import { useFinitePolling } from "../../composables/useFinitePolling";
 import { useSession } from "../auth/session";
@@ -180,6 +180,62 @@ function knowledgeStatusLabel(status: KnowledgeStatus): string {
 }
 
 const hasContext = computed(() => target() !== null);
+
+/** 页内工作区标签；全部面板留在 DOM 里用 v-show 切换，页面状态不因切标签而丢失。 */
+type TabKey = "content" | "ai" | "review" | "attachments" | "revisions";
+
+const TAB_KEYS: readonly TabKey[] = ["content", "ai", "review", "attachments", "revisions"];
+const activeTab = ref<TabKey>("content");
+
+const tabs = computed<Array<{ key: TabKey; label: string; count: number | null }>>(() => {
+  const activityView = reviewActivity.value;
+  return [
+    { key: "content", label: "需求内容", count: null },
+    { key: "ai", label: "AI 辅助", count: null },
+    {
+      key: "review",
+      label: "关联审查",
+      count: activityView === null
+        ? null
+        : PULL_REQUEST_ACTIVITIES.reduce((sum, state) => sum + activityView.counts[state], 0),
+    },
+    { key: "attachments", label: "附件", count: attachments.value.length },
+    { key: "revisions", label: "版本记录", count: revisions.value.length },
+  ];
+});
+
+function moveTab(step: number): void {
+  const index = TAB_KEYS.indexOf(activeTab.value);
+  const next = TAB_KEYS[(index + step + TAB_KEYS.length) % TAB_KEYS.length];
+  activeTab.value = next;
+  document.getElementById(`requirement-tab-${next}`)?.focus();
+}
+
+/** 页头的「编辑新版本」按钮：留在内容标签，再把光标送进编辑器。 */
+function focusEditor(): void {
+  activeTab.value = "content";
+  const editor = document.getElementById("requirement-editor");
+  if (editor !== null && typeof editor.scrollIntoView === "function") {
+    editor.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+  editor?.querySelector<HTMLInputElement>("#edit-title")?.focus();
+}
+
+/**
+ * 质量规则的展示词：`rule` 是稳定的机器名，界面上说的是它对需求意味着什么。
+ * `PROMPT_BUDGET_EXCEEDED` 说的是 AI 部分因预算被跳过，而不是需求有问题。
+ */
+const QUALITY_RULE_LABELS: Record<QualityReport["rules"][number]["rule"], string> = {
+  MISSING_DESCRIPTION: "需补充",
+  DUPLICATE_CRITERION: "可优化",
+  PROMPT_BUDGET_EXCEEDED: "预算受限",
+};
+
+const QUALITY_RULE_TONES: Record<QualityReport["rules"][number]["rule"], string> = {
+  MISSING_DESCRIPTION: "warning",
+  DUPLICATE_CRITERION: "info",
+  PROMPT_BUDGET_EXCEEDED: "danger",
+};
 
 function applyDetail(loaded: RequirementDetail): void {
   const previous = detail.value?.currentRevision;
@@ -515,19 +571,56 @@ function saveReviewer(): Promise<void> {
 
 <template>
   <section class="requirement-detail-page" aria-labelledby="requirement-title">
-    <div class="page-head">
-      <p class="eyebrow">
-        {{ project ? `${project.name} · REQ-${requirementId ?? "—"}` : "Requirement" }}
-      </p>
-      <h1 id="requirement-title">
-        {{ detail ? detail.currentRevision.title : "需求详情" }}
-      </h1>
+    <div class="page-head requirement-head">
+      <div>
+        <h1 id="requirement-title">
+          {{ detail ? detail.currentRevision.title : "需求详情" }}
+        </h1>
+        <p v-if="detail" class="requirement-meta">
+          <span class="meta-item">REQ-{{ requirementId ?? "—" }}</span>
+          <span class="meta-item">
+            <span
+              :class="['badge', `badge-${REQUIREMENT_STATUS_TONES[detail.status]}`, 'requirement-status']"
+            >
+              {{ requirementPhase(detail.status, reviewActivity?.activity) }}
+            </span>
+          </span>
+          <span class="meta-item">
+            处理人
+            <strong>{{ requirementHandler(detail.status, reviewActivity?.activity, detail.assigneeUsername, detail.reviewerName) }}</strong>
+          </span>
+          <span class="meta-item">
+            评审活动
+            <span class="review-activity">
+              <span
+                v-if="reviewActivity"
+                :class="['badge', `badge-${REVIEW_ACTIVITY_TONES[reviewActivity.activity]}`]"
+              >
+                {{ REVIEW_ACTIVITY_LABELS[reviewActivity.activity] }}
+              </span>
+              <span v-else class="badge badge-neutral">未返回</span>
+            </span>
+          </span>
+          <span class="meta-item">开发 <strong>{{ detail.assigneeUsername ?? "未指派" }}</strong></span>
+          <span class="meta-item">评审 <strong>{{ detail.reviewerName ?? "项目负责人处理" }}</strong></span>
+          <span class="meta-item">v{{ detail.currentRevision.seq }}</span>
+          <span class="meta-item">更新于 {{ formatRelativeDateTime(detail.updatedAt) }}</span>
+        </p>
+        <p v-else class="requirement-meta">按版本管理需求契约、验收条件与审查证据。</p>
+      </div>
       <div v-if="projectId !== null" class="record-actions">
         <RouterLink class="button button-quiet" :to="requirementsRoute(projectId)">
           返回需求列表
         </RouterLink>
+        <button
+          v-if="editable"
+          type="button"
+          class="button button-primary"
+          @click="focusEditor"
+        >
+          {{ isDraft ? "编辑草稿" : "编辑新版本" }}
+        </button>
       </div>
-      <p class="lede">查看当前需求契约、人工状态、负责人和每次发布后永久保留的版本链。</p>
     </div>
 
     <p v-if="!hasContext" class="alert" role="alert">
@@ -547,76 +640,54 @@ function saveReviewer(): Promise<void> {
           <p class="decision-reason">{{ review.decisionComment || "未填写理由" }}</p>
         </article>
       </section>
-      <div class="requirement-overview-grid">
-      <div class="panel requirement-overview">
-        <h2 class="panel-title">需求概览</h2>
-        <dl class="meta-list">
-          <div>
-            <dt>当前阶段</dt>
-            <dd class="requirement-status">
-              <span :class="['badge', `badge-${REQUIREMENT_STATUS_TONES[detail.status]}`]">
-                {{ requirementPhase(detail.status, reviewActivity?.activity) }}
-              </span>
-            </dd>
-          </div>
-          <div>
-            <dt>当前处理人</dt>
-            <dd>{{ requirementHandler(detail.status, reviewActivity?.activity, detail.assigneeUsername, detail.reviewerName) }}</dd>
-          </div>
-          <div>
-            <dt>开发负责人</dt>
-            <dd>{{ detail.assigneeUsername ?? "未指派" }}</dd>
-          </div>
-          <div>
-            <dt>审查人</dt>
-            <dd>{{ detail.reviewerName ?? "项目负责人处理" }}</dd>
-          </div>
-          <div>
-            <dt>需求生命周期</dt><dd>{{ REQUIREMENT_STATUS_LABELS[detail.status] }}</dd>
-          </div>
-          <div>
-            <dt>评审活动</dt>
-            <dd class="review-activity">
-              <span
-                v-if="reviewActivity"
-                :class="['badge', `badge-${REVIEW_ACTIVITY_TONES[reviewActivity.activity]}`]"
-              >
-                {{ REVIEW_ACTIVITY_LABELS[reviewActivity.activity] }}
-              </span>
-              <span v-else class="badge badge-neutral">未返回</span>
-            </dd>
-          </div>
-          <div>
-            <dt>当前版本</dt>
-            <dd>v{{ detail.currentRevision.seq }}</dd>
-          </div>
-          <div>
-            <dt>创建时间</dt>
-            <dd>{{ formatDateTime(detail.createdAt) }}</dd>
-          </div>
-          <div>
-            <dt>更新时间</dt>
-            <dd>{{ formatDateTime(detail.updatedAt) }}</dd>
-          </div>
-        </dl>
-        <div v-if="isLeader && detail.status === 'CANCELED'" class="record-actions">
-          <button
-            type="button"
-            class="button button-quiet"
-            :disabled="actionPending"
-            @click="removeRequirement"
-          >删除该作废需求</button>
-        </div>
-        <p v-if="isLeader && detail.status === 'CANCELED'" class="field-hint">
-          删除后它从需求列表消失；AI 调用审计与已发生的 PR 关联记录仍然保留。
-        </p>
-      </div>
+      <nav
+        class="workbench-tabs"
+        role="tablist"
+        aria-label="需求工作区"
+        @keydown.left.prevent="moveTab(-1)"
+        @keydown.right.prevent="moveTab(1)"
+      >
+        <button
+          v-for="tab in tabs"
+          :id="`requirement-tab-${tab.key}`"
+          :key="tab.key"
+          type="button"
+          role="tab"
+          class="button button-quiet workbench-tab"
+          :class="{ 'workbench-tab-active': activeTab === tab.key }"
+          :aria-selected="activeTab === tab.key"
+          :aria-controls="`requirement-panel-${tab.key}`"
+          @click="activeTab = tab.key"
+        >
+          {{ tab.label }}
+          <span v-if="tab.count !== null" class="workbench-tab-count">{{ tab.count }}</span>
+        </button>
+      </nav>
+
+      <section
+        v-show="activeTab === 'content'"
+        id="requirement-panel-content"
+        role="tabpanel"
+        aria-labelledby="requirement-tab-content"
+      >
+      <section
+        v-if="isLeader && detail.status === 'CANCELED'"
+        class="panel canceled-notice"
+        aria-label="作废需求处理"
+      >
+        <p class="field-hint">删除后它从需求列表消失；AI 调用审计与已发生的 PR 关联记录仍然保留。</p>
+        <button
+          type="button"
+          class="button button-quiet"
+          :disabled="actionPending"
+          @click="removeRequirement"
+        >删除该作废需求</button>
+      </section>
 
       <section class="panel current-revision" aria-labelledby="current-revision-title">
         <div class="section-action-head">
           <div>
-            <p class="eyebrow">Structured requirement</p>
-            <h2 id="current-revision-title" class="panel-title">结构化需求</h2>
+            <h2 id="current-revision-title" class="panel-title">结构化需求 · v{{ detail.currentRevision.seq }}</h2>
           </div>
           <button type="button" class="button button-quiet" @click="exportRequirement">
             导出 Markdown
@@ -631,7 +702,93 @@ function saveReviewer(): Promise<void> {
           </li>
         </ol>
       </section>
+
+      <div class="requirement-edit-grid">
+      <section v-if="editable" class="panel requirement-actions" aria-labelledby="requirement-actions-title">
+        <h2 id="requirement-actions-title" class="panel-title">状态与指派</h2>
+
+        <div class="form-actions">
+          <button
+            v-for="next in STATUS_TRANSITIONS[detail.status]"
+            :key="next"
+            type="button"
+            class="button button-quiet"
+            :disabled="actionPending"
+            @click="transitionTo(next)"
+          >
+            置为 {{ REQUIREMENT_STATUS_LABELS[next] }}
+          </button>
+        </div>
+        <p class="field-hint">「开发中」只能由首次指派触发，不在状态按钮中提供。</p>
+
+        <form class="inline-form reviewer-form" @submit.prevent="saveReviewer">
+          <div class="field">
+            <label for="requirement-reviewer">审查负责人</label>
+            <select id="requirement-reviewer" v-model="reviewerSelection">
+              <option :value="null">未指定，由项目负责人处理</option>
+              <option v-for="member in reviewerCandidates" :key="member.userId" :value="member.userId">{{ member.displayName }}（{{ member.username }}）</option>
+            </select>
+          </div>
+          <button type="submit" class="button button-quiet" :disabled="actionPending">保存审查人</button>
+        </form>
+
+        <form class="inline-form assignee-form" @submit.prevent="saveAssignee">
+          <div class="field">
+            <label for="requirement-assignee">开发负责人</label>
+            <select id="requirement-assignee" v-model="assigneeSelection">
+              <option :value="null" disabled>请选择成员</option>
+              <option v-for="member in developerCandidates" :key="member.userId" :value="member.userId">
+                {{ member.username }}
+              </option>
+            </select>
+          </div>
+          <button type="submit" class="button button-quiet" :disabled="actionPending">
+            保存指派
+          </button>
+        </form>
+      </section>
+
+      <form
+        v-if="editable"
+        id="requirement-editor"
+        class="panel requirement-form requirement-editor"
+        @submit.prevent="saveContent"
+      >
+        <h2 class="panel-title">{{ isDraft ? "编辑草稿" : "发布新版本" }}</h2>
+        <div class="field">
+          <label for="edit-title">标题</label>
+          <input id="edit-title" v-model="draftTitle" required maxlength="200" />
+        </div>
+        <div class="field">
+          <label for="edit-background">背景</label>
+          <textarea id="edit-background" v-model="draftBackground" rows="3"></textarea>
+        </div>
+        <div class="field">
+          <label for="edit-description">描述</label>
+          <textarea id="edit-description" v-model="draftDescription" rows="4"></textarea>
+        </div>
+        <AcceptanceCriteriaEditor v-model="draftCriteria" id-prefix="edit" />
+        <div v-if="!isDraft" class="field">
+          <label for="edit-change-reason">变更原因</label>
+          <input id="edit-change-reason" v-model="changeReason" required maxlength="200" />
+        </div>
+        <div class="form-actions">
+          <button type="submit" class="button button-primary" :disabled="actionPending">
+            {{ isDraft ? "保存草稿" : "发布新版本" }}
+          </button>
+        </div>
+      </form>
       </div>
+
+      <p v-if="actionError" class="alert" role="alert">{{ actionError }}</p>
+
+      </section>
+      <section
+        v-show="activeTab === 'review'"
+        id="requirement-panel-review"
+        role="tabpanel"
+        aria-labelledby="requirement-tab-review"
+      >
 
       <section v-if="reviewActivity" class="panel activity-section" aria-labelledby="activity-title">
         <h2 id="activity-title" class="panel-title">关联 PR 活动分布</h2>
@@ -671,11 +828,18 @@ function saveReviewer(): Promise<void> {
           </li>
         </ul>
       </section>
+      </section>
+
+      <section
+        v-show="activeTab === 'attachments'"
+        id="requirement-panel-attachments"
+        role="tabpanel"
+        aria-labelledby="requirement-tab-attachments"
+      >
 
       <section class="panel attachment-section" aria-labelledby="attachment-title">
         <div class="section-action-head">
           <div>
-            <p class="eyebrow">Requirement document</p>
             <h2 id="attachment-title" class="panel-title">需求文档</h2>
           </div>
           <span class="badge badge-info">当前需求私有</span>
@@ -764,12 +928,19 @@ function saveReviewer(): Promise<void> {
           <pre>{{ selectedDocument.text }}</pre>
         </section>
       </section>
-      <section class="ai-assistance" aria-labelledby="ai-assistance-title"><div class="ai-assistance-heading"><p class="eyebrow">AI development assistance</p><h2 id="ai-assistance-title">AI 研发辅助</h2><p>AI 提供一次性分析与知识证据，不会自动改变需求、代码或人工决定。</p></div>
+      </section>
+
+      <section
+        v-show="activeTab === 'ai'"
+        id="requirement-panel-ai"
+        role="tabpanel"
+        aria-labelledby="requirement-tab-ai"
+      >
+      <div class="ai-assistance-heading"><h2 id="ai-assistance-title">AI 研发辅助</h2><p>AI 提供一次性分析与知识证据，不会自动改变需求、代码或人工决定。</p></div>
       <div class="requirement-intelligence-grid">
         <section class="panel quality-section" aria-labelledby="quality-title">
           <div class="section-action-head">
             <div>
-              <p class="eyebrow">Revision advice</p>
               <h2 id="quality-title" class="panel-title">需求质量检查</h2>
             </div>
             <button v-if="canCheckQuality" type="button" class="button button-primary" :disabled="qualityPending" @click="runQualityCheck">运行检查</button>
@@ -786,7 +957,7 @@ function saveReviewer(): Promise<void> {
             <h3 class="subsection-title">确定性规则</h3>
             <p v-if="qualityReport.rules.length === 0" class="muted">规则没有发现问题。</p>
             <ul v-else class="advice-list">
-              <li v-for="(rule, index) in qualityReport.rules" :key="index"><span class="badge badge-warning">{{ rule.rule }}</span> <span v-if="rule.acKey" class="badge badge-neutral">{{ rule.acKey }}</span> {{ rule.message }}</li>
+              <li v-for="(rule, index) in qualityReport.rules" :key="index"><span :class="['badge', `badge-${QUALITY_RULE_TONES[rule.rule]}`]">{{ QUALITY_RULE_LABELS[rule.rule] }}</span> <span v-if="rule.acKey" class="badge badge-neutral">关联 {{ rule.acKey }}</span> {{ rule.message }}</li>
             </ul>
             <h3 class="subsection-title">AI 结构化评估</h3>
             <p v-if="qualityReport.ai === null" class="muted">本次没有返回 AI 评估。</p>
@@ -794,7 +965,7 @@ function saveReviewer(): Promise<void> {
               <p class="muted advice-prose">{{ qualityReport.ai.summary ?? "AI 没有给出总结。" }}</p>
               <p v-if="qualityReport.ai.issues.length === 0" class="muted">AI 没有发现问题。</p>
               <ul v-else class="advice-list">
-                <li v-for="(issue, index) in qualityReport.ai.issues" :key="index"><span v-if="issue.acKey" class="badge badge-neutral">{{ issue.acKey }}</span> {{ issue.message }}</li>
+                <li v-for="(issue, index) in qualityReport.ai.issues" :key="index"><span v-if="issue.acKey" class="badge badge-neutral">关联 {{ issue.acKey }}</span> {{ issue.message }}</li>
               </ul>
             </template>
           </div>
@@ -802,7 +973,7 @@ function saveReviewer(): Promise<void> {
 
         <section class="panel guidance-section" aria-labelledby="guidance-title">
           <div class="section-action-head">
-            <div><p class="eyebrow">开发准备</p><h2 id="guidance-title" class="panel-title">实现建议</h2></div>
+            <div><h2 id="guidance-title" class="panel-title">实现建议</h2></div>
             <button v-if="canGenerateGuidance" type="button" class="button button-primary" :disabled="!canRunGuidance" @click="runGuidance">
               {{ guidancePending ? "正在生成…" : guidance ? "重新生成" : "生成建议" }}
             </button>
@@ -864,80 +1035,12 @@ function saveReviewer(): Promise<void> {
       </div>
       </section>
 
-      <div class="requirement-edit-grid">
-      <section v-if="editable" class="panel requirement-actions" aria-labelledby="requirement-actions-title">
-        <h2 id="requirement-actions-title" class="panel-title">状态与指派</h2>
-
-        <div class="form-actions">
-          <button
-            v-for="next in STATUS_TRANSITIONS[detail.status]"
-            :key="next"
-            type="button"
-            class="button button-quiet"
-            :disabled="actionPending"
-            @click="transitionTo(next)"
-          >
-            置为 {{ REQUIREMENT_STATUS_LABELS[next] }}
-          </button>
-        </div>
-        <p class="field-hint">「开发中」只能由首次指派触发，不在状态按钮中提供。</p>
-
-        <form class="inline-form reviewer-form" @submit.prevent="saveReviewer">
-          <div class="field">
-            <label for="requirement-reviewer">审查负责人</label>
-            <select id="requirement-reviewer" v-model="reviewerSelection">
-              <option :value="null">未指定，由项目负责人处理</option>
-              <option v-for="member in reviewerCandidates" :key="member.userId" :value="member.userId">{{ member.displayName }}（{{ member.username }}）</option>
-            </select>
-          </div>
-          <button type="submit" class="button button-quiet" :disabled="actionPending">保存审查人</button>
-        </form>
-
-        <form class="inline-form assignee-form" @submit.prevent="saveAssignee">
-          <div class="field">
-            <label for="requirement-assignee">开发负责人</label>
-            <select id="requirement-assignee" v-model="assigneeSelection">
-              <option :value="null" disabled>请选择成员</option>
-              <option v-for="member in developerCandidates" :key="member.userId" :value="member.userId">
-                {{ member.username }}
-              </option>
-            </select>
-          </div>
-          <button type="submit" class="button button-quiet" :disabled="actionPending">
-            保存指派
-          </button>
-        </form>
-      </section>
-
-      <form v-if="editable" class="panel requirement-form requirement-editor" @submit.prevent="saveContent">
-        <h2 class="panel-title">{{ isDraft ? "编辑草稿" : "发布新版本" }}</h2>
-        <div class="field">
-          <label for="edit-title">标题</label>
-          <input id="edit-title" v-model="draftTitle" required maxlength="200" />
-        </div>
-        <div class="field">
-          <label for="edit-background">背景</label>
-          <textarea id="edit-background" v-model="draftBackground" rows="3"></textarea>
-        </div>
-        <div class="field">
-          <label for="edit-description">描述</label>
-          <textarea id="edit-description" v-model="draftDescription" rows="4"></textarea>
-        </div>
-        <AcceptanceCriteriaEditor v-model="draftCriteria" id-prefix="edit" />
-        <div v-if="!isDraft" class="field">
-          <label for="edit-change-reason">变更原因</label>
-          <input id="edit-change-reason" v-model="changeReason" required maxlength="200" />
-        </div>
-        <div class="form-actions">
-          <button type="submit" class="button button-primary" :disabled="actionPending">
-            {{ isDraft ? "保存草稿" : "发布新版本" }}
-          </button>
-        </div>
-      </form>
-      </div>
-
-      <p v-if="actionError" class="alert" role="alert">{{ actionError }}</p>
-
+      <section
+        v-show="activeTab === 'revisions'"
+        id="requirement-panel-revisions"
+        role="tabpanel"
+        aria-labelledby="requirement-tab-revisions"
+      >
       <section class="panel revision-history" aria-labelledby="revision-history-title">
         <h2 id="revision-history-title" class="panel-title">版本历史</h2>
         <ol class="revision-list">
@@ -960,6 +1063,7 @@ function saveReviewer(): Promise<void> {
           </li>
         </ol>
       </section>
+      </section>
     </template>
   </section>
 </template>
@@ -967,7 +1071,6 @@ function saveReviewer(): Promise<void> {
 <style scoped>
 .decision-reason { white-space: pre-wrap; overflow-wrap: anywhere; }
 
-.requirement-overview-grid,
 .requirement-edit-grid,
 .requirement-intelligence-grid {
   display: grid;
@@ -980,27 +1083,13 @@ function saveReviewer(): Promise<void> {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
-.requirement-overview-grid {
-  grid-template-areas: "overview current";
-}
-
-.requirement-overview {
-  grid-area: overview;
-}
-
 .current-revision {
-  grid-area: current;
+  border-color: var(--fp-color-border-accent);
 }
 
-.requirement-overview,
-.current-revision,
 .requirement-actions,
 .requirement-editor {
   height: 100%;
-}
-
-.current-revision {
-  border-color: var(--fp-color-border-accent);
 }
 
 .quality-section,
@@ -1010,7 +1099,6 @@ function saveReviewer(): Promise<void> {
 
 .attachment-section { border-color: var(--fp-color-border-accent); }
 .attachment-form { margin-top: var(--fp-space-5); }
-.ai-assistance { margin-bottom: var(--fp-space-6); }
 .ai-assistance-heading { margin-bottom: var(--fp-space-4); padding: var(--fp-space-5); border-left: 0.1875rem solid var(--fp-color-accent); background: var(--fp-color-accent-soft); }
 .ai-assistance-heading h2,.ai-assistance-heading p { margin: 0; }
 .ai-assistance-heading p:last-child { margin-top: var(--fp-space-2); color: var(--fp-color-text-muted); }
@@ -1190,16 +1278,9 @@ function saveReviewer(): Promise<void> {
 }
 
 @media (max-width: 64rem) {
-  .requirement-overview-grid,
   .requirement-edit-grid,
   .requirement-intelligence-grid {
     grid-template-columns: 1fr;
-  }
-
-  .requirement-overview-grid {
-    grid-template-areas:
-      "overview"
-      "current";
   }
 
   .activity-counts {
@@ -1212,6 +1293,10 @@ function saveReviewer(): Promise<void> {
 }
 
 @media (max-width: 42rem) {
+  .requirement-head {
+    grid-template-columns: 1fr;
+  }
+
   .section-action-head {
     flex-direction: column;
   }
@@ -1219,5 +1304,69 @@ function saveReviewer(): Promise<void> {
   .activity-counts {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+}
+
+.requirement-head {
+  display: grid;
+  align-items: center;
+  gap: var(--fp-space-6);
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.requirement-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--fp-space-2) var(--fp-space-4);
+  margin: var(--fp-space-3) 0 0;
+  color: var(--fp-color-text-muted);
+  font-size: 0.8125rem;
+}
+
+.requirement-meta .meta-item {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--fp-space-2);
+}
+
+.requirement-meta strong {
+  color: var(--fp-color-text);
+  font-weight: 600;
+}
+
+.workbench-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--fp-space-2);
+  margin-bottom: var(--fp-space-6);
+}
+
+.workbench-tab {
+  padding: var(--fp-space-2) var(--fp-space-3);
+  font-size: 0.8125rem;
+}
+
+.workbench-tab-active {
+  border-color: var(--fp-color-border-accent);
+  background: var(--fp-color-accent-soft);
+  color: var(--fp-color-accent-inverse);
+}
+
+.workbench-tab-count {
+  margin-left: var(--fp-space-2);
+  color: var(--fp-color-text-subtle);
+  font: 700 0.75rem/1 var(--fp-font-mono);
+}
+
+.canceled-notice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--fp-space-4);
+}
+
+.canceled-notice .field-hint {
+  margin: 0;
 }
 </style>
