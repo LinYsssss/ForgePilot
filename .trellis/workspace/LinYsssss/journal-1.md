@@ -857,3 +857,112 @@ A5 项目选择 composable 迁移六页并清理 31 个死导出（CI run 386738
 ### Next Steps
 
 - 开 PR（fix/review-audit-fixes → main）
+
+
+## Session 28: 全面检查:审查 15 提交、合并 main 并部署 3a251d7
+
+**Date**: 2026-10-17
+**Task**: 全面检查:审查 15 提交、合并 main 并部署 3a251d7
+**Branch**: `main`
+
+### Summary
+
+Session summary was not supplied.
+
+### Main Changes
+
+- 对 fix/review-audit-fixes 的 15 个提交逐块审查:8 个后端文件、4 个测试文件、前端 20 个文件、快速语料 v2 更正与配置同步;无阻塞问题
+- 本机门禁:后端全量 432/0、前端四项门、评测契约与 verify-freeze 全过;guard-no-holdout 在本机失败属证据机预期
+- main 快进到 3a251d7 并推送;重建 backend+frontend 部署,postgres 卷保留
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `3a251d7` | (see git log) |
+
+### Testing
+
+- [OK] 三容器健康、直连/nginx/公网 health 均 UP、前端资产哈希与本地构建一致、Flyway 校验 14 条无需迁移、新环境变量生效
+- [OK] 部署前备份 /root/forgepilot-backups/review-audit-fixes-deploy-20261016T162527Z/(sha256 da1b6363…)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- 把交付文档中过期的部署标记统一清理
+
+
+## Session 29: 补部署记录、统一清理过期部署标记并修正文档小账
+
+**Date**: 2026-10-17
+**Task**: 补部署记录、统一清理过期部署标记并修正文档小账
+**Branch**: `main`
+
+### Summary
+
+Session summary was not supplied.
+
+### Main Changes
+
+- 新建 deployment-20261016.md(镜像 ID、备份、验证);DEFENSE-GUIDE 守卫命令与 CI 统一为 --root .,当前部署版本段落改指 3a251d7
+- 交付文档中所有「尚未部署/尚未提交或部署」标记统一更新;核实 09-30 与 10-01 两轮内容实际自 2026-10-02 的 ff7c13f 起已在线
+- 按用户要求推送后再重建一次作形式对齐,记录新镜像 ID(backend 9940fc2e… / frontend 1229232c…),内容与上一次一致
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `e8e82dc` | (see git log) |
+| `c881e2b` | (see git log) |
+
+### Testing
+
+- [OK] main CI 三轮 push 均四 job 全绿(run 38931556928 / 38935195771 / 38937462862)
+
+### Status
+
+[OK] **Completed**
+
+
+## Session 30: Locate the test order dependency, bump the frontend deps, close the doc debts
+
+**Date**: 2026-10-17
+**Task**: Locate the test order dependency, bump the frontend deps, close the doc debts
+**Branch**: `main`
+
+### Summary
+
+Root-caused the suite's class order dependency to spring-security-test's csrf() post-processor swapping the shared chain's CSRF repository for a session-backed stand-in, fixed it on the test side, and cleared the frontend audit plus three documentation debts.
+
+### Main Changes
+
+- Located the order dependency: .with(csrf()) replaces the CsrfFilter repository in the shared filter chain with TestCsrfTokenRepository (delegating to HttpSessionCsrfTokenRepository), which drops the response cookie; renamed classes only changed who ran first.
+- Fixed it on the test side: PostgresTestBase.spaCsrf() echoes one value in cookie and header, and 14 call sites in six test classes use it; production code unchanged.
+- Frontend: vue and @vue/compiler-sfc 3.5.41 -> 3.5.44 with a refreshed lockfile, npm audit at zero.
+- Docs: TEST-REPORT 9.1 rewritten as fixed with the mechanism and reproducer, 10.4 trimmed, AGENTS.md symlink rule, this journal.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `17e887e` | (see git log) |
+| `ce9c643` | (see git log) |
+
+### Testing
+
+- [OK] Fast reproducer: 139 tests, was 6 failures, now 139 green with CoreApiJourneyTest still running last.
+- [OK] Full verify in the staged copy with the renamed class: 432 tests, 0 failures, 0 errors, BUILD SUCCESS.
+- [OK] Full verify in the repo: 432 tests, 0 failures, 0 errors, BUILD SUCCESS.
+- [OK] Frontend: npm ci, lint, typecheck, 66 tests in 18 files, build all exit 0.
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- Push after the user confirms the commit grouping.
+- Browser acceptance and the live recheck stay out of scope for this round.

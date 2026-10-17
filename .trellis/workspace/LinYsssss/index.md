@@ -8,8 +8,8 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 27
-- **Last Active**: 2026-10-14
+- **Total Sessions**: 30
+- **Last Active**: 2026-10-17
 <!-- @@@/auto:current-status -->
 
 ---
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~859 | Active |
+| `journal-1.md` | ~968 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,9 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 30 | 2026-10-17 | Locate the test order dependency, bump the frontend deps, close the doc debts | `17e887e`, `ce9c643` | `main` |
+| 29 | 2026-10-17 | 补部署记录、统一清理过期部署标记并修正文档小账 | `e8e82dc`, `c881e2b` | `main` |
+| 28 | 2026-10-17 | 全面检查:审查 15 提交、合并 main 并部署 3a251d7 | `3a251d7` | `main` |
 | 27 | 2026-10-14 | 交付文档补充段、仓库卫生与前端项目选择抽取归档 | `cb48389`, `18fcd1b`, `9795e81` | `fix/review-audit-fixes` |
 | 26 | 2026-10-14 | 更正快速语料三处硬伤并完成知识入库分批，归档两任务 | `9de50a7`, `72c441e`, `b63bb37` | `fix/review-audit-fixes` |
 | 25 | 2026-10-14 | CI 全绿：审计修复三任务归档 | - | `fix/review-audit-fixes` |

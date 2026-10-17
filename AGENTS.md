@@ -55,6 +55,8 @@ The configuration freeze, corpus manifest, holdout ledger, and raw outputs must 
 
 The original freeze recorded the wrong provider endpoint and was corrected once by an independently content-addressed wrapper that changed only the endpoint. Preserve that record; never fold it into the original freeze or rewrite it to conceal the protocol deviation.
 
+Frozen artifacts are addressed at `.trellis/tasks/08-22-phase-8-gitlab-evaluation-defense/evidence/...` (the freeze's `freezeArtifact` field). That directory is a tracked symlink into `archive/2026-08/`, not leftover; deleting it as stale breaks freeze verification. Keep it.
+
 The evaluation tool-chain does not call the backend, so changing prompts or schemas cannot invalidate the frozen results — but it also means those results prove that requirement and knowledge context helps, not that any particular retrieval pipeline works. Keep that distinction exact.
 
 ## Execution discipline

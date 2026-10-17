@@ -575,9 +575,9 @@ python3 evaluation/tools/postfreeze_provider_correction.py verify</code></pre>
 <section id="s9">
   <h2><span class="hn">9</span>已发现的缺陷</h2>
 
-  <h3>9.1 未修复：测试套件存在潜伏的类执行顺序依赖</h3>
-  <div class="note red">
-    <span class="label">状态：已确认 · 根因未定位 · 已规避</span>
+  <h3>9.1 已修复：测试套件的类执行顺序依赖</h3>
+  <div class="note amber">
+    <span class="label">状态：已确认 · 根因已定位 · 已修复（测试侧）</span>
     <p><strong>现象</strong></p>
     <p>
       仅重命名 <code>BatchOneApiTest</code> 类名与注释（<strong>diff 中没有任何代码行变化</strong>），
@@ -590,10 +590,27 @@ python3 evaluation/tools/postfreeze_provider_correction.py verify</code></pre>
       <li>完整构建：<strong>4/5 失败</strong>。</li>
       <li><code>SecurityConfig</code> 与该测试类的 diff 均为<strong>纯注释</strong>。</li>
     </ul>
-    <p><strong>分析</strong></p>
+    <p><strong>分析（2026-10-17 定位）</strong></p>
     <p>
-      测试框架默认按文件系统顺序执行测试类。重命名改变了该类的排序位置，
-      使某个先运行的类留下的状态影响到匿名请求的 CSRF cookie 下发。<strong>污染源尚未定位。</strong>
+      污染源不在应用代码，而在测试装配：<code>SecurityMockMvcRequestPostProcessors.csrf()</code>
+      （即各测试类里的 <code>.with(csrf())</code>）在装配请求时，经
+      <code>WebTestUtils.setCsrfTokenRepository</code> 把过滤器链里 <code>CsrfFilter</code> 的
+      <code>CsrfTokenRepository</code> 换成 <code>TestCsrfTokenRepository</code>，后者包着一个
+      <code>HttpSessionCsrfTokenRepository</code>。这个替身覆写了 <code>generateToken</code>、
+      <code>saveToken</code> 与 <code>loadToken</code>，<strong>唯独没有覆写
+      <code>loadDeferredToken</code></strong>，于是 token 落进 session，而不是写回响应 cookie。
+    </p>
+    <p>
+      该替换作用在<strong>共享的过滤器链</strong>上，并且请求结束后仍留在原处：
+      同一 JVM 里只要有一个类用过 <code>.with(csrf())</code>，其后所有类——包括匿名
+      <code>GET /api/auth/me</code> 的 <code>XSRF-TOKEN</code> 下发——都改用 session 仓库。
+      谁先谁后由测试类的文件系统顺序决定，所以仅重命名 <code>BatchOneApiTest</code> 就换来了失败。
+    </p>
+    <p>
+      这也解释了 cookie 平时为什么会出现：<code>GET</code> 不在 <code>CsrfFilter</code> 的保护匹配器内，
+      框架本身不解析延迟 token；真正触发解析的是
+      <code>CsrfTokenRequestAttributeHandler.handle()</code> 里那次
+      <code>getParameterName()</code> 调用，它顺带把 token 生成并保存了一次。
     </p>
     <p><strong>处置</strong></p>
     <p>
@@ -601,11 +618,27 @@ python3 evaluation/tools/postfreeze_provider_correction.py verify</code></pre>
       由此形成的规则：<code>phase1-quick.json</code>、<code>phase1-compose-smoke.sh</code>、
       <code>BatchOneApiTest</code> 这类<strong>历史名字一律保留</strong>，只清理散文。
     </p>
-    <p><strong>影响</strong></p>
+    <p><strong>2026-10-17 的定位与修复</strong></p>
     <p>
-      后续在 <code>com.forgepilot</code> 下<strong>新增测试类</strong>可能再次触发，
-      而失败信息（CSRF cookie 为 null）完全指不到真正的原因。
-      诊断特征是「<strong>单类运行绿、全量运行红</strong>」——出现该特征时应先用单类运行确认是顺序依赖，
+      复现：在仓库外的副本里把该类重命名为 <code>CoreApiJourneyTest</code>，以固定容器入口跑
+      <code>-Dtest='com.forgepilot.review.*Test,CoreApiJourneyTest'</code>，稳定失败
+      <strong>139 项中的 6 项</strong>；单独跑该类则 7/7 通过。副本内加临时探针后，
+      运行期链内容显示 <code>CsrfFilter</code> 持有的 repository 已是
+      <code>TestCsrfTokenRepository</code>（启动期装配的是应用自己的
+      <code>CookieCsrfTokenRepository</code>），失败请求在 <code>CsrfFilter</code> 之后只留下延迟 token 与
+      <code>SupplierCsrfToken</code> 属性、没有 <code>Set-Cookie</code>——与上述机制逐条吻合。
+    </p>
+    <p>
+      修复只动测试侧：6 个测试类共 14 处 <code>.with(csrf())</code> 改走应用真实的双提交路径
+      （<code>PostgresTestBase.spaCsrf()</code>：cookie 与 header 回显同一个值），不再引入任何全局副作用。
+      生产代码未改：<code>SecurityConfig</code> 的 SPA 接线本身是对的，问题出在测试替身。
+      修复后同一条命令 <strong>139/139 全绿</strong>，且重命名后的类仍排在末尾。
+    </p>
+
+    <p><strong>影响与规则</strong></p>
+    <p>
+      套件不再依赖类的执行顺序。仍留一条诊断线索：若再出现「单类运行绿、全量运行红」，
+      先查是否有测试类用了 <code>SecurityMockMvcRequestPostProcessors.csrf()</code>，
       <strong>不要去改 <code>SecurityConfig</code></strong>。
     </p>
     <p><strong>2026-08-29 的复现尝试</strong></p>
@@ -620,6 +653,11 @@ python3 evaluation/tools/postfreeze_provider_correction.py verify</code></pre>
       复现不了就不能宣布它消失，也正因如此<strong>没有</strong>为它加任何「以防万一」的处置：
       给一个复现不了的问题贴 <code>@DirtiesContext</code>，只会多付一个 Spring 上下文，
       并让下一个人误以为它已被解决。
+    </p>
+    <p>
+      2026-10-17 补记：当时的两次尝试与今天的机制相符——它们都没有把「用过
+      <code>.with(csrf())</code> 的类」排在 <code>BatchOneApiTest</code> 之前，因此没触发。
+      「不加以防万一的处置」这个判断事后看是对的。
     </p>
   </div>
 
@@ -716,7 +754,6 @@ python3 evaluation/tools/postfreeze_provider_correction.py verify</code></pre>
 
   <h3>10.4 建议的后续工作</h3>
   <ol>
-    <li><strong>定位 9.1 的顺序依赖污染源</strong>——它会让未来任何新增测试类随机变红，且报错指向错误方向。</li>
     <li><strong>执行 8.2 的两批人工验收</strong>，把结果记入清单。</li>
     <li><strong>为「加表需同步三处」增加机制保障</strong>——目前靠规范约束，而它已被遗漏过一次。</li>
     <li><strong>用一次性账号做真实 provider 端到端演练</strong>，补上 10.3 第二条界限。</li>
@@ -730,7 +767,7 @@ python3 evaluation/tools/postfreeze_provider_correction.py verify</code></pre>
   </p>
   <p>2026-09-20 补充结果来自当前工作树：后端完整 419 项、前端 63 项及四道门均通过；证据锚定与超预算修复的 59 项定向测试通过。正式评测冻结、holdout 台账和原始输出未修改或重跑。</p>
   <p>2026-09-25 补充：Finding 类型推导（<code>review-4</code>）、网关温度与 429 退避、校验摘要与「本轮未再报告」、认领人限制之后，固定容器路径下的 <code>./mvnw -B -ntp verify</code> 完整运行通过 <strong>421 项</strong>，0 失败、0 错误、0 跳过；新增的两项分别锁住「类型只看 acId」与「非认领人不能标记已修复」，另有一项断言 chat 请求带温度。<code>verify-freeze</code> 与订正校验仍通过。</p>
-  <p>2026-09-30 补充（当前工作树，尚未提交或部署）：<code>review-5</code> 类型修正、详情提示与认领人规则修正后，固定 JDK 21 容器入口的一次全量 <code>./mvnw -B -ntp verify</code> 通过 <strong>422 项</strong>，0 失败、0 错误、0 跳过；没有再跑定向或第二次全量。前端 lint、typecheck、<strong>63 项 / 18 个文件</strong>测试与 build 均通过。模拟 DOM 提示 scrollTo/Canvas 未实现，构建提示插件耗时；这些不是失败，也不证明真实浏览器已验收。冻结及 endpoint 订正校验通过。未执行浏览器手工验收、部署、PR 空提交或真实模型 C 轮，旧实验数据与迁移未改。</p>
+  <p>2026-09-30 补充（当前工作树，已部署）：<code>review-5</code> 类型修正、详情提示与认领人规则修正后，固定 JDK 21 容器入口的一次全量 <code>./mvnw -B -ntp verify</code> 通过 <strong>422 项</strong>，0 失败、0 错误、0 跳过；没有再跑定向或第二次全量。前端 lint、typecheck、<strong>63 项 / 18 个文件</strong>测试与 build 均通过。模拟 DOM 提示 scrollTo/Canvas 未实现，构建提示插件耗时；这些不是失败，也不证明真实浏览器已验收。冻结及 endpoint 订正校验通过。未执行浏览器手工验收、部署、PR 空提交或真实模型 C 轮，旧实验数据与迁移未改。</p>
   <p>同日追加全仓静态审计：现行文档的 161 条本地引用与 71 个 HTML 锚点检查通过；修正占位阶段规范、重复指南、路由清单、README 命令和运维说明。六个 Java 文件仅改注释，去注释后的可执行 token 一致，CI 配置结构不变，因此没有重复上述全量测试。953 个跟踪保护文件的摘要在整理前后相同，正式评测再次通过只读校验；没有删除业务代码或历史数据，也没有增加生产/浏览器验收结论。</p>
   <p>2026-10-01 实现建议补充（当前工作树，已部署）：<code>guidance-2</code> 的首次后端全量 verify 被工具 600 秒时限中止，<strong>该次未完成完整门禁</strong>；随后 ImplementationGuidanceTest 定向 7 项通过，不能替代全量。前端 lint/typecheck 通过，首次 Vitest 有两个工作进程启动超时；改用单工作进程复验后 18 个文件、66 项测试全部通过，build 成功。冻结/订正校验通过；未执行真实浏览器或模型建议质量验证。</p>
   <p>随后按用户要求逐项补验：使用独立测试容器运行原命令 <code>./mvnw -B -ntp verify</code>，于 2026-10-01 15:51 UTC 完整通过 <strong>423 项</strong>，0 失败、0 错误、0 跳过，耗时 <strong>18 分 26 秒</strong>；退出码 0，无 OOM。278 个后端输入文件的运行前后摘要一致，完整后端门禁已补齐。未重跑前端，未提交、部署或启动真实模型/浏览器验收。</p>
@@ -740,6 +777,7 @@ python3 evaluation/tools/postfreeze_provider_correction.py verify</code></pre>
     配套文档：《ForgePilot 需求规格说明书》（含需求追溯矩阵，本报告的测试类可反查到需求编号）、
     《ForgePilot 使用与代码手册》、《跟着一次 PR 走完 ForgePilot》、《ForgePilot 安全设计说明》。
   </p>
+  <p>2026-10-17 补充：测试套件顺序依赖的根因已定位并修复（详见 9.1）。污染源是 <code>spring-security-test</code> 的 <code>.with(csrf())</code> 后处理器——它把共享过滤器链里 <code>CsrfFilter</code> 的 <code>CsrfTokenRepository</code> 换成 session 仓库，使其后所有测试类的匿名 <code>GET /api/auth/me</code> 不再下发 <code>XSRF-TOKEN</code>；替换效果留在共享链上，谁先谁后由类文件名顺序决定。修复只动测试侧：6 个类共 14 处改走应用真实的双提交路径（cookie 与 header 回显同一值），生产代码未改，<code>SecurityConfig</code> 保持原样。验证：复现器（重命名后的类排在 review 类之后）由 139 项中 6 失败转为 <strong>139/139</strong> 通过；同一个副本与仓库各跑一次固定容器入口的完整 <code>./mvnw -B -ntp verify</code>，均为 <strong>432 项</strong>、0 失败、0 错误、0 跳过，副本那次重命名后的类仍排在末尾——顺序无关性由此成立。前端 <code>vue</code> 与 <code>@vue/compiler-sfc</code> 由 3.5.41 升到 3.5.44（lockfile 同步），<code>npm audit</code> 为 0 漏洞，lint、typecheck、<strong>66 项 / 18 个文件</strong>、build 四道门与 <code>npm ci</code> 全部通过。冻结资产、holdout 台账与迁移未改动或重跑；未执行浏览器人工验收、线上复测与真实模型调用。</p>
 </footer>
 
 </main>
