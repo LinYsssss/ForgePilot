@@ -77,12 +77,15 @@ const requirementDocument = {
   embeddingVersion: "v1",
 };
 
+/** 模型散文常带首尾空行;页面必须在渲染前收掉它们(用户可见过的空白缺陷)。 */
+const GUIDANCE_SUMMARY = "沿用现有约定，先统一错误语义。";
+
 const guidanceAnswer = {
   requirementId: 12,
   revisionId: 30,
   revisionSeq: 1,
   guidanceVersion: "guidance-2",
-  summary: "沿用现有约定，先统一错误语义。",
+  summary: `\n\n${GUIDANCE_SUMMARY}\n \n`,
   questions: ["需确认会话有效期。"],
   checklist: ["先统一错误语义；对应 AC-3；验证错误口令与不存在用户的响应一致。"],
   rules: ["保留统一错误返回"],
@@ -296,6 +299,8 @@ describe("requirement detail contract", () => {
     expect(wrapper.get(".guidance-result").text()).toContain("需确认会话有效期");
     expect(wrapper.get(".guidance-result").text()).toContain("guidance-2");
     expect(wrapper.get(".guidance-steps li").text()).toContain("对应 AC-3");
+    // 首尾空行与连续空行不得渲染成结果区里的空白。
+    expect(wrapper.get(".guidance-result .advice-prose").text()).toBe(GUIDANCE_SUMMARY);
     expect(wrapper.get<HTMLDetailsElement>(".guidance-sources").element.open).toBe(false);
     expect(wrapper.get(".guidance-sources").text()).toContain("不是建议正确率");
   });
@@ -369,7 +374,7 @@ describe("requirement detail contract", () => {
     fail = true;
     await wrapper.get(".guidance-section .section-action-head button").trigger("click");
     await flushPromises();
-    expect(wrapper.get(".guidance-result").text()).toContain(guidanceAnswer.summary);
+    expect(wrapper.get(".guidance-result").text()).toContain(GUIDANCE_SUMMARY);
     expect(wrapper.get(".guidance-section").text()).toContain("以下仍为上一份有效建议");
   });
 

@@ -237,6 +237,14 @@ const QUALITY_RULE_TONES: Record<QualityReport["rules"][number]["rule"], string>
   PROMPT_BUDGET_EXCEEDED: "danger",
 };
 
+/**
+ * 模型散文按原样保留换行,但首尾空白与连续空行是噪声:pre-wrap 会把它们原样渲染成
+ * 结果区开头、结尾的空行,所以渲染前收掉。
+ */
+function prose(value: string): string {
+  return value.trim().replace(/\n{3,}/g, "\n\n");
+}
+
 function applyDetail(loaded: RequirementDetail): void {
   const previous = detail.value?.currentRevision;
   const revisionChanged = previous?.id !== loaded.currentRevision.id;
@@ -469,12 +477,12 @@ function downloadMarkdown(text: string, fileName: string): void {
 
 function guidanceMarkdown(result: ImplementationGuidance): string {
   const list = (items: string[], empty: string, numbered = false) => items.length === 0 ? empty
-    : items.map((item, index) => `${numbered ? `${index + 1}.` : "-"} ${item}`).join("\n");
+    : items.map((item, index) => `${numbered ? `${index + 1}.` : "-"} ${prose(item)}`).join("\n");
   return [
     `# REQ-${result.requirementId} 实现建议`,
     `需求修订：v${result.revisionSeq}（修订 ID ${result.revisionId}）\n建议版本：${result.guidanceVersion ?? "未记录"}`,
     "基于生成时已保存的需求与本次参考资料；未读取仓库源码，不会自动执行，也不保证建议正确。",
-    `## 建议概览\n\n${result.summary ?? "旧版结果未提供概览。"}`,
+    `## 建议概览\n\n${result.summary === undefined ? "旧版结果未提供概览。" : prose(result.summary)}`,
     `## 开始前需确认\n\n${result.questions === undefined ? "旧版结果未提供待确认事项。"
       : list(result.questions, "本次未提出待确认事项。")}`,
     `## 实施清单\n\n${list(result.checklist, "本次未提供可直接执行的步骤。", true)}`,
@@ -962,10 +970,10 @@ function saveReviewer(): Promise<void> {
             <h3 class="subsection-title">AI 结构化评估</h3>
             <p v-if="qualityReport.ai === null" class="muted">本次没有返回 AI 评估。</p>
             <template v-else>
-              <p class="muted advice-prose">{{ qualityReport.ai.summary ?? "AI 没有给出总结。" }}</p>
+              <p class="muted advice-prose">{{ prose(qualityReport.ai.summary ?? "AI 没有给出总结。") }}</p>
               <p v-if="qualityReport.ai.issues.length === 0" class="muted">AI 没有发现问题。</p>
               <ul v-else class="advice-list">
-                <li v-for="(issue, index) in qualityReport.ai.issues" :key="index"><span v-if="issue.acKey" class="badge badge-neutral">关联 {{ issue.acKey }}</span> {{ issue.message }}</li>
+                <li v-for="(issue, index) in qualityReport.ai.issues" :key="index"><span v-if="issue.acKey" class="badge badge-neutral">关联 {{ issue.acKey }}</span> {{ prose(issue.message) }}</li>
               </ul>
             </template>
           </div>
@@ -998,22 +1006,22 @@ function saveReviewer(): Promise<void> {
 
             <template v-if="guidance.summary !== undefined">
               <h3 class="subsection-title">建议概览</h3>
-              <p class="advice-prose">{{ guidance.summary }}</p>
+              <p class="advice-prose">{{ prose(guidance.summary) }}</p>
             </template>
             <template v-if="guidance.questions !== undefined">
               <h3 class="subsection-title">开始前需确认</h3>
               <p v-if="guidance.questions.length === 0" class="muted">本次未提出待确认事项，请自行核对需求是否完整。</p>
-              <ul v-else class="advice-list"><li v-for="(item, index) in guidance.questions" :key="index" class="advice-prose">{{ item }}</li></ul>
+              <ul v-else class="advice-list"><li v-for="(item, index) in guidance.questions" :key="index" class="advice-prose">{{ prose(item) }}</li></ul>
             </template>
             <h3 class="subsection-title">实施清单</h3>
             <p v-if="guidance.checklist.length === 0" class="muted">本次未提供可直接执行的步骤，请先核对需求信息。</p>
-            <ol v-else class="advice-list guidance-steps"><li v-for="(item, index) in guidance.checklist" :key="index" class="advice-prose">{{ item }}</li></ol>
+            <ol v-else class="advice-list guidance-steps"><li v-for="(item, index) in guidance.checklist" :key="index" class="advice-prose">{{ prose(item) }}</li></ol>
             <h3 class="subsection-title">项目规则</h3>
             <p v-if="guidance.rules.length === 0" class="muted">本次未提出额外规则。</p>
-            <ul v-else class="advice-list"><li v-for="(item, index) in guidance.rules" :key="index" class="advice-prose">{{ item }}</li></ul>
+            <ul v-else class="advice-list"><li v-for="(item, index) in guidance.rules" :key="index" class="advice-prose">{{ prose(item) }}</li></ul>
             <h3 class="subsection-title">风险提示</h3>
             <p v-if="guidance.risks.length === 0" class="muted">本次未提出明确风险，不代表已确认无风险。</p>
-            <ul v-else class="advice-list"><li v-for="(item, index) in guidance.risks" :key="index" class="advice-prose">{{ item }}</li></ul>
+            <ul v-else class="advice-list"><li v-for="(item, index) in guidance.risks" :key="index" class="advice-prose">{{ prose(item) }}</li></ul>
 
             <details class="guidance-sources">
               <summary>本次参考资料（{{ guidance.knowledgeSources.length }} 条）</summary>
@@ -1022,7 +1030,7 @@ function saveReviewer(): Promise<void> {
               <ul v-else class="advice-list">
                 <li v-for="source in guidance.knowledgeSources" :key="`${source.documentId}-${source.chunkSeq}`">
                   <strong>{{ source.title }}</strong> <span class="muted">检索相似度 {{ source.similarity.toFixed(3) }}</span>
-                  <p class="muted advice-prose">{{ source.excerpt }}</p>
+                  <p class="muted advice-prose">{{ prose(source.excerpt) }}</p>
                 </li>
               </ul>
             </details>
@@ -1080,6 +1088,7 @@ function saveReviewer(): Promise<void> {
 }
 
 .requirement-intelligence-grid {
+  align-items: stretch;
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
@@ -1094,7 +1103,15 @@ function saveReviewer(): Promise<void> {
 
 .quality-section,
 .guidance-section {
+  display: flex;
+  flex-direction: column;
   border-color: var(--fp-color-border-accent);
+}
+
+/* 两栏对齐:两面板的说明区预留同一高度,其后的内容才会落在同一水平线。 */
+.quality-section > p:first-of-type,
+.guidance-section > p:first-of-type {
+  min-height: 3.2rem;
 }
 
 .attachment-section { border-color: var(--fp-color-border-accent); }
