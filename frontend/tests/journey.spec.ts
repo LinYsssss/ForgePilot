@@ -832,7 +832,9 @@ async function signInAs(wrapper: VueWrapper, username: string): Promise<void> {
 }
 
 async function signOut(wrapper: VueWrapper): Promise<void> {
-  await wrapper.find(".session-area > button").trigger("click");
+  // 退出入口在账户菜单里:先展开,再点菜单中的「退出登录」。
+  await wrapper.find(".account-menu summary").trigger("click");
+  await wrapper.find(".account-popover button").trigger("click");
   await flushPromises();
 }
 

@@ -22,6 +22,9 @@ const router = useRouter();
 const route = useRoute();
 const { account } = useSession();
 
+/** 头像取显示名首字:中文名首字比拉丁缩写更好认。 */
+const accountInitial = computed(() => (account.value?.displayName ?? "").trim().charAt(0));
+
 const currentProjectId = computed(
   () =>
     parseId(route.query[PROJECT_QUERY_KEY]) ??
@@ -104,16 +107,20 @@ async function logout(): Promise<void> {
 
       <div class="session-area">
         <details ref="accountMenu" class="account-menu">
-          <summary class="button button-inverse session-user">{{ account.displayName }}</summary>
+          <summary class="button button-inverse session-user">
+            <span class="session-avatar" aria-hidden="true">{{ accountInitial }}</span>
+            <span class="session-user-name">{{ account.displayName }}</span>
+            <span class="session-caret" aria-hidden="true">▾</span>
+          </summary>
           <div class="account-popover">
             <h2 class="panel-title">账户</h2>
             <p class="field-hint">{{ account.displayName }} · @{{ account.username }} · ID {{ account.id }}</p>
-            <RouterLink class="button button-quiet" :to="ACCOUNT_ROUTE_PATH">
-              管理资料、密码与 SCM 身份
-            </RouterLink>
+            <div class="account-popover-actions">
+              <RouterLink class="button button-quiet" :to="ACCOUNT_ROUTE_PATH">账户设置</RouterLink>
+              <button type="button" class="button button-danger" @click="logout">退出登录</button>
+            </div>
           </div>
         </details>
-        <button type="button" class="button button-inverse" @click="logout">退出登录</button>
       </div>
     </header>
 
@@ -152,6 +159,46 @@ async function logout(): Promise<void> {
   background: var(--fp-color-surface-overlay);
   box-shadow: var(--fp-shadow-elevated), var(--fp-shadow-accent);
   backdrop-filter: blur(1.25rem) saturate(130%);
+}
+
+.session-user {
+  gap: var(--fp-space-2);
+  padding-inline: var(--fp-space-3);
+}
+
+/* base.css 的在线小圆点属于纯文本形态;带上头像后它就成了两个身份标记。 */
+.session-user::before {
+  content: none;
+}
+
+.session-avatar {
+  display: inline-grid;
+  place-items: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 50%;
+  background: var(--fp-gradient-brand);
+  color: var(--fp-color-text-inverse);
+  font: 800 0.75rem/1 var(--fp-font-sans);
+}
+
+.session-user-name {
+  max-width: 8rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.session-caret {
+  color: var(--fp-color-text-muted);
+  font-size: 0.625rem;
+}
+
+.account-popover-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--fp-space-3);
+  margin-top: var(--fp-space-4);
 }
 
 .account-popover .eyebrow {
