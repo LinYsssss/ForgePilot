@@ -67,6 +67,13 @@
 2. `AGENTS.md`：补承重符号链接说明（冻结产物路径是指向 `archive/2026-08/` 的被跟踪符号链接）。
 3. `.trellis/workspace/LinYsssss/`：补记 10-16 两轮与本轮。
 
+## 四、部署（2026-10-17）
+
+- 推送后 CI run 39045618266 四个 job 全绿；`docker compose -p fp-demo up --build --detach --wait`
+  重建 backend 与 frontend（镜像 `8337b491…` / `6ae8b0cf…`），postgres 容器与数据卷未动，
+  Flyway 校验 14 条迁移、无需迁移。
+- 部署前备份、镜像 ID 与部署后验证明细见 `deployment-20261017.md`。
+
 ## 边界（本轮不做）
 
 - 生产代码语义改动。

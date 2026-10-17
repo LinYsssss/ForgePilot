@@ -966,3 +966,41 @@ Root-caused the suite's class order dependency to spring-security-test's csrf() 
 
 - Push after the user confirms the commit grouping.
 - Browser acceptance and the live recheck stay out of scope for this round.
+
+
+## Session 31: Push 5973d48, deploy the fp-demo stack, verify end to end
+
+**Date**: 2026-10-17
+**Task**: Push 5973d48, deploy the fp-demo stack, verify end to end
+**Branch**: `main`
+
+### Summary
+
+Pushed the three commits after the user's go-ahead, rebuilt and redeployed the fp-demo stack, and verified the running stack from the loopback ports and the public host.
+
+### Main Changes
+
+- Pushed 17e887e, ce9c643 and 5973d48 to main; CI run 39045618266 had Backend verify, Frontend gates, Evaluation contract and Empty-stack Compose smoke all green.
+- Deployed with docker compose -p fp-demo up --build --detach --wait at 15:36 UTC: backend sha256:8337b491 and frontend sha256:6ae8b0cf; the postgres container and its volume were left untouched.
+- The push touched no backend production code or migration, so the backend rebuild is functionally identical; the frontend rebuild carries the vue 3.5.44 bump.
+- Recorded the round in validation.md, deployment-20261017.md and TEST-REPORT's 2026-10-17 supplement.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `5973d48` | (see git log) |
+
+### Testing
+
+- [OK] Pre-deploy backup fp-demo-db-pre-5973d48-20261017T153542Z.dump.gz: 3,034,542 bytes, sha256 8537f975, gzip verified, 212 archive entries.
+- [OK] Post-deploy health UP direct on 18080, through nginx on 18081 and on yasinlin.com; served assets index-BxbeTmqU.js and index-D1nIfD3d.css match the local build.
+- [OK] Flyway validated 14 migrations and reported no migration necessary; the postgres container still shows its 2026-10-07 start time.
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- Browser acceptance and the live review-5 recheck stay out of scope.

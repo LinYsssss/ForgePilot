@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 30
+- **Total Sessions**: 31
 - **Last Active**: 2026-10-17
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~968 | Active |
+| `journal-1.md` | ~1006 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 31 | 2026-10-17 | Push 5973d48, deploy the fp-demo stack, verify end to end | `5973d48` | `main` |
 | 30 | 2026-10-17 | Locate the test order dependency, bump the frontend deps, close the doc debts | `17e887e`, `ce9c643` | `main` |
 | 29 | 2026-10-17 | 补部署记录、统一清理过期部署标记并修正文档小账 | `e8e82dc`, `c881e2b` | `main` |
 | 28 | 2026-10-17 | 全面检查:审查 15 提交、合并 main 并部署 3a251d7 | `3a251d7` | `main` |

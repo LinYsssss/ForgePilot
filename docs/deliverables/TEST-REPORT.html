@@ -778,6 +778,7 @@ python3 evaluation/tools/postfreeze_provider_correction.py verify</code></pre>
     《ForgePilot 使用与代码手册》、《跟着一次 PR 走完 ForgePilot》、《ForgePilot 安全设计说明》。
   </p>
   <p>2026-10-17 补充：测试套件顺序依赖的根因已定位并修复（详见 9.1）。污染源是 <code>spring-security-test</code> 的 <code>.with(csrf())</code> 后处理器——它把共享过滤器链里 <code>CsrfFilter</code> 的 <code>CsrfTokenRepository</code> 换成 session 仓库，使其后所有测试类的匿名 <code>GET /api/auth/me</code> 不再下发 <code>XSRF-TOKEN</code>；替换效果留在共享链上，谁先谁后由类文件名顺序决定。修复只动测试侧：6 个类共 14 处改走应用真实的双提交路径（cookie 与 header 回显同一值），生产代码未改，<code>SecurityConfig</code> 保持原样。验证：复现器（重命名后的类排在 review 类之后）由 139 项中 6 失败转为 <strong>139/139</strong> 通过；同一个副本与仓库各跑一次固定容器入口的完整 <code>./mvnw -B -ntp verify</code>，均为 <strong>432 项</strong>、0 失败、0 错误、0 跳过，副本那次重命名后的类仍排在末尾——顺序无关性由此成立。前端 <code>vue</code> 与 <code>@vue/compiler-sfc</code> 由 3.5.41 升到 3.5.44（lockfile 同步），<code>npm audit</code> 为 0 漏洞，lint、typecheck、<strong>66 项 / 18 个文件</strong>、build 四道门与 <code>npm ci</code> 全部通过。冻结资产、holdout 台账与迁移未改动或重跑；未执行浏览器人工验收、线上复测与真实模型调用。</p>
+  <p>同日推送并部署：三个提交经 <a href="https://github.com/LinYsssss/ForgePilot/actions/runs/39045618266">CI run 39045618266</a> 四个 job 全绿；15:36 UTC 起重建 backend 与 frontend（镜像 <code>sha256:8337b491…</code> / <code>sha256:6ae8b0cf…</code>），postgres 容器与数据卷未动，Flyway 校验 14 条迁移、schema 已是最新、无需迁移。`/actuator/health` 直连、经 nginx 与公网 <code>yasinlin.com</code> 均 <code>UP</code>，页面引用的 <code>assets/index-BxbeTmqU.js</code> 与 <code>index-D1nIfD3d.css</code> 与本地构建一致。回滚无 schema 依赖，可直接回退前后端镜像。</p>
 </footer>
 
 </main>
