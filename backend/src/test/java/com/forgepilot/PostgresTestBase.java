@@ -1,12 +1,18 @@
 package com.forgepilot;
 
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
+import jakarta.servlet.http.Cookie;
 
 import com.forgepilot.knowledge.KnowledgeIngestionProcessor;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 import org.testcontainers.utility.DockerImageName;
 
@@ -42,6 +48,39 @@ public abstract class PostgresTestBase {
         }
         throw new AssertionError("Knowledge ingestion did not drain the pending fixtures.");
     }
+
+    /**
+     * 应用的 CSRF 走浏览器实际走的那条路：同一个值既放在 cookie 里，也由 header 回显
+     * （{@code CookieCsrfTokenRepository} 的双提交名 {@code XSRF-TOKEN} / {@code X-XSRF-TOKEN}）。
+     *
+     * <p>这些用例**刻意**不使用 {@code SecurityMockMvcRequestPostProcessors.csrf()}。
+     * 那个后处理器会把过滤器链里 {@code CsrfFilter} 的 {@code CsrfTokenRepository} 换成
+     * {@code TestCsrfTokenRepository}（包着一个 {@code HttpSessionCsrfTokenRepository}），
+     * 于是 token 被写进 session 而不是响应 cookie。替换作用在**共享的**过滤器链上，
+     * 而且在请求结束后仍留在那里，所以它污染同一 JVM 中之后执行的所有测试类：
+     * 依赖 {@code GET /api/auth/me} 下发 {@code XSRF-TOKEN} 的用例会随类的执行顺序失败。
+     * 走真实路径没有任何全局副作用。
+     */
+    protected static RequestPostProcessor spaCsrf() {
+        return request -> {
+            List<Cookie> cookies = new ArrayList<>();
+            Cookie[] existing = request.getCookies();
+            if (existing != null) {
+                cookies.addAll(Arrays.asList(existing));
+            }
+            cookies.add(new Cookie(SPA_CSRF_COOKIE, SPA_CSRF_TOKEN));
+            request.setCookies(cookies.toArray(new Cookie[0]));
+            request.addHeader(SPA_CSRF_HEADER, SPA_CSRF_TOKEN);
+            return request;
+        };
+    }
+
+    /** 双提交 cookie 与 header 共用的值；服务端只比较两者是否一致。 */
+    private static final String SPA_CSRF_TOKEN = "spa-csrf-token";
+
+    private static final String SPA_CSRF_COOKIE = "XSRF-TOKEN";
+
+    private static final String SPA_CSRF_HEADER = "X-XSRF-TOKEN";
 
     @DynamicPropertySource
     static void datasourceProperties(DynamicPropertyRegistry registry) {

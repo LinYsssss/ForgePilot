@@ -7,7 +7,6 @@ import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -186,7 +185,7 @@ class NotificationChannelTest extends PostgresTestBase {
                 .andExpect(status().isForbidden());
         mockMvc.perform(MockMvcRequestBuilders
                         .put("/api/projects/{p}/notifications/dingtalk", scenario.projectId)
-                        .with(user(scenario.developerName)).with(csrf())
+                        .with(user(scenario.developerName)).with(spaCsrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(payload(WEBHOOK, SECRET, true)))
                 .andExpect(status().isForbidden());
@@ -281,7 +280,7 @@ class NotificationChannelTest extends PostgresTestBase {
             Scenario scenario, String url, String secret, boolean enabled) {
         return MockMvcRequestBuilders
                 .put("/api/projects/{p}/notifications/dingtalk", scenario.projectId)
-                .with(user(scenario.leaderName)).with(csrf())
+                .with(user(scenario.leaderName)).with(spaCsrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(payload(url, secret, enabled));
     }

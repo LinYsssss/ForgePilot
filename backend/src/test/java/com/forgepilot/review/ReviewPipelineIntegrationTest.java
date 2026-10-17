@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.when;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -291,7 +290,7 @@ class ReviewPipelineIntegrationTest extends PostgresTestBase {
         mockMvc.perform(MockMvcRequestBuilders
                         .post("/api/projects/" + fixture.project + "/pull-requests/"
                                 + fixture.pullRequest + "/reviews")
-                        .with(user(fixture.leaderName)).with(csrf()))
+                        .with(user(fixture.leaderName)).with(spaCsrf()))
                 .andExpect(status().isAccepted())
                 .andExpect(jsonPath("$.reviewId").isNumber())
                 .andExpect(jsonPath("$.status").value("PENDING"))
@@ -317,7 +316,7 @@ class ReviewPipelineIntegrationTest extends PostgresTestBase {
         mockMvc.perform(MockMvcRequestBuilders
                         .post("/api/projects/" + fixture.project + "/pull-requests/"
                                 + fixture.pullRequest + "/reviews")
-                        .with(user(stranger)).with(csrf()))
+                        .with(user(stranger)).with(spaCsrf()))
                 .andExpect(status().isForbidden());
 
         assertThat(jdbc.queryForObject("select count(*) from review where pull_request_id = ?",

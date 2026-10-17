@@ -1,7 +1,6 @@
 package com.forgepilot.review;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -469,13 +468,13 @@ class ReviewDecisionTest extends PostgresTestBase {
         String path = "/api/projects/" + scenario.projectId + "/reviews/" + review + "/decision";
 
         mockMvc.perform(MockMvcRequestBuilders.post(path)
-                        .with(user(usernameOf(scenario.developer))).with(csrf())
+                        .with(user(usernameOf(scenario.developer))).with(spaCsrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"decision\": \"APPROVE\"}"))
                 .andExpect(status().isForbidden());
 
         mockMvc.perform(MockMvcRequestBuilders.post(path)
-                        .with(user(usernameOf(scenario.leader))).with(csrf())
+                        .with(user(usernameOf(scenario.leader))).with(spaCsrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"decision\": \"APPROVE\", \"comment\": \"Ship it.\"}"))
                 .andExpect(status().isOk())

@@ -2,7 +2,6 @@ package com.forgepilot.review;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -374,20 +373,20 @@ class FindingLifecycleTest extends PostgresTestBase {
         String status = "/api/projects/" + scenario.projectId + "/findings/" + finding + "/status";
 
         mockMvc.perform(MockMvcRequestBuilders.post(status)
-                        .with(user(usernameOf(scenario.developer))).with(csrf())
+                        .with(user(usernameOf(scenario.developer))).with(spaCsrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"status\": \"CONFIRMED\"}"))
                 .andExpect(status().isForbidden());
 
         mockMvc.perform(MockMvcRequestBuilders.post(status)
-                        .with(user(usernameOf(scenario.leader))).with(csrf())
+                        .with(user(usernameOf(scenario.leader))).with(spaCsrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"status\": \"CONFIRMED\", \"comment\": \"Real.\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("CONFIRMED"));
 
         mockMvc.perform(MockMvcRequestBuilders.post(status)
-                        .with(user(usernameOf(scenario.leader))).with(csrf())
+                        .with(user(usernameOf(scenario.leader))).with(spaCsrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"status\": \"IN_PROGRESS\"}"))
                 .andExpect(status().isForbidden());

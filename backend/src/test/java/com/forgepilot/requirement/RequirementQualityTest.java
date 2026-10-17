@@ -9,7 +9,6 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -371,7 +370,7 @@ class RequirementQualityTest extends PostgresTestBase {
         String path = "/api/projects/" + fixture.project + "/requirements/" + requirement + "/quality";
 
         mockMvc.perform(MockMvcRequestBuilders.post(path)
-                        .with(user(fixture.usernameOf(fixture.leader))).with(csrf()))
+                        .with(user(fixture.usernameOf(fixture.leader))).with(spaCsrf()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.revisionId").value(fixture.currentRevisionOf(requirement)))
                 .andExpect(jsonPath("$.qualityVersion")
@@ -380,13 +379,13 @@ class RequirementQualityTest extends PostgresTestBase {
                 .andExpect(jsonPath("$.ai.issues[0].acKey").value("AC-2"));
 
         mockMvc.perform(MockMvcRequestBuilders.post(path)
-                        .with(user(fixture.usernameOf(developer))).with(csrf()))
+                        .with(user(fixture.usernameOf(developer))).with(spaCsrf()))
                 .andExpect(status().isForbidden());
 
         // The failure classification reaches the caller as the single error body.
         when(ai.chat(any(), any(), any(), any())).thenReturn("这个需求看起来还行。");
         mockMvc.perform(MockMvcRequestBuilders.post(path)
-                        .with(user(fixture.usernameOf(fixture.leader))).with(csrf()))
+                        .with(user(fixture.usernameOf(fixture.leader))).with(spaCsrf()))
                 .andExpect(status().isBadGateway())
                 .andExpect(jsonPath("$.code").value("ai_malformed_result"));
     }

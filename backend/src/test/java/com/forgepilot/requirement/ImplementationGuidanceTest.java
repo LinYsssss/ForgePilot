@@ -1,7 +1,6 @@
 package com.forgepilot.requirement;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -254,7 +253,7 @@ class ImplementationGuidanceTest extends PostgresTestBase {
         String path = "/api/projects/" + fixture.project + "/requirements/" + requirement + "/guidance";
 
         mockMvc.perform(MockMvcRequestBuilders.post(path)
-                        .with(user(fixture.usernameOf(fixture.leader))).with(csrf()))
+                        .with(user(fixture.usernameOf(fixture.leader))).with(spaCsrf()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.requirementId").value(requirement))
                 .andExpect(jsonPath("$.revisionSeq").value(1))
@@ -266,7 +265,7 @@ class ImplementationGuidanceTest extends PostgresTestBase {
                 .andExpect(jsonPath("$.risks[0]").value("会话过期处理会影响已有登录态"));
 
         mockMvc.perform(MockMvcRequestBuilders.post(path)
-                        .with(user(fixture.usernameOf(reviewer))).with(csrf()))
+                        .with(user(fixture.usernameOf(reviewer))).with(spaCsrf()))
                 .andExpect(status().isForbidden());
 
         KnowledgeDocumentView document = attachments.create(fixture.project, fixture.leader, requirement,
