@@ -359,18 +359,18 @@ const readiness = computed(() => {
       : failed > 0
         ? {
             label: "知识文档",
-            value: `${readyKnowledge.value}/${total} 已就绪`,
+            value: `${readyKnowledge.value}/${total}`,
             badge: `${failed} 处理失败`,
             tone: "danger",
           }
         : processing > 0
           ? {
               label: "知识文档",
-              value: `${readyKnowledge.value}/${total} 已就绪`,
+              value: `${readyKnowledge.value}/${total}`,
               badge: `${processing} 处理中`,
               tone: "warning",
             }
-          : { label: "知识文档", value: `${total}/${total} 已就绪`, badge: "已就绪", tone: "success" };
+          : { label: "知识文档", value: `${total}/${total}`, badge: "已就绪", tone: "success" };
   const repository = repositories.value[0] ?? null;
   const repositoryRow =
     repository === null
@@ -560,7 +560,7 @@ watch(projectId, load, { immediate: true });
             <p v-if="visibleRows.length === 0" class="empty-state">
               {{ onlyMine ? "没有需要我处理的任务。" : "没有待处理的任务。" }}
             </p>
-            <div v-else class="table-scroll">
+            <div v-else class="table-scroll queue-scroll">
               <table class="data-table queue-table">
                 <thead>
                   <tr>
@@ -595,6 +595,13 @@ watch(projectId, load, { immediate: true });
                 </tbody>
               </table>
             </div>
+            <p v-if="visibleRows.length > 0" class="queue-foot">
+              <span>共 {{ visibleRows.length }} 项</span>
+              <span class="queue-foot-links">
+                <RouterLink :to="requirementsRoute(projectId ?? 0)">全部需求 →</RouterLink>
+                <RouterLink :to="reviewsRoute(projectId ?? 0)">全部审查 →</RouterLink>
+              </span>
+            </p>
           </section>
 
           <aside class="workbench-rail">
@@ -801,7 +808,47 @@ watch(projectId, load, { immediate: true });
 }
 
 .workbench-queue {
+  display: flex;
   min-width: 0;
+  flex-direction: column;
+}
+
+/* 待办定高内滚,左栏与右栏高度相近;表头吸顶,滚动时列名不丢。 */
+.queue-scroll {
+  max-height: 30rem;
+  overflow: auto;
+}
+
+.queue-table th,
+.queue-table td {
+  padding: var(--fp-space-2) var(--fp-space-3);
+}
+
+.queue-table thead th {
+  position: sticky;
+  z-index: 1;
+  top: 0;
+  background: var(--fp-color-surface-strong);
+  box-shadow: inset 0 -0.0625rem 0 var(--fp-color-border);
+}
+
+.queue-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--fp-space-3);
+  margin: var(--fp-space-3) 0 0;
+  color: var(--fp-color-text-muted);
+  font-size: 0.75rem;
+}
+
+.queue-foot-links {
+  display: inline-flex;
+  gap: var(--fp-space-4);
+}
+
+.queue-foot-links a {
+  color: var(--fp-color-accent-inverse);
 }
 
 .queue-head {
