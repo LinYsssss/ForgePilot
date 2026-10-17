@@ -1,20 +1,23 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
-import { RouterLink } from "vue-router";
+import { RouterLink, type RouteLocationRaw } from "vue-router";
 import {
   knowledgeRoute,
   parseId,
   projectMembersRoute,
   repositoriesRoute,
+  requirementDetailRoute,
   requirementsRoute,
   reviewDetailRoute,
   reviewsRoute,
 } from "../../app/routes";
 import { useProjectSelection } from "../../composables/useProjectSelection";
-import { formatDateTime } from "../../lib/datetime";
+import { formatRelativeDateTime } from "../../lib/datetime";
 import { apiErrorMessage } from "../../lib/http";
+import { useSession } from "../auth/session";
 import { listProjectKnowledge, type KnowledgeDocument } from "../knowledge/api";
-import { requirementHandler, requirementPhase } from "../requirement/status";
+import { listMembers, PROJECT_ROLE_LABELS, type Member } from "../project/api";
+import { requirementPhase, REQUIREMENT_STATUS_TONES } from "../requirement/status";
 import { listRequirements, type RequirementSummary } from "../requirement/api";
 import {
   getReviewCalibration,
@@ -24,7 +27,12 @@ import {
   type ProjectReviewRow,
   type ReviewCalibration,
 } from "../review/api";
-import { FINDING_CONFIDENCE_LABELS, REVIEW_ACTIVITY_LABELS } from "../review/labels";
+import {
+  FINDING_CONFIDENCE_LABELS,
+  pullRequestLabel,
+  REVIEW_STATUS_LABELS,
+  REVIEW_STATUS_TONES,
+} from "../review/labels";
 import { listScmRepositories, type ScmRepository } from "../scm/api";
 
 const {
@@ -34,13 +42,387 @@ const {
   error,
   select,
 } = useProjectSelection({ routeName: "workspace", autoSelectFirst: true });
+const { account } = useSession();
+
 const requirements = ref<RequirementSummary[]>([]);
 const activity = ref<Record<string, ActivityView>>({});
 const reviews = ref<ProjectReviewRow[]>([]);
 const knowledge = ref<KnowledgeDocument[]>([]);
 const repositories = ref<ScmRepository[]>([]);
+const members = ref<Member[]>([]);
 const calibration = ref<ReviewCalibration | null>(null);
 const loading = ref(false);
+
+const queueTab = ref<QueueKind | "ALL">("ALL");
+const onlyMine = ref(false);
+
+type QueueKind = "DEV" | "REVIEW" | "REQ";
+
+const QUEUE_KIND_LABELS: Record<QueueKind, string> = {
+  DEV: "开发任务",
+  REVIEW: "审查任务",
+  REQ: "需求确认",
+};
+
+/**
+ * 待办队列的一行。三类任务(开发/审查/需求)在这里拼成同一种形状，
+ * 但行与行之间的差别保留在这个结构里：徽标说的是行自己的状态，
+ * `reason` 说的是"为什么现在轮到它"，而动作永远只有一个主要入口。
+ */
+interface WorkItem {
+  key: string;
+  kind: QueueKind;
+  badgeLabel: string;
+  badgeTone: string;
+  title: string;
+  titleRoute: RouteLocationRaw;
+  reason: string;
+  mine: boolean;
+  updatedAt: string;
+  actionLabel: string;
+  actionRoute: RouteLocationRaw;
+}
+
+const me = computed(() => account.value?.id ?? null);
+const isLeader = computed(() => selected.value?.myRoles.includes("LEADER") === true);
+const myRoleNames = computed(
+  () => selected.value?.myRoles.map((role) => PROJECT_ROLE_LABELS[role]).join("、") || "—",
+);
+
+/**
+ * 把一条需求折叠成待办行。终态需求不成行；「开发中」的徽标与原因
+ * 取自评审活动的派生量，两者刻意分开写：状态由人维护，活动是只读派生。
+ */
+function requirementItem(requirement: RequirementSummary): WorkItem | null {
+  const state = activity.value[String(requirement.id)]?.activity ?? null;
+  const mine =
+    requirement.assigneeId === me.value ||
+    requirement.reviewerId === me.value ||
+    (requirement.reviewerId === null && isLeader.value);
+  const base = {
+    key: `requirement-${requirement.id}`,
+    title: requirement.title,
+    titleRoute: requirementDetailRoute(projectId.value ?? 0, requirement.id),
+    mine,
+    updatedAt: requirement.updatedAt,
+  };
+  switch (requirement.status) {
+    case "DRAFT":
+      return {
+        ...base,
+        kind: "REQ",
+        badgeLabel: "草稿",
+        badgeTone: "neutral",
+        reason: "草稿待完善，完善后置为「就绪」进入评审",
+        actionLabel: "查看需求",
+        actionRoute: base.titleRoute,
+      };
+    case "READY":
+      return {
+        ...base,
+        kind: "REQ",
+        badgeLabel: "待指派",
+        badgeTone: "info",
+        reason: "需求已就绪，等待负责人指派开发",
+        actionLabel: "查看需求",
+        actionRoute: base.titleRoute,
+      };
+    case "IN_DEVELOPMENT": {
+      const reviewIndex = reviewsRoute(projectId.value ?? 0);
+      switch (state) {
+        case "CHANGES_REQUESTED":
+          return {
+            ...base,
+            kind: "DEV",
+            badgeLabel: "退回修改",
+            badgeTone: "danger",
+            reason: "审查已退回，需修复问题后提交新代码复审",
+            actionLabel: "进入审查",
+            actionRoute: reviewIndex,
+          };
+        case "FAILED":
+          return {
+            ...base,
+            kind: "DEV",
+            badgeLabel: "审查失败",
+            badgeTone: "danger",
+            reason: "AI 审查执行失败，可进入审查页重试",
+            actionLabel: "进入审查",
+            actionRoute: reviewIndex,
+          };
+        case "REVIEW_REQUIRED":
+          return {
+            ...base,
+            kind: "DEV",
+            badgeLabel: "待审查",
+            badgeTone: "warning",
+            reason: "已有 PR 关联到该需求，尚未发起审查",
+            actionLabel: "进入审查",
+            actionRoute: reviewIndex,
+          };
+        case "PENDING":
+          return {
+            ...base,
+            kind: "DEV",
+            badgeLabel: "排队中",
+            badgeTone: "neutral",
+            reason: "审查已排队，等待开始分析",
+            actionLabel: "进入审查",
+            actionRoute: reviewIndex,
+          };
+        case "REVIEWING":
+          return {
+            ...base,
+            kind: "DEV",
+            badgeLabel: "审查中",
+            badgeTone: "info",
+            reason: "AI 正在分析变更，完成后进入人工审查",
+            actionLabel: "进入审查",
+            actionRoute: reviewIndex,
+          };
+        case "APPROVED":
+          return {
+            ...base,
+            kind: "DEV",
+            badgeLabel: "待确认完成",
+            badgeTone: "success",
+            reason: "全部关联审查均已通过，待负责人确认完成",
+            actionLabel: "查看需求",
+            actionRoute: base.titleRoute,
+          };
+        case "MIXED":
+          return {
+            ...base,
+            kind: "DEV",
+            badgeLabel: "多 PR 处理中",
+            badgeTone: "warning",
+            reason: "多个 PR 的审查状态不一致，请逐个核对",
+            actionLabel: "进入审查",
+            actionRoute: reviewIndex,
+          };
+        default:
+          return {
+            ...base,
+            kind: "DEV",
+            badgeLabel: "开发中",
+            badgeTone: "warning",
+            reason: "开发中；关联 PR 后可在审查页发起审查",
+            actionLabel: "查看需求",
+            actionRoute: base.titleRoute,
+          };
+      }
+    }
+    case "DONE":
+    case "CANCELED":
+      return null;
+  }
+}
+
+/** 当前 head 上尚未裁定的审查、以及失败的审查，才需要人处理。 */
+function reviewItem(review: ProjectReviewRow): WorkItem | null {
+  if (!review.isCurrent) return null;
+  const linked =
+    review.requirementId === null
+      ? null
+      : requirements.value.find((item) => item.id === review.requirementId) ?? null;
+  const mine = isLeader.value || (me.value !== null && linked?.reviewerId === me.value);
+  const base = {
+    key: `review-${review.id}`,
+    title: `${pullRequestLabel(review.provider, review.pullRequestNumber)} · ${review.pullRequestTitle}`,
+    titleRoute: reviewDetailRoute(projectId.value ?? 0, review.id),
+    mine,
+    updatedAt: review.createdAt,
+  };
+  if (review.status === "COMPLETED" && review.decision === "PENDING") {
+    return {
+      ...base,
+      kind: "REVIEW",
+      badgeLabel: "待决定",
+      badgeTone: "warning",
+      reason: "审查已完成，终局决定尚未给出",
+      actionLabel: "进入审查",
+      actionRoute: base.titleRoute,
+    };
+  }
+  if (review.status === "FAILED") {
+    return {
+      ...base,
+      kind: "REVIEW",
+      badgeLabel: "待重试",
+      badgeTone: "danger",
+      reason: "AI 审查失败，可重新发起",
+      actionLabel: "进入审查",
+      actionRoute: base.titleRoute,
+    };
+  }
+  return null;
+}
+
+const queueRows = computed<WorkItem[]>(() => {
+  const items: WorkItem[] = [];
+  for (const requirement of requirements.value) {
+    const item = requirementItem(requirement);
+    if (item !== null) items.push(item);
+  }
+  for (const review of reviews.value) {
+    const item = reviewItem(review);
+    if (item !== null) items.push(item);
+  }
+  return items.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+});
+
+const queueCounts = computed<Record<QueueKind | "ALL", number>>(() => {
+  const counts: Record<QueueKind | "ALL", number> = {
+    ALL: queueRows.value.length,
+    DEV: 0,
+    REVIEW: 0,
+    REQ: 0,
+  };
+  for (const item of queueRows.value) counts[item.kind] += 1;
+  return counts;
+});
+
+const queueTabs = computed(() => [
+  { kind: "ALL" as const, label: "全部", count: queueCounts.value.ALL },
+  { kind: "DEV" as const, label: "开发任务", count: queueCounts.value.DEV },
+  { kind: "REVIEW" as const, label: "审查任务", count: queueCounts.value.REVIEW },
+  { kind: "REQ" as const, label: "需求确认", count: queueCounts.value.REQ },
+]);
+
+const visibleRows = computed(() =>
+  queueRows.value.filter(
+    (item) =>
+      (queueTab.value === "ALL" || item.kind === queueTab.value) &&
+      (!onlyMine.value || item.mine),
+  ),
+);
+
+const currentReviews = computed(() => reviews.value.filter((review) => review.isCurrent));
+
+const kpis = computed(() => {
+  const developing = requirements.value.filter((item) => item.status === "IN_DEVELOPMENT");
+  const mineDeveloping = developing.filter((item) => item.assigneeId === me.value).length;
+  const undecided = currentReviews.value.filter(
+    (review) => review.status === "COMPLETED" && review.decision === "PENDING",
+  ).length;
+  const queued = currentReviews.value.filter((review) => review.status === "PENDING").length;
+  const running = currentReviews.value.filter((review) => review.status === "RUNNING").length;
+  const awaitingReview = Object.values(activity.value).reduce(
+    (sum, view) => sum + view.counts.REVIEW_REQUIRED,
+    0,
+  );
+  const project = projectId.value ?? 0;
+  return [
+    {
+      key: "developing",
+      label: "开发中需求",
+      value: developing.length,
+      meta: `指派给我 ${mineDeveloping}`,
+      to: requirementsRoute(project),
+    },
+    {
+      key: "decision",
+      label: "待最终决定",
+      value: undecided,
+      meta: "审查已完成，尚未裁定",
+      to: reviewsRoute(project),
+    },
+    {
+      key: "running",
+      label: "进行中的审查",
+      value: queued + running,
+      meta: `排队中 ${queued} · 审查中 ${running}`,
+      to: reviewsRoute(project),
+    },
+    {
+      key: "required",
+      label: "待发起审查",
+      value: awaitingReview,
+      meta: "已关联需求、尚未审查的 PR",
+      to: reviewsRoute(project),
+    },
+  ];
+});
+
+const readyKnowledge = computed(
+  () => knowledge.value.filter((document) => document.status === "READY").length,
+);
+
+/** 项目准备清单：每行给"现在是什么状态"和一个可直接判断的徽标。 */
+const readiness = computed(() => {
+  const total = knowledge.value.length;
+  const failed = knowledge.value.filter((document) => document.status === "FAILED").length;
+  const processing = knowledge.value.filter((document) => document.status === "PENDING").length;
+  const knowledgeRow =
+    total === 0
+      ? { label: "知识文档", value: "暂无文档", badge: "待上传", tone: "warning" }
+      : failed > 0
+        ? {
+            label: "知识文档",
+            value: `${readyKnowledge.value}/${total} 已就绪`,
+            badge: `${failed} 处理失败`,
+            tone: "danger",
+          }
+        : processing > 0
+          ? {
+              label: "知识文档",
+              value: `${readyKnowledge.value}/${total} 已就绪`,
+              badge: `${processing} 处理中`,
+              tone: "warning",
+            }
+          : { label: "知识文档", value: `${total}/${total} 已就绪`, badge: "已就绪", tone: "success" };
+  const repository = repositories.value[0] ?? null;
+  const repositoryRow =
+    repository === null
+      ? { label: "代码仓库", value: "未接入", badge: "待接入", tone: "warning" }
+      : {
+          label: "代码仓库",
+          value: repository.provider === "GITLAB" ? "GitLab" : "GitHub",
+          badge: "已接入",
+          tone: "success",
+        };
+  const leader = members.value.find((member) => member.roles.includes("LEADER")) ?? null;
+  const memberRow = {
+    label: "项目成员",
+    value: `${members.value.length} 人`,
+    badge: leader === null ? "无负责人" : `负责人 ${leader.displayName}`,
+    tone: leader === null ? "warning" : "neutral",
+  };
+  return [knowledgeRow, repositoryRow, memberRow];
+});
+
+const runningReviews = computed(() =>
+  currentReviews.value
+    .filter((review) => review.status === "PENDING" || review.status === "RUNNING")
+    .slice(0, 3),
+);
+
+/**
+ * 最近动态由既有行派生：审查行的时刻是"发起时间"，需求行的时刻是
+ * "更新时间"，文案如实说出这一点；不虚构完成时刻，也就不需要新接口。
+ */
+const feed = computed(() => {
+  const events = [
+    ...currentReviews.value.map((review) => ({
+      key: `review-${review.id}`,
+      time: review.createdAt,
+      text: `发起审查：${pullRequestLabel(review.provider, review.pullRequestNumber)} · ${review.pullRequestTitle}`,
+      badgeLabel: REVIEW_STATUS_LABELS[review.status],
+      badgeTone: REVIEW_STATUS_TONES[review.status],
+    })),
+    ...requirements.value.map((requirement) => ({
+      key: `requirement-${requirement.id}`,
+      time: requirement.updatedAt,
+      text: `更新需求：${requirement.title}`,
+      badgeLabel: requirementPhase(
+        requirement.status,
+        activity.value[String(requirement.id)]?.activity,
+      ),
+      badgeTone: REQUIREMENT_STATUS_TONES[requirement.status],
+    })),
+  ];
+  return events.sort((a, b) => b.time.localeCompare(a.time)).slice(0, 5);
+});
 
 /**
  * 把一个 0..1 的比例格式化成百分比。`null` 是「没有样本」，不是 0%——
@@ -49,31 +431,6 @@ const loading = ref(false);
 function percent(value: number | null): string {
   return value === null ? "—" : `${(value * 100).toFixed(0)}%`;
 }
-
-const embeddedChunks = computed(() =>
-  knowledge.value.reduce((total, document) => total + document.embeddedChunkCount, 0),
-);
-const readyKnowledge = computed(
-  () => knowledge.value.filter((document) => document.status === "READY").length,
-);
-const requirementStatus = computed(() =>
-  requirements.value.reduce<Record<string, number>>(
-    (counts, requirement) => ({
-      ...counts,
-      [requirement.status]: (counts[requirement.status] ?? 0) + 1,
-    }),
-    {},
-  ),
-);
-const activityDistribution = computed(() =>
-  Object.values(activity.value).reduce<Record<string, number>>(
-    (counts, item) => ({
-      ...counts,
-      [item.activity]: (counts[item.activity] ?? 0) + 1,
-    }),
-    {},
-  ),
-);
 
 function selectProject(event: Event): void {
   void select(parseId((event.target as HTMLSelectElement).value));
@@ -86,6 +443,7 @@ async function load(): Promise<void> {
   reviews.value = [];
   knowledge.value = [];
   repositories.value = [];
+  members.value = [];
   calibration.value = null;
   error.value = null;
   if (id === null) return;
@@ -97,6 +455,7 @@ async function load(): Promise<void> {
       reviews.value,
       knowledge.value,
       repositories.value,
+      members.value,
       calibration.value,
     ] = await Promise.all([
       listRequirements(id),
@@ -104,6 +463,7 @@ async function load(): Promise<void> {
       listProjectReviews(id),
       listProjectKnowledge(id),
       listScmRepositories(id),
+      listMembers(id),
       // 同上：校准卡失败只是它自己不显示，不该让整个工作台变成加载失败。
       getReviewCalibration(id).catch(() => null),
     ]);
@@ -116,47 +476,41 @@ async function load(): Promise<void> {
 
 watch(projectId, load, { immediate: true });
 </script>
+
 <template>
   <section aria-labelledby="workspace-title">
-    <div class="page-head workspace-hero">
+    <div class="page-head workbench-head">
       <div>
-        <p class="eyebrow">Project workbench</p>
         <h1 id="workspace-title">工作台</h1>
-        <p class="lede">
-          用真实项目数据串起需求质量、知识增强实现建议与唯一 AI 审查引擎；AI
-          提供可核验的证据与建议，业务状态和最终决定始终由人完成。
+        <p class="workbench-context">
+          <template v-if="selected">
+            {{ selected.name }} · 我的角色：{{ myRoleNames }}
+          </template>
+          <template v-else>当前项目进展与分配给我的工作。</template>
         </p>
       </div>
-      <div class="hero-signal" aria-label="AI 研发辅助链路在线">
-        <span class="signal-orbit" aria-hidden="true"></span>
-        <strong>AI + Vector</strong>
-        <small>需求驱动 · 知识增强 · 人工闭环</small>
-      </div>
-    </div>
-
-    <section class="panel project-selector">
-      <div>
-        <h2 class="panel-title">当前项目</h2>
-        <p class="field-hint">选择项目后，统一查看它的需求、知识、仓库与审查状态。</p>
-      </div>
-      <div class="field">
-        <label for="workspace-project">项目</label>
-        <select id="workspace-project" :value="projectId ?? ''" @change="selectProject">
+      <div class="workbench-head-actions">
+        <select aria-label="选择项目" :value="projectId ?? ''" @change="selectProject">
           <option value="" disabled>请选择项目</option>
           <option v-for="project in projects" :key="project.id" :value="project.id">
             {{ project.name }}
           </option>
         </select>
+        <RouterLink
+          v-if="projectId !== null"
+          class="button button-primary"
+          :to="reviewsRoute(projectId)"
+        >
+          发起代码审查
+        </RouterLink>
       </div>
-    </section>
+    </div>
 
     <template v-if="projectId === null">
       <p v-if="error" class="alert" role="alert">{{ error }}</p>
       <section v-else-if="projects.length === 0" class="panel empty-guide">
         <h2 class="panel-title">先建一个项目</h2>
-        <p class="field-hint">
-          工作台汇聚的是某个项目的需求、知识、仓库与审查；你还没有任何项目，所以这里没有可展示的上下文。
-        </p>
+        <p class="field-hint">工作台围绕项目聚合需求、知识、仓库与审查。</p>
         <RouterLink class="button button-primary" :to="{ name: 'projects' }">
           去新建项目
         </RouterLink>
@@ -165,152 +519,177 @@ watch(projectId, load, { immediate: true });
     </template>
     <template v-else>
       <p v-if="error" class="alert" role="alert">{{ error }}</p>
-      <p v-else-if="loading" class="muted">正在汇聚项目工作台…</p>
+      <p v-else-if="loading" class="muted">正在加载工作台…</p>
       <template v-else>
-        <section class="ai-section" aria-labelledby="ai-chain-title">
-          <div class="section-heading">
-            <div>
-              <p class="eyebrow">AI delivery loop</p>
-              <h2 id="ai-chain-title">AI 辅助研发链路</h2>
-            </div>
-            <span class="badge badge-info">核心能力</span>
-          </div>
-          <div class="ai-chain">
-            <article class="panel ai-step">
-              <span class="ai-step-index">01</span>
-              <p class="eyebrow">Requirement Quality</p>
-              <h3>需求质量检查</h3>
-              <p>以需求正文与验收标准为输入，生成规则发现和结构化改进建议。</p>
-              <RouterLink class="button button-quiet" :to="requirementsRoute(projectId)">
-                进入需求
-              </RouterLink>
-            </article>
-            <article class="panel ai-step ai-step-featured">
-              <span class="ai-step-index">02</span>
-              <p class="eyebrow">Knowledge-enhanced</p>
-              <h3>向量增强实现建议</h3>
-              <p>语义召回项目知识与需求附件，生成实现清单、相关规则和风险。</p>
-              <RouterLink class="button button-primary" :to="knowledgeRoute(projectId)">
-                查看向量知识
-              </RouterLink>
-            </article>
-            <article class="panel ai-step">
-              <span class="ai-step-index">03</span>
-              <p class="eyebrow">Single Review Engine</p>
-              <h3>AI 代码审查</h3>
-              <p>结合 Requirement、AC、语义知识与 Diff，输出可核验 Finding。</p>
-              <RouterLink class="button button-quiet" :to="reviewsRoute(projectId)">
-                进入审查
-              </RouterLink>
-            </article>
-          </div>
+        <section class="pulse-grid workbench-kpis" aria-label="项目计数">
+          <RouterLink
+            v-for="kpi in kpis"
+            :key="kpi.key"
+            class="panel pulse-card kpi-card"
+            :to="kpi.to"
+          >
+            <strong>{{ kpi.value }}</strong>
+            <span>{{ kpi.label }}</span>
+            <small>{{ kpi.meta }}</small>
+          </RouterLink>
         </section>
 
-        <section class="pulse-grid" aria-label="项目脉搏">
-          <div class="panel pulse-card">
-            <strong>{{ requirements.length }}</strong>
-            <span>研发需求</span>
-            <small>
-              {{
-                Object.entries(requirementStatus)
-                  .map(([status, count]) => `${status} ${count}`)
-                  .join(" · ") || "暂无"
-              }}
-            </small>
-          </div>
-          <div class="panel pulse-card">
-            <strong>{{ reviews.length }}</strong>
-            <span>审查记录</span>
-            <small>
-              {{
-                Object.entries(activityDistribution)
-                  .map(
-                    ([status, count]) =>
-                      `${REVIEW_ACTIVITY_LABELS[status as keyof typeof REVIEW_ACTIVITY_LABELS]} ${count}`,
-                  )
-                  .join(" · ") || "暂无审查活动"
-              }}
-            </small>
-          </div>
-          <div class="panel pulse-card vector-card">
-            <strong>{{ embeddedChunks }}</strong>
-            <span>Embedding Chunk</span>
-            <small>{{ readyKnowledge }}/{{ knowledge.length }} 文档已就绪</small>
-          </div>
-          <div class="panel pulse-card">
-            <strong>{{ repositories.length }}</strong>
-            <span>SCM 仓库</span>
-            <small>{{ repositories[0]?.provider ?? "尚未接入" }}</small>
-          </div>
-        </section>
-
-        <div class="workspace-grid">
-          <section class="panel workspace-list-panel">
-            <div class="index-head">
-              <div>
-                <h2 class="panel-title">最近需求</h2>
-                <p class="field-hint">状态与派生审查活动分别呈现。</p>
-              </div>
-              <RouterLink class="button button-quiet" :to="requirementsRoute(projectId)">
-                全部需求
-              </RouterLink>
+        <div class="workbench-columns">
+          <section class="panel workbench-queue" aria-labelledby="queue-title">
+            <div class="queue-head">
+              <h2 id="queue-title" class="panel-title">我的待办</h2>
+              <label class="queue-mine-toggle">
+                <input v-model="onlyMine" type="checkbox" />
+                只看待我处理
+              </label>
             </div>
-            <p v-if="requirements.length === 0" class="empty-state">还没有需求。</p>
-            <ol v-else class="record-list">
-              <li
-                v-for="requirement in requirements.slice(0, 5)"
-                :key="requirement.id"
-                class="record"
+            <div class="queue-tabs" role="group" aria-label="按任务类型筛选">
+              <button
+                v-for="tab in queueTabs"
+                :key="tab.kind"
+                type="button"
+                class="button button-quiet queue-tab"
+                :class="{ 'queue-tab-active': queueTab === tab.kind }"
+                :aria-pressed="queueTab === tab.kind"
+                @click="queueTab = tab.kind"
               >
-                <RouterLink
-                  :to="{
-                    name: 'requirement-detail',
-                    params: { id: String(requirement.id) },
-                    query: { project: String(projectId) },
-                  }"
-                >
-                  <strong>{{ requirement.title }}</strong>
-                </RouterLink>
-                <p class="muted">
-                  {{ requirementPhase(requirement.status, activity[String(requirement.id)]?.activity) }} ·
-                  处理人：{{ requirementHandler(requirement.status, activity[String(requirement.id)]?.activity, requirement.assigneeUsername, requirement.reviewerName) }} ·
-                  {{ formatDateTime(requirement.updatedAt) }}
-                </p>
-              </li>
-            </ol>
+                {{ tab.label }}
+                <span class="queue-count">{{ tab.count }}</span>
+              </button>
+            </div>
+            <p v-if="visibleRows.length === 0" class="empty-state">
+              {{ onlyMine ? "没有需要我处理的任务。" : "没有待处理的任务。" }}
+            </p>
+            <div v-else class="table-scroll">
+              <table class="data-table queue-table">
+                <thead>
+                  <tr>
+                    <th scope="col">任务</th>
+                    <th scope="col">类型</th>
+                    <th scope="col">需要处理的原因</th>
+                    <th scope="col">更新时间</th>
+                    <th scope="col">操作</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="item in visibleRows" :key="item.key">
+                    <td>
+                      <span class="queue-task">
+                        <span :class="['badge', `badge-${item.badgeTone}`]">
+                          {{ item.badgeLabel }}
+                        </span>
+                        <RouterLink class="queue-title-link" :to="item.titleRoute">
+                          {{ item.title }}
+                        </RouterLink>
+                      </span>
+                    </td>
+                    <td>{{ QUEUE_KIND_LABELS[item.kind] }}</td>
+                    <td class="queue-reason">{{ item.reason }}</td>
+                    <td>{{ formatRelativeDateTime(item.updatedAt) }}</td>
+                    <td>
+                      <RouterLink class="button button-quiet" :to="item.actionRoute">
+                        {{ item.actionLabel }}
+                      </RouterLink>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </section>
 
-          <section class="panel workspace-list-panel">
-            <div class="index-head">
-              <div>
-                <h2 class="panel-title">最近审查</h2>
-                <p class="field-hint">单一 AI Review Engine 的执行记录。</p>
-              </div>
-              <RouterLink class="button button-quiet" :to="reviewsRoute(projectId)">
-                全部审查
-              </RouterLink>
-            </div>
-            <p v-if="reviews.length === 0" class="empty-state">还没有 Review。</p>
-            <ol v-else class="record-list">
-              <li v-for="review in reviews.slice(0, 5)" :key="review.id" class="record">
-                <RouterLink :to="reviewDetailRoute(projectId, review.id)">
-                  <strong>Review {{ review.id }} · PR #{{ review.pullRequestNumber }}</strong>
+          <aside class="workbench-rail">
+            <section class="panel rail-panel" aria-labelledby="readiness-title">
+              <div class="rail-head">
+                <h2 id="readiness-title" class="panel-title">项目准备</h2>
+                <RouterLink
+                  v-if="projectId !== null"
+                  class="rail-link"
+                  :to="projectMembersRoute(projectId)"
+                >
+                  项目管理 →
                 </RouterLink>
-                <p class="muted">
-                  {{ review.status }} · Decision {{ review.decision }} ·
-                  {{ formatDateTime(review.createdAt) }}
-                </p>
-              </li>
-            </ol>
-          </section>
+              </div>
+              <ul class="readiness-list">
+                <li v-for="row in readiness" :key="row.label" class="readiness-row">
+                  <span class="readiness-fact">
+                    <span class="readiness-label">{{ row.label }}</span>
+                    <strong class="readiness-value">{{ row.value }}</strong>
+                  </span>
+                  <span :class="['badge', `badge-${row.tone}`]">{{ row.badge }}</span>
+                </li>
+              </ul>
+            </section>
+
+            <section class="panel rail-panel" aria-labelledby="running-title">
+              <div class="rail-head">
+                <h2 id="running-title" class="panel-title">正在进行</h2>
+              </div>
+              <p v-if="runningReviews.length === 0" class="empty-state">
+                没有排队或分析中的审查。
+              </p>
+              <ol v-else class="running-list">
+                <li v-for="review in runningReviews" :key="review.id" class="running-item">
+                  <RouterLink :to="reviewDetailRoute(projectId ?? 0, review.id)">
+                    {{ pullRequestLabel(review.provider, review.pullRequestNumber) }} ·
+                    {{ review.pullRequestTitle }}
+                  </RouterLink>
+                  <div class="running-meta">
+                    <span :class="['badge', `badge-${REVIEW_STATUS_TONES[review.status]}`]">
+                      {{ REVIEW_STATUS_LABELS[review.status] }}
+                    </span>
+                  </div>
+                  <div
+                    :class="['running-track', { 'running-track-active': review.status === 'RUNNING' }]"
+                    aria-hidden="true"
+                  >
+                    <span></span>
+                  </div>
+                </li>
+              </ol>
+            </section>
+
+            <section class="panel rail-panel" aria-labelledby="feed-title">
+              <div class="rail-head">
+                <h2 id="feed-title" class="panel-title">最近动态</h2>
+              </div>
+              <p v-if="feed.length === 0" class="empty-state">还没有项目动态。</p>
+              <ol v-else class="feed-list">
+                <li v-for="event in feed" :key="event.key" class="feed-item">
+                  <div class="feed-meta">
+                    <time>{{ formatRelativeDateTime(event.time) }}</time>
+                    <span :class="['badge', `badge-${event.badgeTone}`]">
+                      {{ event.badgeLabel }}
+                    </span>
+                  </div>
+                  <p class="feed-text">{{ event.text }}</p>
+                </li>
+              </ol>
+            </section>
+
+            <section class="panel rail-panel" aria-labelledby="shortcuts-title">
+              <div class="rail-head">
+                <h2 id="shortcuts-title" class="panel-title">快捷操作</h2>
+              </div>
+              <div class="shortcut-list">
+                <RouterLink class="shortcut-link" :to="requirementsRoute(projectId ?? 0)">
+                  新建需求 <span aria-hidden="true">→</span>
+                </RouterLink>
+                <RouterLink class="shortcut-link" :to="knowledgeRoute(projectId ?? 0)">
+                  上传知识 <span aria-hidden="true">→</span>
+                </RouterLink>
+                <RouterLink class="shortcut-link" :to="repositoriesRoute(projectId ?? 0)">
+                  查看仓库 <span aria-hidden="true">→</span>
+                </RouterLink>
+              </div>
+            </section>
+          </aside>
         </div>
 
         <section v-if="calibration" class="panel calibration-panel">
           <div>
             <h2 class="panel-title">模型置信度校准</h2>
             <p class="field-hint">
-              模型自报的把握，对上人工的首次裁决。<strong>它不参与任何自动流转</strong>——
-              这张表是在度量那个自报值，不是开始信任它。区间为 95% Wilson，
+              模型自报的把握对上人工的首次裁决，不参与任何自动流转；区间为 95% Wilson，
               与正式评测报告同一套口径。
             </p>
           </div>
@@ -345,23 +724,343 @@ watch(projectId, load, { immediate: true });
             不计入本表。
           </p>
         </section>
-
-        <section v-if="selected" class="panel shortcuts">
-          <div>
-            <h2 class="panel-title">项目快捷入口</h2>
-            <p class="field-hint">继续管理当前项目的协作和上下文。</p>
-          </div>
-          <div class="shortcut-actions">
-            <RouterLink class="button" :to="projectMembersRoute(selected.id)">成员</RouterLink>
-            <RouterLink class="button" :to="repositoriesRoute(selected.id)">仓库接入</RouterLink>
-            <RouterLink class="button" :to="knowledgeRoute(selected.id)">项目知识</RouterLink>
-          </div>
-        </section>
       </template>
     </template>
   </section>
 </template>
+
 <style scoped>
+.workbench-head {
+  display: grid;
+  align-items: center;
+  gap: var(--fp-space-6);
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.workbench-context {
+  margin: var(--fp-space-2) 0 0;
+  color: var(--fp-color-text-muted);
+}
+
+.workbench-head-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--fp-space-3);
+}
+
+.workbench-head-actions select {
+  width: auto;
+  min-width: 11rem;
+}
+
+.workbench-kpis {
+  margin-bottom: var(--fp-space-6);
+}
+
+.kpi-card {
+  margin-bottom: 0;
+  color: inherit;
+  text-decoration: none;
+  transition: border-color var(--fp-duration-fast) var(--fp-ease-standard);
+}
+
+.kpi-card:hover {
+  border-color: var(--fp-color-border-accent);
+}
+
+.pulse-card {
+  display: grid;
+  gap: var(--fp-space-2);
+}
+
+.pulse-card strong {
+  color: var(--fp-color-accent-inverse);
+  font: 800 1.7rem/1 var(--fp-font-mono);
+}
+
+.pulse-card span {
+  font-weight: 700;
+}
+
+.pulse-card small {
+  color: var(--fp-color-text-muted);
+}
+
+.pulse-grid {
+  display: grid;
+  gap: var(--fp-space-5);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.workbench-columns {
+  display: grid;
+  align-items: start;
+  gap: var(--fp-space-5);
+  grid-template-columns: minmax(0, 2.2fr) minmax(0, 1fr);
+}
+
+.workbench-queue {
+  min-width: 0;
+}
+
+.queue-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--fp-space-4);
+  margin-bottom: var(--fp-space-4);
+}
+
+.queue-head .panel-title {
+  margin-bottom: 0;
+}
+
+.queue-mine-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--fp-space-2);
+  color: var(--fp-color-text-muted);
+  font-size: 0.8125rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.queue-mine-toggle input {
+  width: 1rem;
+  min-height: 0;
+  height: 1rem;
+  accent-color: var(--fp-color-accent);
+}
+
+.queue-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--fp-space-2);
+  margin-bottom: var(--fp-space-4);
+}
+
+.queue-tab {
+  padding: var(--fp-space-2) var(--fp-space-3);
+  font-size: 0.8125rem;
+}
+
+.queue-tab-active {
+  border-color: var(--fp-color-border-accent);
+  background: var(--fp-color-accent-soft);
+  color: var(--fp-color-accent-inverse);
+}
+
+.queue-count {
+  margin-left: var(--fp-space-2);
+  color: var(--fp-color-text-subtle);
+  font: 700 0.75rem/1 var(--fp-font-mono);
+}
+
+.queue-table {
+  min-width: 40rem;
+}
+
+.queue-table td {
+  vertical-align: top;
+}
+
+.queue-task {
+  display: inline-flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--fp-space-2);
+}
+
+.queue-title-link {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.queue-reason {
+  color: var(--fp-color-text-muted);
+}
+
+.queue-table .button {
+  white-space: nowrap;
+}
+
+.workbench-rail {
+  display: grid;
+  gap: var(--fp-space-5);
+  min-width: 0;
+}
+
+.rail-panel {
+  margin-bottom: 0;
+}
+
+.rail-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--fp-space-3);
+  margin-bottom: var(--fp-space-3);
+}
+
+.rail-head .panel-title {
+  margin-bottom: 0;
+}
+
+.rail-link {
+  color: var(--fp-color-accent-inverse);
+  font-size: 0.8125rem;
+}
+
+.readiness-list {
+  display: grid;
+  gap: var(--fp-space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.readiness-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--fp-space-3);
+}
+
+.readiness-fact {
+  display: inline-flex;
+  align-items: baseline;
+  min-width: 0;
+  flex-wrap: wrap;
+  gap: var(--fp-space-2);
+}
+
+.readiness-label {
+  color: var(--fp-color-text-muted);
+  font-size: 0.8125rem;
+}
+
+.readiness-value {
+  color: var(--fp-color-text);
+  font: 700 0.875rem/1.4 var(--fp-font-mono);
+  white-space: nowrap;
+}
+
+.running-list {
+  display: grid;
+  gap: var(--fp-space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.running-item {
+  display: grid;
+  gap: var(--fp-space-2);
+}
+
+.running-item a {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.running-track {
+  height: 0.375rem;
+  overflow: hidden;
+  border-radius: var(--fp-radius-full);
+  background: var(--fp-color-border-subtle);
+}
+
+.running-track span {
+  display: none;
+  width: 100%;
+  height: 100%;
+  background: var(--fp-gradient-primary);
+}
+
+.running-track-active span {
+  display: block;
+  animation: fp-workbench-track var(--fp-duration-sweep) var(--fp-ease-cinematic) infinite;
+}
+
+@keyframes fp-workbench-track {
+  from {
+    transform: translateX(-100%);
+  }
+
+  to {
+    transform: translateX(100%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .running-track-active span {
+    animation: none;
+    transform: none;
+    opacity: 0.6;
+  }
+}
+
+.feed-list {
+  display: grid;
+  gap: var(--fp-space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.feed-item {
+  display: grid;
+  gap: var(--fp-space-1);
+}
+
+.feed-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--fp-space-3);
+}
+
+.feed-meta time {
+  color: var(--fp-color-text-subtle);
+  font-size: 0.75rem;
+  white-space: nowrap;
+}
+
+.feed-text {
+  margin: 0;
+  color: var(--fp-color-text-muted);
+  font-size: 0.8125rem;
+  overflow-wrap: anywhere;
+}
+
+.shortcut-list {
+  display: grid;
+  gap: var(--fp-space-2);
+}
+
+.shortcut-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--fp-space-3);
+  padding: var(--fp-space-3) var(--fp-space-4);
+  border: 0.0625rem solid var(--fp-color-border);
+  border-radius: var(--fp-radius-sm);
+  background: var(--fp-color-canvas-muted);
+  transition: border-color var(--fp-duration-fast) var(--fp-ease-standard);
+}
+
+.shortcut-link:hover {
+  border-color: var(--fp-color-border-accent);
+}
+
+.empty-guide {
+  display: grid;
+  justify-items: start;
+  gap: var(--fp-space-3);
+}
+
 .calibration-table {
   width: 100%;
   margin-top: var(--fp-space-4);
@@ -390,198 +1089,33 @@ watch(projectId, load, { immediate: true });
   color: var(--fp-color-text-muted);
 }
 
-.workspace-hero {
-  display: grid;
-  align-items: center;
-  gap: var(--fp-space-8);
-  grid-template-columns: minmax(0, 1fr) auto;
-}
-
-.hero-signal {
-  position: relative;
-  display: grid;
-  width: 15rem;
-  min-height: 9rem;
-  place-content: center;
-  overflow: hidden;
-  border: 0.0625rem solid var(--fp-color-border-accent);
-  border-radius: var(--fp-radius-lg);
-  background: var(--fp-color-accent-soft);
-  text-align: center;
-}
-
-.hero-signal strong {
-  color: var(--fp-color-accent-inverse);
-  font: 800 1rem/1 var(--fp-font-mono);
-  letter-spacing: 0.06em;
-}
-
-.hero-signal small {
-  margin-top: var(--fp-space-3);
-  color: var(--fp-color-text-muted);
-}
-
-.signal-orbit {
-  position: absolute;
-  inset: 1rem;
-  border: 0.0625rem solid var(--fp-color-border-accent);
-  border-radius: 50%;
-  animation: fp-pulse-glow var(--fp-duration-pulse) ease-in-out infinite;
-}
-
-.ai-section {
-  margin-bottom: var(--fp-space-6);
-}
-
-.empty-guide {
-  display: grid;
-  justify-items: start;
-  gap: var(--fp-space-3);
-}
-
-.section-heading {
-  display: flex;
-  align-items: end;
-  justify-content: space-between;
-  gap: var(--fp-space-4);
-  margin-bottom: var(--fp-space-5);
-}
-
-.section-heading h2 {
-  margin: 0;
-}
-
-.ai-chain,
-.pulse-grid,
-.workspace-grid {
-  display: grid;
-  gap: var(--fp-space-5);
-}
-
-.ai-chain {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-
-.ai-step {
-  display: flex;
-  min-height: 18rem;
-  margin-bottom: 0;
-  flex-direction: column;
-  border-color: var(--fp-color-border-accent);
-}
-
-.ai-step-featured {
-  background: linear-gradient(145deg, var(--fp-color-accent-soft), var(--fp-color-surface-glass));
-  box-shadow: var(--fp-shadow-elevated), var(--fp-shadow-accent);
-}
-
-.ai-step-index {
-  align-self: flex-end;
-  color: var(--fp-color-text-subtle);
-  font: 800 1.75rem/1 var(--fp-font-mono);
-}
-
-.ai-step h3 {
-  margin: 0;
-  font-size: 1.125rem;
-}
-
-.ai-step p:not(.eyebrow) {
-  color: var(--fp-color-text-muted);
-  line-height: 1.65;
-}
-
-.ai-step .button {
-  align-self: flex-start;
-  margin-top: auto;
-}
-
-.pulse-grid {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-}
-
-.pulse-card {
-  display: grid;
-  gap: var(--fp-space-2);
-  margin-bottom: var(--fp-space-6);
-}
-
-.pulse-card strong {
-  color: var(--fp-color-accent-inverse);
-  font: 800 1.7rem/1 var(--fp-font-mono);
-}
-
-.pulse-card span {
-  font-weight: 700;
-}
-
-.pulse-card small {
-  color: var(--fp-color-text-muted);
-}
-
-.vector-card {
-  border-color: var(--fp-color-info);
-  background: linear-gradient(145deg, var(--fp-color-info-soft), var(--fp-color-surface-glass));
-}
-
-.workspace-grid {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-.workspace-list-panel {
-  min-width: 0;
-}
-
-.shortcuts {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: var(--fp-space-4);
-}
-
-.shortcuts .panel-title {
-  margin-bottom: var(--fp-space-1);
-}
-
-.shortcut-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--fp-space-3);
+@media (max-width: 72rem) {
+  .workbench-columns {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 64rem) {
-  .ai-chain,
   .pulse-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .ai-step-featured {
-    grid-column: span 1;
   }
 }
 
 @media (max-width: 42rem) {
-  .workspace-hero,
-  .ai-chain,
-  .pulse-grid,
-  .workspace-grid {
+  .workbench-head,
+  .pulse-grid {
     grid-template-columns: 1fr;
   }
 
-  .hero-signal {
+  .workbench-head-actions,
+  .workbench-head-actions select,
+  .workbench-head-actions .button {
     width: 100%;
   }
 
-  .section-heading,
-  .shortcuts {
+  .queue-head {
     align-items: flex-start;
     flex-direction: column;
-  }
-
-  .shortcut-actions,
-  .shortcut-actions .button {
-    width: 100%;
   }
 }
 </style>
