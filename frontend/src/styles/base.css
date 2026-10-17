@@ -395,7 +395,7 @@ main {
 .page-intro {
   position: relative;
   margin-bottom: var(--fp-space-6);
-  padding: clamp(var(--fp-space-6), 4vw, var(--fp-space-10));
+  padding: clamp(var(--fp-space-5), 3vw, var(--fp-space-8));
   overflow: hidden;
   border: 0.0625rem solid var(--fp-color-border);
   border-radius: var(--fp-radius-xl);
@@ -426,7 +426,7 @@ main {
 }
 
 .page-head .record-actions {
-  margin-top: var(--fp-space-5);
+  margin-top: var(--fp-space-4);
 }
 
 .eyebrow {
@@ -671,7 +671,7 @@ textarea:disabled {
 }
 
 .record-actions {
-  margin-top: var(--fp-space-5);
+  margin-top: var(--fp-space-4);
 }
 
 .button {
@@ -877,7 +877,7 @@ textarea:disabled {
 }
 
 .record {
-  padding: clamp(var(--fp-space-5), 3vw, var(--fp-space-6));
+  padding: clamp(var(--fp-space-4), 2.5vw, var(--fp-space-5));
   overflow: hidden;
   border-radius: var(--fp-radius-lg);
   transition:

@@ -407,6 +407,23 @@ async function removeRequirement(item: RequirementSummary): Promise<void> {
   gap: var(--fp-space-6);
 }
 
+/* 6 条元信息固定三列:auto-fit 在宽屏会摊成一整行,右半张卡片全是空。 */
+.requirement-meta {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+@media (max-width: 64rem) {
+  .requirement-meta {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 42rem) {
+  .requirement-meta {
+    grid-template-columns: 1fr;
+  }
+}
+
 .form-section-head .eyebrow {
   margin-bottom: var(--fp-space-2);
 }

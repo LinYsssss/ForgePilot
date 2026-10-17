@@ -213,10 +213,10 @@ watch(projectId, load, { immediate: true });
         <div class="panel">
           <strong>{{ summary.ready }}</strong><span>可用于审查</span>
         </div>
-        <div class="panel vector-metric">
+        <div :class="['panel', { 'vector-metric': summary.pending > 0 }]">
           <strong>{{ summary.pending }}</strong><span>正在处理</span>
         </div>
-        <div class="panel vector-metric">
+        <div :class="['panel', { 'vector-metric': summary.failed > 0 }]">
           <strong>{{ summary.failed }}</strong><span>处理失败</span>
         </div>
       </section>
@@ -270,8 +270,8 @@ watch(projectId, load, { immediate: true });
         <p v-if="loading" class="muted">正在加载知识文档…</p>
         <p v-else-if="documents.length === 0" class="empty-state">该项目还没有公共知识文档。</p>
         <ol v-else class="record-list">
-          <li v-for="document in documents" :key="document.id" class="record">
-            <div class="record-head">
+          <li v-for="document in documents" :key="document.id" class="record knowledge-card">
+            <div class="record-head knowledge-card-head">
               <h3 class="record-title">{{ document.title }}</h3>
               <span
                 class="badge"
@@ -285,45 +285,50 @@ watch(projectId, load, { immediate: true });
               >
                 {{ document.status === "READY" ? "可用于审查" : document.status === "FAILED" ? "处理失败" : "正在处理" }}
               </span>
-            </div>
-            <div v-if="projectId !== null" class="record-actions">
-              <RouterLink class="button button-quiet" :to="knowledgeDocumentRoute(projectId, document.id)">阅读</RouterLink>
-              <a class="button button-quiet" :href="knowledgeDownloadUrl(projectId, document.id)">下载</a>
-            </div>
-            <details>
-              <summary>索引详情</summary>
-              <p class="field-hint">文档分片用于召回相关规范；当前使用精确向量检索，尚未建立数据库向量索引。</p>
-              <dl class="meta-list">
-              <div><dt>Chunk / 向量</dt><dd>{{ document.chunkCount }} / {{ document.embeddedChunkCount }}</dd></div>
-              <div><dt>向量维度</dt><dd>{{ document.embeddingDimension ?? "未就绪" }}</dd></div>
-              <div>
-                <dt>Embedding Profile</dt>
-                <dd>
-                  {{
-                    [document.embeddingProvider, document.embeddingModel, document.embeddingVersion]
-                      .filter(Boolean)
-                      .join(" · ") || "未记录"
-                  }}
-                </dd>
+              <span class="knowledge-card-meta">
+                {{ document.chunkCount }}/{{ document.embeddedChunkCount }} 向量 Chunk ·
+                {{
+                  [document.embeddingProvider, document.embeddingModel].filter(Boolean).join(" · ") ||
+                  "未记录 Profile"
+                }}
+              </span>
+              <div v-if="projectId !== null" class="record-actions knowledge-card-actions">
+                <RouterLink class="button button-quiet" :to="knowledgeDocumentRoute(projectId, document.id)">阅读</RouterLink>
+                <a class="button button-quiet" :href="knowledgeDownloadUrl(projectId, document.id)">下载</a>
+                <button
+                  v-if="isLeader && document.sourceType === 'PROJECT_KNOWLEDGE'"
+                  type="button"
+                  class="button button-quiet"
+                  :disabled="deletePending"
+                  @click="remove(document)"
+                >删除文档</button>
               </div>
-              <div><dt>更新时间</dt><dd>{{ formatDateTime(document.updatedAt) }}</dd></div>
-              </dl>
-            </details>
+            </div>
+            <p v-if="isLeader && document.sourceType !== 'PROJECT_KNOWLEDGE'" class="field-hint">
+              需求 {{ document.sourceRequirementId }} 的附件，请在该需求下解除附件后再删。
+            </p>
             <p v-if="document.failureReason" class="alert" role="alert">
               {{ document.failureReason }}
             </p>
-            <div v-if="isLeader" class="record-actions">
-              <button
-                v-if="document.sourceType === 'PROJECT_KNOWLEDGE'"
-                type="button"
-                class="button button-quiet"
-                :disabled="deletePending"
-                @click="remove(document)"
-              >删除文档</button>
-              <span v-else class="field-hint">
-                需求 {{ document.sourceRequirementId }} 的附件，请在该需求下解除附件后再删。
-              </span>
-            </div>
+            <details class="knowledge-details">
+              <summary>索引详情</summary>
+              <p class="field-hint">文档分片用于召回相关规范；当前使用精确向量检索，尚未建立数据库向量索引。</p>
+              <dl class="meta-list">
+                <div><dt>Chunk / 向量</dt><dd>{{ document.chunkCount }} / {{ document.embeddedChunkCount }}</dd></div>
+                <div><dt>向量维度</dt><dd>{{ document.embeddingDimension ?? "未就绪" }}</dd></div>
+                <div>
+                  <dt>Embedding Profile</dt>
+                  <dd>
+                    {{
+                      [document.embeddingProvider, document.embeddingModel, document.embeddingVersion]
+                        .filter(Boolean)
+                        .join(" · ") || "未记录"
+                    }}
+                  </dd>
+                </div>
+                <div><dt>更新时间</dt><dd>{{ formatDateTime(document.updatedAt) }}</dd></div>
+              </dl>
+            </details>
           </li>
         </ol>
       </section>
@@ -344,6 +349,13 @@ watch(projectId, load, { immediate: true });
 .upload-results { grid-column: 1 / -1; }
 .upload-results .record { display: flex; flex-wrap: wrap; align-items: center; gap: var(--fp-space-3); }
 .knowledge-index { border-color: var(--fp-color-border-accent); }
+/* 一行式文档卡片:标题 + 状态 + 元信息 + 动作右对齐,索引详情折叠在行尾,避免大空白。 */
+.knowledge-card-head { align-items: baseline; }
+.knowledge-card-meta { flex: 1 1 18rem; min-width: 0; color: var(--fp-color-text-muted); font-size: 0.8125rem; overflow-wrap: anywhere; }
+.knowledge-card-actions { margin-top: 0; margin-left: auto; }
+.knowledge-details { margin-top: var(--fp-space-3); }
+.knowledge-details > summary { color: var(--fp-color-text-muted); cursor: pointer; font-size: 0.8125rem; }
+.knowledge-details .meta-list { grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: var(--fp-space-3); }
 @media (max-width: 64rem) {
   .knowledge-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .upload-panel { grid-template-columns: 1fr; }

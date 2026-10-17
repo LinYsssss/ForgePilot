@@ -185,9 +185,9 @@ watch(projectId, load, { immediate: true });
       <h1 id="repositories-title">仓库接入</h1>
       <p class="field-hint">
         一个项目接入一个 GitHub 或 GitLab 仓库；凭据仅写入请求，页面和读取接口都不会显示
-        token 或 Webhook 密钥。
+        token 或 Webhook 密钥。个人身份需在账户设置验证，再到项目成员页绑定，才能识别本人 PR、
+        修改需求关联和请求审查。
       </p>
-      <p class="field-hint">仓库凭据用于读取代码和合并。个人身份需在账户设置验证，再到项目成员页绑定，才能识别本人 PR、修改需求关联和请求审查。</p>
     </div>
     <section class="panel project-selector">
       <div>
@@ -220,7 +220,7 @@ watch(projectId, load, { immediate: true });
           </div>
           <span class="badge badge-success">已连接</span>
         </div>
-        <dl class="meta-list">
+        <dl class="meta-list repository-facts">
           <div><dt>提供方</dt><dd>{{ repository.provider }}</dd></div>
           <div><dt>外部仓库 ID</dt><dd><code>{{ repository.externalId }}</code></dd></div>
           <div><dt>API 基地址</dt><dd><code>{{ repository.apiBase }}</code></dd></div>
@@ -229,7 +229,7 @@ watch(projectId, load, { immediate: true });
         </dl>
       </section>
       <p v-else-if="!loading" class="empty-state">该项目还没有仓库接入。</p>
-      <p v-if="!isLeader && selected" class="empty-state">
+      <p v-if="!isLeader && selected" class="field-hint">
         你可查看安全元数据；只有项目负责人可以注册或修改仓库。
       </p>
       <section v-if="isLeader" class="panel repository-editor" aria-labelledby="repository-form-title">
@@ -432,6 +432,11 @@ watch(projectId, load, { immediate: true });
   border-color: var(--fp-color-border-accent);
 }
 
+/* auto-fit 在宽屏会把 5 条事实摊成一整行,右半屏全是空隙;固定三列更紧凑。 */
+.repository-facts {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
 .repository-editor,
 .notification-editor {
   display: grid;
@@ -483,10 +488,18 @@ watch(projectId, load, { immediate: true });
   .repository-editor {
     grid-template-columns: 1fr;
   }
+
+  .repository-facts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 42rem) {
   .repository-form {
+    grid-template-columns: 1fr;
+  }
+
+  .repository-facts {
     grid-template-columns: 1fr;
   }
 
