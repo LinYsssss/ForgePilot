@@ -475,7 +475,6 @@ function eventsErrorFor(findingId: number): string | null {
 <template>
   <section class="review-detail-page" aria-labelledby="review-detail-title">
     <div class="page-head">
-      <p class="eyebrow">{{ project ? `${project.name} · Review workspace` : "Review" }}</p>
       <h1 id="review-detail-title">
         {{ detail ? `审查 ${detail.id}` : "审查详情" }}
       </h1>
@@ -489,7 +488,7 @@ function eventsErrorFor(findingId: number): string | null {
           该 PR 的全部审查
         </RouterLink>
       </div>
-      <p class="lede">唯一 AI Review Engine 将 Requirement、AC、向量召回的项目知识与 Diff 形成证据；Finding 生命周期和最终 Decision 始终由人完成。</p>
+      <p class="field-hint">Finding 生命周期和最终 Decision 始终由人完成。</p>
     </div>
 
     <p v-if="!hasContext" class="alert" role="alert">
@@ -674,7 +673,6 @@ function eventsErrorFor(findingId: number): string | null {
       <section class="panel evidence-workspace" aria-labelledby="evidence-workspace-title">
         <div class="workspace-head">
           <div>
-            <p class="eyebrow">Immutable review evidence</p>
             <h2 id="evidence-workspace-title" class="panel-title">审查证据工作台</h2>
           </div>
           <span v-if="selectedFinding" class="badge badge-warning">
@@ -897,7 +895,6 @@ function eventsErrorFor(findingId: number): string | null {
       <section class="panel decision-panel" aria-labelledby="review-decision-title">
         <div class="decision-panel-head">
           <div>
-            <p class="eyebrow">Human decision gate</p>
             <h2 id="review-decision-title" class="panel-title">终局决定</h2>
           </div>
           <span :class="['badge', `badge-${REVIEW_DECISION_TONES[detail.decision]}`]">

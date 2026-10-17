@@ -132,7 +132,6 @@ async function saveIdentity(identity: ScmIdentity): Promise<void> {
 <template>
   <section aria-labelledby="account-title">
     <div class="page-head">
-      <p class="eyebrow">Account identity</p>
       <h1 id="account-title">账户与 SCM 身份</h1>
       <p v-if="account" class="lede">@{{ account.username }} · 平台 ID {{ account.id }}</p>
     </div>

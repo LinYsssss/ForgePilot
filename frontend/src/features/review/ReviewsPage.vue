@@ -268,9 +268,8 @@ async function triggerReview(): Promise<void> {
 <template>
   <section class="reviews-page" aria-labelledby="reviews-title">
     <div class="page-head">
-      <p class="eyebrow">Review pipeline</p>
       <h1 id="reviews-title">代码审查</h1>
-      <p class="lede">唯一 AI Review Engine 基于 Requirement、AC、向量语义召回知识与 Diff 生成证据；执行状态、Finding 人工生命周期、Decision 与当前有效性始终分开呈现。</p>
+      <p class="field-hint">执行状态、Finding 人工生命周期、Decision 与当前有效性始终分开呈现。</p>
     </div>
 
     <div class="panel project-selector">
@@ -300,7 +299,7 @@ async function triggerReview(): Promise<void> {
 
       <section class="panel review-index-panel" aria-labelledby="project-reviews-title">
         <div class="index-head">
-          <div><p class="eyebrow">Project review index</p><h2 id="project-reviews-title" class="panel-title">项目审查记录</h2></div>
+          <div><h2 id="project-reviews-title" class="panel-title">项目审查记录</h2></div>
           <span class="badge badge-neutral">{{ projectReviews.length }} 条</span>
         </div>
 
@@ -369,7 +368,7 @@ async function triggerReview(): Promise<void> {
 
       <section v-if="pullRequestId !== null" class="panel pull-request-panel" aria-labelledby="pull-request-history-title">
         <div class="index-head">
-          <div><p class="eyebrow">Selected pull request</p><h2 id="pull-request-history-title" class="panel-title">PR 审查历史</h2></div>
+          <div><h2 id="pull-request-history-title" class="panel-title">PR 审查历史</h2></div>
           <RouterLink class="button button-quiet" :to="reviewsRoute(projectId)">关闭 PR 视图</RouterLink>
         </div>
         <p v-if="pullRequestLoading" class="muted">正在加载 PR 与审查历史…</p>

@@ -169,17 +169,10 @@ watch(projectId, load, { immediate: true });
 
 <template>
   <section aria-labelledby="knowledge-title">
-    <div class="page-head knowledge-hero">
+    <div class="page-head">
       <div>
-        <p class="eyebrow">Semantic project context</p>
         <h1 id="knowledge-title">项目知识</h1>
-        <p class="lede">
-          阅读项目规范与参考文档。处理完成的文档会用于 AI 审查和实现建议，可从审查引用回到原文核对。
-        </p>
-      </div>
-      <div class="vector-visual" aria-label="项目知识的用途">
-        <span>项目文档</span><i aria-hidden="true">→</i><span>相关规范</span><i aria-hidden="true">→</i
-        ><strong>审查依据</strong>
+        <p class="field-hint">处理完成的文档会用于 AI 审查和实现建议，可从审查引用回到原文核对。</p>
       </div>
     </div>
     <section class="panel project-selector">
@@ -229,7 +222,6 @@ watch(projectId, load, { immediate: true });
       </section>
       <section v-if="isLeader" class="panel upload-panel" aria-labelledby="knowledge-upload-title">
         <div>
-          <p class="eyebrow">Build retrieval context</p>
           <h2 id="knowledge-upload-title" class="panel-title">上传项目知识</h2>
           <p class="field-hint">
             支持 .txt 与 .md，可一次选择多个文件。逐个文件独立处理并各自报告结果，
@@ -272,7 +264,6 @@ watch(projectId, load, { immediate: true });
       <section class="panel knowledge-index" aria-labelledby="knowledge-list-title">
         <div class="index-head">
           <div>
-            <p class="eyebrow">Project documents</p>
             <h2 id="knowledge-list-title" class="panel-title">公共知识文档</h2>
           </div>
         </div>
@@ -347,10 +338,6 @@ watch(projectId, load, { immediate: true });
 .knowledge-summary .panel { display: grid; gap: var(--fp-space-2); margin-bottom: var(--fp-space-6); }
 .knowledge-summary strong { color: var(--fp-color-accent-inverse); font: 800 1.5rem/1 var(--fp-font-mono); }
 .knowledge-summary span { color: var(--fp-color-text-muted); font-size: 0.75rem; }
-.knowledge-hero { display: grid; align-items: center; gap: var(--fp-space-8); grid-template-columns: minmax(0, 1fr) auto; }
-.vector-visual { display: flex; align-items: center; gap: var(--fp-space-3); padding: var(--fp-space-5); border: 0.0625rem solid var(--fp-color-border-accent); border-radius: var(--fp-radius-lg); background: var(--fp-color-accent-soft); color: var(--fp-color-text-muted); font: 700 0.6875rem/1 var(--fp-font-mono); text-transform: uppercase; }
-.vector-visual i { color: var(--fp-color-accent); font-style: normal; }
-.vector-visual strong { color: var(--fp-color-accent-inverse); }
 .vector-metric { border-color: var(--fp-color-info); background: linear-gradient(145deg, var(--fp-color-info-soft), var(--fp-color-surface-glass)); }
 .upload-panel { display: grid; align-items: end; gap: var(--fp-space-6); grid-template-columns: minmax(15rem, 0.75fr) minmax(20rem, 1.25fr); }
 .upload-panel .inline-form { margin: 0; }
@@ -362,8 +349,6 @@ watch(projectId, load, { immediate: true });
   .upload-panel { grid-template-columns: 1fr; }
 }
 @media (max-width: 42rem) {
-  .knowledge-hero,
   .knowledge-summary { grid-template-columns: 1fr; }
-  .vector-visual { justify-content: center; width: 100%; }
 }
 </style>

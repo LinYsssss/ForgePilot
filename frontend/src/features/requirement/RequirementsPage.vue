@@ -192,9 +192,8 @@ async function removeRequirement(item: RequirementSummary): Promise<void> {
 <template>
   <section class="requirements-page" aria-labelledby="requirements-title">
     <div class="page-head">
-      <p class="eyebrow">Requirement contracts</p>
       <h1 id="requirements-title">研发需求</h1>
-      <p class="lede">用不可变版本与稳定 AC 描述“应该做什么”，让后续审查拥有可追踪的判断基准。</p>
+      <p class="field-hint">需求以不可变版本与稳定 AC 描述“应该做什么”，是后续审查的判断基准。</p>
     </div>
 
     <div class="panel inline-form project-selector">
@@ -344,7 +343,6 @@ async function removeRequirement(item: RequirementSummary): Promise<void> {
         <form class="requirement-form requirement-create" @submit.prevent="create">
           <div class="form-section-head">
             <div>
-              <p class="eyebrow">New contract</p>
               <h2 class="panel-title">创建需求契约</h2>
             </div>
             <p class="field-hint">创建后先处于草稿状态；发布就绪后内容以版本保存。</p>

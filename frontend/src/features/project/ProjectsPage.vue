@@ -129,9 +129,8 @@ async function restore(project: Project): Promise<void> {
 <template>
   <section class="projects-page" aria-labelledby="projects-title">
     <div class="page-head">
-      <p class="eyebrow">Project workspace</p>
       <h1 id="projects-title">项目</h1>
-      <p class="lede">管理团队边界、需求上下文与代码审查入口。每个项目只连接一个活动仓库。</p>
+      <p class="field-hint">每个项目连接一个活动仓库；归档是可逆的，数据与审计保留。</p>
     </div>
 
     <form class="panel inline-form project-create" @submit.prevent="create">

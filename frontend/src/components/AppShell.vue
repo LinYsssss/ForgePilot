@@ -106,7 +106,6 @@ async function logout(): Promise<void> {
         <details ref="accountMenu" class="account-menu">
           <summary class="button button-inverse session-user">{{ account.displayName }}</summary>
           <div class="account-popover">
-            <p class="eyebrow">Account</p>
             <h2 class="panel-title">账户</h2>
             <p class="field-hint">{{ account.displayName }} · @{{ account.username }} · ID {{ account.id }}</p>
             <RouterLink class="button button-quiet" :to="ACCOUNT_ROUTE_PATH">

@@ -55,10 +55,6 @@ async function submit(): Promise<void> {
         <div class="login-laser" aria-hidden="true"></div>
         <div class="login-brand">
           <img class="login-logo-app" src="/brand/logo-app.png" alt="ForgePilot" />
-          <div>
-            <p class="eyebrow">ForgePilot</p>
-            <p class="login-brand-note">Requirement-driven AI review console</p>
-          </div>
         </div>
         <p id="login-story-title" class="login-story-title">把需求、项目规范与代码变更放进同一条证据链。</p>
         <p class="login-story-copy">
@@ -83,7 +79,6 @@ async function submit(): Promise<void> {
 
       <div class="login-access">
         <div class="login-heading">
-          <p class="eyebrow">Secure workspace access</p>
           <h1 id="login-title">{{ mode === "login" ? "登录" : "注册并登录" }}</h1>
           <p class="muted">
             {{

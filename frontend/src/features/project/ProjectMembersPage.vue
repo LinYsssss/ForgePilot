@@ -306,7 +306,6 @@ onMounted(load);
 <template>
   <section aria-labelledby="members-title">
     <div class="page-head">
-      <p class="eyebrow">Project · people and identities</p>
       <h1 id="members-title">{{ project?.name ?? "项目成员" }}</h1>
       <p v-if="project" class="lede">
         我的角色：{{ project.myRoles.map((role) => PROJECT_ROLE_LABELS[role]).join("、") }}

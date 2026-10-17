@@ -182,13 +182,12 @@ watch(projectId, load, { immediate: true });
 <template>
   <section aria-labelledby="repositories-title">
     <div class="page-head">
-      <p class="eyebrow">SCM integration</p>
       <h1 id="repositories-title">仓库接入</h1>
-      <p class="field-hint">仓库凭据用于读取代码和合并。个人身份需在账户设置验证，再到项目成员页绑定，才能识别本人 PR、修改需求关联和请求审查。</p>
-      <p class="lede">
-        一个项目接入一个 GitHub 或 GitLab 仓库。凭据仅写入请求，页面和读取接口都不会显示
+      <p class="field-hint">
+        一个项目接入一个 GitHub 或 GitLab 仓库；凭据仅写入请求，页面和读取接口都不会显示
         token 或 Webhook 密钥。
       </p>
+      <p class="field-hint">仓库凭据用于读取代码和合并。个人身份需在账户设置验证，再到项目成员页绑定，才能识别本人 PR、修改需求关联和请求审查。</p>
     </div>
     <section class="panel project-selector">
       <div>
@@ -217,7 +216,6 @@ watch(projectId, load, { immediate: true });
       >
         <div class="index-head">
           <div>
-            <p class="eyebrow">Safe repository metadata</p>
             <h2 id="repository-current-title" class="panel-title">当前接入</h2>
           </div>
           <span class="badge badge-success">已连接</span>
@@ -236,7 +234,6 @@ watch(projectId, load, { immediate: true });
       </p>
       <section v-if="isLeader" class="panel repository-editor" aria-labelledby="repository-form-title">
         <div class="editor-heading">
-          <p class="eyebrow">Repository credentials</p>
           <h2 id="repository-form-title" class="panel-title">
             {{ repository ? "修改仓库" : "注册仓库" }}
           </h2>
@@ -325,7 +322,6 @@ watch(projectId, load, { immediate: true });
         aria-labelledby="notification-title"
       >
         <div class="editor-heading">
-          <p class="eyebrow">DingTalk notifications</p>
           <h2 id="notification-title" class="panel-title">审查完成通知</h2>
           <p class="field-hint">
             一次审查跑完后往群里发一条摘要：PR、关联需求、发现条数。
