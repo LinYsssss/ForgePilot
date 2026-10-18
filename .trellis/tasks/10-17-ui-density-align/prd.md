@@ -39,3 +39,9 @@
 6. **通用密度**:`.page-head`、`.record`、`.record-actions` 的内边距/上边距各收一档;需求列表卡片元信息固定三列。
 
 门禁:lint / typecheck / vitest 66 项(含新增 trim 断言)/ build 全绿。部署:20:19 UTC `docker compose -p fp-demo up --build --detach --wait`,前端资产 `index-QFiYJGTr.js` / `index-By-epeHB.css`,本地与公网一致;后端未改,未重跑。
+
+## 第三轮补充(同日,已部署)
+
+- **工作台两栏对齐的真因**:`.workbench-columns` 的行是默认 `auto`,48 行表格按内容把行撑到 4011px 并溢出容器(校准面板被压在下面)。修复 = 显式 `grid-template-rows: minmax(0, 1fr)` 把行收进定高容器(56rem),左栏在内部滚动、右栏在自身高度内拉伸(超高才内滚);右栏再压实一档(动态 3 条、间距收紧、快捷操作一行三键)。度量复核:`columns/queue/rail` 底边重合同一像素,队列 `clientHeight 573 / scrollHeight 3792`,右栏接近不滚。
+- **研发需求列表**:卡片压成一行式(REQ + 标题 + REV/状态徽标 + 处理人/开发/评审/更新时间同行,动作右对齐);列表区 48rem 定高内滚(实测 `clientHeight 768 / scrollHeight 2450`,卡片高 84px)。
+- **代码审查列表**:表格 46rem 定高内滚、表头吸顶、行距收紧、PR 标题单行省略(悬停看全文);实测 `clientHeight 734 / scrollHeight 6755`。
