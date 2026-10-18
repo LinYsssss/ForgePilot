@@ -274,3 +274,18 @@ const CHANGE_TYPE_LABELS: Record<string, string> = {
 export function changeTypeLabel(changeType: string): string {
   return CHANGE_TYPE_LABELS[changeType] ?? changeType;
 }
+
+/**
+ * AI 调用台账的用途词表，与 `ai_call_log.use_case` 的 CHECK 一一对应。
+ * 未知取值原样显示，不猜：读接口不该被一个未来的用途名整个绊倒。
+ */
+const AI_USE_CASE_LABELS: Record<string, string> = {
+  REVIEW: "代码审查",
+  EMBEDDING: "知识向量化",
+  IMPLEMENTATION_GUIDANCE: "实现建议",
+  REQUIREMENT_QUALITY: "需求质量检查",
+};
+
+export function aiUseCaseLabel(useCase: string): string {
+  return AI_USE_CASE_LABELS[useCase] ?? useCase;
+}

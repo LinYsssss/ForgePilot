@@ -13,6 +13,7 @@ import {
   knowledgeDownloadUrl,
   type KnowledgeDocumentContent,
   listProjectKnowledge,
+  retryProjectKnowledge,
   uploadProjectKnowledge,
   type KnowledgeDocument,
   type KnowledgeStatus,
@@ -61,6 +62,7 @@ const uploadResults = ref<Array<{
   error: string | null;
 }>>([]);
 const deletePending = ref(false);
+const retryPending = ref(false);
 let listToken = 0;
 const summary = computed(() => ({
   ready: documents.value.filter((document) => document.status === "READY").length,
@@ -161,6 +163,25 @@ async function remove(document: KnowledgeDocument): Promise<void> {
     error.value = apiErrorMessage(failure);
   } finally {
     deletePending.value = false;
+  }
+}
+
+/**
+ * 失败重试：后端只受理 FAILED。受理后回到「正在处理」，
+ * 列表轮询会自动接上，无需在这里手工刷新状态。
+ */
+async function retry(document: KnowledgeDocument): Promise<void> {
+  const id = projectId.value;
+  if (id === null) return;
+  retryPending.value = true;
+  error.value = null;
+  try {
+    await retryProjectKnowledge(id, document.id);
+    await load();
+  } catch (failure: unknown) {
+    error.value = apiErrorMessage(failure);
+  } finally {
+    retryPending.value = false;
   }
 }
 
@@ -295,6 +316,13 @@ watch(projectId, load, { immediate: true });
               <div v-if="projectId !== null" class="record-actions knowledge-card-actions">
                 <RouterLink class="button button-quiet" :to="knowledgeDocumentRoute(projectId, document.id)">阅读</RouterLink>
                 <a class="button button-quiet" :href="knowledgeDownloadUrl(projectId, document.id)">下载</a>
+                <button
+                  v-if="isLeader && document.status === 'FAILED'"
+                  type="button"
+                  class="button button-quiet"
+                  :disabled="retryPending"
+                  @click="retry(document)"
+                >重试处理</button>
                 <button
                   v-if="isLeader && document.sourceType === 'PROJECT_KNOWLEDGE'"
                   type="button"

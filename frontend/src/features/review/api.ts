@@ -178,6 +178,9 @@ export interface ProjectReviewRow {
   status: ReviewStatus;
   decision: ReviewDecision;
   isCurrent: boolean;
+  /** 产生这行的引擎版本与模型；更早的数据可能没有记录，故可空。 */
+  promptVersion: string | null;
+  model: string | null;
   createdAt: string;
 }
 
@@ -360,4 +363,32 @@ export function getRequirementCoverage(
 
 export function getReviewCalibration(projectId: number): Promise<ReviewCalibration> {
   return requestJson<ReviewCalibration>(`${projectPath(projectId)}/review-calibration`);
+}
+
+/**
+ * AI 调用台账里按用途聚合的一行。
+ *
+ * `failed` 数的是未成功的尝试（含超时）；`tokens` 在全部调用都没上报时为 `null`，
+ * 与「花了 0 token」区分。`p50LatencyMs` / `p95LatencyMs` 是离散分位，
+ * 取到的必是某次调用的真实延迟。
+ */
+export interface AiUsageRow {
+  useCase: string;
+  calls: number;
+  succeeded: number;
+  failed: number;
+  tokens: number | null;
+  p50LatencyMs: number | null;
+  p95LatencyMs: number | null;
+  lastCallAt: string;
+}
+
+/** `rows` 按用途名排序；没有调用时为空数组。 */
+export interface AiUsage {
+  rows: AiUsageRow[];
+  totalCalls: number;
+}
+
+export function getAiUsage(projectId: number): Promise<AiUsage> {
+  return requestJson<AiUsage>(`${projectPath(projectId)}/ai-usage`);
 }

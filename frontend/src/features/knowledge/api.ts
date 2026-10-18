@@ -32,6 +32,11 @@ export function uploadProjectKnowledge(projectId: number, input: KnowledgeDocume
   return requestJson<KnowledgeDocument>(`${projectPath(projectId)}/knowledge/documents`, { method: "POST", body: JSON.stringify(input) });
 }
 
+/** 只有处理失败的文档能被重试；受理后回到 PENDING，由后台入库流程重新消费。 */
+export function retryProjectKnowledge(projectId: number, documentId: number): Promise<KnowledgeDocument> {
+  return requestJson<KnowledgeDocument>(`${projectPath(projectId)}/knowledge/documents/${documentId}/retry`, { method: "POST" });
+}
+
 export function deleteProjectKnowledge(projectId: number, documentId: number): Promise<void> {
   return requestJson<void>(`${projectPath(projectId)}/knowledge/documents/${documentId}`, {
     method: "DELETE",

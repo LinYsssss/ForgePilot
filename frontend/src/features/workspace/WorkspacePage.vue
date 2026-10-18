@@ -20,14 +20,17 @@ import { listMembers, PROJECT_ROLE_LABELS, type Member } from "../project/api";
 import { requirementPhase, REQUIREMENT_STATUS_TONES } from "../requirement/status";
 import { listRequirements, type RequirementSummary } from "../requirement/api";
 import {
+  getAiUsage,
   getReviewCalibration,
   listProjectReviews,
   listReviewActivity,
   type ActivityView,
+  type AiUsage,
   type ProjectReviewRow,
   type ReviewCalibration,
 } from "../review/api";
 import {
+  aiUseCaseLabel,
   FINDING_CONFIDENCE_LABELS,
   pullRequestLabel,
   REVIEW_STATUS_LABELS,
@@ -51,6 +54,7 @@ const knowledge = ref<KnowledgeDocument[]>([]);
 const repositories = ref<ScmRepository[]>([]);
 const members = ref<Member[]>([]);
 const calibration = ref<ReviewCalibration | null>(null);
+const aiUsage = ref<AiUsage | null>(null);
 const loading = ref(false);
 
 const queueTab = ref<QueueKind | "ALL">("ALL");
@@ -432,6 +436,11 @@ function percent(value: number | null): string {
   return value === null ? "—" : `${(value * 100).toFixed(0)}%`;
 }
 
+/** 延迟按秒展示并保留一位小数：毫秒在这个粒度上没有阅读价值。 */
+function formatSeconds(milliseconds: number | null): string {
+  return milliseconds === null ? "—" : `${(milliseconds / 1000).toFixed(1)} s`;
+}
+
 function selectProject(event: Event): void {
   void select(parseId((event.target as HTMLSelectElement).value));
 }
@@ -445,6 +454,7 @@ async function load(): Promise<void> {
   repositories.value = [];
   members.value = [];
   calibration.value = null;
+  aiUsage.value = null;
   error.value = null;
   if (id === null) return;
   loading.value = true;
@@ -457,6 +467,7 @@ async function load(): Promise<void> {
       repositories.value,
       members.value,
       calibration.value,
+      aiUsage.value,
     ] = await Promise.all([
       listRequirements(id),
       listReviewActivity(id),
@@ -466,6 +477,8 @@ async function load(): Promise<void> {
       listMembers(id),
       // 同上：校准卡失败只是它自己不显示，不该让整个工作台变成加载失败。
       getReviewCalibration(id).catch(() => null),
+      // 台账面板同理：失败只是它自己不显示。
+      getAiUsage(id).catch(() => null),
     ]);
   } catch (failure: unknown) {
     error.value = apiErrorMessage(failure);
@@ -731,6 +744,44 @@ watch(projectId, load, { immediate: true });
             不计入本表。
           </p>
         </section>
+
+        <details v-if="aiUsage?.rows?.length" class="panel ai-usage-panel">
+          <summary>
+            AI 调用台账（{{ aiUsage.totalCalls }} 次调用 · {{ aiUsage.rows.length }} 种用途）
+          </summary>
+          <p class="field-hint">
+            本项目全部 AI 调用按用途聚合。「未成功」含超时；P50/P95 为离散分位，
+            取到的必是某次调用的真实延迟。
+          </p>
+          <div class="ai-usage-scroll">
+            <table class="calibration-table ai-usage-table">
+              <thead>
+                <tr>
+                  <th scope="col">用途</th>
+                  <th scope="col">调用</th>
+                  <th scope="col">成功</th>
+                  <th scope="col">未成功</th>
+                  <th scope="col">P50</th>
+                  <th scope="col">P95</th>
+                  <th scope="col">Token</th>
+                  <th scope="col">最近一次</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="row in aiUsage.rows" :key="row.useCase">
+                  <th scope="row">{{ aiUseCaseLabel(row.useCase) }}</th>
+                  <td>{{ row.calls }}</td>
+                  <td>{{ row.succeeded }}</td>
+                  <td>{{ row.failed }}</td>
+                  <td>{{ formatSeconds(row.p50LatencyMs) }}</td>
+                  <td>{{ formatSeconds(row.p95LatencyMs) }}</td>
+                  <td>{{ row.tokens === null ? "未记录" : row.tokens.toLocaleString() }}</td>
+                  <td>{{ formatRelativeDateTime(row.lastCallAt) }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </details>
       </template>
     </template>
   </section>
@@ -1145,6 +1196,24 @@ watch(projectId, load, { immediate: true });
 
 .calibration-empty {
   color: var(--fp-color-text-muted);
+}
+
+.ai-usage-panel summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.ai-usage-panel > .field-hint {
+  margin: var(--fp-space-3) 0 0;
+}
+
+/* 台账列多行少:窄屏下让表格自己横向滚动,而不是把页面撑宽。 */
+.ai-usage-scroll {
+  overflow-x: auto;
+}
+
+.ai-usage-table {
+  min-width: 44rem;
 }
 
 @media (max-width: 72rem) {

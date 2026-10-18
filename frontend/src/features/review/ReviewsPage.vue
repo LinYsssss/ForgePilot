@@ -326,7 +326,7 @@ async function triggerReview(): Promise<void> {
         <div v-else class="table-scroll">
           <table class="data-table project-review-table">
             <caption class="table-caption">按服务端返回的时间倒序展示项目内全部 Review。</caption>
-            <thead><tr><th scope="col">审查</th><th scope="col">PR</th><th scope="col">关联需求</th><th scope="col">执行状态</th><th scope="col">Decision</th><th scope="col">当前有效性</th><th scope="col">head SHA</th><th scope="col">创建时间</th></tr></thead>
+            <thead><tr><th scope="col">审查</th><th scope="col">PR</th><th scope="col">关联需求</th><th scope="col">执行状态</th><th scope="col">Decision</th><th scope="col">提示词 · 模型</th><th scope="col">当前有效性</th><th scope="col">head SHA</th><th scope="col">创建时间</th></tr></thead>
             <tbody>
               <tr v-for="review in filteredReviews" :key="review.id">
                 <td><RouterLink :to="reviewDetailRoute(projectId, review.id)">审查 {{ review.id }}</RouterLink></td>
@@ -334,6 +334,7 @@ async function triggerReview(): Promise<void> {
                 <td><RouterLink v-if="review.requirementId !== null" :to="requirementDetailRoute(projectId, review.requirementId)">{{ requirementTitle(review.requirementId) }}</RouterLink><span v-else>未关联需求</span></td>
                 <td><span :class="['badge', `badge-${REVIEW_STATUS_TONES[review.status]}`]">{{ REVIEW_STATUS_LABELS[review.status] }}</span></td>
                 <td><span :class="['badge', `badge-${REVIEW_DECISION_TONES[review.decision]}`]">{{ REVIEW_DECISION_LABELS[review.decision] }}</span></td>
+                <td><span class="review-engine">{{ review.promptVersion ?? "未记录" }} · {{ review.model ?? "未记录" }}</span></td>
                 <td><span :class="['badge', review.isCurrent ? 'badge-success' : 'badge-warning']">{{ review.isCurrent ? "当前有效" : "已过期" }}</span></td>
                 <td><code :title="review.headSha">{{ shortSha(review.headSha) }}</code></td>
                 <td>{{ formatDateTime(review.createdAt) }}</td>
@@ -454,6 +455,13 @@ async function triggerReview(): Promise<void> {
   color: var(--fp-color-text-muted);
   font-size: 0.8125rem;
   text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 引擎元数据是次要信息:等宽小字,不抢列宽。 */
+.review-engine {
+  color: var(--fp-color-text-muted);
+  font: 0.75rem/1.4 var(--fp-font-mono);
   white-space: nowrap;
 }
 .data-table { min-width: 70rem; width: 100%; border-collapse: collapse; text-align: left; }
