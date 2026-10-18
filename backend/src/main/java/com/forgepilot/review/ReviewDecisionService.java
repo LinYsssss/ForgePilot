@@ -269,7 +269,7 @@ public class ReviewDecisionService {
                         review.getRequirementId(), review.getStatus(), review.getDecision(),
                         inputs.computeIfAbsent(review.getPullRequestId(),
                                 pullRequest -> inputsOf(projectId, pullRequest)).matches(review),
-                        review.getCreatedAt()))
+                        review.getPromptVersion(), review.getModel(), review.getCreatedAt()))
                 .toList();
     }
 

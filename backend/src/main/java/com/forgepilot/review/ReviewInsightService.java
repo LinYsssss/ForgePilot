@@ -13,6 +13,8 @@ import com.forgepilot.review.ReviewInsightRepository.Criterion;
 import com.forgepilot.review.ReviewInsightRepository.LatestReview;
 import com.forgepilot.review.ReviewInsightRepository.Unusable;
 import com.forgepilot.review.ReviewViews.AcCoverage;
+import com.forgepilot.review.ReviewViews.AiUsage;
+import com.forgepilot.review.ReviewViews.AiUsageRow;
 import com.forgepilot.review.ReviewViews.CalibrationBin;
 import com.forgepilot.review.ReviewViews.RequirementCoverage;
 import com.forgepilot.review.ReviewViews.ReviewCalibration;
@@ -20,8 +22,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * 两个从既有数据推导出来的只读视图：一条需求当前修订的<strong>覆盖度</strong>，
- * 以及模型自报置信度与人工裁决之间的<strong>校准</strong>。
+ * 三个从既有数据推导出来的只读视图：一条需求当前修订的<strong>覆盖度</strong>、
+ * 模型自报置信度与人工裁决之间的<strong>校准</strong>，以及 AI 调用<strong>台账</strong>。
  *
  * <p>两者都不存储任何东西，每次读取现算——理由与 {@link ReviewActivityService} 相同：
  * 一份存下来的副本必须被每一次审查、每一次人工裁决、每一次修订发布所失效，
@@ -107,5 +109,17 @@ public class ReviewInsightService {
         Unusable unusable = insights.unusableFindings(projectId);
         return new ReviewCalibration(bins, unusable.awaitingAdjudication(),
                 unusable.withoutConfidence());
+    }
+
+    /**
+     * 本项目的 AI 调用台账：每个用途调了多少次、成败几何、token 与延迟分位。
+     *
+     * <p>任何成员都能读：它记录的是「系统调了什么、花了多久、败了几次」，
+     * 不含 prompt 与回答正文，说不出审查详情没说过的东西。
+     */
+    public AiUsage aiUsage(long projectId, long actorId) {
+        access.requireMember(projectId, actorId);
+        List<AiUsageRow> rows = insights.aiUsageByUseCase(projectId);
+        return new AiUsage(rows, rows.stream().mapToLong(AiUsageRow::calls).sum());
     }
 }

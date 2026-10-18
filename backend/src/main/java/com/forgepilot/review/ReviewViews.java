@@ -34,6 +34,9 @@ final class ReviewViews {
     /**
      * 项目级审查列表中的一行。它携带 PR 信息，因为这份列表是跨 PR 的，
      * 而按 PR 展开的历史列表则不必重复说明这一点。
+     *
+     * <p>行上同时带引擎的 {@code promptVersion} 与 {@code model}：列表要能回答
+     * 「这行是谁审的、审于哪个版本」，而这恰好是评测口径的一部分。
      */
     record ProjectReviewRow(
             long id,
@@ -46,6 +49,8 @@ final class ReviewViews {
             ReviewStatus status,
             ReviewDecision decision,
             boolean isCurrent,
+            String promptVersion,
+            String model,
             Instant createdAt) {
     }
 
@@ -189,6 +194,22 @@ final class ReviewViews {
      */
     record ReviewCalibration(List<CalibrationBin> bins, long awaitingAdjudication,
             long withoutConfidence) {
+    }
+
+    /**
+     * AI 调用台账里按用途聚合的一行。
+     *
+     * <p>{@code failed} 数的是<strong>未成功</strong>的尝试（含 {@code TIMEOUT}）；
+     * {@code tokens} 在全部调用都没上报 token 时为 {@code null} 而不是 0——
+     * 0 会被读成「这些调用不花 token」。{@code p50}/{@code p95} 取自 SQL 的
+     * {@code percentile_disc}（离散分位），给出的数必是某个真实样本值。
+     */
+    record AiUsageRow(String useCase, long calls, long succeeded, long failed, Long tokens,
+            Double p50LatencyMs, Double p95LatencyMs, Instant lastCallAt) {
+    }
+
+    /** 一个项目的调用台账：{@code rows} 按用途名排序，没有调用时为空数组。 */
+    record AiUsage(List<AiUsageRow> rows, long totalCalls) {
     }
 
     /** Finding 审计轨迹中的一行。 */

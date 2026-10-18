@@ -5,13 +5,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import com.forgepilot.review.ReviewViews.AiUsageRow;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
 /**
- * 覆盖度与校准这两个派生视图所需的读取。
+ * 覆盖度、校准与 AI 调用台账这三个派生视图所需的读取。
  *
- * <p>和 {@link ReviewActivityRepository} 一样用朴素 SQL，理由也一样：这两个视图都要跨
+ * <p>和 {@link ReviewActivityRepository} 一样用朴素 SQL，理由也一样：覆盖度与校准要跨
  * {@code acceptance_criterion}（归 {@code requirement} 所有）与 {@code review} / {@code finding}
  * 取数，而 {@code review} 不得注入另一个功能模块的仓库。写成 SQL 的连接不产生任何类型依赖。
  *
@@ -117,6 +118,30 @@ class ReviewInsightRepository {
              where f.project_id = ?
             """.formatted(FIRST_ADJUDICATION);
 
+    /**
+     * 按用途聚合的 AI 调用台账。
+     *
+     * <p>{@code failed} 数的是 status 不为 SUCCESS 的行——TIMEOUT 也是一种失败，
+     * 而「未成功」正是这个数在说的事。{@code tokens} 求和保留 NULL：一列全空时
+     * 「没上报过 token」与「花了 0 token」是两回事。分位用 {@code percentile_disc}
+     * （离散分位），取到的必是某次调用的真实延迟，而不是两个样本之间的一个假想值；
+     * {@code latency_ms} 是整数，故在 SQL 里显式转成 double。
+     */
+    private static final String AI_USAGE_BY_USE_CASE = """
+            select use_case,
+                   count(*) as calls,
+                   count(*) filter (where status = 'SUCCESS') as succeeded,
+                   count(*) filter (where status <> 'SUCCESS') as failed,
+                   sum(total_token) as tokens,
+                   (percentile_disc(0.5) within group (order by latency_ms))::double precision as p50,
+                   (percentile_disc(0.95) within group (order by latency_ms))::double precision as p95,
+                   max(created_at) as last_call_at
+              from ai_call_log
+             where project_id = ?
+             group by use_case
+             order by use_case
+            """;
+
     private final JdbcTemplate jdbc;
 
     ReviewInsightRepository(JdbcTemplate jdbc) {
@@ -175,6 +200,16 @@ class ReviewInsightRepository {
                                 rs.getLong("awaiting_adjudication"))
                         : new Unusable(0, 0),
                 projectId, projectId);
+    }
+
+    List<AiUsageRow> aiUsageByUseCase(long projectId) {
+        return jdbc.query(AI_USAGE_BY_USE_CASE,
+                (rs, index) -> new AiUsageRow(rs.getString("use_case"), rs.getLong("calls"),
+                        rs.getLong("succeeded"), rs.getLong("failed"),
+                        rs.getObject("tokens", Long.class),
+                        rs.getObject("p50", Double.class), rs.getObject("p95", Double.class),
+                        rs.getTimestamp("last_call_at").toInstant()),
+                projectId);
     }
 
     /**

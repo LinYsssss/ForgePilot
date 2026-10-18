@@ -10,6 +10,8 @@ import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import com.forgepilot.PostgresTestBase;
+import com.forgepilot.review.ReviewViews.AiUsage;
+import com.forgepilot.review.ReviewViews.AiUsageRow;
 import com.forgepilot.review.ReviewViews.CalibrationBin;
 import com.forgepilot.review.ReviewViews.Interval;
 import com.forgepilot.review.ReviewViews.RequirementCoverage;
@@ -25,11 +27,12 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
 /**
- * 覆盖度与校准这两个派生视图。
+ * 覆盖度、校准与调用台账这三个派生视图。
  *
- * <p>这里只锁四件删掉就会静默出错的事：区间在没有样本时说「没有区间」而不是零、
+ * <p>这里只锁删掉就会静默出错的事：区间在没有样本时说「没有区间」而不是零、
  * 校准的标签取自<strong>首次</strong>人工裁决、覆盖度只反映<strong>当前修订</strong>、
- * 以及这两个端点真的挂在它们声称的那条 HTTP 路径上。
+ * 台账的「未成功」口径与分位取自真实样本，
+ * 以及这三个端点真的挂在它们声称的那条 HTTP 路径上。
  */
 @SpringBootTest
 class ReviewInsightTest extends PostgresTestBase {
@@ -191,15 +194,47 @@ class ReviewInsightTest extends PostgresTestBase {
                 .satisfies(row -> assertThat(row.openFindings()).isOne());
     }
 
+    /**
+     * 台账按用途聚合，且只聚合本项目。
+     *
+     * <p>{@code TIMEOUT} 计入「未成功」而不是被丢掉；从未上报 token 与花了 0 token
+     * 是两个答案；分位取自真实样本（两样本的 p50 是较小的那个，而不是插值出的中间值）。
+     */
+    @Test
+    void aiUsageAggregatesPerUseCaseAndStaysInsideTheProject() {
+        Scenario scenario = new Scenario();
+        Scenario other = new Scenario();
+        scenario.aiCall("REVIEW", "SUCCESS", 1_000, 120);
+        scenario.aiCall("REVIEW", "TIMEOUT", 5_000, 80);
+        scenario.aiCall("EMBEDDING", "FAILED", 40, null);
+        other.aiCall("REVIEW", "SUCCESS", 999, 9_999);
+
+        AiUsage usage = insights.aiUsage(scenario.projectId, scenario.member);
+
+        assertThat(usage.totalCalls()).isEqualTo(3);
+        assertThat(usage.rows()).extracting(AiUsageRow::useCase)
+                .containsExactly("EMBEDDING", "REVIEW");
+        AiUsageRow review = usage.rows().get(1);
+        assertThat(review.calls()).isEqualTo(2);
+        assertThat(review.succeeded()).isEqualTo(1);
+        assertThat(review.failed()).as("TIMEOUT 也是一种未成功").isEqualTo(1);
+        assertThat(review.tokens()).isEqualTo(200);
+        assertThat(review.p50LatencyMs()).as("离散分位：取真实样本，不插值")
+                .isEqualTo(1_000.0);
+        assertThat(review.p95LatencyMs()).isEqualTo(5_000.0);
+        assertThat(usage.rows().get(0).tokens()).as("没上报过 token 不等于花了 0 token")
+                .isNull();
+    }
+
     // -------------------------------------------------------------------- HTTP
 
     /**
-     * 两个端点真的挂在它们声称的路径上。
+     * 三个端点真的挂在它们声称的路径上。
      *
      * <p>本项目有过教训：只有 Service 测试时，路径写错会在后端全绿而在前端 404。
      */
     @Test
-    void bothViewsAreReachableOverTheRealChain() throws Exception {
+    void everyViewIsReachableOverTheRealChain() throws Exception {
         Scenario scenario = new Scenario();
         scenario.completedReview(scenario.revisionId, "[{\"acKey\":\"AC-1\",\"verdict\":\"AT_RISK\"}]");
 
@@ -216,6 +251,13 @@ class ReviewInsightTest extends PostgresTestBase {
                         .with(user(scenario.memberName)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.bins.length()").value(FindingConfidence.values().length));
+
+        mockMvc.perform(MockMvcRequestBuilders
+                        .get("/api/projects/{p}/ai-usage", scenario.projectId)
+                        .with(user(scenario.memberName)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalCalls").value(0))
+                .andExpect(jsonPath("$.rows.length()").value(0));
     }
 
     /** 非成员看到的是 404，与项目不存在时完全相同——不得由状态码泄露存在性。 */
@@ -231,6 +273,10 @@ class ReviewInsightTest extends PostgresTestBase {
                 .andExpect(status().isNotFound());
         mockMvc.perform(MockMvcRequestBuilders
                         .get("/api/projects/{p}/review-calibration", scenario.projectId)
+                        .with(user(outsider)))
+                .andExpect(status().isNotFound());
+        mockMvc.perform(MockMvcRequestBuilders
+                        .get("/api/projects/{p}/ai-usage", scenario.projectId)
                         .with(user(outsider)))
                 .andExpect(status().isNotFound());
     }
@@ -354,6 +400,12 @@ class ReviewInsightTest extends PostgresTestBase {
 
         private ReviewCalibration calibration() {
             return insights.calibration(projectId, member);
+        }
+
+        private void aiCall(String useCase, String status, int latencyMs, Integer tokens) {
+            jdbc.update("insert into ai_call_log (project_id, use_case, model, latency_ms, status, "
+                    + "total_token) values (?, ?, 'test-model', ?, ?, ?)",
+                    projectId, useCase, latencyMs, status, tokens);
         }
     }
 }
