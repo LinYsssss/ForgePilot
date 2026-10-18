@@ -469,7 +469,8 @@ async function triggerReview(): Promise<void> {
 .recovery-panel summary { color: var(--fp-color-text-muted); cursor: pointer; font-weight: 700; }
 .activity-overview > summary { color: var(--fp-color-text-muted); cursor: pointer; font-weight: 700; }
 .activity-overview > .field-hint { margin: var(--fp-space-3) 0; }
-.activity-list { display: grid; gap: var(--fp-space-2); margin: 0; padding: 0; list-style: none; }
+/* 概览在展开态最长:24 个需求把页面拉长,列表区定高内滚,和审查表格同一模式。 */
+.activity-list { display: grid; max-height: 28rem; gap: var(--fp-space-2); margin: 0; padding: 0 var(--fp-space-2) 0 0; overflow: auto; list-style: none; }
 .activity-list li { display: grid; align-items: center; gap: var(--fp-space-3); padding: var(--fp-space-3); border: 0.0625rem solid var(--fp-color-border); border-radius: var(--fp-radius-sm); grid-template-columns: minmax(12rem, 1fr) auto minmax(0, 2fr); }
 .activity-list small { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--fp-space-2); color: var(--fp-color-text-subtle); }
 .recovery-form { margin-top: var(--fp-space-4); }
