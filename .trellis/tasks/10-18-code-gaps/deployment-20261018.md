@@ -3,7 +3,7 @@
 方案见同目录 `prd.md`。本文件记录执行结果:三处代码缺口已实现、测试、部署,
 并用真实产品流程在 halo-replay(项目 4)产生工作台数据。
 
-## 提交(本地,未推送)
+## 提交(已推送)
 
 | commit | 内容 |
 | --- | --- |
@@ -11,8 +11,9 @@
 | `0f74726` | feat(review): 列表带提示词与模型,新增 AI 调用台账只读视图(/ai-usage + 测试) |
 | `4d6d9d3` | feat(web): 审查列表现引擎元数据,工作台 AI 台账面板,知识失败重试入口 |
 | `a824143` | docs(trellis): 10-18 代码缺口方案与数据生成计划 |
+| `228f86b` | docs(trellis): 部署与数据生成记录(含线上镜像 ID) |
 
-未推送:按 AGENTS.md「先给出分组、确认后再推」。CI 未运行。
+已推送(`5de4cdc..228f86b`,10-18 晚用户确认);CI run [39117811114](https://github.com/LinYsssss/ForgePilot/actions/runs/39117811114) 四个 job 全绿(Backend verify / Frontend gates / Evaluation contract / Empty-stack Compose smoke)。
 
 ## 测试与部署
 
@@ -42,6 +43,8 @@
 
 - 校准表(工作台):高 47 裁决 / 39 确认 / 83%,95% 区间 70%–91%;中 8 / 3 / 38%,区间 14%–69%;
   低档无样本显示「样本不足」。待裁决 0、无置信度 0。
+- 裁决查准率(55 条人工标注,明细 `live-data-20261018/adjudication-review4-20261018.csv`):
+  TRUE 42 / FALSE 13,查准率 76.4%,95% Wilson [63.7%, 85.6%];高分箱 83.0%、中分箱 37.5%(与校准表同口径)。
 - 工作台 KPI:开发中需求 24 / 待最终决定 21 / 进行中的审查 0 / 待发起审查 0;AI 台账面板 388 次调用 · 4 种用途
   (代码审查 219 次含重试新增,知识向量化 163 次)。
 - 截图(`screenshots-20261018/`):`01-workspace-full`(工作台全页)、`02-calibration`(校准表)、
@@ -50,6 +53,7 @@
 
 ## 遗留
 
-- 推送待确认;推送后 CI 复核,并补记 CI run id。
 - 数据是真实的,但「最近动态」的时间戳来自 09-25 的审查行(PR head 未变,审查身份幂等,
   不能为制造新数据而改 head 或需求修订)。
+- `export-live-data.py` 现期望 `adjudication-review4-20261017.csv` 这个文件名;本次明细按真实日期
+  命名为 `adjudication-review4-20261018.csv`,改名或让脚本按 `adjudication-*.csv` 识别待定。
