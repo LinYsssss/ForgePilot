@@ -140,4 +140,13 @@ public class KnowledgeDocument {
         this.status = KnowledgeStatus.FAILED;
         this.failureReason = reason;
     }
+
+    /**
+     * 失败后的重试：回到 PENDING 并清掉原因，后台处理器下一轮就会再领走它。
+     * 允许从哪个状态调用由服务层判定；这里只表达这次状态迁移本身。
+     */
+    public void requeue() {
+        this.status = KnowledgeStatus.PENDING;
+        this.failureReason = null;
+    }
 }

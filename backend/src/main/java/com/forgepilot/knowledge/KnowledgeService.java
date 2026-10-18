@@ -155,6 +155,25 @@ public class KnowledgeService {
                 "chunks: " + removed);
     }
 
+    /**
+     * 重试一份处理失败的知识文档。
+     *
+     * <p>只有 FAILED 能进来：失败时结果事务整体回滚（见
+     * {@link KnowledgeIngestionProcessor} 的注释），不存在半成品分块，因此重试
+     * 只需把状态放回 PENDING，由同一条后台入库流程重新消费。
+     */
+    @Transactional
+    public long retryProjectKnowledge(long projectId, long actorId, long documentId) {
+        access.requireRole(projectId, actorId, ProjectRole.LEADER);
+        KnowledgeDocument document = documents.lockByProjectIdAndId(projectId, documentId)
+                .orElseThrow(ApiException::notFound);
+        if (document.getStatus() != KnowledgeStatus.FAILED) {
+            throw ApiException.conflict("只有处理失败的文档可以重试。");
+        }
+        document.requeue();
+        return document.getId();
+    }
+
     /** 有人类操作者的检索：先证明成员身份，再做项目 + 需求双重硬过滤的向量检索。 */
     @Transactional(readOnly = true)
     public List<ChunkSearchRepository.ChunkMatch> search(long projectId, long actorId,

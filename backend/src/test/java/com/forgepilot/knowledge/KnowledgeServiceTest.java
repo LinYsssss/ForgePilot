@@ -8,7 +8,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doThrow;
 
 import com.forgepilot.PostgresTestBase;
 import com.forgepilot.ai.AiGateway;
@@ -55,10 +56,12 @@ class KnowledgeServiceTest extends PostgresTestBase {
 
     @BeforeEach
     void embeddingsAreFourDimensional() {
-        when(ai.embed(anyList(), any(), any())).thenAnswer(call -> {
+        // doAnswer 而非 thenAnswer：有一个测试会先把同一个桩换成抛异常，再用这个方法
+        // 把成功桩装回来；那时 thenAnswer 风格会在「取值」阶段触发旧的异常桩，do 家族不会。
+        doAnswer(call -> {
             List<String> texts = call.getArgument(0);
             return texts.stream().map(text -> new float[] {0.1f, 0.2f, 0.3f, 0.4f}).toList();
-        });
+        }).when(ai).embed(anyList(), any(), any());
     }
 
     @Test
@@ -236,6 +239,53 @@ class KnowledgeServiceTest extends PostgresTestBase {
         assertThat(statusOf(() -> knowledge.deleteProjectKnowledge(
                 other.project, other.leader, document))).isEqualTo(HttpStatus.NOT_FOUND);
         assertThat(documents.findByProjectIdAndId(fixture.project, document)).isPresent();
+    }
+
+    /**
+     * 只有 FAILED 能重试；重试把状态放回 PENDING、清掉失败原因，由同一条后台
+     * 入库流程重新消费它。失败这一态是真的让处理器跑出来的，而不是用 SQL
+     * 摆出来的——处理器失败时结果事务整体回滚，不会留下半成品分块，
+     * 「重试只需改状态」正是靠这一点成立。
+     */
+    @Test
+    void onlyAFailedDocumentCanBeRetriedAndRetryClearsTheReason() {
+        Fixture fixture = new Fixture();
+        Fixture other = new Fixture();
+        long developer = fixture.member(ProjectRole.DEVELOPER);
+        long document = knowledge.createProjectKnowledge(fixture.project, fixture.leader, "手册.md", "正文");
+
+        // PENDING 已在队列里，重试它只会产生一次虚假的进度。
+        assertThat(statusOf(() -> knowledge.retryProjectKnowledge(
+                fixture.project, fixture.leader, document)))
+                .isEqualTo(HttpStatus.CONFLICT);
+
+        // 让入库真实失败一次；上游恢复后同一个文档应当能跑完整条流程。
+        doThrow(new IllegalStateException("上游不可用")).when(ai).embed(anyList(), any(), any());
+        processPendingKnowledge(ingestion, jdbc);
+        KnowledgeDocument failed = documents.findByProjectIdAndId(fixture.project, document).orElseThrow();
+        assertThat(failed.getStatus()).isEqualTo(KnowledgeStatus.FAILED);
+        assertThat(failed.getFailureReason()).isNotBlank();
+
+        // 与删除同一道门：开发者不能重试；跨项目与不存在同答。
+        assertThat(statusOf(() -> knowledge.retryProjectKnowledge(
+                fixture.project, developer, document))).isEqualTo(HttpStatus.FORBIDDEN);
+        assertThat(statusOf(() -> knowledge.retryProjectKnowledge(
+                other.project, other.leader, document))).isEqualTo(HttpStatus.NOT_FOUND);
+
+        // 重装 @BeforeEach 里的成功桩：上游恢复。
+        embeddingsAreFourDimensional();
+        assertThat(knowledge.retryProjectKnowledge(fixture.project, fixture.leader, document))
+                .isEqualTo(document);
+        KnowledgeDocument requeued = documents.findByProjectIdAndId(fixture.project, document).orElseThrow();
+        assertThat(requeued.getStatus()).isEqualTo(KnowledgeStatus.PENDING);
+        assertThat(requeued.getFailureReason())
+                .as("旧原因必须消失，否则排队中的文档会被页面显示成失败过")
+                .isNull();
+
+        // 重试即回到同一条入库流程：跑完后仍然可检索。
+        processPendingKnowledge(ingestion, jdbc);
+        assertThat(knowledge.document(fixture.project, fixture.leader, document).status())
+                .isEqualTo(KnowledgeStatus.READY);
     }
 
     // ---------------------------------------------------------------- fixture

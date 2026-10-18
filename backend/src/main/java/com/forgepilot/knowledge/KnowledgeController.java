@@ -68,6 +68,15 @@ class KnowledgeController {
         return knowledge.document(projectId, actorId, documentId);
     }
 
+    /** 失败重试与上传同一道 LEADER 门:它重新触发一次入库。 */
+    @PostMapping("/{documentId}/retry")
+    KnowledgeDocumentView retry(@PathVariable long projectId, @PathVariable long documentId,
+            Principal principal) {
+        long actorId = userIdOf(principal);
+        long retriedId = knowledge.retryProjectKnowledge(projectId, actorId, documentId);
+        return knowledge.document(projectId, actorId, retriedId);
+    }
+
     @PostMapping("/{documentId}/promote")
     @ResponseStatus(HttpStatus.CREATED)
     KnowledgeDocumentView promote(@PathVariable long projectId, @PathVariable long documentId,
