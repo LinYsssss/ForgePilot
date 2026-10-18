@@ -330,7 +330,7 @@ async function triggerReview(): Promise<void> {
             <tbody>
               <tr v-for="review in filteredReviews" :key="review.id">
                 <td><RouterLink :to="reviewDetailRoute(projectId, review.id)">审查 {{ review.id }}</RouterLink></td>
-                <td><RouterLink :to="reviewsRoute(projectId, review.pullRequestId)">{{ pullRequestLabel(review.provider, review.pullRequestNumber) }}</RouterLink><p>{{ review.pullRequestTitle }}</p></td>
+                <td><RouterLink :to="reviewsRoute(projectId, review.pullRequestId)">{{ pullRequestLabel(review.provider, review.pullRequestNumber) }}</RouterLink><p :title="review.pullRequestTitle">{{ review.pullRequestTitle }}</p></td>
                 <td><RouterLink v-if="review.requirementId !== null" :to="requirementDetailRoute(projectId, review.requirementId)">{{ requirementTitle(review.requirementId) }}</RouterLink><span v-else>未关联需求</span></td>
                 <td><span :class="['badge', `badge-${REVIEW_STATUS_TONES[review.status]}`]">{{ REVIEW_STATUS_LABELS[review.status] }}</span></td>
                 <td><span :class="['badge', `badge-${REVIEW_DECISION_TONES[review.decision]}`]">{{ REVIEW_DECISION_LABELS[review.decision] }}</span></td>
@@ -428,7 +428,34 @@ async function triggerReview(): Promise<void> {
 .pull-request-panel { border-color: var(--fp-color-border-accent); }
 .index-head { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--fp-space-4); margin-bottom: var(--fp-space-5); }
 .index-head .eyebrow { margin-bottom: var(--fp-space-2); }
-.table-scroll { overflow-x: auto; }
+.table-scroll {
+  max-height: 46rem;
+  overflow: auto;
+}
+
+/* 表格在定高区域内滚动:表头吸顶、行距收紧,长标题单行省略、悬停看全文。 */
+.project-review-table thead th {
+  position: sticky;
+  z-index: 1;
+  top: 0;
+  background: var(--fp-color-surface-strong);
+  box-shadow: inset 0 -0.0625rem 0 var(--fp-color-border);
+}
+
+.project-review-table th,
+.project-review-table td {
+  padding: var(--fp-space-2) var(--fp-space-3);
+}
+
+.project-review-table td p {
+  max-width: 26rem;
+  margin: var(--fp-space-1) 0 0;
+  overflow: hidden;
+  color: var(--fp-color-text-muted);
+  font-size: 0.8125rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .data-table { min-width: 70rem; width: 100%; border-collapse: collapse; text-align: left; }
 .table-caption { margin-bottom: var(--fp-space-3); color: var(--fp-color-text-muted); font-size: 0.8125rem; text-align: left; }
 .data-table th,

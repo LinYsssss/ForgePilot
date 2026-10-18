@@ -10,7 +10,6 @@ import { listReviewActivity, type ActivityView } from "../review/api";
 import {
   REVIEW_ACTIVITIES,
   REVIEW_ACTIVITY_LABELS,
-  REVIEW_ACTIVITY_TONES,
 } from "../review/labels";
 import AcceptanceCriteriaEditor from "./AcceptanceCriteriaEditor.vue";
 import {
@@ -266,73 +265,42 @@ async function removeRequirement(item: RequirementSummary): Promise<void> {
               </RouterLink>
             </h2>
             <span class="badge badge-neutral">REV {{ item.currentRevisionSeq }}</span>
-          </div>
-
-          <dl class="meta-list requirement-meta">
-            <div>
-              <dt>当前阶段</dt>
-              <dd class="requirement-status">
-                <span :class="['badge', `badge-${REQUIREMENT_STATUS_TONES[item.status]}`]">
-                  {{ requirementPhase(item.status, activity[String(item.id)]?.activity) }}
-                </span>
-              </dd>
+            <span
+              :class="['badge', `badge-${REQUIREMENT_STATUS_TONES[item.status]}`, 'requirement-status']"
+            >
+              {{ requirementPhase(item.status, activity[String(item.id)]?.activity) }}
+            </span>
+            <span class="requirement-facts">
+              处理人
+              {{ requirementHandler(item.status, activity[String(item.id)]?.activity, item.assigneeUsername, item.reviewerName) }}
+              · 开发 {{ item.assigneeUsername ?? "未指派" }}
+              · 评审 {{ item.reviewerName ?? "项目负责人处理" }}
+              · 更新 {{ formatDateTime(item.updatedAt) }}
+            </span>
+            <div v-if="isLeader" class="record-actions requirement-actions">
+              <RouterLink
+                v-if="!isTerminal(item.status)"
+                class="button button-quiet"
+                :to="requirementDetailRoute(projectId, item.id)"
+              >{{ item.status === "DRAFT" ? "编辑草稿" : "发布新版本" }}</RouterLink>
+              <button
+                v-if="canCancel(item)"
+                type="button"
+                class="button button-quiet"
+                :disabled="rowPending === item.id"
+                @click="cancelRequirement(item)"
+              >作废</button>
+              <button
+                v-if="item.status === 'CANCELED'"
+                type="button"
+                class="button button-danger"
+                :disabled="rowPending === item.id"
+                @click="removeRequirement(item)"
+              >删除</button>
+              <p v-if="item.status === 'DONE'" class="field-hint">
+                已完成的需求不再接受编辑、修订或状态流转。
+              </p>
             </div>
-            <div>
-              <dt>当前处理人</dt>
-              <dd>{{ requirementHandler(item.status, activity[String(item.id)]?.activity, item.assigneeUsername, item.reviewerName) }}</dd>
-            </div>
-            <div>
-              <dt>开发负责人</dt>
-              <dd>{{ item.assigneeUsername ?? "未指派" }}</dd>
-            </div>
-            <div>
-              <dt>审查人</dt>
-              <dd>{{ item.reviewerName ?? "项目负责人处理" }}</dd>
-            </div>
-            <div>
-              <dt>评审活动</dt>
-              <dd class="review-activity">
-                <span
-                  v-if="activity[String(item.id)]"
-                  :class="[
-                    'badge',
-                    `badge-${REVIEW_ACTIVITY_TONES[activity[String(item.id)].activity]}`,
-                  ]"
-                >
-                  {{ REVIEW_ACTIVITY_LABELS[activity[String(item.id)].activity] }}
-                </span>
-                <span v-else class="badge badge-neutral">未返回</span>
-              </dd>
-            </div>
-            <div>
-              <dt>更新时间</dt>
-              <dd>{{ formatDateTime(item.updatedAt) }}</dd>
-            </div>
-          </dl>
-
-          <div v-if="isLeader" class="record-actions requirement-actions">
-            <RouterLink
-              v-if="!isTerminal(item.status)"
-              class="button button-quiet"
-              :to="requirementDetailRoute(projectId, item.id)"
-            >{{ item.status === "DRAFT" ? "编辑草稿" : "发布新版本" }}</RouterLink>
-            <button
-              v-if="canCancel(item)"
-              type="button"
-              class="button button-quiet"
-              :disabled="rowPending === item.id"
-              @click="cancelRequirement(item)"
-            >作废</button>
-            <button
-              v-if="item.status === 'CANCELED'"
-              type="button"
-              class="button button-danger"
-              :disabled="rowPending === item.id"
-              @click="removeRequirement(item)"
-            >删除</button>
-            <p v-if="item.status === 'DONE'" class="field-hint">
-              已完成的需求不再接受编辑、修订或状态流转。
-            </p>
           </div>
         </li>
       </ul>
@@ -407,21 +375,28 @@ async function removeRequirement(item: RequirementSummary): Promise<void> {
   gap: var(--fp-space-6);
 }
 
-/* 6 条元信息固定三列:auto-fit 在宽屏会摊成一整行,右半张卡片全是空。 */
-.requirement-meta {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+/* 一行式需求卡片:标题/徽标/事实同一行,动作右对齐;列表区定高内滚,整页不再无限拉长。 */
+.requirement-card-head {
+  align-items: baseline;
 }
 
-@media (max-width: 64rem) {
-  .requirement-meta {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
+.requirement-facts {
+  flex: 1 1 20rem;
+  min-width: 0;
+  color: var(--fp-color-text-muted);
+  font-size: 0.8125rem;
+  overflow-wrap: anywhere;
 }
 
-@media (max-width: 42rem) {
-  .requirement-meta {
-    grid-template-columns: 1fr;
-  }
+.requirement-actions {
+  margin-top: 0;
+  margin-left: auto;
+}
+
+.requirement-list {
+  max-height: 48rem;
+  padding-right: var(--fp-space-2);
+  overflow: auto;
 }
 
 .form-section-head .eyebrow {
