@@ -421,7 +421,7 @@ const feed = computed(() => {
       badgeTone: REQUIREMENT_STATUS_TONES[requirement.status],
     })),
   ];
-  return events.sort((a, b) => b.time.localeCompare(a.time)).slice(0, 5);
+  return events.sort((a, b) => b.time.localeCompare(a.time)).slice(0, 3);
 });
 
 /**
@@ -800,22 +800,28 @@ watch(projectId, load, { immediate: true });
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
+/* 两栏等高:整行定高,左栏内部滚动,右栏在自身高度内拉伸,底边始终齐平。
+   grid-template-rows 必须显式声明 1fr:auto 行会被 48 行的表格按内容撑开并溢出容器。 */
 .workbench-columns {
   display: grid;
-  align-items: start;
+  align-items: stretch;
   gap: var(--fp-space-5);
   grid-template-columns: minmax(0, 2.2fr) minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+  height: 56rem;
 }
 
 .workbench-queue {
   display: flex;
+  height: 100%;
   min-width: 0;
   flex-direction: column;
 }
 
-/* 待办定高内滚,左栏与右栏高度相近;表头吸顶,滚动时列名不丢。 */
+/* 左栏撑满等高行,表格在其中滚动;表头吸顶,滚动时列名不丢。 */
 .queue-scroll {
-  max-height: 30rem;
+  min-height: 0;
+  flex: 1 1 auto;
   overflow: auto;
 }
 
@@ -934,8 +940,11 @@ watch(projectId, load, { immediate: true });
 
 .workbench-rail {
   display: grid;
+  align-content: stretch;
   gap: var(--fp-space-5);
+  height: 100%;
   min-width: 0;
+  overflow: auto;
 }
 
 .rail-panel {
@@ -1050,7 +1059,7 @@ watch(projectId, load, { immediate: true });
 
 .feed-list {
   display: grid;
-  gap: var(--fp-space-4);
+  gap: var(--fp-space-3);
   margin: 0;
   padding: 0;
   list-style: none;
@@ -1082,16 +1091,18 @@ watch(projectId, load, { immediate: true });
 }
 
 .shortcut-list {
-  display: grid;
+  display: flex;
+  flex-wrap: wrap;
   gap: var(--fp-space-2);
 }
 
 .shortcut-link {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  justify-content: space-between;
+  flex: 1 1 auto;
+  justify-content: center;
   gap: var(--fp-space-3);
-  padding: var(--fp-space-3) var(--fp-space-4);
+  padding: var(--fp-space-2) var(--fp-space-3);
   border: 0.0625rem solid var(--fp-color-border);
   border-radius: var(--fp-radius-sm);
   background: var(--fp-color-canvas-muted);
@@ -1139,6 +1150,17 @@ watch(projectId, load, { immediate: true });
 @media (max-width: 72rem) {
   .workbench-columns {
     grid-template-columns: 1fr;
+    height: auto;
+  }
+
+  .workbench-queue,
+  .workbench-rail {
+    height: auto;
+    overflow: visible;
+  }
+
+  .queue-scroll {
+    max-height: 30rem;
   }
 }
 
