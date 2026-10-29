@@ -179,6 +179,9 @@ class ReviewInsightTest extends PostgresTestBase {
         assertThat(after.criteria()).singleElement()
                 .satisfies(row -> assertThat(row.verdict())
                         .as("没有裁定不等于 NOT_FOUND").isNull());
+        scenario.completedReview(scenario.revisionId, "[{\"acKey\":\"AC-1\",\"verdict\":\"UNKNOWN\"}]");
+        assertThat(scenario.coverage().criteria()).singleElement()
+                .satisfies(row -> assertThat(row.verdict()).isEqualTo(AcVerdict.UNKNOWN));
     }
 
     /** 未决 finding 数只数当前那一次审查，不跨审查累加同一个被延续的问题。 */

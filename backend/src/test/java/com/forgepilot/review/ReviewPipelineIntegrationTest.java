@@ -141,7 +141,7 @@ class ReviewPipelineIntegrationTest extends PostgresTestBase {
      * own way to a COMPLETED row with findings under it.
      *
      * <p>Only one of the two acceptance criteria gets a verdict from the model. The
-     * other one has to appear anyway, as {@code NOT_FOUND} — ARCHITECTURE.md 3.5
+     * other one has to appear anyway, as {@code UNKNOWN} — ARCHITECTURE.md 3.5
      * makes a silent model unable to shorten the report, and asserting on the
      * criterion the model answered would not test that.
      */
@@ -195,7 +195,7 @@ class ReviewPipelineIntegrationTest extends PostgresTestBase {
         assertThat(verdictFor(verdicts, fixture.acOne)).isEqualTo("COVERED");
         assertThat(verdictFor(verdicts, fixture.acTwo))
                 .as("3.5: a criterion the model skipped is recorded, never dropped")
-                .isEqualTo("NOT_FOUND");
+                .isEqualTo("UNKNOWN");
         assertThat(verdicts.size()).isEqualTo(2);
 
         // 4. The mutable pull-request snapshot and the immutable requirement
@@ -408,7 +408,10 @@ class ReviewPipelineIntegrationTest extends PostgresTestBase {
                 .hasSize(1);
         assertThat(provider.synthesisPrompts().getFirst())
                 .as("what the batches found has to reach the step that concludes")
-                .contains(first).contains(second);
+                .contains(first, second, "Category: MAINTAINABILITY",
+                        "Explanation: the total is recomputed on every call",
+                        "Suggestion: hoist it out of the loop")
+                .hasSizeLessThanOrEqualTo(60_000);
         assertThat(jdbc.queryForObject("select count(*) from review where pull_request_id = ?",
                 Integer.class, fixture.pullRequest)).isEqualTo(1);
         assertThat(jdbc.queryForObject("select count(*) from finding where review_id = ?", Integer.class,

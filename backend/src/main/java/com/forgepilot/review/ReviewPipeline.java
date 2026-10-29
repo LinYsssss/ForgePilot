@@ -162,7 +162,7 @@ public class ReviewPipeline {
                         AiUseCase.REVIEW, callContext, heartbeat)),
                 malformed -> atStage("synthesis repair", () -> ai.chat(ReviewPrompts.repair(malformed),
                         ReviewPrompts.SYNTHESIS_SCHEMA, AiUseCase.REVIEW, callContext, heartbeat)),
-                context);
+                context, phase.evidence());
         if (outcome.status() == ReviewStatus.FAILED) {
             log.warn("Review {} attempt {} invalid synthesis output: {}", claim.reviewId(), claim.attempt(),
                     outcome.failureReason());

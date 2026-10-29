@@ -145,12 +145,14 @@ export const AC_VERDICT_LABELS: Record<AcVerdict, string> = {
   COVERED: "已覆盖",
   NOT_FOUND: "未找到",
   AT_RISK: "有风险",
+  UNKNOWN: "信息不足／待核实",
 };
 
 export const AC_VERDICT_TONES: Record<AcVerdict, string> = {
   COVERED: "success",
   NOT_FOUND: "danger",
   AT_RISK: "warning",
+  UNKNOWN: "neutral",
 };
 
 export const FINDING_ACTION_LABELS: Record<FindingAction, string> = {

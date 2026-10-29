@@ -11,6 +11,7 @@ import java.util.function.UnaryOperator;
 
 import com.forgepilot.review.ReviewOutput.AcResult;
 import com.forgepilot.review.ReviewOutput.FindingCandidate;
+import com.forgepilot.review.ReviewOutputValidator.AcEvidence;
 import com.forgepilot.review.ReviewOutputValidator.Context;
 import com.forgepilot.review.ReviewOutputValidator.Outcome;
 import com.forgepilot.scm.ChangedFile;
@@ -63,7 +64,10 @@ class ReviewOutputValidatorTest {
     }
 
     private ReviewOutput valid(String verdicts, String findings) {
-        Outcome outcome = validator.validate(answer(verdicts, findings), NO_REPAIR, context());
+        List<AcEvidence> evidence = validator.readBatch("""
+                {"findings":[],"acEvidence":[{"acId":11,"path":"%s","line":3,"excerpt":"class A {}"}]}
+                """.formatted(FILE), context()).evidence();
+        Outcome outcome = validator.validate(answer(verdicts, findings), NO_REPAIR, context(), evidence);
         assertThat(outcome.status()).isEqualTo(ReviewStatus.COMPLETED);
         return outcome.output();
     }
@@ -71,15 +75,38 @@ class ReviewOutputValidatorTest {
     // ------------------------------------------------------------- AC verdicts
 
     @Test
-    void anAcceptanceCriterionTheModelSkippedComesBackAsNotFound() {
+    void anAcceptanceCriterionTheModelSkippedComesBackAsUnknown() {
         ReviewOutput output = valid("{\"acId\":11,\"verdict\":\"COVERED\"}", "");
 
         assertThat(output.acVerdicts()).containsExactly(
                 new AcResult(11L, "AC-1", AcVerdict.COVERED),
-                new AcResult(12L, "AC-2", AcVerdict.NOT_FOUND));
+                new AcResult(12L, "AC-2", AcVerdict.UNKNOWN));
         assertThat(output.warnings())
                 .as("a silent model and a negative model must stay distinguishable")
-                .anyMatch(warning -> warning.contains("AC-2") && warning.contains("NOT_FOUND"));
+                .anyMatch(warning -> warning.contains("AC-2") && warning.contains("UNKNOWN"));
+    }
+
+    @Test
+    void unsupportedCoverageAndZeroReviewedFilesStayUnknown() {
+        List<AcEvidence> discarded = validator.readBatch("""
+                {"findings":[],"acEvidence":[{"acId":11,"path":"%s","line":3,"excerpt":"invented"}]}
+                """.formatted(FILE), context()).evidence();
+        assertThat(discarded).isEmpty();
+        ReviewOutput unsupported = validator.validate(answer("{\"acId\":11,\"verdict\":\"COVERED\"}", ""),
+                NO_REPAIR, context(), discarded).output();
+        assertThat(unsupported.acVerdicts()).extracting(AcResult::verdict)
+                .containsOnly(AcVerdict.UNKNOWN);
+        assertThat(unsupported.warnings()).anyMatch(warning -> warning.contains("instead of COVERED"));
+
+        for (AcVerdict verdict : AcVerdict.values()) {
+            ReviewOutput noFiles = validator.validate(answer("{\"acId\":11,\"verdict\":\"" + verdict + "\"}", ""),
+                    NO_REPAIR, context().withVisibleFiles(List.of()), List.of()).output();
+            assertThat(noFiles.acVerdicts()).extracting(AcResult::verdict).containsOnly(AcVerdict.UNKNOWN);
+            assertThat(noFiles.warnings()).anyMatch(warning -> warning.contains("no files were reviewed"));
+        }
+        assertThat(validator.validate(answer("", ""), NO_REPAIR,
+                new Context(null, null, null, List.of(), Map.of(), List.of()), List.of())
+                .output().acVerdicts()).isEmpty();
     }
 
     @Test
@@ -181,10 +208,10 @@ class ReviewOutputValidatorTest {
         Context repeatedContext = new Context(null, null, null, List.of(), Map.of(), List.of(repeated));
 
         FindingCandidate disambiguated = validator.validate(answer("",
-                finding("CODE_QUALITY", FILE, 2, "return value;", "")), NO_REPAIR, repeatedContext)
+                finding("CODE_QUALITY", FILE, 2, "return value;", "")), NO_REPAIR, repeatedContext, List.of())
                 .output().findings().getFirst();
         FindingCandidate ambiguous = validator.validate(answer("",
-                finding("CODE_QUALITY", FILE, 99, "return value;", "")), NO_REPAIR, repeatedContext)
+                finding("CODE_QUALITY", FILE, 99, "return value;", "")), NO_REPAIR, repeatedContext, List.of())
                 .output().findings().getFirst();
 
         assertThat(disambiguated.line()).isEqualTo(2);
@@ -209,7 +236,7 @@ class ReviewOutputValidatorTest {
                 + finding("CODE_QUALITY", FILE, 1, "[patch truncated]", "") + ","
                 + finding("CODE_QUALITY", FILE, 1, "new safe\\ntail\\nnext safe", "");
 
-        ReviewOutput output = validator.validate(answer("", findings), NO_REPAIR, separatedContext).output();
+        ReviewOutput output = validator.validate(answer("", findings), NO_REPAIR, separatedContext, List.of()).output();
 
         assertThat(output.findings()).isEmpty();
         assertThat(output.warnings()).filteredOn(warning -> warning.contains("does not occur")).hasSize(4);
@@ -238,7 +265,7 @@ class ReviewOutputValidatorTest {
                 answer -> {
                     repairs.incrementAndGet();
                     return "{\"acVerdicts\": oops";
-                }, context());
+                }, context(), List.of());
 
         assertThat(outcome.status())
                 .as("the verdict itself must be FAILED, not merely an absence of output")
@@ -251,7 +278,7 @@ class ReviewOutputValidatorTest {
     @Test
     void theOneRepairIsRealAndItsResultIsValidatedLikeAnyOtherAnswer() {
         Outcome outcome = validator.validate("{",
-                answer -> answer("{\"acId\":11,\"verdict\":\"AT_RISK\"}", ""), context());
+                answer -> answer("{\"acId\":11,\"verdict\":\"AT_RISK\"}", ""), context(), List.of());
 
         assertThat(outcome.status()).isEqualTo(ReviewStatus.COMPLETED);
         assertThat(outcome.output().acVerdicts()).contains(new AcResult(11L, "AC-1", AcVerdict.AT_RISK));
@@ -259,7 +286,7 @@ class ReviewOutputValidatorTest {
 
     @Test
     void anAnswerMissingAnArrayIsAStructuralFailureRatherThanAnEmptyReport() {
-        Outcome outcome = validator.validate("{\"acVerdicts\":[]}", answer -> "{\"acVerdicts\":[]}", context());
+        Outcome outcome = validator.validate("{\"acVerdicts\":[]}", answer -> "{\"acVerdicts\":[]}", context(), List.of());
 
         assertThat(outcome.status()).isEqualTo(ReviewStatus.FAILED);
         assertThat(outcome.output()).isNull();
@@ -317,9 +344,9 @@ class ReviewOutputValidatorTest {
         String reported = finding("REQUIREMENT", FILE, 3, "class A {}", "\"acId\":11,");
         String body = answer("", reported);
 
-        FindingCandidate before = validator.validate(body, NO_REPAIR, context()).output().findings().getFirst();
+        FindingCandidate before = validator.validate(body, NO_REPAIR, context(), List.of()).output().findings().getFirst();
         FindingCandidate after = validator.validate(body, NO_REPAIR,
-                context("the requirement body", "the first criterion, now with a bound"))
+                context("the requirement body", "the first criterion, now with a bound"), List.of())
                 .output().findings().getFirst();
 
         assertThat(after.basisHash()).isNotEqualTo(before.basisHash());
@@ -335,8 +362,8 @@ class ReviewOutputValidatorTest {
                         new Context.Ac(12L, "AC-2", "the second criterion")),
                 Map.of(5L, "excerpt-hash-5-rewritten", 6L, "excerpt-hash-6"), List.of(CHANGED));
 
-        assertThat(validator.validate(body, NO_REPAIR, reIngested).output().findings().getFirst().basisHash())
-                .isNotEqualTo(validator.validate(body, NO_REPAIR, context()).output().findings().getFirst().basisHash());
+        assertThat(validator.validate(body, NO_REPAIR, reIngested, List.of()).output().findings().getFirst().basisHash())
+                .isNotEqualTo(validator.validate(body, NO_REPAIR, context(), List.of()).output().findings().getFirst().basisHash());
     }
 
     @Test
@@ -367,7 +394,7 @@ class ReviewOutputValidatorTest {
         List<FindingCandidate> findings = validator.validate(answer("",
                 finding("CODE_QUALITY", upper.path(), 3, "class A {}", "") + ","
                         + finding("CODE_QUALITY", lower.path(), 3, "class A {}", "")),
-                NO_REPAIR, both).output().findings();
+                NO_REPAIR, both, List.of()).output().findings();
 
         assertThat(findings).hasSize(2);
         assertThat(findings.getFirst().findingKey()).isNotEqualTo(findings.get(1).findingKey());

@@ -200,10 +200,10 @@ class ChangedFileBatcherTest {
         assertThat(phase.evidence()).singleElement()
                 .satisfies(evidence -> assertThat(evidence.acKey()).isEqualTo("AC-1"));
         // Only the final synthesis concludes. The batch said COVERED and the
-        // Review still says NOT_FOUND, because the batch's claim never left the batch.
+        // Review still says UNKNOWN, because the batch's claim never left the batch.
         assertThat(validator.validate("{\"acVerdicts\":[],\"findings\":[]}",
-                        answer -> answer, context()).output().acVerdicts())
-                .containsExactly(new ReviewOutput.AcResult(11L, "AC-1", AcVerdict.NOT_FOUND));
+                        answer -> answer, context(), List.of()).output().acVerdicts())
+                .containsExactly(new ReviewOutput.AcResult(11L, "AC-1", AcVerdict.UNKNOWN));
     }
 
     @Test

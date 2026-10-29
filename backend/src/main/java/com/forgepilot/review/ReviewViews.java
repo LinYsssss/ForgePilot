@@ -158,7 +158,7 @@ final class ReviewViews {
      *
      * <p>{@code verdict} 为 {@code null} 表示这条需求的当前修订<strong>还没有被审查过</strong>，
      * 与 {@link AcVerdict#NOT_FOUND}（审查过了，但 diff 里没有东西实现它）不是一回事。
-     * 这条区分与 {@code AcVerdict} 拒绝设「无裁定」值出于同一个理由。
+     * UNKNOWN 则表示审查完成但证据不足，仍与尚未审查的 null 分开。
      */
     record AcCoverage(String acKey, String text, AcVerdict verdict, int openFindings) {
     }

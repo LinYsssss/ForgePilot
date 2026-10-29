@@ -24,7 +24,7 @@ import tools.jackson.databind.ObjectMapper;
  *
  * <ul>
  * <li>被审查修订的**每一条**验收条件最终都会有一个裁定。模型跳过的条件
- * 会被填成 {@code NOT_FOUND}，因此一个沉默的模型永远无法把报告缩短。</li>
+ * 会被填成 {@code UNKNOWN}，不把模型沉默当成未实现。</li>
  * <li>结构非法的回答可以得到<strong>一次</strong>格式修复。修复仍不成功，
  * 则该 Review 判为 FAILED——绝不产出一份读起来像「PR 很干净」的空报告。
  * {@link Outcome} 让这一点从「本意如此」变成了**不可表达**。</li>
@@ -72,12 +72,13 @@ public class ReviewOutputValidator {
      * 它最多被调用一次：3.5 只给一次修复机会，
      * 而在这里写个循环，会悄悄把 AI 网关自身那次有界重试放大成四次调用。
      */
-    public Outcome validate(String answer, UnaryOperator<String> formatRepair, Context context) {
+    public Outcome validate(String answer, UnaryOperator<String> formatRepair, Context context,
+            List<AcEvidence> evidence) {
         try {
-            return Outcome.completed(read(answer, context));
+            return Outcome.completed(read(answer, context, evidence));
         } catch (MalformedAnswer firstAttempt) {
             try {
-                return Outcome.completed(read(formatRepair.apply(answer), context));
+                return Outcome.completed(read(formatRepair.apply(answer), context, evidence));
             } catch (MalformedAnswer afterRepair) {
                 return Outcome.failed(afterRepair.getMessage());
             }
@@ -101,7 +102,7 @@ public class ReviewOutputValidator {
         return new BatchAnswer(candidates, evidence, warnings);
     }
 
-    private ReviewOutput read(String answer, Context context) {
+    private ReviewOutput read(String answer, Context context, List<AcEvidence> evidence) {
         JsonNode root = parse(answer);
         List<String> warnings = new ArrayList<>();
         Map<Long, AcVerdict> reported = readVerdicts(root, context, warnings);
@@ -111,11 +112,18 @@ public class ReviewOutputValidator {
         for (Context.Ac criterion : context.acceptanceCriteria()) {
             AcVerdict verdict = reported.get(criterion.id());
             if (verdict == null) {
-                // 3.5：模型的遗漏被填成 NOT_FOUND。而那条警告，
-                // 让「模型什么都没说」与「模型说了没有」保持可区分。
-                verdict = AcVerdict.NOT_FOUND;
+                verdict = AcVerdict.UNKNOWN;
                 warnings.add("the answer skipped acceptance criterion " + criterion.key()
-                        + ", recorded as NOT_FOUND");
+                        + ", recorded as UNKNOWN");
+            } else if (context.visibleFiles().isEmpty()) {
+                verdict = AcVerdict.UNKNOWN;
+                warnings.add("no files were reviewed for acceptance criterion " + criterion.key()
+                        + ", recorded as UNKNOWN");
+            } else if (verdict == AcVerdict.COVERED
+                    && evidence.stream().noneMatch(item -> item.acId() == criterion.id())) {
+                verdict = AcVerdict.UNKNOWN;
+                warnings.add("no verified AC evidence for acceptance criterion " + criterion.key()
+                        + ", recorded as UNKNOWN instead of COVERED");
             }
             verdicts.add(new AcResult(criterion.id(), criterion.key(), verdict));
         }

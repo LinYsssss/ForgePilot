@@ -42,7 +42,7 @@ export type FindingCategory =
  */
 export type FindingConfidence = "HIGH" | "MEDIUM" | "LOW";
 
-export type AcVerdict = "COVERED" | "NOT_FOUND" | "AT_RISK";
+export type AcVerdict = "COVERED" | "NOT_FOUND" | "AT_RISK" | "UNKNOWN";
 
 export type FindingAction =
   | "CONFIRM"
