@@ -18,14 +18,14 @@
     "vue-router": "5.2.0"
   },
   "devDependencies": {
-    "@vitejs/plugin-vue": "6.0.8",
     "@types/node": "24.13.1",
+    "@vitejs/plugin-vue": "6.0.8",
     "@vue/compiler-sfc": "3.5.44",
     "@vue/test-utils": "2.4.11",
     "jsdom": "30.0.1",
     "typescript": "6.0.2",
-    "vite": "8.2.1",
-    "vitest": "4.1.11",
+    "vite": "8.3.5",
+    "vitest": "4.1.12",
     "vue-tsc": "3.3.10"
   }
 }
