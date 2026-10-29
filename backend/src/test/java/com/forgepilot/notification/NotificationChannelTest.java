@@ -259,7 +259,10 @@ class NotificationChannelTest extends PostgresTestBase {
                 .doesNotContain(reason);
         assertThat(jdbc.queryForObject("select decision_comment from review where id = ?", String.class, reviewId))
                 .isEqualTo(reason);
-        verifyNoInteractions(scmActions);
+        org.mockito.Mockito.verify(scmActions, org.mockito.Mockito.times(2))
+                .requireOpen(org.mockito.ArgumentMatchers.eq(scenario.projectId), org.mockito.ArgumentMatchers.anyLong(),
+                        org.mockito.ArgumentMatchers.eq("head"));
+        org.mockito.Mockito.verifyNoMoreInteractions(scmActions);
 
         clearInvocations(sender);
         when(sender.send(any(), anyString(), anyString())).thenReturn(true);
@@ -267,6 +270,16 @@ class NotificationChannelTest extends PostgresTestBase {
         decisions.decide(scenario.projectId, scenario.leader, second, ReviewDecision.APPROVE, null);
         verify(sender).send(any(), anyString(), text.capture());
         assertThat(text.getValue()).contains("已通过并合并", "**处理人**：leader display");
+
+        clearInvocations(sender, scmActions);
+        long third = scenario.completedReview();
+        decisions.decide(scenario.projectId, scenario.leader, third, ReviewDecision.REJECT, reason);
+        decisions.decide(scenario.projectId, scenario.leader, third, ReviewDecision.REJECT, reason);
+        verify(sender).send(any(), anyString(), text.capture());
+        assertThat(text.getValue()).contains("已拒绝并关闭", "**处理人**：leader display").doesNotContain(reason);
+        verify(scmActions).close(org.mockito.ArgumentMatchers.eq(scenario.projectId), org.mockito.ArgumentMatchers.anyLong(),
+                org.mockito.ArgumentMatchers.eq("head"));
+        org.mockito.Mockito.verifyNoMoreInteractions(scmActions);
     }
 
     // ----------------------------------------------------------------- helpers

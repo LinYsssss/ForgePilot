@@ -63,7 +63,7 @@ function operationRequest(operation: Operation, reviewId = 101, projectId = 3) {
   }
 }
 
-async function openReview(options: { runningThenComplete?: boolean } = {}) {
+async function openReview(options: { runningThenComplete?: boolean; remoteState?: PullRequest["remoteState"] } = {}) {
   const calls: { path: string; method: string }[] = [];
   let held: { path: string; method: string; deferred: ReturnType<typeof deferredResponse> } | null = null;
   let initialReviewReads = 0;
@@ -86,7 +86,7 @@ async function openReview(options: { runningThenComplete?: boolean } = {}) {
       return review(projectId, id);
     }
     const pull = /^\/pull-requests\/(\d+)(?:\/requirement)?$/.exec(suffix);
-    if (pull) return pullRequest(projectId, Number(pull[1]));
+    if (pull) return { ...pullRequest(projectId, Number(pull[1])), remoteState: options.remoteState };
     const history = /^\/pull-requests\/(\d+)\/reviews$/.exec(suffix);
     if (history) return [{
       ...review(projectId, Number(history[1]) - 10), createdAt: "2026-09-12T00:00:00Z",
@@ -149,9 +149,29 @@ afterEach(() => {
   for (const wrapper of wrappers.splice(0)) wrapper.unmount();
   vi.useRealTimers();
   vi.unstubAllGlobals();
+  vi.restoreAllMocks();
 });
 
 describe("review operations belong to the page visit that started them", () => {
+  it("requires a reason and confirmation while keeping the closed PR verification action available", async () => {
+    const { wrapper, calls } = await openReview({ remoteState: "CLOSED" });
+    const close = wrapper.get('[data-decision="REJECT"]');
+    expect(close.text()).toContain("核验关闭并补记拒绝");
+    expect(close.attributes("disabled")).toBeUndefined();
+    expect(wrapper.get('[data-decision="APPROVE"]').attributes("disabled")).toBeDefined();
+    await close.trigger("click");
+    expect(wrapper.text()).toContain("请填写退回修改或拒绝关闭的理由");
+    await wrapper.get("#decision-comment").setValue("放弃该变更");
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
+    await close.trigger("click");
+    expect(calls.filter(call => call.method === "POST")).toHaveLength(0);
+    confirm.mockReturnValue(true);
+    await close.trigger("click");
+    await flushPromises();
+    const writes = vi.mocked(fetch).mock.calls.filter(([, init]) => init?.method === "POST");
+    expect(writes).toHaveLength(1);
+    expect(JSON.parse(String(writes[0][1]?.body))).toEqual({ decision: "REJECT", comment: "放弃该变更" });
+  });
   it("refreshes a running review to terminal state without clearing form input", async () => {
     vi.useFakeTimers();
     const { wrapper, calls } = await openReview({ runningThenComplete: true });

@@ -234,7 +234,7 @@ describe("requirement detail contract", () => {
 
     // The two values come from different endpoints and stay in different cells.
     expect(status.text()).not.toContain("NO_PR");
-    expect(wrapper.find(".review-activity").text()).toBe("无关联 PR");
+    expect(wrapper.find(".review-activity").text()).toBe("暂无活动 PR");
     expect(wrapper.get(".current-revision").text()).toContain("结构化需求");
     expect(wrapper.get(".attachment-section").text()).toContain("需求文档");
 

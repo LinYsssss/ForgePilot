@@ -17,7 +17,7 @@ import { useFinitePolling } from "../../composables/useFinitePolling";
 import { getProject, hasProjectRole, listMembers, type Member, type Project } from "../project/api";
 import { listProjectKnowledge } from "../knowledge/api";
 import { listRequirements, type RequirementSummary } from "../requirement/api";
-import { getPullRequest, setPullRequestRequirement, type PullRequest } from "../scm/api";
+import { getPullRequest, setPullRequestRequirement, PULL_REQUEST_STATE_LABELS, type PullRequest } from "../scm/api";
 import {
   decideReview,
   getReview,
@@ -153,7 +153,7 @@ const gateBlocked = computed(() => {
   return (
     head !== undefined &&
     history.value.some(
-      (review) => review.headSha === head && review.decision === "REQUEST_CHANGES",
+      review => review.headSha === head && (review.decision === "REQUEST_CHANGES" || review.decision === "REJECT"),
     )
   );
 });
@@ -193,7 +193,7 @@ const decisionBlockers = computed<string[]>(() => {
     }
   }
   if (gateBlocked.value) {
-    blockers.push("该 head 上已经存在退回，只有新的 head SHA 能解除。");
+    blockers.push("该 head 上已经存在退回或拒绝，只有新的 head SHA 能解除。");
   }
   return blockers;
 });
@@ -365,7 +365,7 @@ async function saveAssociation(): Promise<void> {
   }
 }
 
-async function decide(decision: "APPROVE" | "REQUEST_CHANGES"): Promise<void> {
+async function decide(decision: "APPROVE" | "REQUEST_CHANGES" | "REJECT"): Promise<void> {
   const ids = displayedTarget();
   const token = detailLoadToken;
   if (ids === null || decisionPending.value) {
@@ -373,22 +373,32 @@ async function decide(decision: "APPROVE" | "REQUEST_CHANGES"): Promise<void> {
   }
   decisionError.value = null;
   if (!canSubmitDecision.value) return;
-  if (decision === "REQUEST_CHANGES" && !decisionComment.value.trim()) {
-    decisionError.value = "请填写退回修改的理由。";
+  if (decision !== "APPROVE" && !decisionComment.value.trim()) {
+    decisionError.value = "请填写退回修改或拒绝关闭的理由。";
     return;
   }
+  const state = pullRequest.value?.remoteState;
+  if ((decision === "REJECT" && state === "MERGED")
+    || (decision === "APPROVE" && state === "CLOSED")
+    || (decision === "REQUEST_CHANGES" && (state === "CLOSED" || state === "MERGED"))) {
+    decisionError.value = "远端状态不允许此操作，请核查 PR。";
+    return;
+  }
+  if (decision === "REJECT" && !window.confirm("确认拒绝整个 PR 并关闭远端记录？源分支会保留。若远端已关闭，将核验后补记本地拒绝。")) return;
   decisionPending.value = true;
   try {
     await decideReview(ids.projectId, ids.reviewId, decision, decisionComment.value);
     if (!isCurrentPage(ids, token)) return;
     decisionComment.value = "";
-    const [loadedReview, loadedHistory] = await Promise.all([
+    const [loadedReview, loadedHistory, loadedPull] = await Promise.all([
       getReview(ids.projectId, ids.reviewId),
       listPullRequestReviews(ids.projectId, ids.pullRequestId),
+      getPullRequest(ids.projectId, ids.pullRequestId),
     ]);
     if (!isCurrentPage(ids, token)) return;
     detail.value = loadedReview;
     history.value = loadedHistory;
+    pullRequest.value = loadedPull;
   } catch (failure: unknown) {
     if (isCurrentPage(ids, token)) decisionError.value = apiErrorMessage(failure);
   } finally {
@@ -667,7 +677,7 @@ function eventsErrorFor(findingId: number): string | null {
         </dl>
 
         <p v-if="gateBlocked" class="decision-gate" role="status">
-          此 head 已有退回：只有新的 head SHA 能解除，改 Base、需求关联、需求版本或重新同步 Diff 都不解除。
+          此 head 已有退回或拒绝：只有新的 head SHA 能解除，改 Base、需求关联、需求版本或重新同步 Diff 都不解除。
         </p>
         <p v-if="!detail.isCurrent" class="review-stale" role="status">
           审查已过期：这条 Review 的 head、输入指纹或需求版本与 PR 当前值不一致。
@@ -913,7 +923,7 @@ function eventsErrorFor(findingId: number): string | null {
 
         <template v-else>
           <div class="field">
-            <label for="decision-comment">决定备注（退回修改必填）</label>
+            <label for="decision-comment">决定备注（退回或拒绝必填）</label>
             <textarea id="decision-comment" v-model="decisionComment" rows="3" maxlength="2000" placeholder="请说明需要修改的内容和原因"></textarea>
           </div>
           <div class="form-actions decision-actions">
@@ -921,7 +931,7 @@ function eventsErrorFor(findingId: number): string | null {
               type="button"
               class="button button-success"
               data-decision="APPROVE"
-              :disabled="decisionPending || !canSubmitDecision"
+              :disabled="decisionPending || !canSubmitDecision || pullRequest?.remoteState === 'CLOSED'"
               @click="decide('APPROVE')"
             >
               通过并合并
@@ -930,12 +940,21 @@ function eventsErrorFor(findingId: number): string | null {
               type="button"
               class="button button-danger"
               data-decision="REQUEST_CHANGES"
-              :disabled="decisionPending || !canSubmitDecision"
+              :disabled="decisionPending || !canSubmitDecision || pullRequest?.remoteState === 'CLOSED' || pullRequest?.remoteState === 'MERGED'"
               @click="decide('REQUEST_CHANGES')"
             >
               退回修改
             </button>
+            <button
+              type="button"
+              class="button button-quiet reject-button"
+              data-decision="REJECT"
+              :disabled="decisionPending || !canSubmitDecision || pullRequest?.remoteState === 'MERGED'"
+              @click="decide('REJECT')"
+            >{{ pullRequest?.remoteState === "CLOSED" ? "核验关闭并补记拒绝" : "拒绝并关闭" }}</button>
           </div>
+
+          <p class="field-hint">远端状态：{{ pullRequest?.remoteState ? PULL_REQUEST_STATE_LABELS[pullRequest.remoteState] : "未同步，操作前核验" }}。拒绝关闭保留源分支，不取消需求；结果不明时不会记录成功。</p>
 
           <ul v-if="decisionBlockers.length > 0" class="decision-blockers">
             <li v-for="blocker in decisionBlockers" :key="blocker">{{ blocker }}</li>
@@ -957,6 +976,7 @@ function eventsErrorFor(findingId: number): string | null {
 </template>
 
 <style scoped>
+.reject-button { color: var(--fp-color-danger); }
 .decision-reason { white-space: pre-wrap; overflow-wrap: anywhere; }
 
 .review-context-grid,

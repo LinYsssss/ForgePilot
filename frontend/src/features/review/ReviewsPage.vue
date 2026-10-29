@@ -16,7 +16,7 @@ import { useFinitePolling } from "../../composables/useFinitePolling";
 import { useSession } from "../auth/session";
 import { hasProjectRole } from "../project/api";
 import { listRequirements, type RequirementSummary } from "../requirement/api";
-import { getPullRequest, type PullRequest } from "../scm/api";
+import { getPullRequest, PULL_REQUEST_STATE_LABELS, type PullRequest } from "../scm/api";
 import {
   listProjectReviews,
   listPullRequestReviews,
@@ -142,6 +142,7 @@ const pollingError = computed(() => polling.error.value === null
   : apiErrorMessage(polling.error.value));
 
 const canTriggerReview = computed(() => {
+  if (pullRequest.value?.remoteState === "CLOSED" || pullRequest.value?.remoteState === "MERGED") return false;
   return (
     hasProjectRole(selectedProject.value, "LEADER") ||
     hasProjectRole(selectedProject.value, "REVIEWER") ||
@@ -380,9 +381,11 @@ async function triggerReview(): Promise<void> {
             <div><dt>当前 head</dt><dd><code :title="pullRequest.headSha">{{ shortSha(pullRequest.headSha) }}</code></dd></div>
             <div><dt>关联需求</dt><dd>{{ requirementTitle(pullRequest.requirementId) }}</dd></div>
             <div><dt>作者</dt><dd>{{ pullRequest.authorUsername ?? "未知" }}</dd></div>
+            <div><dt>远端状态</dt><dd>{{ pullRequest.remoteState ? PULL_REQUEST_STATE_LABELS[pullRequest.remoteState] : "未同步，操作前核验" }}</dd></div>
           </dl>
           <div class="trigger-row">
             <button v-if="canTriggerReview" type="button" class="button button-primary" :disabled="triggerPending" @click="triggerReview">请求审查 / 重试</button>
+            <p v-else-if="pullRequest.remoteState === 'CLOSED' || pullRequest.remoteState === 'MERGED'" class="field-hint">PR 已关闭或合并，不能启动新审查；历史记录保留。</p>
             <p v-else class="field-hint">负责人、评审或该 PR 的平台内作者可以请求审查。</p>
             <p class="field-hint">同一审查身份幂等；失败可重试，代码或需求版本变化后可发起新一轮。</p>
           </div>

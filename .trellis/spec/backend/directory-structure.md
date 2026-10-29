@@ -24,7 +24,7 @@ backend/
     │   └── resources/
     │       ├── application.yml               # default configuration
     │       ├── application-capacity.yml      # measurement profile only
-    │       └── db/migration/                  # append-only V1–V14 schema history
+    │       └── db/migration/                  # append-only V1–V15 schema history
     └── test/java/com/forgepilot/
         ├── ArchitectureRulesTest.java        # architecture rules + counter-probes
         ├── FoundationDatabaseTest.java       # real PostgreSQL/pgvector test

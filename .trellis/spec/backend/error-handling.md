@@ -55,8 +55,8 @@ way for both providers (`scm/github/GitHubClient.request`,
 that is missing an authoritative field or has the wrong shape is 422. An
 unwrapped `RestClientResponseException` would reach the catch-all as 500
 `internal_error`, which is exactly the answer this contract exists to prevent.
-`merge()` is not behind that wrapper: a 5xx there triggers a read-only
-confirmation and `merge_outcome_unknown`, not "unavailable".
+`merge()` and `close()` are not behind that wrapper: ambiguous writes trigger
+one read-only confirmation and `merge_outcome_unknown` / `close_outcome_unknown`.
 
 `notFound()` deliberately answers two different questions the same way. If a
 non-member got 403 for an existing project and 404 for a missing one, the status
@@ -199,6 +199,16 @@ requirement (project_id, reviewer_id) -> project_member (project_id, user_id)
 - APPROVE validates remote head and sends expected SHA, then requires confirmed
   merge. REQUEST_CHANGES never writes remotely. Ambiguous merge responses only
   trigger a read; already-merged same-head retries can finish the local decision.
+- V15 adds REJECT and nullable PR remote state without rewriting history. REJECT
+  requires a reason and validates head/base before closing; only confirmed CLOSED
+  commits the local decision. Already-closed PENDING can confirm read-only and
+  record REJECT, but MERGED or changed input cannot. Repeating the same final
+  decision checks authority/lifecycle and returns the original actor/time without
+  remote writes or notifications; a different final decision conflicts.
+- Confirmed merge/close records remote state locally. Terminal PRs cannot start
+  or recover PENDING, while RUNNING lease recovery still works. NULL historical
+  state is read before a manual request/return. MERGED cannot regress; CLOSED to
+  OPEN is rechecked under the PR lock to reject in-flight stale snapshots.
 - Publish `ReviewDecided` inside the transaction; its listener runs after commit.
   AI completion/failure events are already published after commit and keep ordinary
   listeners. Notification failures cannot roll back decisions. Resolve requirement
@@ -217,9 +227,10 @@ requirement (project_id, reviewer_id) -> project_member (project_id, user_id)
 | Missing/cross-project resource or non-member | 404 `not_found` |
 | Unassigned reviewer or invalid required role | 403 `forbidden` |
 | Terminal reviewer assignment, invalid lifecycle/current input, decided head | 409 `conflict` |
-| Empty return reason, comment over 2000, invalid decision | 422 `unprocessable` |
+| Empty return/rejection reason, comment over 2000, invalid decision | 422 `unprocessable` |
 | Remote head mismatch, closed PR/MR or rejected merge | 409 `conflict`, local rollback |
 | Merge response ambiguous and read cannot confirm same-head merge | 503 `merge_outcome_unknown`, local rollback |
+| Close response ambiguous and one read cannot confirm same-version CLOSED | 503 `close_outcome_unknown`, no local REJECT |
 | Public endpoint requested for an attachment | 404 `not_found` |
 
 ### 5. Good / Base / Bad Cases

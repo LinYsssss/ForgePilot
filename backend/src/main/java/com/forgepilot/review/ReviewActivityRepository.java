@@ -56,6 +56,9 @@ class ReviewActivityRepository {
                     and cur.review_input_fingerprint = pr.review_input_fingerprint
                     and cur.requirement_revision_id is not distinct from r.current_revision_id
              where pr.project_id = ?
+               and cur.decision is distinct from 'REJECT'
+               and (pr.remote_state is null or pr.remote_state = 'OPEN'
+                    or (pr.remote_state = 'MERGED' and cur.decision = 'APPROVE'))
             """;
 
     /**

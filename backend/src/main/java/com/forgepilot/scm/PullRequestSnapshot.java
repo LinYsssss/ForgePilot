@@ -20,5 +20,6 @@ public record PullRequestSnapshot(
         Instant sourceUpdatedAt,
         String authorExternalUserId,
         String authorUsername,
-        List<ChangedFile> changedFiles) {
+        List<ChangedFile> changedFiles,
+        PullRequestState remoteState) {
 }

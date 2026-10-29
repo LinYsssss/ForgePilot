@@ -5,7 +5,6 @@ import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -45,18 +44,8 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
             @Param("revisionId") Long revisionId);
 
     /**
-     * 决策闸门（ARCHITECTURE.md 3.1）：这个 head 上是否已经带了 REQUEST_CHANGES？
-     * 每次都现算，而不是缓存在 PR 行上——force-push 回退到某个较旧的 head 时
-     * 必须自动重新上锁，而一个存下来的标志位做不到这一点。
-     */
-    boolean existsByProjectIdAndPullRequestIdAndHeadShaAndDecision(
-            long projectId, long pullRequestId, String headSha, ReviewDecision decision);
-
-    /**
-     * 同一口径的「任意终局裁定」，供 {@link ReviewDecisionGate} 回答 PRD P1 的
-     * 作者纠正权。与上面那个方法刻意分开：Decision Gate 只关心 REQUEST_CHANGES
-     * （只有新 head 能解锁），而作者纠正权被**任何**终局裁定关闭，
-     * 把两者合并成一个带集合参数的方法会让调用点读起来像同一条规则。
+     * 按调用方传入集合现算：退回/拒绝锁住同 head 的决定；任意终局
+     * 裁定关闭作者纠正权。force-push 回到旧 head 时旧闸门自动生效。
      */
     boolean existsByProjectIdAndPullRequestIdAndHeadShaAndDecisionIn(
             long projectId, long pullRequestId, String headSha, Collection<ReviewDecision> decisions);

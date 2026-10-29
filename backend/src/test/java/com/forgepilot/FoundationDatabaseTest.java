@@ -63,7 +63,8 @@ class FoundationDatabaseTest extends PostgresTestBase {
                         "4:knowledge ai", "5:scm", "6:review", "7:pull request title",
                         "8:member roles and scm identities", "9:finding explanation",
                         "10:resource removal", "11:notification channel",
-                        "12:optional notification signing", "13:notification keyword", "14:requirement reviewer");
+                        "12:optional notification signing", "13:notification keyword", "14:requirement reviewer",
+                        "15:pull request terminal decision");
         assertThat(history).allSatisfy(row -> assertThat(row.get("success")).isEqualTo(true));
     }
 

@@ -92,6 +92,9 @@ public interface ReviewClaimRepository extends Repository<Review, Long> {
              WHERE project_id = :projectId
                AND id = :reviewId
                AND (status = 'PENDING' OR (status = 'RUNNING' AND lease_until < now()))
+               AND (status = 'RUNNING' OR EXISTS (SELECT 1 FROM pull_request p WHERE p.project_id = review.project_id
+                   AND p.id = review.pull_request_id
+                   AND (p.remote_state IS NULL OR p.remote_state = 'OPEN')))
             """, nativeQuery = true)
     int claim(@Param("projectId") long projectId, @Param("reviewId") long reviewId,
             @Param("token") String token, @Param("leaseSeconds") int leaseSeconds);
@@ -195,9 +198,11 @@ public interface ReviewClaimRepository extends Repository<Review, Long> {
     @Query(value = """
             SELECT r.project_id AS "projectId", r.id AS "reviewId"
               FROM review r
-             WHERE (r.status = 'PENDING'
+             WHERE ((r.status = 'PENDING'
                         AND r.updated_at < now() - (:pendingStallSeconds * interval '1 second'))
-                OR (r.status = 'RUNNING' AND r.lease_until < now())
+                OR (r.status = 'RUNNING' AND r.lease_until < now()))
+               AND (r.status = 'RUNNING' OR EXISTS (SELECT 1 FROM pull_request p WHERE p.project_id = r.project_id
+                   AND p.id = r.pull_request_id AND (p.remote_state IS NULL OR p.remote_state = 'OPEN')))
              ORDER BY r.id
              LIMIT :limit
             """, nativeQuery = true)

@@ -345,6 +345,7 @@ class ReviewEngineTest extends PostgresTestBase {
         Fixture fixture = new Fixture(false);
         long review = fixture.insertReview("PENDING");
         int claimed = executor.claim(fixture.project, review).orElseThrow().attempt();
+        jdbc.update("update pull_request set remote_state = 'CLOSED' where id = ?", fixture.pullRequest);
 
         assertThat(stalledIds()).as("a live lease is not stalled").doesNotContain(review);
         jdbc.update("update review set lease_until = now() - interval '1 hour' where id = ?", review);
@@ -370,6 +371,20 @@ class ReviewEngineTest extends PostgresTestBase {
         jdbc.update("update review set updated_at = now() - interval '1 day' where id = ?", failed);
 
         assertThat(stalledIds()).doesNotContain(completed, failed);
+    }
+
+    @Test
+    void terminalPullRequestsCannotStartOrRecoverPendingReviews() {
+        for (String state : List.of("CLOSED", "MERGED")) {
+            Fixture fixture = new Fixture(false);
+            long pending = fixture.insertReview("PENDING");
+            jdbc.update("update pull_request set remote_state = ? where id = ?", state, fixture.pullRequest);
+            jdbc.update("update review set updated_at = now() - interval '1 day' where id = ?", pending);
+            assertThat(stalledIds()).doesNotContain(pending);
+            assertThat(executor.claim(fixture.project, pending)).isEmpty();
+            assertThat(statusOf(() -> reviews.requestReview(fixture.project, fixture.pullRequest, fixture.owner)))
+                    .isEqualTo(HttpStatus.CONFLICT);
+        }
     }
 
     // ------------------------------------------------------------------- helpers
@@ -501,10 +516,10 @@ class ReviewEngineTest extends PostgresTestBase {
                             + "values (?, 'GITHUB', ?, ?, 'http://127.0.0.1', 'x', 'y') returning id",
                     Long.class, project, "engine-host-" + sequence, "engine-repo-" + sequence);
             this.pullRequest = jdbc.queryForObject(
-                    "insert into pull_request (project_id, repository_id, external_number, base_sha, "
+                    "insert into pull_request (remote_state, project_id, repository_id, external_number, base_sha, "
                             + "head_sha, review_input_fingerprint, changed_files, requirement_id, "
                             + "author_external_user_id, author_username) "
-                            + "values (?, ?, 1, ?, ?, ?, '[]'::jsonb, ?, '424242', 'octocat') returning id",
+                            + "values ('OPEN', ?, ?, 1, ?, ?, ?, '[]'::jsonb, ?, '424242', 'octocat') returning id",
                     Long.class, project, repository, "base-" + sequence, headSha, fingerprint, requirement);
         }
 

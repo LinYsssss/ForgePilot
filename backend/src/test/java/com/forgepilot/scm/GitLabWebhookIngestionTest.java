@@ -401,7 +401,7 @@ class GitLabWebhookIngestionTest extends ScmTestBase {
 
         private void snapshot(String base, String head, String branch, Instant updatedAt) {
             mergeRequest = """
-                    {"iid":17,"title":"A merge request","source_branch":"%s","updated_at":"%s",
+                    {"state":"opened","iid":17,"title":"A merge request","source_branch":"%s","updated_at":"%s",
                      "diff_refs":{"base_sha":"%s","head_sha":"%s","start_sha":"%s"},
                      "author":{"id":4242,"username":"gitlab-user"}}"""
                     .formatted(branch, updatedAt, base, head, base);

@@ -291,6 +291,29 @@ class ReviewActivityTest extends PostgresTestBase {
     // ------------------------------------------------------------- aggregation
 
     @Test
+    void terminalPullRequestsLeaveTheActiveAggregateWithoutInventingApproval() {
+        Fixture fixture = new Fixture();
+        long requirement = fixture.requirement();
+        long revision = fixture.currentRevision(requirement);
+        long pullRequest = fixture.pullRequest(requirement, HEAD, FINGERPRINT);
+        fixture.review(pullRequest, HEAD, FINGERPRINT, revision, ReviewStatus.COMPLETED, ReviewDecision.PENDING);
+        for (String state : List.of("CLOSED", "MERGED")) {
+            jdbc.update("update pull_request set remote_state = ? where id = ?", state, pullRequest);
+            assertThat(activityOf(fixture, requirement)).isEqualTo(RequirementActivity.NO_PR);
+        }
+        jdbc.update("update review set decision = 'APPROVE', decision_by = ?, decision_at = now() where pull_request_id = ?",
+                fixture.owner, pullRequest);
+        assertThat(activityOf(fixture, requirement)).isEqualTo(RequirementActivity.APPROVED);
+        jdbc.update("update pull_request set remote_state = 'CLOSED' where id = ?", pullRequest);
+        assertThat(activityOf(fixture, requirement)).isEqualTo(RequirementActivity.NO_PR);
+        jdbc.update("update review set decision = 'REJECT' where pull_request_id = ?", pullRequest);
+        jdbc.update("update pull_request set remote_state = 'OPEN' where id = ?", pullRequest);
+        assertThat(activityOf(fixture, requirement)).isEqualTo(RequirementActivity.NO_PR);
+        jdbc.update("update pull_request set head_sha = ? where id = ?", OTHER_HEAD, pullRequest);
+        assertThat(activityOf(fixture, requirement)).isEqualTo(RequirementActivity.REVIEW_REQUIRED);
+    }
+
+    @Test
     void aRequirementWithNoPullRequestIsNoPr() {
         Fixture fixture = new Fixture();
         long requirement = fixture.requirement();

@@ -5,6 +5,7 @@ import com.forgepilot.project.ProjectAccessService;
 import com.forgepilot.project.ProjectMember;
 import com.forgepilot.project.ProjectRole;
 import com.forgepilot.scm.ProjectScmIdentityAccess;
+import com.forgepilot.scm.PullRequestDecisionActions;
 import com.forgepilot.review.ReviewClaimRepository.PullRequestIdentity;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -50,11 +51,12 @@ public class ReviewService {
     private final JdbcTemplate jdbc;
     private final ObjectMapper json;
     private final ProjectScmIdentityAccess scmIdentities;
+    private final PullRequestDecisionActions scmActions;
 
     ReviewService(ReviewRepository reviews, ReviewClaimRepository claims, DecisionRepository decisions,
             ProjectAccessService access,
             ApplicationEventPublisher publisher, JdbcTemplate jdbc, ObjectMapper json,
-            ProjectScmIdentityAccess scmIdentities) {
+            ProjectScmIdentityAccess scmIdentities, PullRequestDecisionActions scmActions) {
         this.reviews = reviews;
         this.claims = claims;
         this.decisions = decisions;
@@ -63,6 +65,7 @@ public class ReviewService {
         this.jdbc = jdbc;
         this.json = json;
         this.scmIdentities = scmIdentities;
+        this.scmActions = scmActions;
     }
 
     /**
@@ -82,6 +85,7 @@ public class ReviewService {
                 .orElseThrow(ApiException::notFound);
         PullRequestIdentity pullRequest = pullRequestIn(projectId, pullRequestId);
         authorize(projectId, actorId, pullRequest);
+        scmActions.requireOpen(projectId, pullRequestId, pullRequest.getHeadSha());
         Review review = openOrTake(projectId, pullRequestId, pullRequest);
         return switch (review.getStatus()) {
             case PENDING, RUNNING -> review;

@@ -1,10 +1,11 @@
 import { projectPath, requestJson } from "../../lib/http";
+import type { PullRequestState } from "../scm/api";
 
 /** 一次 Review 的执行状态（API.md）。与 `decision` 正交。 */
 export type ReviewStatus = "PENDING" | "RUNNING" | "COMPLETED" | "FAILED";
 
 /** 一次性的人工裁定。`PENDING` 表示「尚未作出裁定」，而不是第三种裁定。 */
-export type ReviewDecision = "PENDING" | "APPROVE" | "REQUEST_CHANGES";
+export type ReviewDecision = "PENDING" | "APPROVE" | "REQUEST_CHANGES" | "REJECT";
 
 /** 一条 Finding 的人工处理生命周期（API.md）。 */
 export type FindingStatus =
@@ -168,6 +169,7 @@ export interface ReviewSummary {
 
 /** 项目级审查索引返回的一行（最新在前）。 */
 export interface ProjectReviewRow {
+  remoteState?: PullRequestState | null;
   id: number;
   pullRequestId: number;
   pullRequestNumber: number;
@@ -248,7 +250,7 @@ export function requestReview(
 export function decideReview(
   projectId: number,
   reviewId: number,
-  decision: "APPROVE" | "REQUEST_CHANGES",
+  decision: "APPROVE" | "REQUEST_CHANGES" | "REJECT",
   comment: string,
 ): Promise<DecisionResult> {
   return requestJson<DecisionResult>(

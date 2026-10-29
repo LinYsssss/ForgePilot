@@ -62,7 +62,11 @@ class ReviewCompletedListener {
             String status = switch (stage) {
                 case COMPLETED -> "AI 审查完成，待人工审查";
                 case FAILED -> "AI 审查失败，请检查并重试";
-                case DECIDED -> "APPROVE".equals(review.decision()) ? "已通过并合并" : "已退回修改";
+                case DECIDED -> switch (review.decision()) {
+                    case "APPROVE" -> "已通过并合并";
+                    case "REJECT" -> "已拒绝并关闭";
+                    default -> "已退回修改";
+                };
             };
             String person = switch (stage) {
                 case COMPLETED -> review.reviewerName();

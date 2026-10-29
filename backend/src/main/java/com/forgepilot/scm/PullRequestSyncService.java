@@ -9,6 +9,8 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.forgepilot.scm.github.GitHubClient;
+import com.forgepilot.scm.gitlab.GitLabClient;
 import tools.jackson.databind.ObjectMapper;
 
 /**
@@ -26,11 +28,14 @@ public class PullRequestSyncService {
     private final ApplicationEventPublisher publisher;
     private final ObjectMapper json;
     private final PullRequestAuthorMapper authors;
+    private final GitHubClient github;
+    private final GitLabClient gitlab;
 
     PullRequestSyncService(ScmRepositoryRepository repositories, PullRequestRepository pullRequests,
             PullRequestRequirementEventRepository events, RequirementReferenceParser references,
             WebhookSignatureVerifier verifier, ScmSecretCipher cipher,
-            ApplicationEventPublisher publisher, ObjectMapper json, PullRequestAuthorMapper authors) {
+            ApplicationEventPublisher publisher, ObjectMapper json, PullRequestAuthorMapper authors,
+            GitHubClient github, GitLabClient gitlab) {
         this.repositories = repositories;
         this.pullRequests = pullRequests;
         this.events = events;
@@ -40,6 +45,8 @@ public class PullRequestSyncService {
         this.publisher = publisher;
         this.json = json;
         this.authors = authors;
+        this.github = github;
+        this.gitlab = gitlab;
     }
 
     /**
@@ -109,9 +116,27 @@ public class PullRequestSyncService {
             if (isOlderThan(snapshot.sourceUpdatedAt(), existing.getSourceUpdatedAt())) {
                 return;
             }
+            // 合并不可撤销；关闭可以外部重开。一个已在途的 OPEN 快照不能
+            // 覆盖本地刚确认的终态，故只在关闭 -> 重开时于同一行锁下再读状态。
+            if (existing.getRemoteState() == PullRequestState.MERGED
+                    && snapshot.remoteState() != PullRequestState.MERGED) {
+                return;
+            }
+            if (existing.getRemoteState() == PullRequestState.CLOSED
+                    && snapshot.remoteState() == PullRequestState.OPEN) {
+                PullRequestState state = repository.getProvider() == ScmProvider.GITHUB
+                        ? github.currentState(repository, snapshot.externalNumber(), snapshot.headSha(), snapshot.baseSha())
+                        : gitlab.currentState(repository, snapshot.externalNumber(), snapshot.headSha(), snapshot.baseSha());
+                if (state != PullRequestState.OPEN) {
+                    existing.recordRemoteState(state);
+                    pullRequests.flush();
+                    return;
+                }
+            }
             existing.applySnapshot(snapshot.baseSha(), snapshot.headSha(), snapshot.title(), fingerprint,
                     manifest, snapshot.sourceRevision(), snapshot.sourceUpdatedAt());
             existing.mapAuthor(authors.userIdFor(projectId, snapshot.authorExternalUserId()));
+            existing.recordRemoteState(snapshot.remoteState());
             pullRequests.flush();
             publish(existing);
             return;
@@ -122,6 +147,7 @@ public class PullRequestSyncService {
         created.applySnapshot(snapshot.baseSha(), snapshot.headSha(), snapshot.title(), fingerprint,
                 manifest, snapshot.sourceRevision(), snapshot.sourceUpdatedAt());
         created.mapAuthor(authors.userIdFor(projectId, snapshot.authorExternalUserId()));
+        created.recordRemoteState(snapshot.remoteState());
         // 只在创建该行时解析一次。后续投递绝不能覆盖人工纠正去重新解析，
         // 关联的最终话语权在页面；解析不出来的引用只会让它保持 null，
         // 永远不会阻塞入库。
@@ -159,6 +185,10 @@ public class PullRequestSyncService {
      * 它被告知的行。
      */
     private void publish(PullRequest pullRequest) {
+        if (pullRequest.getRemoteState() == PullRequestState.CLOSED
+                || pullRequest.getRemoteState() == PullRequestState.MERGED) {
+            return;
+        }
         publisher.publishEvent(new PullRequestChanged(pullRequest.getId(), pullRequest.getHeadSha(),
                 pullRequest.getReviewInputFingerprint()));
     }

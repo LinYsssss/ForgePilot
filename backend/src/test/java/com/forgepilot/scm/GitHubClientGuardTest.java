@@ -172,7 +172,7 @@ class GitHubClientGuardTest extends ScmTestBase {
                         "head":{"sha":"%s","ref":"feat/x"},"user":{"id":424242,"login":"octocat"}}"""
                         .formatted(BASE_SHA, HEAD_SHA), "缺少 title"),
                 new Case("updated_at is absent", """
-                        {"number":7,"title":"A pull request","base":{"sha":"%s"},\
+                        {"state":"open","merged":false,"number":7,"title":"A pull request","base":{"sha":"%s"},\
                         "head":{"sha":"%s","ref":"feat/x"},"user":{"id":424242,"login":"octocat"}}"""
                         .formatted(BASE_SHA, HEAD_SHA), "缺少 updated_at"));
     }
@@ -405,7 +405,7 @@ class GitHubClientGuardTest extends ScmTestBase {
     /** The fields every case shares, so each case differs in exactly one thing. */
     private static String pullRequest(String rest) {
         return """
-                {"number":7,"title":"A pull request","updated_at":"2026-08-21T12:00:00Z",%s}"""
+                {"state":"open","merged":false,"number":7,"title":"A pull request","updated_at":"2026-08-21T12:00:00Z",%s}"""
                 .formatted(rest);
     }
 

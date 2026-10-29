@@ -1155,7 +1155,7 @@ describe("three-role journey through the real App and router", () => {
     await wrapper.find('[data-decision="REQUEST_CHANGES"]').trigger("click");
     await flushPromises();
     expect(lastCall("POST", "/api/projects/3/reviews/501/decision")).toBeUndefined();
-    expect(wrapper.text()).toContain("请填写退回修改的理由");
+    expect(wrapper.text()).toContain("请填写退回修改或拒绝关闭的理由");
     await wrapper.find("#decision-comment").setValue("AC-1 还没有覆盖");
     await wrapper.find('[data-decision="REQUEST_CHANGES"]').trigger("click");
     await flushPromises();

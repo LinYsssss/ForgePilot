@@ -84,9 +84,9 @@ class ReviewInputFingerprintTest {
     @Test
     void theOrderingFieldsAreNotPartOfTheIdentity() {
         PullRequestSnapshot first = new PullRequestSnapshot(7, BASE, HEAD, "feat/REQ-1-login", "Log in",
-                "revision-1", Instant.parse("2026-08-21T10:00:00Z"), "gh-1", "octocat", List.of(MODIFIED));
+                "revision-1", Instant.parse("2026-08-21T10:00:00Z"), "gh-1", "octocat", List.of(MODIFIED), PullRequestState.OPEN);
         PullRequestSnapshot second = new PullRequestSnapshot(7, BASE, HEAD, "feat/REQ-1-login", "Log in",
-                "revision-2", Instant.parse("2026-08-21T18:30:00Z"), "gh-1", "octocat", List.of(MODIFIED));
+                "revision-2", Instant.parse("2026-08-21T18:30:00Z"), "gh-1", "octocat", List.of(MODIFIED), PullRequestState.OPEN);
 
         assertThat(fingerprintFor(second)).isEqualTo(fingerprintFor(first));
     }
@@ -96,7 +96,7 @@ class ReviewInputFingerprintTest {
     void theAuthorAndTheTitleAreNotPartOfTheIdentity() {
         PullRequestSnapshot renamed = new PullRequestSnapshot(7, BASE, HEAD, "fix/other-branch",
                 "A different title", null, Instant.parse("2026-08-21T10:00:00Z"), "gh-9", "someone-else",
-                List.of(MODIFIED));
+                List.of(MODIFIED), PullRequestState.OPEN);
 
         assertThat(fingerprintFor(renamed)).isEqualTo(fingerprintOf(MODIFIED));
     }
@@ -116,6 +116,6 @@ class ReviewInputFingerprintTest {
 
     private static PullRequestSnapshot snapshot(String base, String head, ChangedFile... files) {
         return new PullRequestSnapshot(7, base, head, "feat/REQ-1-login", "Log in", null,
-                Instant.parse("2026-08-21T10:00:00Z"), "gh-1", "octocat", Arrays.asList(files));
+                Instant.parse("2026-08-21T10:00:00Z"), "gh-1", "octocat", Arrays.asList(files), PullRequestState.OPEN);
     }
 }

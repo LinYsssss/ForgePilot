@@ -251,7 +251,7 @@ class ChangedFileLimitTest extends ScmTestBase {
 
     private PullRequestSnapshot snapshot(int number, List<ChangedFile> files) {
         return new PullRequestSnapshot(number, BASE_SHA, HEAD_SHA, "feat/x", "Big", null, UPDATED_AT,
-                "424242", "octocat", files);
+                "424242", "octocat", files, PullRequestState.OPEN);
     }
 
     private int pullRequestCount(Fixture fixture) {
@@ -355,7 +355,7 @@ class ChangedFileLimitTest extends ScmTestBase {
                 body = page <= filePages.size() ? filePages.get(page - 1) : "[]";
             } else {
                 body = """
-                        {"number":7,"title":"Big","updated_at":"%s","base":{"sha":"%s"},
+                        {"state":"open","merged":false,"number":7,"title":"Big","updated_at":"%s","base":{"sha":"%s"},
                          "head":{"sha":"%s","ref":"feat/x"},"user":{"id":424242,"login":"octocat"}}"""
                         .formatted(UPDATED_AT, BASE_SHA, HEAD_SHA);
             }

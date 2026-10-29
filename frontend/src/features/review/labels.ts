@@ -25,7 +25,7 @@ export const REVIEW_ACTIVITIES: readonly ReviewActivity[] = [
 ];
 
 export const REVIEW_ACTIVITY_LABELS: Record<ReviewActivity, string> = {
-  NO_PR: "无关联 PR",
+  NO_PR: "暂无活动 PR",
   REVIEW_REQUIRED: "待审查",
   FAILED: "审查失败",
   CHANGES_REQUESTED: "已退回",
@@ -71,12 +71,14 @@ export const REVIEW_DECISION_LABELS: Record<ReviewDecision, string> = {
   PENDING: "尚无终局决定",
   APPROVE: "已通过",
   REQUEST_CHANGES: "已退回",
+  REJECT: "已拒绝并关闭",
 };
 
 export const REVIEW_DECISION_TONES: Record<ReviewDecision, string> = {
   PENDING: "neutral",
   APPROVE: "success",
   REQUEST_CHANGES: "danger",
+  REJECT: "danger",
 };
 
 export const FINDING_STATUS_LABELS: Record<FindingStatus, string> = {

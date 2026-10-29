@@ -19,9 +19,9 @@ import org.springframework.transaction.annotation.Transactional;
 @Component
 class ReviewDecisionGate implements PullRequestDecisionGate {
 
-    /** ARCHITECTURE.md 3.1：终局裁定只有这两个取值，PENDING 不是裁定。 */
+    /** ARCHITECTURE.md 3.1：三种终局裁定，PENDING 不是裁定。 */
     private static final Set<ReviewDecision> FINAL =
-            Set.of(ReviewDecision.APPROVE, ReviewDecision.REQUEST_CHANGES);
+            Set.of(ReviewDecision.APPROVE, ReviewDecision.REQUEST_CHANGES, ReviewDecision.REJECT);
 
     private final ReviewRepository reviews;
 

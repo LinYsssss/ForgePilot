@@ -1,6 +1,10 @@
 import { projectPath, requestJson } from "../../lib/http";
 
 export type ScmProvider = "GITHUB" | "GITLAB";
+export type PullRequestState = "OPEN" | "CLOSED" | "MERGED";
+export const PULL_REQUEST_STATE_LABELS: Record<PullRequestState, string> = {
+  OPEN: "开放", CLOSED: "已关闭", MERGED: "已合并",
+};
 export type ScmIdentityUsage = "WORK" | "PERSONAL" | "CLIENT" | "OTHER";
 type ScmIdentityStatus = "VERIFIED" | "LEGACY_UNCONFIRMED" | "REVOKED";
 type ScmBindingStatus =
@@ -82,6 +86,7 @@ export interface PullRequest {
   title: string;
   baseSha: string;
   headSha: string;
+  remoteState?: PullRequestState | null;
   reviewInputFingerprint: string;
   requirementId: number | null;
   authorExternalUserId: string | null;

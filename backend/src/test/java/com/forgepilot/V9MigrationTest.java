@@ -63,6 +63,13 @@ class V9MigrationTest extends PostgresTestBase {
 
             migrate(null);
 
+            assertThat(value(sql, "select coalesce(remote_state, 'UNSYNCED') from pull_request where id = 401"))
+                    .as("V15 不猜测历史 PR 状态").isEqualTo("UNSYNCED");
+            assertThat(value(sql, "select decision from review where id = 501")).isEqualTo("PENDING");
+            sql.executeUpdate("update review set decision = 'REJECT', decision_by = 101, decision_at = now(), "
+                    + "decision_comment = 'abandoned' where id = 501");
+            assertThat(value(sql, "select decision from review where id = 501")).isEqualTo("REJECT");
+
             assertThat(value(sql, """
                     select coalesce(category, '-') || ':' || coalesce(explanation, '-')
                         || ':' || coalesce(suggestion, '-') || ':' || coalesce(confidence, '-')

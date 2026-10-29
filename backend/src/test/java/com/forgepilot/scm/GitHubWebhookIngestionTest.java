@@ -145,7 +145,7 @@ class GitHubWebhookIngestionTest extends ScmTestBase {
         assertThat(fingerprintOf(pullRequest)).isEqualTo(ReviewInputFingerprint.of("GITHUB",
                 fixture.instanceIdentity, fixture.externalId,
                 new PullRequestSnapshot(7, BASE_SHA, HEAD_SHA, "branch", "title", null, UPDATED_AT,
-                        "424242", "octocat", List.of(MODIFIED, ADDED))));
+                        "424242", "octocat", List.of(MODIFIED, ADDED), PullRequestState.OPEN)));
 
         // Real JSONB, in canonical path-byte order, with absent still absent.
         assertThat(jdbc.queryForObject("select jsonb_array_length(changed_files) from pull_request "
@@ -188,6 +188,37 @@ class GitHubWebhookIngestionTest extends ScmTestBase {
         assertThat(snapshotColumns(pullRequest)).isEqualTo(afterFirst);
         assertThat(jdbc.queryForObject("select count(*) from pull_request_requirement_event "
                 + "where pull_request_id = ?", Integer.class, pullRequest)).isEqualTo(1);
+    }
+
+    @Test
+    void anInFlightOpenSnapshotCannotUndoConfirmedClosureButExternalReopeningCan() throws Exception {
+        Fixture fixture = new Fixture();
+        deliver(fixture, 7, "pull_request", status().isAccepted());
+        long id = pullRequestId(fixture, 7);
+        jdbc.update("update pull_request set remote_state = 'CLOSED' where id = ?", id);
+        listener.reset();
+        ScmRepository repository = repositories.findById(fixture.repository).orElseThrow();
+        PullRequestSnapshot open = new PullRequestSnapshot(7, BASE_SHA, HEAD_SHA, "feat/other",
+                "A pull request", null, UPDATED_AT, "424242", "octocat", List.of(MODIFIED, ADDED), PullRequestState.OPEN);
+
+        provider.pullRequestJson = provider.pullRequestJson.replace("\"state\":\"open\"", "\"state\":\"closed\"");
+        sync.apply(repository, open);
+        assertThat(jdbc.queryForObject("select remote_state from pull_request where id = ?", String.class, id))
+                .isEqualTo("CLOSED");
+        assertThat(listener.received()).isEmpty();
+
+        provider.pullRequest(BASE_SHA, HEAD_SHA, "feat/other", UPDATED_AT);
+        sync.apply(repository, open);
+        assertThat(jdbc.queryForObject("select remote_state from pull_request where id = ?", String.class, id))
+                .isEqualTo("OPEN");
+        assertThat(listener.received()).hasSize(1);
+
+        jdbc.update("update pull_request set remote_state = 'MERGED' where id = ?", id);
+        listener.reset();
+        sync.apply(repository, open);
+        assertThat(jdbc.queryForObject("select remote_state from pull_request where id = ?", String.class, id))
+                .isEqualTo("MERGED");
+        assertThat(listener.received()).isEmpty();
     }
 
     @Test
@@ -356,7 +387,7 @@ class GitHubWebhookIngestionTest extends ScmTestBase {
         listener.failNext();
 
         assertThatThrownBy(() -> sync.apply(repository, new PullRequestSnapshot(15, BASE_SHA, HEAD_SHA,
-                "feat/other", "Title", null, UPDATED_AT, "424242", "octocat", List.of(MODIFIED))))
+                "feat/other", "Title", null, UPDATED_AT, "424242", "octocat", List.of(MODIFIED), PullRequestState.OPEN)))
                 .isInstanceOf(IllegalStateException.class);
 
         assertThat(jdbc.queryForObject("select count(*) from pull_request where repository_id = ?",
@@ -497,7 +528,7 @@ class GitHubWebhookIngestionTest extends ScmTestBase {
         private void pullRequestWithTitle(String baseSha, String headSha, String branch, String title,
                 Instant updatedAt) {
             pullRequestJson = """
-                    {"number":7,"title":"%s","updated_at":"%s",
+                    {"state":"open","merged":false,"number":7,"title":"%s","updated_at":"%s",
                      "base":{"sha":"%s"},
                      "head":{"sha":"%s","ref":"%s"},
                      "user":{"id":424242,"login":"octocat"}}"""

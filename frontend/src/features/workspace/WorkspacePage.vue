@@ -226,7 +226,7 @@ function requirementItem(requirement: RequirementSummary): WorkItem | null {
 
 /** 当前 head 上尚未裁定的审查、以及失败的审查，才需要人处理。 */
 function reviewItem(review: ProjectReviewRow): WorkItem | null {
-  if (!review.isCurrent) return null;
+  if (!review.isCurrent || review.remoteState === "CLOSED" || review.remoteState === "MERGED") return null;
   const linked =
     review.requirementId === null
       ? null
@@ -303,7 +303,8 @@ const visibleRows = computed(() =>
   ),
 );
 
-const currentReviews = computed(() => reviews.value.filter((review) => review.isCurrent));
+const currentReviews = computed(() => reviews.value.filter(review => review.isCurrent
+  && review.remoteState !== "CLOSED" && review.remoteState !== "MERGED"));
 
 const kpis = computed(() => {
   const developing = requirements.value.filter((item) => item.status === "IN_DEVELOPMENT");

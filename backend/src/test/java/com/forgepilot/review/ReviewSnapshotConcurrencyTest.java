@@ -156,10 +156,10 @@ class ReviewSnapshotConcurrencyTest extends PostgresTestBase {
                     + "external_id, api_base, encrypted_token, encrypted_secret) "
                     + "values (?, 'GITHUB', 'github.com', ?, 'https://api.github.com', 'x', 'y') returning id",
                     Long.class, project, "review-race-" + sequence);
-            pullRequest = jdbc.queryForObject("insert into pull_request (project_id, repository_id, external_number, "
+            pullRequest = jdbc.queryForObject("insert into pull_request (remote_state, project_id, repository_id, external_number, "
                     + "base_sha, head_sha, review_input_fingerprint, changed_files, requirement_id, "
                     + "author_external_user_id, author_username) "
-                    + "values (?, ?, 1, 'base', 'head-A', 'input-A', ?::jsonb, ?, 'author', 'author') returning id",
+                    + "values ('OPEN', ?, ?, 1, 'base', 'head-A', 'input-A', ?::jsonb, ?, 'author', 'author') returning id",
                     Long.class, project, repository, FILES_A, requirement);
             jdbc.update("insert into review (project_id, pull_request_id, head_sha, review_input_fingerprint, "
                     + "requirement_id, requirement_revision_id, status) "

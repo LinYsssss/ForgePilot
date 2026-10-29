@@ -11,6 +11,7 @@ import com.forgepilot.common.ApiException;
 import com.forgepilot.scm.ChangedFile;
 import com.forgepilot.scm.OutboundUrlPolicy;
 import com.forgepilot.scm.PullRequestSnapshot;
+import com.forgepilot.scm.PullRequestState;
 import com.forgepilot.scm.ScmRepository;
 import com.forgepilot.scm.ScmSecretCipher;
 import org.springframework.http.HttpHeaders;
@@ -70,7 +71,7 @@ public class GitHubClient {
             if (before.equals(after)) {
                 return new PullRequestSnapshot(number, before.baseSha(), before.headSha(),
                         before.headRef(), before.title(), null, before.updatedAt(),
-                        before.authorExternalUserId(), before.authorUsername(), files);
+                        before.authorExternalUserId(), before.authorUsername(), files, before.remoteState());
             }
         }
         throw ApiException.conflict(
@@ -93,11 +94,82 @@ public class GitHubClient {
                 // 没有稳定的 diff 修订号；updated_at 还能发现 SHA 回退后的更新。
                 Instant.parse(required(pullRequest, "updated_at")),
                 required(pullRequest.path("user"), "id", "user.id"),
-                required(pullRequest.path("user"), "login", "user.login"));
+                required(pullRequest.path("user"), "login", "user.login"), remoteState(pullRequest));
     }
 
     private record PullRequestMetadata(String baseSha, String headSha, String headRef, String title,
-            Instant updatedAt, String authorExternalUserId, String authorUsername) {
+            Instant updatedAt, String authorExternalUserId, String authorUsername, PullRequestState remoteState) {
+    }
+
+    public PullRequestState currentState(ScmRepository repository, int number, String expectedHead, String expectedBase) {
+        RestClient client = clientFor(repository);
+        return closeState(request(() -> client.get()
+                .uri("/repositories/{repository}/pulls/{number}", repository.getExternalId(), number)
+                .retrieve().body(JsonNode.class)), expectedHead, expectedBase);
+    }
+
+    /** 关闭没有远端 SHA 原子条件；先核验版本，响应不明时只读核验一次。 */
+    public void close(ScmRepository repository, int number, String expectedHead, String expectedBase) {
+        RestClient client = clientFor(repository);
+        String path = "/repositories/" + repository.getExternalId() + "/pulls/" + number;
+        PullRequestState before = closeState(request(() -> client.get().uri(path).retrieve().body(JsonNode.class)),
+                expectedHead, expectedBase);
+        if (before == PullRequestState.MERGED) throw ApiException.conflict("GitHub PR 已合并，不能拒绝关闭。");
+        if (before == PullRequestState.CLOSED) return;
+        try {
+            JsonNode result = client.patch().uri(path).contentType(MediaType.APPLICATION_JSON)
+                    .body(java.util.Map.of("state", "closed")).retrieve().body(JsonNode.class);
+            if (closeState(result, expectedHead, expectedBase) != PullRequestState.CLOSED) {
+                throw ApiException.conflict("GitHub 未确认 PR 关闭，请核查远端状态。");
+            }
+        } catch (RestClientResponseException response) {
+            if (!response.getStatusCode().is5xxServerError()) {
+                throw ApiException.conflict("GitHub 拒绝关闭，请检查权限和远端状态。");
+            }
+            confirmClose(client, path, expectedHead, expectedBase);
+        } catch (org.springframework.web.client.RestClientException failure) {
+            confirmClose(client, path, expectedHead, expectedBase);
+        } catch (ApiException invalidResponse) {
+            if (invalidResponse.getStatus() != HttpStatus.UNPROCESSABLE_ENTITY) throw invalidResponse;
+            confirmClose(client, path, expectedHead, expectedBase);
+        }
+    }
+
+    private static PullRequestState remoteState(JsonNode state) {
+        if (state == null || !state.path("merged").isBoolean()) {
+            throw ApiException.unprocessable("GitHub 未返回可核验的 PR 状态。");
+        }
+        String value = state.path("state").asString();
+        if ("closed".equals(value)) return state.path("merged").asBoolean()
+                ? PullRequestState.MERGED : PullRequestState.CLOSED;
+        if ("open".equals(value) && !state.path("merged").asBoolean()) return PullRequestState.OPEN;
+        throw ApiException.unprocessable("GitHub 返回的 PR 状态无效。");
+    }
+
+    private static PullRequestState closeState(JsonNode state, String expectedHead, String expectedBase) {
+        if (state == null || !state.path("head").path("sha").isTextual()) {
+            throw ApiException.unprocessable("GitHub 未返回可核验的 PR 版本。");
+        }
+        requireMergeHead(state, expectedHead);
+        if (!expectedBase.equals(state.path("base").path("sha").asString())) {
+            throw ApiException.conflict("GitHub PR 的 base 已变化，请同步后重新审查。");
+        }
+        return remoteState(state);
+    }
+
+    private static void confirmClose(RestClient client, String path, String expectedHead, String expectedBase) {
+        try {
+            PullRequestState state = closeState(client.get().uri(path).retrieve().body(JsonNode.class),
+                    expectedHead, expectedBase);
+            if (state == PullRequestState.CLOSED) return;
+            if (state == PullRequestState.MERGED) throw ApiException.conflict("GitHub PR 已合并，不能补记拒绝。");
+        } catch (ApiException invalidResponse) {
+            if (invalidResponse.getStatus() != HttpStatus.UNPROCESSABLE_ENTITY) throw invalidResponse;
+        } catch (org.springframework.web.client.RestClientException unavailable) {
+            // 结果不明时不重复远端写入，也不提交本地决定。
+        }
+        throw new ApiException(HttpStatus.SERVICE_UNAVAILABLE, "close_outcome_unknown",
+                "关闭结果尚未确认，请到 GitHub 核对后重试；平台尚未记录拒绝。");
     }
 
     public void merge(ScmRepository repository, int number, String expectedHeadSha) {

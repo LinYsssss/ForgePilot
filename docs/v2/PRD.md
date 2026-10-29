@@ -64,7 +64,7 @@ flowchart LR
 | Finding 确认 / 拒绝 | ✅ | ❌ | ✅ |
 | Finding 认领、标记已修复 | ❌ | ✅（已有认领仅限认领人；无人认领时可接续标记） | ❌ |
 | Finding 验证通过 / 打回 | ✅ | ❌ | ✅ |
-| Review 终局 APPROVE / REQUEST_CHANGES | ✅ | ❌ | 仅需求指定且角色仍有效的审查人 |
+| Review 终局 APPROVE / REQUEST_CHANGES / REJECT | ✅ | ❌ | 仅需求指定且角色仍有效的审查人 |
 | 取消需求 | ✅ | ❌ | ❌ |
 
 跨项目一律不可见、不可操作。
@@ -88,7 +88,9 @@ flowchart LR
 - 项目级钉钉通知：AI 完成交给有效审查人，失败交给 LEADER，人工退回交给有效开发负责人，合并交给 LEADER；处理人无效时回退 LEADER。消息含项目详情链接，不广播退回理由，LEADER 可发测试消息。
 - Knowledge 优先展示阅读状态，真实切片、Embedding Profile、维度和语义索引状态收进索引详情，不展示原始向量；历史证据摘录不因文档删除而消失。
 - 唯一 Review Engine：Requirement/AC + Knowledge + PR patch → Finding。
-- Finding 人工生命周期 + PR 的 APPROVE/REQUEST_CHANGES。
+- AC 报告以“信息不足／待核实”表达证据不足，不把模型漏答当作未实现；源码片段存在不代表判断正确。旧报告保持原样。
+- 工作台原 AI 台账按请求模型和用途展示本项目累计已记录尝试、成败、耗时、已上报 Token；重试各算一次，缺失/读取失败明确显示，不是账单或审查准确率。
+- Finding 人工生命周期 + PR 的通过合并/退回修改/拒绝关闭；关闭保留源分支，不取消需求。
 - 修复后按新 head SHA 产生新 Review，保留前后结果。
 - 可复现评测：漏报率、误报率、AC 判定、结构失败、Token、耗时。
 
@@ -128,7 +130,7 @@ DRAFT → READY → IN_DEVELOPMENT → DONE
 | 当前 Review 为 PENDING | `PENDING` |
 | 当前 Review 的 Decision 为 `APPROVE` | `APPROVED` |
 
-Requirement 没有关联 PR 时为 `NO_PR`。多 PR 聚合先让 `FAILED`、`CHANGES_REQUESTED` 两类风险状态依次占优；否则全部子状态相同就返回该状态，全部 `APPROVED` 才返回 `APPROVED`，其余组合返回 `MIXED` 并在 UI 展示各状态计数。生命周期与活动保持独立事实；列表、详情和工作台可由两者派生一个醒目的“当前阶段”，同时保留生命周期。仅 `IN_DEVELOPMENT` 派生评审/返工阶段，草稿、待开发及终态不得被活动覆盖。
+评审活动只统计开放或未同步 PR，以及本系统已通过并合并的当前审查；关闭/拒绝及外部合并不进入待审聚合，不伪造人工通过。没有这样的 PR 时为 `NO_PR`（暂无活动 PR），关联与历史仍保留。多 PR 聚合先让 `FAILED`、`CHANGES_REQUESTED` 两类风险状态依次占优；否则全部子状态相同就返回该状态，全部 `APPROVED` 才返回 `APPROVED`，其余组合返回 `MIXED` 并在 UI 展示各状态计数。生命周期与活动保持独立事实；列表、详情和工作台可由两者派生一个醒目的“当前阶段”，同时保留生命周期。仅 `IN_DEVELOPMENT` 派生评审/返工阶段，草稿、待开发及终态不得被活动覆盖。
 
 READY 后正文与 AC 锁定；修改由 LEADER 创建新的不可变 Revision 并填写变更原因，旧 AC 永久保留。DRAFT 阶段的 Revision 1 可原地编辑，`DRAFT → READY` 同事务冻结——"不可变"指**已发布的 Revision**。需求版本变更**不自动重审**，关联 PR 显示"审查已过期"，由人工按上表权限触发。需求质量检查结果归属具体 Revision，DRAFT 期间正文一改即失效。
 
@@ -146,8 +148,10 @@ READY 后正文与 AC 锁定；修改由 LEADER 创建新的不可变 Revision �
 
 ### Review Decision
 
-`PENDING | APPROVE | REQUEST_CHANGES`。**AI 置信度、Finding 状态、Review Decision 三者不互相替代**，UI 上必须分开呈现。置信度真实记录，但只分 `HIGH/MEDIUM/LOW` 三档而非数值，且不参与任何自动门禁或状态流转——它是未经校准的模型自报把握，不是质量保证。
-终局 Decision 只能从 `PENDING` **写入一次**，目标 Review 必须已完成，且 head、Diff fingerprint 与需求版本均等于 PR 当前值；同一 head 出现 REQUEST_CHANGES 后必须有新 head SHA 才能再次 APPROVE——**改 Base、需求关联、需求版本或重新同步 Diff 都不能解除该闸门**。并发 APPROVE/REQUEST_CHANGES 只有一个请求可以成功。
+`PENDING | APPROVE | REQUEST_CHANGES | REJECT`。**AI 置信度、Finding 状态、Review Decision 三者不互相替代**，UI 上必须分开呈现。置信度真实记录，但只分 `HIGH/MEDIUM/LOW` 三档而非数值，且不参与任何自动门禁或状态流转——它是未经校准的模型自报把握，不是质量保证。
+终局 Decision 只能从 `PENDING` **写入一次**，目标 Review 必须已完成，且 head、Diff fingerprint 与需求版本均等于 PR 当前值；同一 head 出现 REQUEST_CHANGES 或 REJECT 后必须有新 head SHA 才能解除通过闸门，改 Base、关联或需求版本均不能绕过。同一决定重复请求返回原记录，不重复远端写入或通知，不同决定仍冲突。
+
+拒绝关闭必填理由并二次确认，远端确认关闭后才提交本地 REJECT；远端已关闭但本地仍 PENDING 时，在原权限/版本条件满足下核验补记，已合并或版本变化不能补记。关闭没有远端原子 SHA 条件；响应丢失/不明只读核验一次，仍不明则提示人工核查，不记录成功。终态 PR 不再发起新审查，已运行审查保留原完成/恢复流程；不自动取消或完成需求。
 
 新 `REQUEST_CHANGES` 必须填写去除首尾空白后非空的理由，备注最多 2000 字；旧数据中的空理由仍可读取。退回不关闭 PR/MR、不删除分支、不改变需求生命周期，开发者沿原分支提交新 head 后产生新一轮。需求与审查详情展示退回人、时间和理由；审查详情还展示轮次、上一轮及上一轮退回理由。
 

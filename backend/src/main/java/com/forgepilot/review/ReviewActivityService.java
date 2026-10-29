@@ -36,8 +36,8 @@ public class ReviewActivityService {
      * <p>只列出可达的组合。决策只能写到 COMPLETED 的 Review 上
      * （ARCHITECTURE.md 3.1 前置条件 1），而
      * {@code ck_review_decision_needs_completion} 让另外六种组合根本存不进去，
-     * 因此下面若出现查不到的情况，意味着那条 CHECK 没了，
-     * 而不是漏想了某种情形。
+     * REJECT 的当前审查已在活动 SQL 中排除（关闭或同版本外部重开
+     * 都不制造待审）；其余查不到的组合意味着 CHECK 被破坏。
      *
      * <p>这里的三个 PENDING 是三件不同的事实，靠类型把它们区分开：
      * {@code ReviewStatus.PENDING} 是“已排队、未被抢占”，

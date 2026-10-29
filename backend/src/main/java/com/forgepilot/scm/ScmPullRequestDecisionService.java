@@ -37,5 +37,40 @@ class ScmPullRequestDecisionService implements PullRequestDecisionActions {
         } else {
             gitlab.merge(repository, pullRequest.getExternalNumber(), expectedHeadSha);
         }
+        pullRequest.recordRemoteState(PullRequestState.MERGED);
+        pullRequests.flush();
+    }
+
+    @Override
+    public void close(long projectId, long pullRequestId, String expectedHeadSha) {
+        PullRequest pullRequest = pullRequests.findByProjectIdAndId(projectId, pullRequestId)
+                .orElseThrow(ApiException::notFound);
+        ScmRepository repository = repositories.findByProjectIdAndId(projectId, pullRequest.getRepositoryId())
+                .orElseThrow(ApiException::notFound);
+        if (repository.getProvider() == ScmProvider.GITHUB) {
+            github.close(repository, pullRequest.getExternalNumber(), expectedHeadSha, pullRequest.getBaseSha());
+        } else {
+            gitlab.close(repository, pullRequest.getExternalNumber(), expectedHeadSha, pullRequest.getBaseSha());
+        }
+        pullRequest.recordRemoteState(PullRequestState.CLOSED);
+        pullRequests.flush();
+    }
+
+    @Override
+    public void requireOpen(long projectId, long pullRequestId, String expectedHeadSha) {
+        PullRequest pullRequest = pullRequests.findByProjectIdAndId(projectId, pullRequestId)
+                .orElseThrow(ApiException::notFound);
+        if (pullRequest.getRemoteState() == null) {
+            ScmRepository repository = repositories.findByProjectIdAndId(projectId, pullRequest.getRepositoryId())
+                    .orElseThrow(ApiException::notFound);
+            PullRequestState state = repository.getProvider() == ScmProvider.GITHUB
+                    ? github.currentState(repository, pullRequest.getExternalNumber(), expectedHeadSha, pullRequest.getBaseSha())
+                    : gitlab.currentState(repository, pullRequest.getExternalNumber(), expectedHeadSha, pullRequest.getBaseSha());
+            pullRequest.recordRemoteState(state);
+        }
+        if (pullRequest.getRemoteState() != PullRequestState.OPEN) {
+            throw ApiException.conflict("PR 已关闭或合并，不能启动新审查。");
+        }
+        pullRequests.flush();
     }
 }

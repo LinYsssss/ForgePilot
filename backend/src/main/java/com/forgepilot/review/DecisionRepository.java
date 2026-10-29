@@ -85,7 +85,7 @@ interface DecisionRepository extends Repository<Review, Long> {
      * 这份列表是跨 PR 的，否则就会变成每条 review 一次查询。
      */
     @Query(value = """
-            SELECT p.id, p.external_number, p.title, s.provider FROM pull_request p
+            SELECT p.id, p.external_number, p.title, s.provider, p.remote_state FROM pull_request p
               JOIN scm_repository s ON s.project_id = p.project_id AND s.id = p.repository_id
              WHERE p.project_id = :projectId
             """, nativeQuery = true)
@@ -151,7 +151,7 @@ interface DecisionRepository extends Repository<Review, Long> {
                     WHERE blocking.project_id = r.project_id
                       AND blocking.pull_request_id = r.pull_request_id
                       AND blocking.head_sha = p.head_sha
-                      AND blocking.decision = 'REQUEST_CHANGES')
+                      AND blocking.decision IN ('REQUEST_CHANGES', 'REJECT'))
             """, nativeQuery = true)
     int decideIfStillPending(@Param("projectId") long projectId, @Param("reviewId") long reviewId,
             @Param("decision") String decision, @Param("actorId") long actorId,

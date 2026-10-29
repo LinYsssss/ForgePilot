@@ -98,8 +98,9 @@ class ReviewDecisionTest extends PostgresTestBase {
                 () -> decide(scenario, scenario.leader, review, ReviewDecision.APPROVE),
                 () -> decide(scenario, scenario.leader, review, ReviewDecision.APPROVE));
 
-        // null is the winner: the loser's conditional update matched no row.
-        assertThat(outcomes).containsExactlyInAnyOrder(null, HttpStatus.CONFLICT);
+        // 同一个决定的重试返回原结果，远端合并只执行一次。
+        assertThat(outcomes).containsExactly(null, null);
+        org.mockito.Mockito.verify(scmActions).merge(scenario.projectId, scenario.pullRequestId, "head-1");
         assertThat(decisionOf(review)).isEqualTo("APPROVE");
         assertThat(jdbc.queryForObject("select count(*) from review where id = ? and decision_by is not null",
                 Integer.class, review)).isEqualTo(1);
@@ -505,7 +506,8 @@ class ReviewDecisionTest extends PostgresTestBase {
         assertThat(decide(scenario, scenario.reviewer, review, ReviewDecision.REQUEST_CHANGES)).isNull();
         assertThat(decisions.detail(scenario.projectId, scenario.developer, review).decisionComment())
                 .isEqualTo("Fix the missing validation");
-        org.mockito.Mockito.verifyNoInteractions(scmActions);
+        org.mockito.Mockito.verify(scmActions).requireOpen(scenario.projectId, scenario.pullRequestId, "head-1");
+        org.mockito.Mockito.verifyNoMoreInteractions(scmActions);
     }
 
     @Test
@@ -533,6 +535,33 @@ class ReviewDecisionTest extends PostgresTestBase {
                 .merge(scenario.projectId, scenario.pullRequestId, "head-1");
         assertThat(decide(scenario, scenario.leader, review, ReviewDecision.APPROVE)).isEqualTo(HttpStatus.CONFLICT);
         assertThat(decisionOf(review)).isEqualTo("PENDING");
+    }
+
+    @Test
+    void closeRequiresAuthorityReasonAndConfirmationAndIsWrittenOnlyOnce() {
+        Scenario scenario = new Scenario();
+        long review = scenario.completedReview("head-1", "fp-1", null, null);
+        assertThat(decide(scenario, scenario.developer, review, ReviewDecision.REJECT))
+                .isEqualTo(HttpStatus.FORBIDDEN);
+        assertThat(statusOf(() -> decisions.decide(scenario.projectId, scenario.leader, review,
+                ReviewDecision.REJECT, "  "))).isEqualTo(HttpStatus.UNPROCESSABLE_ENTITY);
+        org.mockito.Mockito.verifyNoInteractions(scmActions);
+        org.mockito.Mockito.doThrow(new ApiException(HttpStatus.SERVICE_UNAVAILABLE, "close_outcome_unknown", "unconfirmed"))
+                .when(scmActions).close(scenario.projectId, scenario.pullRequestId, "head-1");
+        assertThat(decide(scenario, scenario.leader, review, ReviewDecision.REJECT))
+                .isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
+        assertThat(decisionOf(review)).isEqualTo("PENDING");
+        org.mockito.Mockito.reset(scmActions);
+        assertThat(decide(scenario, scenario.leader, review, ReviewDecision.REJECT)).isNull();
+        assertThat(decide(scenario, scenario.leader, review, ReviewDecision.REJECT)).isNull();
+        assertThat(decide(scenario, scenario.leader, review, ReviewDecision.APPROVE)).isEqualTo(HttpStatus.CONFLICT);
+        assertThat(decisionOf(review)).isEqualTo("REJECT");
+        org.mockito.Mockito.verify(scmActions).close(scenario.projectId, scenario.pullRequestId, "head-1");
+        org.mockito.Mockito.verifyNoMoreInteractions(scmActions);
+
+        jdbc.update("update pull_request set review_input_fingerprint = 'fp-after-base' where id = ?", scenario.pullRequestId);
+        long sameHead = scenario.completedReview("head-1", "fp-after-base", null, null);
+        assertThat(decide(scenario, scenario.leader, sameHead, ReviewDecision.APPROVE)).isEqualTo(HttpStatus.CONFLICT);
     }
 
     // ---------------------------------------------------------------- machinery
@@ -611,7 +640,7 @@ class ReviewDecisionTest extends PostgresTestBase {
     }
 
     private HttpStatus decide(Scenario scenario, long actorId, long reviewId, ReviewDecision decision) {
-        return statusOf(() -> decisions.decide(scenario.projectId, actorId, reviewId, decision, decision == ReviewDecision.REQUEST_CHANGES ? "Fix the missing validation" : null));
+        return statusOf(() -> decisions.decide(scenario.projectId, actorId, reviewId, decision, decision == ReviewDecision.APPROVE ? null : "Fix the missing validation"));
     }
 
     /** The status the API would answer with, or null when the call was allowed to succeed. */

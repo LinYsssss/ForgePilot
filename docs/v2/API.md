@@ -48,7 +48,7 @@
 | `GET /api/projects/{projectId}/review-activity` | 成员 | 200 | 全项目活动，按需求 id |
 | `GET /api/projects/{projectId}/requirements/{id}/coverage` | 成员 | 200 | AC 覆盖度 |
 | `GET /api/projects/{projectId}/review-calibration` | 成员 | 200 | 置信度校准视图 |
-| `GET /api/projects/{projectId}/ai-usage` | 成员 | 200 | AI 调用次数、成败、Token 与延迟分位 |
+| `GET /api/projects/{projectId}/ai-usage` | 成员 | 200 | 按 model + useCase 的累计已记录尝试、成败、已上报 Token 与单次延迟分位 |
 | `GET /api/projects/{projectId}/knowledge/documents` | 成员 | 200 | 知识列表（元数据） |
 | `POST /api/projects/{projectId}/knowledge/documents` | LEADER | 201 | 上传，返回 PENDING |
 | `POST .../knowledge/documents/{id}/retry` | LEADER | 200 | 失败文档回到 PENDING |
@@ -78,6 +78,8 @@
 | `GET` `PUT` `DELETE /api/projects/{projectId}/notifications/dingtalk` | LEADER | 200 / 200 / 204 | 钉钉渠道配置 |
 | `POST /api/projects/{projectId}/notifications/dingtalk/test` | LEADER | 200 | 测试消息 |
 | `POST /api/scm/github/webhook` `gitlab/webhook` | 签名 / Token 验证，限流 | 202 | 投递入口；验签后读取 Provider 权威快照，Provider 429/5xx 或网络故障答 503 `provider_unavailable`，其他拒绝答 502 `provider_error`，响应缺少权威字段或形状不对答 422 |
+
+AI 台账返回 `{rows, totalCalls}`；每行含 `model, useCase, calls, succeeded, failed, tokens, p50LatencyMs, p95LatencyMs, lastCallAt`，按用途/模型排序。失败含超时，重试是独立记录；Token 全缺失为 null，部分缺失只合计已记录部分。空记录为 `rows=[]`，读取失败仍为错误响应；不新增限制或计费。
 
 ## 账户
 
@@ -224,31 +226,35 @@ GitHub 默认 `apiBase=https://api.github.com`；GitLab 默认 `https://gitlab.c
 ## Review 最终决定与历史
 
 - `POST /api/projects/{projectId}/reviews/{reviewId}/decision`
-  - 请求：`{"decision":"REQUEST_CHANGES","comment":"请补齐权限校验"}`，或 `{"decision":"APPROVE","comment":null}`。
+  - 请求：`{"decision":"REQUEST_CHANGES","comment":"请补齐权限校验"}`、`{"decision":"APPROVE","comment":null}`，或 `{"decision":"REJECT","comment":"放弃此 PR"}`。
   - 成功 200：`{decision,decisionBy,decisionAt}`；详情保留 `decisionComment`。
   - 仅指定且仍有效的 REVIEWER 或 LEADER；未关联需求、未指定审查人时仅 LEADER。
-  - 关联需求须处于 `IN_DEVELOPMENT` 且开发负责人仍有 DEVELOPER/LEADER 资格。Review 必须已完成、当前有效、未决定，且同 head 无既有退回。
-  - 新退回理由去除首尾空白后必须非空；任意决定备注最多 2000 字。历史空备注仍能读取。
+  - 关联需求须处于 `IN_DEVELOPMENT` 且开发负责人仍有 DEVELOPER/LEADER 资格。新决定要求 Review 已完成、当前有效、未决定，且同 head 无既有退回或拒绝。
+  - 重复相同已终局决定通过当前权限/需求状态检查后返回原结果，不重复远端操作或通知；不同决定返回冲突，不能改判。
+  - 新退回/拒绝理由去除首尾空白后必须非空；任意决定备注最多 2000 字。历史空备注仍能读取。
   - `REQUEST_CHANGES` 不调用远端写接口，保留 PR/MR 与分支。`APPROVE` 合并被审查的 SHA，Provider 确认合并后才提交本地决定；不会把需求改为 `DONE`。
+  - `REJECT` 核验远端 head/base 后关闭整个 PR/MR，明确关闭后记录本地拒绝，保留分支、不取消需求；界面要求理由和二次确认。本地仍 PENDING、远端已 CLOSED 可只读核验补记；已 MERGED 或版本变化拒绝补记。关闭不具有远端 SHA 原子条件。
 - `GET /api/projects/{projectId}/reviews/{reviewId}`
   - 新增 `decisionBlockReason: string|null`，仅表示调用人权限和需求状态限制。
   - `validation: {droppedFindings, correctedLines}|null`：整条丢弃的 Finding 数与 Finding 纠行事件数；纠行包含分批候选、不含 AC 证据，因此可大于最终 Finding 数。无摘要时为 null，丢弃内容不回显，类型降级后保留的项不算丢弃。
   - `notReported: Finding[]`：上一轮已完成审查的 key 差集，再排除本轮同类型同文件的同位置（非空行号）/同需求同非空 ac_key 候选。只对已完成的一轮派生，不落库，不改变血缘/抑制，不等于已修复；这是粗粒度提示去重，不保证语义等价。
   - Finding 的 `findingType` 在 `review-5` 起由模型显式给出并校验；合法引用与类型矛盾时保留 CODE_QUALITY、清空 AC 并记 warning，缺失/未知类型按 acId 兜底。外来 AC 仍整条拒绝；旧报告不回填。
-  - 前端仅在 `decisionBlockReason` 显式为 null，且 `isCurrent=true`、`status=COMPLETED`、`decision=PENDING`、无 head 退回闸门时展示决定按钮。
+  - `review-6` 起 AC verdict 增加 UNKNOWN（信息不足/待核实）：合法结构漏答、无已校验证据的 COVERED、零受审文件降级并记录 warning。旧三值报告原样读取；尚未审查仍为 null，格式/Provider 失败仍失败。
+  - 前端仅在 `decisionBlockReason` 显式为 null，且 `isCurrent=true`、`status=COMPLETED`、`decision=PENDING`、无 head 退回/拒绝闸门时展示决定按钮；终态限制相应操作，CLOSED 保留核验补记拒绝入口。
 - `GET /api/projects/{projectId}/pull-requests/{pullRequestId}/reviews`
   - 返回现有 `{id,headSha,requirementRevisionId,status,decision,isCurrent,createdAt}[]`，按创建时间、ID 从旧到新排序。
   - UI 从该序列推导轮次，按需读取上一轮详情中的退回理由，不增加轮次字段或历史表。
-- 项目审查列表包含 `provider`、`pullRequestNumber`、`pullRequestTitle`；PR 详情包含 `title` 及原有作者映射字段，用于区分远端 PR/MR 与内部记录 ID。
+- 项目审查列表包含 `provider`、`pullRequestNumber`、`pullRequestTitle`；PR 详情包含 `title` 及原有作者映射字段。两者均含 `remoteState: OPEN|CLOSED|MERGED|null`；null 表示尚未核验，人工请求审查/退回前核验。终态不能启动新审查，历史保留；活动聚合不伪造外部合并为 APPROVE。
 
 | 情况 | HTTP / code | 处理 |
 |---|---|---|
 | 非成员、跨项目或资源不存在 | 404 / `not_found` | 不泄露资源存在性 |
 | 非指定审查人、无相应角色；开发负责人失去所需角色 | 403 / `forbidden` | 由 LEADER 调整角色/指派 |
-| 非终局 decision、空退回理由、备注超长 | 422 / `unprocessable` | 修改请求 |
-| 需求状态不允许、Review 过期/未完成/已决定、同 head 已退回 | 409 / `conflict` | 纠正状态或更新 head 后重新审查 |
+| 非终局 decision、空退回/拒绝理由、备注超长 | 422 / `unprocessable` | 修改请求 |
+| 需求状态不允许、Review 过期/未完成/不同终局决定、同 head 已退回/拒绝 | 409 / `conflict` | 纠正状态或更新 head 后重新审查 |
 | 远端 head 变化、关闭、拒绝合并或响应明确未合并 | 409 / `conflict` | 检查冲突、保护分支与仓库 Token 权限；同步后重审 |
 | 远端响应丢失/无法读取，且只读确认仍不能证明已合并同 SHA | 503 / `merge_outcome_unknown` | 本地决定回滚；人工核查远端，不能按失败自动重复写入 |
+| 关闭响应不明，且一次只读核验仍不能确认同版本 CLOSED | 503 / `close_outcome_unknown` | 未记录拒绝；人工核查后可重试核验补记 |
 
 远端合并与数据库提交不是原子操作。已合并同 SHA 的人工重试可补上本地决定；这不是撤销/改判接口。GitLab 仓库 Token 需要 `api` 与实际合并权限，个人身份核验 Token 的只读要求不变。
 

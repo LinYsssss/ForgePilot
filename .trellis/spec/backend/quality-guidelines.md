@@ -82,6 +82,29 @@ Regression anchors are `ReviewOutputValidatorTest`, `ChangedFileBatcherTest`,
 boundary changes, cover at least the base case, the rejected case, and any
 correction/nullable-output case in those tests.
 
+### Scenario: synthesis evidence and recorded model usage
+
+1. **Scope / Trigger:** `review-6` adds UNKNOWN and transfers candidate prose;
+   model/use-case usage grouping changes an existing response without new storage.
+2. **Signatures:** `validate(answer, formatRepair, context, List<AcEvidence>)`;
+   `GET /api/projects/{projectId}/ai-usage` returns `{rows, totalCalls}`.
+3. **Contracts:** Pass `BatchPhase.evidence()` after batch validation. Missing AC,
+   unsupported COVERED, or zero reviewed files yields UNKNOWN with warnings.
+   Usage rows include `model` and `useCase`, sorted by useCase/model; each logged
+   retry/failed attempt counts once. `sum(total_token)` remains nullable.
+4. **Validation & Error Matrix:** Missing arrays/invalid JSON after one repair
+   stays FAILED; provider failures propagate. Non-members get 404. Empty logs
+   yield empty rows/zero total; read errors remain errors, not zero usage.
+5. **Good / Base / Bad Cases:** Verified matching AC evidence permits COVERED;
+   legitimate NOT_FOUND/AT_RISK and old reports stay readable. A quote for AC-1
+   cannot establish COVERED for AC-2. Model names identify requests, not upstream execution.
+6. **Tests Required:** Reuse Validator/Batcher/Pipeline tests for reason transfer,
+   budget, UNKNOWN and structural failure; Insight/Workspace for compatibility,
+   grouping, project isolation, null tokens and local empty/error states.
+7. **Wrong vs Correct:** Wrong: fill omitted AC with NOT_FOUND, or group models
+   into one use-case row. Correct: retain UNKNOWN/warning and group by both fields.
+   Keep FindingKeys rules and frozen evaluation assets unchanged.
+
 ### Scenario: review type correction and detail-only hints
 
 #### 1. Scope / Trigger

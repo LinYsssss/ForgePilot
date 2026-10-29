@@ -7,6 +7,8 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.EnumType;
 import jakarta.persistence.Table;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.JdbcTypeCode;
@@ -48,6 +50,10 @@ public class PullRequest {
 
     @Column(name = "head_sha", nullable = false, length = 64)
     private String headSha;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "remote_state", length = 16)
+    private PullRequestState remoteState;
 
     @Column(name = "review_input_fingerprint", nullable = false, length = 64)
     private String reviewInputFingerprint;
@@ -127,6 +133,14 @@ public class PullRequest {
 
     public String getHeadSha() {
         return headSha;
+    }
+
+    public PullRequestState getRemoteState() {
+        return remoteState;
+    }
+
+    void recordRemoteState(PullRequestState state) {
+        this.remoteState = state;
     }
 
     public String getReviewInputFingerprint() {

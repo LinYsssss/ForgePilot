@@ -736,10 +736,10 @@ class ReviewPipelineIntegrationTest extends PostgresTestBase {
                     values (?, 'GITHUB', ?, ?, 'http://127.0.0.1', 'x', 'y') returning id
                     """, Long.class, project, "pipeline-host-" + sequence, "pipeline-repo-" + sequence);
             this.pullRequest = jdbc.queryForObject("""
-                    insert into pull_request (project_id, repository_id, external_number, title, base_sha,
+                    insert into pull_request (remote_state, project_id, repository_id, external_number, title, base_sha,
                         head_sha, review_input_fingerprint, changed_files, requirement_id,
                         author_external_user_id, author_username)
-                    values (?, ?, 1, ?, ?, ?, ?, cast(? as jsonb), ?, '424242', 'octocat') returning id
+                    values ('OPEN', ?, ?, 1, ?, ?, ?, ?, cast(? as jsonb), ?, '424242', 'octocat') returning id
                     """, Long.class, project, repository, "REQ-" + requirement + " checkout", "base-" + sequence,
                     headSha, fingerprint,
                     json.writeValueAsString(ChangedFile.canonicalOrder(changedFiles)), requirement);

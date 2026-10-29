@@ -1,0 +1,5 @@
+{"file":"docs/plans/2026-10-29-minimal-review-improvements.md","reason":"用户授权范围、最小实现与验收边界"}
+{"file":".trellis/spec/backend/database-guidelines.md","reason":"追加迁移、历史兼容与条件写入"}
+{"file":".trellis/spec/backend/quality-guidelines.md","reason":"单引擎、输出证据与固定构建路径"}
+{"file":".trellis/spec/backend/error-handling.md","reason":"远端关闭确认、结果不明与一次性决定"}
+{"file":".trellis/spec/frontend/design-contract.md","reason":"复用既有布局和危险操作 token"}

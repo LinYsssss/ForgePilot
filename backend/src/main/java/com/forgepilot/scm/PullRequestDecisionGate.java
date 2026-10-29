@@ -17,7 +17,7 @@ public interface PullRequestDecisionGate {
 
     /**
      * 该 PR 在 {@code headSha} 上是否已存在任何非 PENDING 的 Decision
-     * （{@code APPROVE} 或 {@code REQUEST_CHANGES}）。
+     * （{@code APPROVE}、{@code REQUEST_CHANGES} 或 {@code REJECT}）。
      *
      * <p>按 head 而不是按 PR 提问，与 ARCHITECTURE.md 3.1 的 Decision Gate 同口径：
      * 推一个新 commit 会开启一个新的 head，作者在新 head 上重新获得纠正权。

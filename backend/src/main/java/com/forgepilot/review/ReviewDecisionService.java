@@ -94,8 +94,8 @@ public class ReviewDecisionService {
         access.requireRole(projectId, actorId, ProjectRole.LEADER, ProjectRole.REVIEWER);
         // 放在鉴权之后，使项目外的调用方无从得知任何信息，
         // 连「你的请求体格式是对的」这件事都不会泄露。
-        if (decision != ReviewDecision.APPROVE && decision != ReviewDecision.REQUEST_CHANGES) {
-            throw ApiException.unprocessable("决定只能是 APPROVE 或 REQUEST_CHANGES。");
+        if (decision == null || decision == ReviewDecision.PENDING) {
+            throw ApiException.unprocessable("决定只能是 APPROVE、REQUEST_CHANGES 或 REJECT。");
         }
 
         // 单独读出父级 id，以便在加载 Review 本身之前就把锁拿到手。
@@ -115,14 +115,26 @@ public class ReviewDecisionService {
         Review review = reviews.findByProjectIdAndId(projectId, reviewId)
                 .orElseThrow(ApiException::notFound);
 
+        if (review.getDecision() == decision) {
+            authorizeDecision(projectId, actorId, review.getRequirementId());
+            return new DecisionResult(review.getDecision(), review.getDecisionBy(), review.getDecisionAt());
+        }
         checkPreconditions(review, currentHead, currentFingerprint, currentRevisionId);
         authorizeDecision(projectId, actorId, review.getRequirementId());
         comment = comment == null ? null : comment.strip();
-        if (decision == ReviewDecision.REQUEST_CHANGES && (comment == null || comment.isEmpty())) {
-            throw ApiException.unprocessable("请填写退回修改的理由。");
+        if (decision != ReviewDecision.APPROVE && (comment == null || comment.isEmpty())) {
+            throw ApiException.unprocessable("请填写退回修改或拒绝关闭的理由。");
         }
         if (comment != null && comment.length() > 2000) {
             throw ApiException.unprocessable("决定备注不能超过 2000 字。");
+        }
+
+        if (decision == ReviewDecision.APPROVE) {
+            scmActions.merge(projectId, review.getPullRequestId(), review.getHeadSha());
+        } else if (decision == ReviewDecision.REJECT) {
+            scmActions.close(projectId, review.getPullRequestId(), review.getHeadSha());
+        } else {
+            scmActions.requireOpen(projectId, review.getPullRequestId(), review.getHeadSha());
         }
 
         int updated = decisions.decideIfStillPending(projectId, reviewId, decision.name(), actorId, comment);
@@ -134,9 +146,6 @@ public class ReviewDecisionService {
 
         Review decided = reviews.findByProjectIdAndId(projectId, reviewId)
                 .orElseThrow(ApiException::notFound);
-        if (decision == ReviewDecision.APPROVE) {
-            scmActions.merge(projectId, decided.getPullRequestId(), decided.getHeadSha());
-        }
         events.publishEvent(new ReviewDecided(projectId, reviewId));
         return new DecisionResult(decided.getDecision(), decided.getDecisionBy(), decided.getDecisionAt());
     }
@@ -189,10 +198,10 @@ public class ReviewDecisionService {
         }
         // 从数据行中推导，对照该 PR 当前的 head。改 base、改关联、改需求修订
         // 或重新同步 diff 都解不开它；只有一个新的 head SHA 才能。
-        if (reviews.existsByProjectIdAndPullRequestIdAndHeadShaAndDecision(
+        if (reviews.existsByProjectIdAndPullRequestIdAndHeadShaAndDecisionIn(
                 review.getProjectId(), review.getPullRequestId(), currentHead,
-                ReviewDecision.REQUEST_CHANGES)) {
-            throw ApiException.conflict("该 head 已被退回修改，只有新的 head 才能解除。");
+                List.of(ReviewDecision.REQUEST_CHANGES, ReviewDecision.REJECT))) {
+            throw ApiException.conflict("该 head 已被退回或拒绝，只有新的 head 才能解除。");
         }
     }
 
@@ -265,7 +274,8 @@ public class ReviewDecisionService {
                 .map(review -> new ProjectReviewRow(review.getId(), review.getPullRequestId(),
                         ((Number) numbers.get(review.getPullRequestId())[1]).intValue(),
                         (String) numbers.get(review.getPullRequestId())[2],
-                        (String) numbers.get(review.getPullRequestId())[3], review.getHeadSha(),
+                        (String) numbers.get(review.getPullRequestId())[3],
+                        (String) numbers.get(review.getPullRequestId())[4], review.getHeadSha(),
                         review.getRequirementId(), review.getStatus(), review.getDecision(),
                         inputs.computeIfAbsent(review.getPullRequestId(),
                                 pullRequest -> inputsOf(projectId, pullRequest)).matches(review),

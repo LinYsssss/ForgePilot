@@ -29,16 +29,17 @@ web layer.
 
 - Migration files live in `backend/src/main/resources/db/migration` and follow
   the naming rule in `ARCHITECTURE.md` §2.4.
-- Fourteen migrations, `V1`–`V14`, produce the current twenty-one business tables.
+- Fifteen migrations, `V1`–`V15`, produce the current twenty-one business tables.
   `V1__foundation.sql` contains only `CREATE EXTENSION IF NOT EXISTS vector`;
   `V2`–`V6` create the core model; `V7`, `V9` and `V10` add columns, and `V8`
   and `V10` add the role/identity/binding and deletion-ledger tables. `V11`–`V13`
   own notification storage; `V14` adds nullable `requirement.reviewer_id` and its
   `(project_id, reviewer_id)` member FK without changing existing rows or roles.
+  `V15` adds nullable PR remote state and extends one-shot Review decisions with REJECT.
 - **No migration carries seed rows.** The first account is created through
   `POST /api/auth/register`, so no password ever lives in the repository.
 - Flyway derives the history `description` from the file name, and
-  `FoundationDatabaseTest` asserts all fourteen successful entries plus the exact
+  `FoundationDatabaseTest` asserts all fifteen successful entries plus the exact
   twenty-one-table set in `public`. Renaming an applied migration breaks both that
   test and every existing database.
 - **`ALTER TABLE ... ADD CONSTRAINT ... CHECK` validates the rows already in the
@@ -282,13 +283,12 @@ convention rather than a local choice:
 | Absent | Means | Not to be confused with |
 |---|---|---|
 | `project_notification_channel.encrypted_secret` NULL | this channel is not signed | an empty secret, which would produce a real-looking signature that DingTalk always rejects |
-| `RequirementCoverage.verdict` null | the current revision has not been reviewed | `AcVerdict.NOT_FOUND`, which means it *was* reviewed and nothing implements it |
+| `RequirementCoverage.verdict` null | the current revision has not been reviewed | `UNKNOWN` means reviewed with insufficient evidence; `NOT_FOUND` means not found in the reviewed changes |
 | `CalibrationBin.interval` null | no samples | `[0, 0]`, which reads as "measured, and it is zero" |
 
-Use NULL, not a sentinel. An empty string, a zero, or a synthetic enum value
-all answer a question that was never asked, and the reader cannot tell the
-difference afterwards. `AcVerdict`'s javadoc makes the same argument for why it
-has no "no verdict" member: the two facts must stay separable in the UI.
+Use NULL for absent observations, not a sentinel. `AcVerdict.UNKNOWN` represents
+an actual completed review with insufficient evidence, rather than no review.
+Keep both facts separable in the UI; never rewrite historical reports.
 
 The rule extends to the view layer — a JSON field that is `null` for "unknown"
 and a number for "known" is honest; folding the first into `0` is not.

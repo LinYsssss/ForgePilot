@@ -12,6 +12,7 @@ import com.forgepilot.common.ApiException;
 import com.forgepilot.scm.ChangedFile;
 import com.forgepilot.scm.OutboundUrlPolicy;
 import com.forgepilot.scm.PullRequestSnapshot;
+import com.forgepilot.scm.PullRequestState;
 import com.forgepilot.scm.ScmRepository;
 import com.forgepilot.scm.ScmSecretCipher;
 import org.springframework.http.HttpHeaders;
@@ -52,7 +53,7 @@ public class GitLabClient {
             if (identity.sameInputAs(after)) {
                 return new PullRequestSnapshot(number, identity.baseSha(), identity.headSha(),
                         identity.headRef(), identity.title(), version, identity.updatedAt(),
-                        identity.authorId(), identity.authorUsername(), files);
+                        identity.authorId(), identity.authorUsername(), files, identity.remoteState());
             }
         }
         throw unavailable("读取 diff 期间 GitLab MR 已变化。");
@@ -91,6 +92,76 @@ public class GitLabClient {
         if (state == null || !expectedHeadSha.equals(state.path("sha").asString())) {
             throw ApiException.conflict("GitLab MR 提交已变化，请同步后重新审查。");
         }
+    }
+
+    public PullRequestState currentState(ScmRepository repository, int number, String expectedHead, String expectedBase) {
+        RestClient client = clientFor(repository);
+        return closeState(mergeRequest(client, repository.getExternalId(), number), expectedHead, expectedBase);
+    }
+
+    /** 同一个关闭动作可核验补记；不删除分支，不重复不明结果的写请求。 */
+    public void close(ScmRepository repository, int number, String expectedHead, String expectedBase) {
+        RestClient client = clientFor(repository);
+        String path = "/projects/" + repository.getExternalId() + "/merge_requests/" + number;
+        PullRequestState before = closeState(mergeRequest(client, repository.getExternalId(), number),
+                expectedHead, expectedBase);
+        if (before == PullRequestState.MERGED) throw ApiException.conflict("GitLab MR 已合并，不能拒绝关闭。");
+        if (before == PullRequestState.CLOSED) return;
+        try {
+            JsonNode result = client.put().uri(path).contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                    .body(java.util.Map.of("state_event", "close")).retrieve().body(JsonNode.class);
+            if (closeState(result, expectedHead, expectedBase) != PullRequestState.CLOSED) {
+                throw ApiException.conflict("GitLab 未确认 MR 关闭，请核查远端状态。");
+            }
+        } catch (RestClientResponseException response) {
+            if (!response.getStatusCode().is5xxServerError()) {
+                throw ApiException.conflict("GitLab 拒绝关闭，请检查权限和远端状态。");
+            }
+            confirmClose(client, path, expectedHead, expectedBase);
+        } catch (org.springframework.web.client.RestClientException failure) {
+            confirmClose(client, path, expectedHead, expectedBase);
+        } catch (ApiException invalidResponse) {
+            if (invalidResponse.getStatus() != HttpStatus.UNPROCESSABLE_ENTITY) throw invalidResponse;
+            confirmClose(client, path, expectedHead, expectedBase);
+        }
+    }
+
+    private static PullRequestState remoteState(JsonNode state) {
+        if (state != null) {
+            return switch (state.path("state").asString()) {
+                case "opened" -> PullRequestState.OPEN;
+                case "closed" -> PullRequestState.CLOSED;
+                case "merged" -> PullRequestState.MERGED;
+                default -> throw ApiException.unprocessable("GitLab 返回的 MR 状态无效。");
+            };
+        }
+        throw ApiException.unprocessable("GitLab 未返回可核验的 MR 状态。");
+    }
+
+    private static PullRequestState closeState(JsonNode state, String expectedHead, String expectedBase) {
+        if (state == null || !state.path("sha").isTextual()) {
+            throw ApiException.unprocessable("GitLab 未返回可核验的 PR 版本。");
+        }
+        requireMergeHead(state, expectedHead);
+        if (!expectedBase.equals(state.path("diff_refs").path("base_sha").asString())) {
+            throw ApiException.conflict("GitLab MR 的 base 已变化，请同步后重新审查。");
+        }
+        return remoteState(state);
+    }
+
+    private static void confirmClose(RestClient client, String path, String expectedHead, String expectedBase) {
+        try {
+            PullRequestState state = closeState(client.get().uri(path).retrieve().body(JsonNode.class),
+                    expectedHead, expectedBase);
+            if (state == PullRequestState.CLOSED) return;
+            if (state == PullRequestState.MERGED) throw ApiException.conflict("GitLab MR 已合并，不能补记拒绝。");
+        } catch (ApiException invalidResponse) {
+            if (invalidResponse.getStatus() != HttpStatus.UNPROCESSABLE_ENTITY) throw invalidResponse;
+        } catch (org.springframework.web.client.RestClientException unavailable) {
+            // 结果不明时保留人工核验入口，不自动重复关闭。
+        }
+        throw new ApiException(HttpStatus.SERVICE_UNAVAILABLE, "close_outcome_unknown",
+                "关闭结果尚未确认，请到 GitLab 核对后重试；平台尚未记录拒绝。");
     }
 
     private static void confirmMerge(RestClient client, String path, String expectedHeadSha) {
@@ -209,7 +280,7 @@ public class GitLabClient {
                 requiredText(refs, "head_sha", "diff_refs.head_sha"),
                 requiredText(node, "source_branch"), requiredText(node, "title"),
                 requiredInstant(node, "updated_at"), requiredValue(author, "id", "author.id"),
-                requiredText(author, "username", "author.username"));
+                requiredText(author, "username", "author.username"), remoteState(node));
     }
 
     private static JsonNode request(Supplier<JsonNode> call) {
@@ -313,13 +384,13 @@ public class GitLabClient {
     }
 
     private record MrIdentity(String baseSha, String headSha, String headRef, String title,
-            Instant updatedAt, String authorId, String authorUsername) {
+            Instant updatedAt, String authorId, String authorUsername, PullRequestState remoteState) {
 
         boolean sameInputAs(MrIdentity other) {
             return baseSha.equals(other.baseSha) && headSha.equals(other.headSha)
                     && headRef.equals(other.headRef) && title.equals(other.title)
                     && updatedAt.equals(other.updatedAt) && authorId.equals(other.authorId)
-                    && authorUsername.equals(other.authorUsername);
+                    && authorUsername.equals(other.authorUsername) && remoteState == other.remoteState;
         }
     }
 }

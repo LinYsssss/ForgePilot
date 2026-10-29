@@ -44,6 +44,7 @@ final class ReviewViews {
             int pullRequestNumber,
             String pullRequestTitle,
             String provider,
+            String remoteState,
             String headSha,
             Long requirementId,
             ReviewStatus status,

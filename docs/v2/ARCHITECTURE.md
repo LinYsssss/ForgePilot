@@ -252,7 +252,7 @@ CHECK (
   (decision = 'PENDING'
     AND decision_by IS NULL AND decision_at IS NULL AND decision_comment IS NULL)
   OR
-  (decision IN ('APPROVE', 'REQUEST_CHANGES')
+  (decision IN ('APPROVE', 'REQUEST_CHANGES', 'REJECT')
     AND decision_by IS NOT NULL AND decision_at IS NOT NULL)
 );
 ```
@@ -320,27 +320,31 @@ Webhook 在 PR 与 PENDING Review 均提交后返回 202，不等待 LLM。轻�
 ```text
 Review Identity = pull_request_id + head_sha + review_input_fingerprint + requirement_revision_id
 Current Validity = Review 的 head/fingerprint/requirement revision 均等于 PR 当前值
-Decision Gate = pull_request_id + head_sha 上是否已有 REQUEST_CHANGES
+Decision Gate = pull_request_id + head_sha 上是否已有 REQUEST_CHANGES 或 REJECT
 ```
 
-Base、changed files、patch 或纳入指纹的稳定 Diff version 改变时，即使 head SHA 不变，也必须形成新的 Review Identity；旧 Review 保留但不再当前有效。同一 head 一旦出现 `REQUEST_CHANGES`，任何需求版本或 Diff fingerprint 都不能再 APPROVE，解除只能靠新 head SHA。
+Base、changed files、patch 或纳入指纹的稳定 Diff version 改变时，即使 head SHA 不变，也必须形成新的 Review Identity；旧 Review 保留但不再当前有效。同一 head 一旦出现 `REQUEST_CHANGES` 或 `REJECT`，任何需求版本或 Diff fingerprint 都不能再 APPROVE，解除只能靠新 head SHA。
 
-Decision 是一次性人工终局事实，只允许 `PENDING → APPROVE | REQUEST_CHANGES`，不得覆盖、反转或重写。写入事务必须 `SELECT ... FOR UPDATE` 锁 `pull_request` 行，并逐条校验以下前置条件，再以 `WHERE decision='PENDING'` 条件更新；禁止用普通 `EXISTS` 查询或无条件 save 代替：
+Decision 是一次性人工终局事实，只允许 `PENDING → APPROVE | REQUEST_CHANGES | REJECT`，不得覆盖、反转或重写。相同决定的已终局请求通过当前权限/需求状态检查后返回原 actor/time，不重复远端操作或通知；其他新决定的写入事务必须 `SELECT ... FOR UPDATE` 锁 `pull_request` 行，并逐条校验以下前置条件，再以 `WHERE decision='PENDING'` 条件更新；禁止用普通 `EXISTS` 查询或无条件 save 代替：
 
 1. 目标 Review 的 `status = COMPLETED`；
 2. 目标 Review 的 `decision = PENDING`；
 3. `review.head_sha = pull_request.head_sha`；
 4. `review.review_input_fingerprint = pull_request.review_input_fingerprint`；
 5. `review.requirement_revision_id IS NOT DISTINCT FROM pull_request` 当前关联需求版本（NULL 亦须相等）；
-6. 该 `head_sha` 上不存在任何 `REQUEST_CHANGES`（否则只能靠新 head 解除）。
+6. 该 `head_sha` 上不存在任何 `REQUEST_CHANGES` 或 `REJECT`（否则只能靠新 head 解除）。
 
-条件更新影响行数必须为 1，否则按并发冲突返回 409。Review 的 CHECK 保持兼容历史数据：`decision=PENDING` 时 `decision_by/at/comment` 均为空；终局时 actor/time 必须非空。新请求的退回理由由服务层要求去除首尾空白后非空，所有备注最多 2000 字；历史空理由仍可读取。MVP 不支持撤销或改判。
+条件更新影响行数必须为 1，否则按并发冲突返回 409。Review 的 CHECK 保持兼容历史数据：`decision=PENDING` 时 `decision_by/at/comment` 均为空；终局时 actor/time 必须非空。新请求的退回/拒绝理由由服务层要求去除首尾空白后非空，所有备注最多 2000 字；历史空理由仍可读取。MVP 不支持撤销或改判。
 
 最终决定还须通过 `RequirementDirectory.DecisionContext` 检查：调用人是 LEADER 或需求当前指定且仍有 REVIEWER 角色的成员；未关联、未指定或审查人失效时仅 LEADER 可决定。关联需求须处于 `IN_DEVELOPMENT`，开发负责人仍是本项目 DEVELOPER/LEADER；该要求同样约束 LEADER。详情的 `decisionBlockReason` 表达权限/需求状态阻碍，前端再结合 `isCurrent`、执行状态、既有决定与 head 闸门决定是否展示按钮。
 
 `REQUEST_CHANGES` 仅写本地决定，保留远端 PR/MR 和分支。`APPROVE` 在同一数据库事务内调用 `scm.PullRequestDecisionActions.merge(projectId, pullRequestId, expectedHeadSha)`，SCM 门面选择 Provider，`scm` 仍不依赖 `review`。两端先读取远端 head，再把被审查的 SHA 交给合并接口作并发条件，并验证真实合并结果；GitLab 使用 `should_remove_source_branch=false`。响应丢失、不可解析或 5xx 后只读确认，不自动重复合并写入；仍不明时返回 503 `merge_outcome_unknown` 并回滚本地决定。已合并且 head 匹配的人工重试可完成本地记录。远端写入与数据库不能原子提交，因此远端已合并、本地回滚的窗口仍需人工核查，没有新增补偿系统。
 
 `requirement.reviewer_id` 可空，并以项目成员复合外键约束；未指定审查人的需求由 LEADER 接手。角色变化无需改写历史引用：查询与决策按当前角色判定有效性，失去资格的 `reviewerId` 可保留但 `reviewerName` 返回 null；成员移除则在原清理事务内置空该引用。
+
+`REJECT` 经同一 SCM 门面关闭 PR/MR，预先核验 head/base，明确 CLOSED 后才写本地决定；没有远端 SHA 原子关闭条件。已关闭且本地仍 PENDING 可只读核验补记，已合并或版本变化不能补记。5xx、响应丢失或不可解析后只读确认一次，仍不明确返回 503 `close_outcome_unknown`，不重复写入、不记录成功。关闭保留源分支和需求，沿用 after-commit 通知。
+
+V15 追加 `pull_request.remote_state`：OPEN/CLOSED/MERGED，历史 NULL 保持未核验。状态不进指纹，Webhook 读取事实；确认合并/关闭也在本地回写。MERGED 不回退；CLOSED 收到 OPEN 快照时在 PR 行锁下再次只读核验，防止已在途快照覆盖刚确认的关闭，允许真实外部重开。终态不发布新审查事件、不启动或恢复 PENDING；已运行及租约过期的 RUNNING 沿原执行/恢复路径结束。历史 NULL 在人工请求/退回时核验状态。活动聚合排除关闭和外部合并，保留本系统已 APPROVE 的合并以支持需求人工完成；不自动 DONE 或取消。
 
 ### 人工决定通知
 
@@ -365,7 +369,7 @@ stateDiagram-v2
 
 每次实际 AI HTTP 尝试（知识召回、批次、重试、格式修复和综合）前都先续租；续租失败立即停止该旧 worker，不写 FAILED。分析或结果事务中的其他运行时失败会先让结果事务回滚，再用同一 attempt/token 围栏写 FAILED；清理暂时不可用时保留 RUNNING，由 reconciliation 在租约过期后恢复。
 
-reconciliation 恢复已落库但未执行的 PENDING 和 lease 过期的 RUNNING，**不补建**从未存在的 Review。失败重试复用原行并产生新 attempt/token；`COMPLETED` 永不重跑或覆盖。Decision 与执行状态正交：`PENDING | APPROVE | REQUEST_CHANGES`。
+reconciliation 恢复非终态 PR 已落库但未执行的 PENDING，以及所有 lease 过期的 RUNNING，**不补建**从未存在的 Review。失败重试复用原行并产生新 attempt/token；`COMPLETED` 永不重跑或覆盖。Decision 与执行状态正交：`PENDING | APPROVE | REQUEST_CHANGES | REJECT`。
 
 ### 3.3 单次 Review（小 PR 路径）
 
@@ -399,12 +403,13 @@ sequenceDiagram
 4. 任一 Batch 非法 JSON 且修复失败 → 整个 Review = FAILED，不输出部分成功报告。
 5. 必须保存 truncation/coverage manifest，未审查文件在 UI 显式呈现，禁止静默截断。
 6. 分批预算按最终格式化 Prompt 计算，包含 Requirement、AC、召回知识、路径和框架文本；网关对仍超预算的完整 Prompt 返回 `ai_prompt_too_large`，不得再次静默裁剪。
+7. 综合阶段保留候选的类别、解释和建议，连同源码证据作为不可信内容核对；不传递自报置信度作为门禁，不新增调用阶段。
 
 绝不因分批产生第二套 Pipeline。
 
 ### 3.5 输出校验与证据规则
 
-- 每条 AC 最终必须有 `COVERED | NOT_FOUND | AT_RISK`；模型漏项由 Validator 补 `NOT_FOUND`。
+- `review-6` 起每条 AC 最终必须有 `COVERED | NOT_FOUND | AT_RISK | UNKNOWN`。合法回答漏项、COVERED 没有对应的已校验批次 AC 证据、零文件受审时记为 UNKNOWN 并保留 warning；格式或 Provider 失败仍按原 FAILED 路径处理。有效引用只提供必要证据，不证明语义正确。NOT_FOUND 限于本轮已审变更，旧三值历史报告不改写；尚未审查的覆盖度仍用 null。
 - `acId` 必须属于当前 Requirement Revision；`sourceId` 必须在本次召回白名单；`filePath` 必须在 changed files 内。
 - Finding 类型由模型显式给出，并与 `acId` 核对（`review-5` 起）：`REQUIREMENT` + 本修订合法 AC 保留为需求类，`CODE_QUALITY` + 无 AC 保留为代码质量类。类型与合法引用矛盾时保留为 `CODE_QUALITY`、去掉 AC 引用并记录 warning；缺失/未知类型兼容地按 acId 推导并记录 warning。**先验证引用归属**，不属于本修订的 AC 仍使整条 Finding 丢弃。类型修正不代替源码锚定，也不证明模型判断真实。
 - Finding `evidence` 与批次 AC `excerpt` 必须逐字存在于对应 changed file 的合法 unified-diff hunk 新侧源码中；diff 的 `+`/空格标记、删除行、元数据与截断标记都不是源码。只归一化 CRLF/LF，不裁剪或折叠空白，也不允许跨 hunk 拼接引用。
