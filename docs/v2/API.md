@@ -48,8 +48,10 @@
 | `GET /api/projects/{projectId}/review-activity` | 成员 | 200 | 全项目活动，按需求 id |
 | `GET /api/projects/{projectId}/requirements/{id}/coverage` | 成员 | 200 | AC 覆盖度 |
 | `GET /api/projects/{projectId}/review-calibration` | 成员 | 200 | 置信度校准视图 |
+| `GET /api/projects/{projectId}/ai-usage` | 成员 | 200 | AI 调用次数、成败、Token 与延迟分位 |
 | `GET /api/projects/{projectId}/knowledge/documents` | 成员 | 200 | 知识列表（元数据） |
 | `POST /api/projects/{projectId}/knowledge/documents` | LEADER | 201 | 上传，返回 PENDING |
+| `POST .../knowledge/documents/{id}/retry` | LEADER | 200 | 失败文档回到 PENDING |
 | `GET .../knowledge/documents/{id}/content` `download` | 成员 | 200 | 公共原文 |
 | `POST .../knowledge/documents/{id}/promote` | LEADER | 201 | 附件提升（知识入口） |
 | `DELETE .../knowledge/documents/{id}` | LEADER | 204 | 硬删 |
@@ -261,6 +263,11 @@ GitHub 默认 `apiBase=https://api.github.com`；GitLab 默认 `https://gitlab.c
 端点刷新元数据，直到状态变为 `READY` 或 `FAILED`。`READY` 表示全部 chunk、向量和
 Embedding Profile 已在同一事务提交；`FAILED` 携带受控的 `failureReason`，不会自动
 无限重试。处理中删除公共知识后，后台结果不会把已删除文档重新创建。
+
+`POST /api/projects/{projectId}/knowledge/documents/{documentId}/retry` 仅限 LEADER
+手动重试 `FAILED` 文档，返回 200 和 `KnowledgeDocumentView`：状态回到 `PENDING`、
+`failureReason` 清空，由同一个入库处理器重新消费。非失败状态返回 409，非 LEADER
+返回 403，跨项目或不存在的文档返回 404；不新增自动循环重试。
 
 项目知识与需求附件页面只在存在 `PENDING` 项时轮询，前一次请求结束后才安排下一次；
 页面离开、标签页隐藏或全部进入终态时停止。连续刷新失败有上限，并显示手动重试入口。
