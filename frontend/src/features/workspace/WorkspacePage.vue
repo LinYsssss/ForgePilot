@@ -791,7 +791,7 @@ watch(projectId, load, { immediate: true });
 .workbench-head {
   display: grid;
   align-items: center;
-  gap: var(--fp-space-6);
+  gap: var(--fp-space-4);
   grid-template-columns: minmax(0, 1fr) auto;
 }
 
@@ -813,7 +813,7 @@ watch(projectId, load, { immediate: true });
 }
 
 .workbench-kpis {
-  margin-bottom: var(--fp-space-6);
+  margin-bottom: var(--fp-space-5);
 }
 
 .kpi-card {

@@ -89,7 +89,7 @@ watch(
 <style scoped>
 .diff-viewer {
   display: grid;
-  min-height: 28rem;
+  min-height: 22rem;
   overflow: hidden;
   border: 0.0625rem solid var(--fp-color-border);
   border-radius: var(--fp-radius-md);
@@ -98,7 +98,7 @@ watch(
 }
 
 .diff-files {
-  max-height: 38rem;
+  max-height: 30rem;
   overflow: auto;
   border-right: 0.0625rem solid var(--fp-color-border);
   background: var(--fp-color-surface-strong);
@@ -152,7 +152,7 @@ watch(
 }
 
 .diff-scroll {
-  max-height: 35rem;
+  max-height: 28rem;
   overflow: auto;
   font: 0.75rem/1.55 var(--fp-font-mono);
 }

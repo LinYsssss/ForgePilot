@@ -701,8 +701,16 @@ function saveReviewer(): Promise<void> {
             导出 Markdown
           </button>
         </div>
-        <p class="muted">背景：{{ detail.currentRevision.background ?? "未填写" }}</p>
-        <p class="muted">描述：{{ detail.currentRevision.description ?? "未填写" }}</p>
+        <dl class="meta-list revision-facts">
+          <div>
+            <dt>背景</dt>
+            <dd>{{ detail.currentRevision.background ?? "未填写" }}</dd>
+          </div>
+          <div>
+            <dt>描述</dt>
+            <dd>{{ detail.currentRevision.description ?? "未填写" }}</dd>
+          </div>
+        </dl>
         <ol class="criteria-list">
           <li v-for="criterion in detail.currentRevision.acceptanceCriteria" :key="criterion.id">
             <span class="badge badge-neutral">{{ criterion.acKey }}</span>
@@ -727,8 +735,6 @@ function saveReviewer(): Promise<void> {
             置为 {{ REQUIREMENT_STATUS_LABELS[next] }}
           </button>
         </div>
-        <p class="field-hint">「开发中」只能由首次指派触发，不在状态按钮中提供。</p>
-
         <form class="inline-form reviewer-form" @submit.prevent="saveReviewer">
           <div class="field">
             <label for="requirement-reviewer">审查负责人</label>
@@ -754,6 +760,8 @@ function saveReviewer(): Promise<void> {
             保存指派
           </button>
         </form>
+
+        <p class="field-hint">「开发中」只能由首次指派触发，不在状态按钮中提供。</p>
       </section>
 
       <form
@@ -1079,16 +1087,17 @@ function saveReviewer(): Promise<void> {
 <style scoped>
 .decision-reason { white-space: pre-wrap; overflow-wrap: anywhere; }
 
-.requirement-edit-grid,
-.requirement-intelligence-grid {
+.requirement-edit-grid {
   display: grid;
   align-items: start;
-  gap: var(--fp-space-6);
-  grid-template-columns: minmax(18rem, 0.7fr) minmax(0, 1.3fr);
+  gap: var(--fp-space-5);
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .requirement-intelligence-grid {
+  display: grid;
   align-items: stretch;
+  gap: var(--fp-space-5);
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
@@ -1096,9 +1105,8 @@ function saveReviewer(): Promise<void> {
   border-color: var(--fp-color-border-accent);
 }
 
-.requirement-actions,
-.requirement-editor {
-  height: 100%;
+.requirement-editor > .field {
+  max-width: 62rem;
 }
 
 .quality-section,
@@ -1255,14 +1263,45 @@ function saveReviewer(): Promise<void> {
   min-width: 0;
 }
 
-.requirement-actions {
-  position: sticky;
-  top: 6rem;
-}
-
 .requirement-form {
   display: grid;
-  gap: var(--fp-space-5);
+  gap: var(--fp-space-4);
+}
+
+/* 状态与指派:一段横排的紧凑面板,状态按钮与两个指派表单并排,不再各占半屏。 */
+.requirement-actions {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: var(--fp-space-3) var(--fp-space-5);
+  padding: var(--fp-space-4) var(--fp-space-5);
+}
+
+.requirement-actions > .panel-title {
+  flex: 1 0 100%;
+  margin-bottom: 0;
+}
+
+.requirement-actions .form-actions {
+  flex: 0 1 auto;
+}
+
+.requirement-actions .inline-form {
+  display: grid;
+  flex: 1 1 16rem;
+  align-items: end;
+  gap: var(--fp-space-2);
+  margin-top: 0;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.requirement-actions > .field-hint {
+  flex: 1 0 100%;
+  margin-top: 0;
+}
+
+.revision-facts {
+  margin-top: var(--fp-space-3);
 }
 
 .criteria-list {
@@ -1303,10 +1342,6 @@ function saveReviewer(): Promise<void> {
   .activity-counts {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
-
-  .requirement-actions {
-    position: static;
-  }
 }
 
 @media (max-width: 42rem) {
@@ -1326,7 +1361,7 @@ function saveReviewer(): Promise<void> {
 .requirement-head {
   display: grid;
   align-items: center;
-  gap: var(--fp-space-6);
+  gap: var(--fp-space-4);
   grid-template-columns: minmax(0, 1fr) auto;
 }
 
@@ -1355,7 +1390,7 @@ function saveReviewer(): Promise<void> {
   display: flex;
   flex-wrap: wrap;
   gap: var(--fp-space-2);
-  margin-bottom: var(--fp-space-6);
+  margin-bottom: var(--fp-space-4);
 }
 
 .workbench-tab {

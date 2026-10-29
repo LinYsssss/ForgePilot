@@ -61,6 +61,12 @@ Keep operational reading order in DOM order. Long evidence, paths, and diffs
 may scroll inside a bounded region, but a component must not create page-wide
 horizontal overflow.
 
+Project-context strips reuse `.project-selector` in `base.css`: explanatory
+text flexes on desktop, the selector keeps a bounded width, and both stack at
+the existing `64rem` breakpoint. Keep this layout in the shared selector rather
+than overriding its display mode in every route's scoped CSS. The requirement
+list may combine project selection and its filters in its own toolbar.
+
 Bound a long region with the property group `FindingCard.vue`'s
 `.narrative-body` established — max-height, `overflow: auto`,
 `white-space: pre-wrap`, `word-break: break-word` — rather than inventing a

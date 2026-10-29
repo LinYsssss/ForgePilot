@@ -195,12 +195,8 @@ async function removeRequirement(item: RequirementSummary): Promise<void> {
       <p class="field-hint">需求以不可变版本与稳定 AC 描述“应该做什么”，是后续审查的判断基准。</p>
     </div>
 
-    <div class="panel inline-form project-selector">
-      <div class="selector-copy">
-        <h2 class="panel-title">项目上下文</h2>
-        <p class="field-hint">需求始终在一个明确的项目边界内读取和修改。</p>
-      </div>
-      <div class="field">
+    <section class="panel requirement-toolbar" aria-label="项目与筛选">
+      <div class="field toolbar-project">
         <label for="requirement-project">当前项目</label>
         <select id="requirement-project" v-model="selection">
           <option :value="null" disabled>请选择项目</option>
@@ -209,7 +205,39 @@ async function removeRequirement(item: RequirementSummary): Promise<void> {
           </option>
         </select>
       </div>
-    </div>
+      <template v-if="projectId !== null && requirements.length > 0">
+        <div class="field toolbar-search">
+          <label for="requirement-search">搜索</label>
+          <input
+            id="requirement-search"
+            v-model="search"
+            type="search"
+            placeholder="需求编号、标题或负责人"
+          />
+        </div>
+        <div class="field toolbar-status">
+          <label for="requirement-status-filter">需求状态</label>
+          <select id="requirement-status-filter" v-model="statusFilter">
+            <option value="">全部状态</option>
+            <option v-for="status in REQUIREMENT_STATUSES" :key="status" :value="status">
+              {{ REQUIREMENT_STATUS_LABELS[status] }}
+            </option>
+          </select>
+        </div>
+        <div class="field toolbar-activity">
+          <label for="requirement-activity-filter">评审活动</label>
+          <select id="requirement-activity-filter" v-model="activityFilter">
+            <option value="">全部活动</option>
+            <option v-for="state in REVIEW_ACTIVITIES" :key="state" :value="state">
+              {{ REVIEW_ACTIVITY_LABELS[state] }}
+            </option>
+          </select>
+        </div>
+        <p class="toolbar-summary" role="status">
+          筛出 {{ filteredRequirements.length }} / 共 {{ requirements.length }} 条
+        </p>
+      </template>
+    </section>
 
     <p v-if="projectId === null" class="empty-state">先选择一个项目，再查看它的需求。</p>
 
@@ -219,36 +247,6 @@ async function removeRequirement(item: RequirementSummary): Promise<void> {
       <p v-else-if="requirements.length === 0" class="empty-state">该项目还没有需求。</p>
 
       <template v-else>
-      <section class="panel requirement-filters" aria-label="筛选需求">
-        <div class="field">
-          <label for="requirement-search">搜索</label>
-          <input
-            id="requirement-search"
-            v-model="search"
-            type="search"
-            placeholder="需求编号、标题或负责人"
-          />
-        </div>
-        <div class="field">
-          <label for="requirement-status-filter">需求状态</label>
-          <select id="requirement-status-filter" v-model="statusFilter">
-            <option value="">全部状态</option>
-            <option v-for="status in REQUIREMENT_STATUSES" :key="status" :value="status">
-              {{ REQUIREMENT_STATUS_LABELS[status] }}
-            </option>
-          </select>
-        </div>
-        <div class="field">
-          <label for="requirement-activity-filter">评审活动</label>
-          <select id="requirement-activity-filter" v-model="activityFilter">
-            <option value="">全部活动</option>
-            <option v-for="state in REVIEW_ACTIVITIES" :key="state" :value="state">
-              {{ REVIEW_ACTIVITY_LABELS[state] }}
-            </option>
-          </select>
-        </div>
-      </section>
-
       <p v-if="rowError" class="alert" role="alert">{{ rowError }}</p>
 
       <p v-if="filteredRequirements.length === 0" class="empty-state">
@@ -339,14 +337,33 @@ async function removeRequirement(item: RequirementSummary): Promise<void> {
 </template>
 
 <style scoped>
-.project-selector {
-  display: grid;
-  grid-template-columns: minmax(14rem, 1fr) minmax(14rem, 1.2fr);
-}
-
-.selector-copy .panel-title,
 .form-section-head .panel-title {
   margin-bottom: var(--fp-space-1);
+}
+
+/* 项目与筛选合并成一条工具栏:选项一行排开,右侧给出筛选计数。 */
+.requirement-toolbar {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: var(--fp-space-3) var(--fp-space-4);
+  padding: var(--fp-space-4) var(--fp-space-5);
+}
+
+.requirement-toolbar .field {
+  min-width: 0;
+}
+
+.toolbar-project { flex: 0 1 15rem; }
+.toolbar-search { flex: 1 1 18rem; }
+.toolbar-status,
+.toolbar-activity { flex: 0 1 11rem; }
+
+.toolbar-summary {
+  margin: 0 0 var(--fp-space-2) auto;
+  color: var(--fp-color-text-muted);
+  font-size: 0.8125rem;
+  white-space: nowrap;
 }
 
 .requirement-form {
@@ -372,12 +389,13 @@ async function removeRequirement(item: RequirementSummary): Promise<void> {
   display: flex;
   align-items: end;
   justify-content: space-between;
-  gap: var(--fp-space-6);
+  gap: var(--fp-space-4);
 }
 
 /* 一行式需求卡片:标题/徽标/事实同一行,动作右对齐;列表区定高内滚,整页不再无限拉长。 */
 .requirement-card-head {
-  align-items: baseline;
+  align-items: center;
+  row-gap: var(--fp-space-2);
 }
 
 .requirement-facts {
@@ -404,24 +422,12 @@ async function removeRequirement(item: RequirementSummary): Promise<void> {
 }
 
 .requirement-list {
-  gap: var(--fp-space-4);
+  gap: var(--fp-space-3);
 }
 
-.requirement-filters {
-  display: grid;
-  align-items: end;
-  grid-template-columns: minmax(16rem, 1.4fr) repeat(2, minmax(11rem, 0.7fr));
-  gap: var(--fp-space-4);
-}
-
+/* 单列卡片:删掉一直没有内容的第二列,标题行因此可以铺满整行。 */
 .requirement-card {
-  display: grid;
-  gap: var(--fp-space-5);
-  grid-template-columns: minmax(0, 1fr) minmax(16rem, 0.48fr);
-}
-
-.requirement-card-head {
-  grid-column: 1;
+  display: block;
 }
 
 .requirement-key {
@@ -438,27 +444,16 @@ async function removeRequirement(item: RequirementSummary): Promise<void> {
   margin-right: auto;
 }
 
-.requirement-meta {
-  grid-column: 2;
-  grid-row: 1;
-  padding-left: var(--fp-space-5);
-  border-left: 0.0625rem solid var(--fp-color-border);
-}
-
 @media (max-width: 64rem) {
-  .project-selector,
-  .requirement-filters,
-  .requirement-card {
-    grid-template-columns: 1fr;
+  .toolbar-project,
+  .toolbar-search,
+  .toolbar-status,
+  .toolbar-activity {
+    flex: 1 1 12rem;
   }
 
-  .requirement-meta {
-    grid-column: 1;
-    grid-row: auto;
-    padding-top: var(--fp-space-5);
-    padding-left: 0;
-    border-top: 0.0625rem solid var(--fp-color-border);
-    border-left: 0;
+  .toolbar-summary {
+    margin-left: 0;
   }
 }
 

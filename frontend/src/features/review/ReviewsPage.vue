@@ -414,15 +414,14 @@ async function triggerReview(): Promise<void> {
 </template>
 
 <style scoped>
-.project-selector,
+/* 项目上下文沿用共享工具栏样式(见 base.css);这里只保留本页的筛选栏栅格。 */
 .review-filters {
   display: grid;
   align-items: end;
   gap: var(--fp-space-4);
+  grid-template-columns: minmax(15rem, 1.4fr) repeat(3, minmax(10rem, 0.7fr));
+  margin-bottom: var(--fp-space-5);
 }
-
-.project-selector { grid-template-columns: minmax(14rem, 1fr) minmax(14rem, 1.2fr); }
-.review-filters { grid-template-columns: minmax(15rem, 1.4fr) repeat(3, minmax(10rem, 0.7fr)); margin-bottom: var(--fp-space-5); }
 .selector-copy .panel-title,
 .index-head .panel-title { margin-bottom: var(--fp-space-1); }
 .review-index-panel,
@@ -484,7 +483,6 @@ async function triggerReview(): Promise<void> {
 .recovery-form { margin-top: var(--fp-space-4); }
 
 @media (max-width: 64rem) {
-  .project-selector,
   .review-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .history-row { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .activity-list li { grid-template-columns: 1fr auto; }
@@ -492,7 +490,6 @@ async function triggerReview(): Promise<void> {
 }
 
 @media (max-width: 42rem) {
-  .project-selector,
   .review-filters,
   .history-row { grid-template-columns: 1fr; }
   .activity-list li { grid-template-columns: 1fr; }

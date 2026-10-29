@@ -506,11 +506,16 @@ function eventsErrorFor(findingId: number): string | null {
     <template v-if="detail !== null">
       <section class="panel" aria-labelledby="review-progress-title">
         <h2 id="review-progress-title" class="panel-title">第 {{ round || "—" }} 轮审查 · 平台记录 {{ detail.id }}</h2>
-        <p>审查人：{{ reviewRequirement?.reviewerName ?? "项目负责人处理" }} · 开发负责人：{{ reviewRequirement?.assigneeUsername ?? "未指派" }}</p>
-        <template v-if="detail.decision !== 'PENDING'">
-          <p><strong>{{ REVIEW_DECISION_LABELS[detail.decision] }}</strong> · {{ memberName(detail.decisionBy) ?? "未知成员" }} · {{ detail.decisionAt ? formatDateTime(detail.decisionAt) : "" }}</p>
-          <p class="decision-reason">{{ detail.decisionComment || "未填写理由" }}</p>
-        </template>
+        <div class="summary-facts">
+          <span>审查人：<strong>{{ reviewRequirement?.reviewerName ?? "项目负责人处理" }}</strong></span>
+          <span>开发负责人：<strong>{{ reviewRequirement?.assigneeUsername ?? "未指派" }}</strong></span>
+        </div>
+        <p v-if="detail.decision !== 'PENDING'" class="summary-facts">
+          <span><strong>{{ REVIEW_DECISION_LABELS[detail.decision] }}</strong></span>
+          <span>{{ memberName(detail.decisionBy) ?? "未知成员" }}</span>
+          <span>{{ detail.decisionAt ? formatDateTime(detail.decisionAt) : "" }}</span>
+        </p>
+        <p v-if="detail.decision !== 'PENDING'" class="decision-reason">{{ detail.decisionComment || "未填写理由" }}</p>
         <template v-if="previousSummary && projectId !== null">
           <RouterLink :to="reviewDetailRoute(projectId, previousSummary.id)">查看上一轮审查</RouterLink>
           <p v-if="previousReview" class="decision-reason">上一轮退回理由：{{ previousReview.decisionComment || "未填写理由" }}</p>
@@ -958,7 +963,7 @@ function eventsErrorFor(findingId: number): string | null {
 .review-evidence-grid {
   display: grid;
   align-items: start;
-  gap: var(--fp-space-6);
+  gap: var(--fp-space-5);
 }
 
 .review-context-grid {
@@ -988,7 +993,22 @@ function eventsErrorFor(findingId: number): string | null {
   align-items: flex-start;
   justify-content: space-between;
   gap: var(--fp-space-4);
-  margin-bottom: var(--fp-space-5);
+  margin-bottom: var(--fp-space-4);
+}
+
+/* 审查人与开发负责人并排一行,窄屏自动换行,不再各占一整行。 */
+.summary-facts {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--fp-space-2) var(--fp-space-5);
+  margin: 0;
+  color: var(--fp-color-text-muted);
+}
+
+.summary-facts strong {
+  color: var(--fp-color-text);
+  font-weight: 600;
 }
 
 .workspace-head .eyebrow {
@@ -1001,14 +1021,14 @@ function eventsErrorFor(findingId: number): string | null {
 
 .snapshot-summary-grid {
   display: grid;
-  gap: var(--fp-space-4);
-  margin-bottom: var(--fp-space-4);
+  gap: var(--fp-space-3);
+  margin-bottom: var(--fp-space-3);
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .snapshot-card {
   min-width: 0;
-  padding: var(--fp-space-4);
+  padding: var(--fp-space-3) var(--fp-space-4);
   border: 0.0625rem solid var(--fp-color-border);
   border-radius: var(--fp-radius-md);
   background: var(--fp-color-canvas-muted);
@@ -1028,15 +1048,15 @@ function eventsErrorFor(findingId: number): string | null {
 .snapshot-criteria,
 .knowledge-list {
   display: grid;
-  gap: var(--fp-space-2);
-  margin: var(--fp-space-4) 0 0;
+  gap: var(--fp-space-1);
+  margin: var(--fp-space-3) 0 0;
   padding: 0;
   list-style: none;
 }
 
 .snapshot-criteria li,
 .knowledge-list li {
-  padding: var(--fp-space-3);
+  padding: var(--fp-space-2) var(--fp-space-3);
   border: 0.0625rem solid var(--fp-color-border);
   border-radius: var(--fp-radius-sm);
   line-height: 1.6;
@@ -1049,7 +1069,7 @@ function eventsErrorFor(findingId: number): string | null {
 }
 
 .knowledge-list {
-  max-height: 22rem;
+  max-height: 18rem;
   overflow: auto;
 }
 
@@ -1162,7 +1182,7 @@ function eventsErrorFor(findingId: number): string | null {
 }
 
 .subsection-title {
-  margin: var(--fp-space-6) 0 var(--fp-space-2);
+  margin: var(--fp-space-4) 0 var(--fp-space-2);
   font-size: 0.9375rem;
 }
 

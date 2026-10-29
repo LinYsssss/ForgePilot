@@ -394,8 +394,8 @@ main {
 .page-head,
 .page-intro {
   position: relative;
-  margin-bottom: var(--fp-space-6);
-  padding: clamp(var(--fp-space-5), 3vw, var(--fp-space-8));
+  margin-bottom: var(--fp-space-5);
+  padding: clamp(var(--fp-space-4), 2.4vw, var(--fp-space-6));
   overflow: hidden;
   border: 0.0625rem solid var(--fp-color-border);
   border-radius: var(--fp-radius-xl);
@@ -461,14 +461,14 @@ h3 {
 }
 
 .panel-title {
-  margin: 0 0 var(--fp-space-4);
+  margin: 0 0 var(--fp-space-3);
   color: var(--fp-color-text);
   font-size: 1rem;
   letter-spacing: -0.01em;
 }
 
 .subsection-title {
-  margin: var(--fp-space-6) 0 var(--fp-space-3);
+  margin: var(--fp-space-4) 0 var(--fp-space-2);
   color: var(--fp-color-text);
   font-size: 0.875rem;
 }
@@ -528,8 +528,8 @@ h3 {
 }
 
 .panel {
-  margin-bottom: var(--fp-space-6);
-  padding: clamp(var(--fp-space-5), 3vw, var(--fp-space-8));
+  margin-bottom: var(--fp-space-5);
+  padding: clamp(var(--fp-space-4), 2.4vw, var(--fp-space-6));
   border-radius: var(--fp-radius-lg);
 }
 
@@ -547,11 +547,19 @@ h3 {
   pointer-events: none;
 }
 
+/* 项目上下文条:说明在左、项目选择器在右,同一行内收成一条工具栏,
+   而不是让唯一的那个下拉框铺满整块面板。 */
 .project-selector {
-  display: grid;
+  display: flex;
   align-items: end;
-  gap: var(--fp-space-6);
-  grid-template-columns: minmax(14rem, 1fr) minmax(14rem, 1.2fr);
+  flex-wrap: wrap;
+  gap: var(--fp-space-3) var(--fp-space-5);
+  padding: var(--fp-space-4) var(--fp-space-5);
+}
+
+.project-selector > div:first-child {
+  flex: 1 1 26rem;
+  min-width: 0;
 }
 
 .project-selector .panel-title {
@@ -559,7 +567,8 @@ h3 {
 }
 
 .project-selector .field {
-  width: 100%;
+  flex: 0 1 22rem;
+  min-width: 0;
 }
 
 .index-head {
@@ -601,7 +610,7 @@ input,
 select,
 textarea {
   width: 100%;
-  min-height: 2.75rem;
+  min-height: 2.5rem;
   padding: var(--fp-space-2) var(--fp-space-3);
   border: 0.0625rem solid var(--fp-color-border);
   border-radius: var(--fp-radius-sm);
@@ -654,8 +663,8 @@ textarea:disabled {
   display: flex;
   align-items: flex-end;
   flex-wrap: wrap;
-  gap: var(--fp-space-4);
-  margin-top: var(--fp-space-4);
+  gap: var(--fp-space-3);
+  margin-top: var(--fp-space-3);
 }
 
 .panel.inline-form {
@@ -842,8 +851,8 @@ textarea:disabled {
 .empty-state,
 .decision-gate,
 .review-stale {
-  margin: var(--fp-space-4) 0 0;
-  padding: var(--fp-space-4) var(--fp-space-5);
+  margin: var(--fp-space-3) 0 0;
+  padding: var(--fp-space-3) var(--fp-space-4);
   border: 0.0625rem solid;
   border-radius: var(--fp-radius-md);
   line-height: 1.6;
@@ -870,14 +879,14 @@ textarea:disabled {
 
 .record-list {
   display: grid;
-  gap: var(--fp-space-4);
+  gap: var(--fp-space-3);
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
 .record {
-  padding: clamp(var(--fp-space-4), 2.5vw, var(--fp-space-5));
+  padding: clamp(var(--fp-space-3), 2vw, var(--fp-space-4));
   overflow: hidden;
   border-radius: var(--fp-radius-lg);
   transition:
@@ -929,14 +938,14 @@ textarea:disabled {
 
 .meta-list {
   display: grid;
-  gap: var(--fp-space-4);
+  gap: var(--fp-space-3) var(--fp-space-4);
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 10rem), 1fr));
   margin: 0;
 }
 
 .record .meta-list,
 .panel > .meta-list {
-  margin-top: var(--fp-space-5);
+  margin-top: var(--fp-space-4);
 }
 
 .meta-list > div {
@@ -956,7 +965,7 @@ textarea:disabled {
   flex-wrap: wrap;
   gap: var(--fp-space-2);
   min-width: 0;
-  margin: var(--fp-space-2) 0 0;
+  margin: var(--fp-space-1) 0 0;
   color: var(--fp-color-text);
 }
 
@@ -997,7 +1006,7 @@ textarea:disabled {
 
 .data-table th,
 .data-table td {
-  padding: var(--fp-space-3) var(--fp-space-4);
+  padding: var(--fp-space-2) var(--fp-space-4);
   border-bottom: 0.0625rem solid var(--fp-color-border);
   vertical-align: top;
 }
@@ -1295,7 +1304,14 @@ textarea:disabled {
   }
 
   .project-selector {
-    grid-template-columns: 1fr;
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .project-selector > div:first-child,
+  .project-selector .field {
+    flex: 0 1 auto;
+    width: 100%;
   }
 }
 

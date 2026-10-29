@@ -74,25 +74,48 @@ function move(index: number, offset: number): void {
 <style scoped>
 .ac-list {
   display: grid;
-  gap: var(--fp-space-3);
+  gap: var(--fp-space-2);
   margin: var(--fp-space-3) 0;
   padding: 0;
   list-style: none;
 }
 
+/* 一条 AC 占一行:输入框在左,排序与删除按钮贴右、与输入框底对齐。 */
 .ac-row {
-  display: flex;
-  align-items: flex-end;
-  flex-wrap: wrap;
+  display: grid;
+  align-items: end;
   gap: var(--fp-space-3);
+  grid-template-columns: minmax(0, 1fr) auto;
 }
 
 .ac-row .field {
-  flex: 1 1 18rem;
+  min-width: 0;
+}
+
+.ac-row .field label {
+  display: flex;
+  align-items: center;
+  gap: var(--fp-space-2);
 }
 
 .ac-row-actions {
   display: flex;
   gap: var(--fp-space-2);
+}
+
+.ac-row-actions .button {
+  min-height: 2.5rem;
+  padding: var(--fp-space-1) var(--fp-space-3);
+  font-size: 0.75rem;
+}
+
+@media (max-width: 42rem) {
+  .ac-row {
+    grid-template-columns: 1fr;
+  }
+
+  .ac-row-actions {
+    justify-content: flex-end;
+  }
 }
 </style>

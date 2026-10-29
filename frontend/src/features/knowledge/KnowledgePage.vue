@@ -368,11 +368,11 @@ watch(projectId, load, { immediate: true });
 .document-content { max-height: 30rem; overflow: auto; white-space: pre-wrap; word-break: break-word; }
 
 .knowledge-summary { display: grid; gap: var(--fp-space-4); grid-template-columns: repeat(4, minmax(0, 1fr)); }
-.knowledge-summary .panel { display: grid; gap: var(--fp-space-2); margin-bottom: var(--fp-space-6); }
+.knowledge-summary .panel { display: grid; gap: var(--fp-space-1); margin-bottom: var(--fp-space-5); padding: var(--fp-space-4); }
 .knowledge-summary strong { color: var(--fp-color-accent-inverse); font: 800 1.5rem/1 var(--fp-font-mono); }
 .knowledge-summary span { color: var(--fp-color-text-muted); font-size: 0.75rem; }
 .vector-metric { border-color: var(--fp-color-info); background: linear-gradient(145deg, var(--fp-color-info-soft), var(--fp-color-surface-glass)); }
-.upload-panel { display: grid; align-items: end; gap: var(--fp-space-6); grid-template-columns: minmax(15rem, 0.75fr) minmax(20rem, 1.25fr); }
+.upload-panel { display: grid; align-items: end; gap: var(--fp-space-5); grid-template-columns: minmax(15rem, 0.85fr) minmax(20rem, 1.15fr); }
 .upload-panel .inline-form { margin: 0; }
 .upload-results { grid-column: 1 / -1; }
 .upload-results .record { display: flex; flex-wrap: wrap; align-items: center; gap: var(--fp-space-3); }
