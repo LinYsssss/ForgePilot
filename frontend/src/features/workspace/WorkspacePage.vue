@@ -55,6 +55,8 @@ const repositories = ref<ScmRepository[]>([]);
 const members = ref<Member[]>([]);
 const calibration = ref<ReviewCalibration | null>(null);
 const aiUsage = ref<AiUsage | null>(null);
+const aiUsageError = ref<string | null>(null);
+const aiUseCaseCount = computed(() => new Set(aiUsage.value?.rows.map(row => row.useCase)).size);
 const loading = ref(false);
 
 const queueTab = ref<QueueKind | "ALL">("ALL");
@@ -455,6 +457,7 @@ async function load(): Promise<void> {
   members.value = [];
   calibration.value = null;
   aiUsage.value = null;
+  aiUsageError.value = null;
   error.value = null;
   if (id === null) return;
   loading.value = true;
@@ -477,8 +480,10 @@ async function load(): Promise<void> {
       listMembers(id),
       // 同上：校准卡失败只是它自己不显示，不该让整个工作台变成加载失败。
       getReviewCalibration(id).catch(() => null),
-      // 台账面板同理：失败只是它自己不显示。
-      getAiUsage(id).catch(() => null),
+      getAiUsage(id).catch((failure: unknown) => {
+        aiUsageError.value = apiErrorMessage(failure);
+        return null;
+      }),
     ]);
   } catch (failure: unknown) {
     error.value = apiErrorMessage(failure);
@@ -745,31 +750,36 @@ watch(projectId, load, { immediate: true });
           </p>
         </section>
 
-        <details v-if="aiUsage?.rows?.length" class="panel ai-usage-panel">
+        <p v-if="aiUsageError" class="alert" role="alert">AI 调用台账读取失败：{{ aiUsageError }}</p>
+        <details v-if="aiUsage" class="panel ai-usage-panel">
           <summary>
-            AI 调用台账（{{ aiUsage.totalCalls }} 次调用 · {{ aiUsage.rows.length }} 种用途）
+            AI 调用台账（累计已记录 {{ aiUsage.totalCalls }} 次尝试 · {{ aiUseCaseCount }} 种用途）
           </summary>
           <p class="field-hint">
-            本项目全部 AI 调用按用途聚合。「未成功」含超时；P50/P95 为离散分位，
-            取到的必是某次调用的真实延迟。
+            本项目累计已记录请求按模型和用途聚合，重试各算一次，失败和超时计入；运行中或未写入台账的请求不计入。
+            次数不等于审查轮数或账单，成功不等于判断正确。模型名来自请求记录，未核验服务商内部模型。
+            Token 仅合计已上报部分；P50/P95 是单次请求耗时的离散分位。
           </p>
-          <div class="ai-usage-scroll">
+          <p v-if="aiUsage.rows.length === 0" class="muted">暂无调用记录。</p>
+          <div v-else class="ai-usage-scroll">
             <table class="calibration-table ai-usage-table">
               <thead>
                 <tr>
                   <th scope="col">用途</th>
+                  <th scope="col">请求模型</th>
                   <th scope="col">调用</th>
                   <th scope="col">成功</th>
                   <th scope="col">未成功</th>
                   <th scope="col">P50</th>
                   <th scope="col">P95</th>
-                  <th scope="col">Token</th>
+                  <th scope="col">已记录 Token</th>
                   <th scope="col">最近一次</th>
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="row in aiUsage.rows" :key="row.useCase">
+                <tr v-for="row in aiUsage.rows" :key="JSON.stringify([row.useCase, row.model])">
                   <th scope="row">{{ aiUseCaseLabel(row.useCase) }}</th>
+                  <td>{{ row.model }}</td>
                   <td>{{ row.calls }}</td>
                   <td>{{ row.succeeded }}</td>
                   <td>{{ row.failed }}</td>

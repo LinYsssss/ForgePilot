@@ -197,18 +197,18 @@ final class ReviewViews {
     }
 
     /**
-     * AI 调用台账里按用途聚合的一行。
+     * AI 调用台账里按请求模型和用途聚合的一行。
      *
      * <p>{@code failed} 数的是<strong>未成功</strong>的尝试（含 {@code TIMEOUT}）；
      * {@code tokens} 在全部调用都没上报 token 时为 {@code null} 而不是 0——
      * 0 会被读成「这些调用不花 token」。{@code p50}/{@code p95} 取自 SQL 的
      * {@code percentile_disc}（离散分位），给出的数必是某个真实样本值。
      */
-    record AiUsageRow(String useCase, long calls, long succeeded, long failed, Long tokens,
+    record AiUsageRow(String model, String useCase, long calls, long succeeded, long failed, Long tokens,
             Double p50LatencyMs, Double p95LatencyMs, Instant lastCallAt) {
     }
 
-    /** 一个项目的调用台账：{@code rows} 按用途名排序，没有调用时为空数组。 */
+    /** 本项目累计已记录尝试，按用途和模型排序；没有记录时为空数组。 */
     record AiUsage(List<AiUsageRow> rows, long totalCalls) {
     }
 

@@ -40,7 +40,7 @@ function stubServer(): void {
           ? PROJECTS
           : path.endsWith("/review-calibration")
             ? CALIBRATION
-            : [];
+            : path.endsWith("/ai-usage") ? { rows: [], totalCalls: 0 } : [];
       return Promise.resolve(
         new Response(JSON.stringify(body), {
           status: 200,

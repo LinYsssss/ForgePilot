@@ -119,7 +119,7 @@ public class ReviewInsightService {
      */
     public AiUsage aiUsage(long projectId, long actorId) {
         access.requireMember(projectId, actorId);
-        List<AiUsageRow> rows = insights.aiUsageByUseCase(projectId);
+        List<AiUsageRow> rows = insights.aiUsageByModelAndUseCase(projectId);
         return new AiUsage(rows, rows.stream().mapToLong(AiUsageRow::calls).sum());
     }
 }

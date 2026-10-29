@@ -366,13 +366,14 @@ export function getReviewCalibration(projectId: number): Promise<ReviewCalibrati
 }
 
 /**
- * AI 调用台账里按用途聚合的一行。
+ * AI 调用台账里按请求模型和用途聚合的一行。
  *
  * `failed` 数的是未成功的尝试（含超时）；`tokens` 在全部调用都没上报时为 `null`，
  * 与「花了 0 token」区分。`p50LatencyMs` / `p95LatencyMs` 是离散分位，
  * 取到的必是某次调用的真实延迟。
  */
 export interface AiUsageRow {
+  model: string;
   useCase: string;
   calls: number;
   succeeded: number;
@@ -383,7 +384,7 @@ export interface AiUsageRow {
   lastCallAt: string;
 }
 
-/** `rows` 按用途名排序；没有调用时为空数组。 */
+/** `rows` 按用途和模型排序；没有调用记录时为空数组。 */
 export interface AiUsage {
   rows: AiUsageRow[];
   totalCalls: number;

@@ -1,6 +1,7 @@
 package com.forgepilot.review;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.tuple;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -204,20 +205,23 @@ class ReviewInsightTest extends PostgresTestBase {
      * 是两个答案；分位取自真实样本（两样本的 p50 是较小的那个，而不是插值出的中间值）。
      */
     @Test
-    void aiUsageAggregatesPerUseCaseAndStaysInsideTheProject() {
+    void aiUsageAggregatesPerModelAndUseCaseAndStaysInsideTheProject() {
         Scenario scenario = new Scenario();
         Scenario other = new Scenario();
         scenario.aiCall("REVIEW", "SUCCESS", 1_000, 120);
         scenario.aiCall("REVIEW", "TIMEOUT", 5_000, 80);
         scenario.aiCall("EMBEDDING", "FAILED", 40, null);
+        jdbc.update("insert into ai_call_log (project_id, use_case, model, latency_ms, status) "
+                + "values (?, 'REVIEW', 'other-model', 60, 'SUCCESS')", scenario.projectId);
         other.aiCall("REVIEW", "SUCCESS", 999, 9_999);
 
         AiUsage usage = insights.aiUsage(scenario.projectId, scenario.member);
 
-        assertThat(usage.totalCalls()).isEqualTo(3);
-        assertThat(usage.rows()).extracting(AiUsageRow::useCase)
-                .containsExactly("EMBEDDING", "REVIEW");
-        AiUsageRow review = usage.rows().get(1);
+        assertThat(usage.totalCalls()).isEqualTo(4);
+        assertThat(usage.rows()).extracting(AiUsageRow::useCase, AiUsageRow::model)
+                .containsExactly(tuple("EMBEDDING", "test-model"), tuple("REVIEW", "other-model"),
+                        tuple("REVIEW", "test-model"));
+        AiUsageRow review = usage.rows().get(2);
         assertThat(review.calls()).isEqualTo(2);
         assertThat(review.succeeded()).isEqualTo(1);
         assertThat(review.failed()).as("TIMEOUT 也是一种未成功").isEqualTo(1);

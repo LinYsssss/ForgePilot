@@ -119,7 +119,7 @@ class ReviewInsightRepository {
             """.formatted(FIRST_ADJUDICATION);
 
     /**
-     * 按用途聚合的 AI 调用台账。
+     * 按请求模型和用途聚合的已记录 AI 调用尝试。
      *
      * <p>{@code failed} 数的是 status 不为 SUCCESS 的行——TIMEOUT 也是一种失败，
      * 而「未成功」正是这个数在说的事。{@code tokens} 求和保留 NULL：一列全空时
@@ -127,8 +127,8 @@ class ReviewInsightRepository {
      * （离散分位），取到的必是某次调用的真实延迟，而不是两个样本之间的一个假想值；
      * {@code latency_ms} 是整数，故在 SQL 里显式转成 double。
      */
-    private static final String AI_USAGE_BY_USE_CASE = """
-            select use_case,
+    private static final String AI_USAGE_BY_MODEL_AND_USE_CASE = """
+            select model, use_case,
                    count(*) as calls,
                    count(*) filter (where status = 'SUCCESS') as succeeded,
                    count(*) filter (where status <> 'SUCCESS') as failed,
@@ -138,8 +138,8 @@ class ReviewInsightRepository {
                    max(created_at) as last_call_at
               from ai_call_log
              where project_id = ?
-             group by use_case
-             order by use_case
+             group by model, use_case
+             order by use_case, model
             """;
 
     private final JdbcTemplate jdbc;
@@ -202,9 +202,9 @@ class ReviewInsightRepository {
                 projectId, projectId);
     }
 
-    List<AiUsageRow> aiUsageByUseCase(long projectId) {
-        return jdbc.query(AI_USAGE_BY_USE_CASE,
-                (rs, index) -> new AiUsageRow(rs.getString("use_case"), rs.getLong("calls"),
+    List<AiUsageRow> aiUsageByModelAndUseCase(long projectId) {
+        return jdbc.query(AI_USAGE_BY_MODEL_AND_USE_CASE,
+                (rs, index) -> new AiUsageRow(rs.getString("model"), rs.getString("use_case"), rs.getLong("calls"),
                         rs.getLong("succeeded"), rs.getLong("failed"),
                         rs.getObject("tokens", Long.class),
                         rs.getObject("p50", Double.class), rs.getObject("p95", Double.class),
