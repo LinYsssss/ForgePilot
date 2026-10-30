@@ -1,0 +1,429 @@
+{
+  "ai": [
+    {
+      "calls": 36,
+      "model": "Qwen/Qwen3-Embedding-8B",
+      "p50_ms": 88,
+      "p95_ms": 60316,
+      "status": "FAILED",
+      "tokens": null,
+      "use_case": "EMBEDDING",
+      "last_call": "2026-09-25T21:17:08.446747+00:00",
+      "first_call": "2026-09-12T04:09:36.54404+00:00",
+      "average_latency_ms": 26798
+    },
+    {
+      "calls": 241,
+      "model": "Qwen/Qwen3-Embedding-8B",
+      "p50_ms": 2344,
+      "p95_ms": 37657,
+      "status": "SUCCESS",
+      "tokens": 86041,
+      "use_case": "EMBEDDING",
+      "last_call": "2026-10-18T09:38:50.880295+00:00",
+      "first_call": "2026-09-02T15:50:07.809897+00:00",
+      "average_latency_ms": 8762
+    },
+    {
+      "calls": 9,
+      "model": "gpt-5.6-luna",
+      "p50_ms": 22007,
+      "p95_ms": 46656,
+      "status": "SUCCESS",
+      "tokens": 35708,
+      "use_case": "IMPLEMENTATION_GUIDANCE",
+      "last_call": "2026-10-18T07:19:51.74965+00:00",
+      "first_call": "2026-09-02T16:06:41.114483+00:00",
+      "average_latency_ms": 24049
+    },
+    {
+      "calls": 4,
+      "model": "gpt-5.6-luna",
+      "p50_ms": 17475,
+      "p95_ms": 22094,
+      "status": "SUCCESS",
+      "tokens": 6032,
+      "use_case": "REQUIREMENT_QUALITY",
+      "last_call": "2026-10-18T07:19:47.940118+00:00",
+      "first_call": "2026-09-02T16:06:46.906841+00:00",
+      "average_latency_ms": 17470
+    },
+    {
+      "calls": 1,
+      "model": "gpt-5.6-luna",
+      "p50_ms": 66090,
+      "p95_ms": 66090,
+      "status": "FAILED",
+      "tokens": null,
+      "use_case": "REVIEW",
+      "last_call": "2026-09-23T03:02:10.486146+00:00",
+      "first_call": "2026-09-23T03:02:10.486146+00:00",
+      "average_latency_ms": 66090
+    },
+    {
+      "calls": 362,
+      "model": "gpt-5.6-luna",
+      "p50_ms": 27651,
+      "p95_ms": 82298,
+      "status": "SUCCESS",
+      "tokens": 1905618,
+      "use_case": "REVIEW",
+      "last_call": "2026-10-18T09:39:50.569083+00:00",
+      "first_call": "2026-09-02T15:57:01.773694+00:00",
+      "average_latency_ms": 33103
+    },
+    {
+      "calls": 32,
+      "model": "gpt-5.6-luna",
+      "p50_ms": 120002,
+      "p95_ms": 120006,
+      "status": "TIMEOUT",
+      "tokens": null,
+      "use_case": "REVIEW",
+      "last_call": "2026-09-23T03:36:37.086648+00:00",
+      "first_call": "2026-09-22T08:35:05.374384+00:00",
+      "average_latency_ms": 120003
+    }
+  ],
+  "findings": [
+    {
+      "count": 1,
+      "status": "CLOSED",
+      "continuity": "NEW",
+      "finding_type": "REQUIREMENT"
+    },
+    {
+      "count": 27,
+      "status": "CONFIRMED",
+      "continuity": "NEW",
+      "finding_type": "REQUIREMENT"
+    },
+    {
+      "count": 5,
+      "status": "CONFIRMED",
+      "continuity": "NEW",
+      "finding_type": "CODE_QUALITY"
+    },
+    {
+      "count": 8,
+      "status": "CONFIRMED",
+      "continuity": "PERSISTING",
+      "finding_type": "REQUIREMENT"
+    },
+    {
+      "count": 2,
+      "status": "CONFIRMED",
+      "continuity": "PERSISTING",
+      "finding_type": "CODE_QUALITY"
+    },
+    {
+      "count": 54,
+      "status": "IN_PROGRESS",
+      "continuity": "NEW",
+      "finding_type": "REQUIREMENT"
+    },
+    {
+      "count": 1,
+      "status": "IN_PROGRESS",
+      "continuity": "NEW",
+      "finding_type": "CODE_QUALITY"
+    },
+    {
+      "count": 2,
+      "status": "OPEN",
+      "continuity": "NEW",
+      "finding_type": "CODE_QUALITY"
+    },
+    {
+      "count": 150,
+      "status": "OPEN",
+      "continuity": "NEW",
+      "finding_type": "REQUIREMENT"
+    },
+    {
+      "count": 103,
+      "status": "OPEN",
+      "continuity": "PERSISTING",
+      "finding_type": "REQUIREMENT"
+    },
+    {
+      "count": 2,
+      "status": "OPEN",
+      "continuity": "PERSISTING",
+      "finding_type": "CODE_QUALITY"
+    },
+    {
+      "count": 14,
+      "status": "REJECTED",
+      "continuity": "NEW",
+      "finding_type": "REQUIREMENT"
+    },
+    {
+      "count": 3,
+      "status": "REJECTED",
+      "continuity": "NEW",
+      "finding_type": "CODE_QUALITY"
+    },
+    {
+      "count": 1,
+      "status": "REJECTED",
+      "continuity": "PERSISTING",
+      "finding_type": "REQUIREMENT"
+    },
+    {
+      "count": 2,
+      "status": "REJECTED",
+      "continuity": "SUPPRESSED",
+      "finding_type": "REQUIREMENT"
+    }
+  ],
+  "projects": [
+    {
+      "id": 1,
+      "name": "mall-order-service",
+      "status": "ACTIVE",
+      "reviews": 27,
+      "requirements": 6,
+      "pull_requests": 5
+    },
+    {
+      "id": 2,
+      "name": "tenant-user-center",
+      "status": "ACTIVE",
+      "reviews": 30,
+      "requirements": 5,
+      "pull_requests": 5
+    },
+    {
+      "id": 3,
+      "name": "payment-settlement-service",
+      "status": "ACTIVE",
+      "reviews": 30,
+      "requirements": 5,
+      "pull_requests": 5
+    },
+    {
+      "id": 4,
+      "name": "halo-replay",
+      "status": "ACTIVE",
+      "reviews": 94,
+      "requirements": 24,
+      "pull_requests": 24
+    },
+    {
+      "id": 5,
+      "name": "lin",
+      "status": "ACTIVE",
+      "reviews": 0,
+      "requirements": 1,
+      "pull_requests": 0
+    },
+    {
+      "id": 6,
+      "name": "验收专用-guidance3-20261003T012550Z",
+      "status": "ARCHIVED",
+      "reviews": 0,
+      "requirements": 1,
+      "pull_requests": 0
+    }
+  ],
+  "knowledge": [
+    {
+      "count": 37,
+      "status": "READY",
+      "source_type": "PROJECT_KNOWLEDGE"
+    }
+  ],
+  "finding_keys": {
+    "rows": 375,
+    "distinctKeys": 193,
+    "distinctPrKeys": 193
+  },
+  "requirements": [
+    {
+      "count": 39,
+      "status": "IN_DEVELOPMENT",
+      "deleted": false
+    },
+    {
+      "count": 1,
+      "status": "CANCELED",
+      "deleted": true
+    },
+    {
+      "count": 3,
+      "status": "DRAFT",
+      "deleted": false
+    }
+  ],
+  "usage_counts": {
+    "users": 12,
+    "scm_bindings": 0,
+    "finding_events": 175,
+    "scm_identities": 0,
+    "pr_associations": 39,
+    "knowledge_chunks": 132,
+    "notification_channels": 1,
+    "requirement_attachments": 0
+  },
+  "adjudications": [
+    {
+      "total": 20,
+      "confirmed": 19,
+      "confidence": "HIGH",
+      "project_id": 1,
+      "prompt_version": "review-2",
+      "distinct_pr_keys": 20
+    },
+    {
+      "total": 1,
+      "confirmed": 1,
+      "confidence": "MEDIUM",
+      "project_id": 1,
+      "prompt_version": "review-2",
+      "distinct_pr_keys": 1
+    },
+    {
+      "total": 19,
+      "confirmed": 17,
+      "confidence": "HIGH",
+      "project_id": 2,
+      "prompt_version": "review-2",
+      "distinct_pr_keys": 19
+    },
+    {
+      "total": 1,
+      "confirmed": 1,
+      "confidence": "MEDIUM",
+      "project_id": 2,
+      "prompt_version": "review-2",
+      "distinct_pr_keys": 1
+    },
+    {
+      "total": 20,
+      "confirmed": 18,
+      "confidence": "HIGH",
+      "project_id": 3,
+      "prompt_version": "review-2",
+      "distinct_pr_keys": 20
+    },
+    {
+      "total": 8,
+      "confirmed": 6,
+      "confidence": "HIGH",
+      "project_id": 4,
+      "prompt_version": "review-2",
+      "distinct_pr_keys": 8
+    },
+    {
+      "total": 3,
+      "confirmed": 2,
+      "confidence": "MEDIUM",
+      "project_id": 4,
+      "prompt_version": "review-2",
+      "distinct_pr_keys": 3
+    },
+    {
+      "total": 11,
+      "confirmed": 10,
+      "confidence": "HIGH",
+      "project_id": 4,
+      "prompt_version": "review-3",
+      "distinct_pr_keys": 11
+    },
+    {
+      "total": 28,
+      "confirmed": 23,
+      "confidence": "HIGH",
+      "project_id": 4,
+      "prompt_version": "review-4",
+      "distinct_pr_keys": 23
+    },
+    {
+      "total": 4,
+      "confirmed": 1,
+      "confidence": "MEDIUM",
+      "project_id": 4,
+      "prompt_version": "review-4",
+      "distinct_pr_keys": 4
+    },
+    {
+      "total": 1,
+      "confirmed": 0,
+      "confidence": "MEDIUM",
+      "project_id": 4,
+      "prompt_version": "review-5",
+      "distinct_pr_keys": 1
+    }
+  ],
+  "failed_reviews": [
+    {
+      "id": 69,
+      "created_at": "2026-09-22T08:21:40.82801+00:00",
+      "project_id": 4,
+      "updated_at": "2026-09-22T09:53:16.357134+00:00",
+      "summary_json": null,
+      "pull_request_id": 39,
+      "execution_attempt": 3
+    }
+  ],
+  "current_reviews": [
+    {
+      "count": 1,
+      "status": "COMPLETED",
+      "decision": "APPROVE"
+    },
+    {
+      "count": 35,
+      "status": "COMPLETED",
+      "decision": "PENDING"
+    },
+    {
+      "count": 3,
+      "status": "COMPLETED",
+      "decision": "REQUEST_CHANGES"
+    }
+  ],
+  "review_versions": [
+    {
+      "count": 1,
+      "model": null,
+      "status": "FAILED",
+      "last_updated": "2026-09-22T09:53:16.357134+00:00",
+      "first_created": "2026-09-22T08:21:40.82801+00:00",
+      "prompt_version": null
+    },
+    {
+      "count": 68,
+      "model": "gpt-5.6-luna",
+      "status": "COMPLETED",
+      "last_updated": "2026-09-22T09:11:41.093942+00:00",
+      "first_created": "2026-09-12T04:16:22.871243+00:00",
+      "prompt_version": "review-2"
+    },
+    {
+      "count": 37,
+      "model": "gpt-5.6-luna",
+      "status": "COMPLETED",
+      "last_updated": "2026-09-23T06:59:15.479579+00:00",
+      "first_created": "2026-09-23T01:44:18.094931+00:00",
+      "prompt_version": "review-3"
+    },
+    {
+      "count": 74,
+      "model": "gpt-5.6-luna",
+      "status": "COMPLETED",
+      "last_updated": "2026-10-18T09:46:57.855822+00:00",
+      "first_created": "2026-09-25T20:27:52.01996+00:00",
+      "prompt_version": "review-4"
+    },
+    {
+      "count": 1,
+      "model": "gpt-5.6-luna",
+      "status": "COMPLETED",
+      "last_updated": "2026-10-18T09:39:50.600941+00:00",
+      "first_created": "2026-09-23T02:30:57.979431+00:00",
+      "prompt_version": "review-5"
+    }
+  ]
+}

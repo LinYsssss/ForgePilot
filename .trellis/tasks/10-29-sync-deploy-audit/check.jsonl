@@ -1,0 +1,2 @@
+{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "只引用实际 verify 证据，保持冻结资产不变"}
+{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "区分浏览器只读走查与未执行的写操作"}

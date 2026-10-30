@@ -1,7 +1,7 @@
 {
   "id": "sync-deploy-audit",
   "name": "sync-deploy-audit",
-  "title": "同步已部署的前端改动并验证最新发布与功能边界",
+  "title": "最新版本同步部署与全量代码、智能能力和数据核查",
   "description": "",
   "status": "in_progress",
   "dev_type": null,
@@ -18,9 +18,11 @@
   "commit": null,
   "pr_url": null,
   "subtasks": [],
-  "children": [],
+  "children": [
+    "10-29-minimal-review-improvements"
+  ],
   "parent": null,
   "relatedFiles": [],
-  "notes": "",
+  "notes": "5021013 业务代码已部署，15 条迁移成功；最新远程 CI 和 18 组追加浏览器走查通过，数据聚合不变。最小改进子任务收尾，全量逐文件阅读仍进行中，阶段报告见 AUDIT.md。",
   "meta": {}
 }

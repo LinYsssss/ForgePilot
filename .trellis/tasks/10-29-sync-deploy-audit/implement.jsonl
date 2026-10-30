@@ -1,0 +1,2 @@
+{"file": "docs/v2/PRD.md", "reason": "核对产品能力、角色权限与真实使用闭环"}
+{"file": "docs/v2/ARCHITECTURE.md", "reason": "核对单引擎、快照身份、并发和跨系统边界"}
