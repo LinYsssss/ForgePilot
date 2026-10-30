@@ -1004,3 +1004,26 @@ Pushed the three commits after the user's go-ahead, rebuilt and redeployed the f
 ### Next Steps
 
 - Browser acceptance and the live review-5 recheck stay out of scope.
+
+
+## Session 32: 最小审查改进已部署，恢复全量审读
+
+**Date**: 2026-10-30
+**Task**: 最小审查改进已部署，恢复全量审读
+**Branch**: `main`
+
+### Summary
+
+A 候选理由与 UNKNOWN、B 模型累计台账、C 确认关闭及终态同步已交付。业务 HEAD 5021013 干净 CI 后端 443 零失败，前端与两次 compose smoke 通过；公网/容器产物一致，15 迁移成功，数据库聚合不变，18 组浏览器只读走查与确认取消通过。未运行真实推理/关闭/通知。子任务归档，父审计继续，当前 SHA 核验 224/351 文件完整，review-6 真实效果未验证。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `e14b663` | (see git log) |
+| `4bf649c` | (see git log) |
+| `5021013` | (see git log) |
+
+### Status
+
+[OK] **Completed**
