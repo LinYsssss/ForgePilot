@@ -7,6 +7,8 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.time.Instant;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -39,15 +41,12 @@ import org.springframework.jdbc.core.JdbcTemplate;
  * second connection and committing the first pull request while the update is
  * queued behind it.
  *
- * <p><strong>What this class does not cover, and why it is not an oversight.</strong>
- * The freeze protects the ordering "identity change versus first pull request". It
- * does not protect the ordering "identity change versus the unlocked re-read inside
- * {@code PullRequestSyncService.apply}", and that second race is open: measured, an
- * ingestion whose {@code findById} runs before an identity update commits and whose
- * insert lands after it stores a {@code review_input_fingerprint} that cannot be
- * recomputed from the repository row it belongs to. No test here asserts that,
- * because asserting it today would assert a defect rather than a guarantee. It is
- * reported rather than pinned.
+ * <p>The freeze protects the ordering "identity change versus first pull request".
+ * {@code PullRequestSyncService.apply} adds two guarantees of its own: it re-reads
+ * the repository under the row lock, so the identity cannot move between that read
+ * and the insert, and it compares the locked identity with the one the snapshot was
+ * fetched under, so a snapshot from before an identity change is refused rather than
+ * filed under the new identity. The last test here pins the second guarantee.
  */
 @SpringBootTest
 class ScmIdentityFreezeConcurrencyTest extends ScmTestBase {
@@ -67,6 +66,12 @@ class ScmIdentityFreezeConcurrencyTest extends ScmTestBase {
 
     @Autowired
     private JdbcTemplate jdbc;
+
+    @Autowired
+    private ScmRepositoryRepository repositories;
+
+    @Autowired
+    private PullRequestSyncService sync;
 
     /**
      * The interleaving the single-threaded test cannot reach: the emptiness check
@@ -159,6 +164,29 @@ class ScmIdentityFreezeConcurrencyTest extends ScmTestBase {
 
         assertThat(identityOf(fixture.repository)).isEqualTo(
                 Map.<String, Object>of("external_id", moved, "instance_identity", "127.0.0.1:34591"));
+    }
+
+    /**
+     * The interleaving the lock alone does not close: the snapshot was fetched under
+     * the old identity, and the identity moved (legally, no pull request yet) before
+     * {@code apply} ran. The fingerprint would still be recomputable from the row, so
+     * reproducibility is no evidence the snapshot came from this repository; only the
+     * source comparison is. Refused with the same 401 the delivery would get a moment
+     * later from {@code authenticate}, and nothing is written.
+     */
+    @Test
+    void aSnapshotFetchedUnderTheOldIdentityIsRefusedAfterTheIdentityMoved() {
+        Fixture fixture = new Fixture();
+        ScmRepository fetchedUnder = repositories.findByProjectId(fixture.project).getFirst();
+        PullRequestSnapshot fromOldRepository = new PullRequestSnapshot(17, "base-sha", "head-sha", "branch",
+                "from the old repository", null, Instant.now(), "gh-1", "octocat",
+                List.of(new ChangedFile("a.ts", "modified", "@@ -1 +1 @@\n-old\n+new")), PullRequestState.OPEN);
+
+        service.update(fixture.project, fixture.owner, fixture.repository, null,
+                "moved-" + SEQUENCE.incrementAndGet(), null, null, null, null);
+
+        assertThat(statusOf(() -> sync.apply(fetchedUnder, fromOldRepository))).isEqualTo(HttpStatus.UNAUTHORIZED);
+        assertThat(pullRequestCount(fixture.repository)).isZero();
     }
 
     // ------------------------------------------------------------------ helpers

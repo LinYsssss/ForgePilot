@@ -102,6 +102,16 @@ public class PullRequestSyncService {
         ScmRepository repository = repositories
                 .findWithLockByProjectIdAndId(detached.getProjectId(), detached.getId())
                 .orElseThrow(PullRequestSyncService::unauthenticated);
+        // 锁只保证「入库期间身份不变」，不保证快照来自当前这个仓库：detached 正是
+        // 控制器用来向 provider 拉取的那个对象，若它的稳定身份已被（首个 PR 之前合法的）
+        // 更新改掉，这份快照属于旧仓库，挂到新身份下就是错归属。按「此刻已查不到该仓库」
+        // 处理：晚几毫秒到达的同一份投递本来就会在 authenticate() 得到同样的 401。
+        // 不在这里用新身份重拉——那会取到另一个仓库的同号 PR。凭据与 api_base 不参与比较。
+        if (repository.getProvider() != detached.getProvider()
+                || !repository.getInstanceIdentity().equals(detached.getInstanceIdentity())
+                || !repository.getExternalId().equals(detached.getExternalId())) {
+            throw unauthenticated();
+        }
         long projectId = repository.getProjectId();
         String fingerprint = ReviewInputFingerprint.of(repository.getProvider().name(),
                 repository.getInstanceIdentity(), repository.getExternalId(), snapshot);
