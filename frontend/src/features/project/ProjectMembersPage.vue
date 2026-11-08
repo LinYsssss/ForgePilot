@@ -296,8 +296,16 @@ async function bindMine(): Promise<void> {
 async function decide(binding: ScmBinding, decision: "approve" | "reject"): Promise<void> {
   const id = projectId.value;
   if (id === null) return;
-  await decideScmBinding(id, binding.id, decision);
-  await load();
+  pending.value = true;
+  error.value = null;
+  try {
+    await decideScmBinding(id, binding.id, decision);
+    await load();
+  } catch (failure: unknown) {
+    error.value = apiErrorMessage(failure);
+  } finally {
+    pending.value = false;
+  }
 }
 
 onMounted(load);
@@ -324,7 +332,8 @@ onMounted(load);
       <form class="inline-form" @submit.prevent="search">
         <div class="field">
           <label for="candidate-query">显示名、用户名或平台 ID</label>
-          <input id="candidate-query" v-model="query" required minlength="2" maxlength="120" />
+          <!-- 不写 minlength：纯数字平台 ID 允许单字符，长度规则由 search() 与后端判定。 -->
+          <input id="candidate-query" v-model="query" required maxlength="120" />
         </div>
         <button class="button button-quiet" :disabled="pending">搜索</button>
       </form>
@@ -513,11 +522,13 @@ onMounted(load);
                     <button
                       type="button"
                       class="button button-primary"
+                      :disabled="pending"
                       @click="decide(row.binding, 'approve')"
                     >批准</button>
                     <button
                       type="button"
                       class="button button-quiet"
+                      :disabled="pending"
                       @click="decide(row.binding, 'reject')"
                     >拒绝</button>
                   </span>

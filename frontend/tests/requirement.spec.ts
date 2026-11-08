@@ -262,6 +262,35 @@ describe("requirement detail contract", () => {
     expect(await exported?.text()).toContain("**AC-1**：登录成功后进入项目列表");
   });
 
+  it("re-reads review activity after publishing a revision instead of keeping the old one", async () => {
+    const counts = { REVIEW_REQUIRED: 0, FAILED: 0, CHANGES_REQUESTED: 0, REVIEWING: 0, PENDING: 0, APPROVED: 0 };
+    let published = false;
+    const wrapper = await mountDetailPage(["READY"], (path, method) => {
+      if (path === "/api/projects/3/requirements/12" && method === "GET") {
+        return jsonResponse({ ...detail, status: "IN_DEVELOPMENT" });
+      }
+      if (path.endsWith("/review-activity")) {
+        return jsonResponse(published
+          ? { activity: "REVIEW_REQUIRED", counts: { ...counts, REVIEW_REQUIRED: 1 } }
+          : { activity: "REVIEWING", counts: { ...counts, REVIEWING: 1 } });
+      }
+      if (path.endsWith("/revisions") && method === "POST") {
+        published = true;
+        return jsonResponse({ ...detail, status: "IN_DEVELOPMENT",
+          currentRevision: { ...revision, id: 31, seq: 2, title: "登录闭环 v2" } });
+      }
+      return undefined;
+    });
+    expect(wrapper.get(".review-activity").text()).toBe("审查中");
+
+    await wrapper.get("#edit-title").setValue("登录闭环 v2");
+    await wrapper.get("#edit-change-reason").setValue("补充锁定策略");
+    await wrapper.get("form.requirement-form").trigger("submit");
+    await flushPromises();
+
+    expect(wrapper.get(".review-activity").text()).toBe("待审查");
+  });
+
   it("keeps every existing acKey and never sends sortOrder when editing criteria", async () => {
     const wrapper = await mountDetailPage();
 

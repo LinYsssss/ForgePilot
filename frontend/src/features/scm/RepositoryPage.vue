@@ -485,7 +485,8 @@ watch(projectId, load, { immediate: true });
 }
 
 @media (max-width: 64rem) {
-  .repository-editor {
+  .repository-editor,
+  .notification-editor {
     grid-template-columns: 1fr;
   }
 

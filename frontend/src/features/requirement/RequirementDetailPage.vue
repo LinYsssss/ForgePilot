@@ -327,18 +327,7 @@ async function load(): Promise<void> {
     attachments.value = loadedAttachments;
     coverage.value = loadedCoverage;
     applyDetail(loadedDetail);
-    if (loadedActivity.counts.CHANGES_REQUESTED > 0) {
-      try {
-        const reviews = await listProjectReviews(ids.projectId);
-        const returned = await Promise.all(reviews
-          .filter(review => review.requirementId === ids.requirementId && review.isCurrent
-            && review.decision === "REQUEST_CHANGES")
-          .map(review => getReview(ids.projectId, review.id)));
-        if (token === detailLoadToken) returnedReviews.value = returned;
-      } catch (failure: unknown) {
-        if (token === detailLoadToken) returnsError.value = apiErrorMessage(failure);
-      }
-    }
+    await loadReturns(ids, loadedActivity, () => token === detailLoadToken);
   } catch (failure: unknown) {
     if (token === detailLoadToken) {
       loadError.value = apiErrorMessage(failure);
@@ -351,6 +340,47 @@ async function load(): Promise<void> {
 }
 
 watch([projectId, requirementId], load, { immediate: true });
+
+/** 退回明细只在当前活动里有退回时读取；`current()` 为假说明页面已换了数据，结果作废。 */
+async function loadReturns(
+  ids: { projectId: number; requirementId: number },
+  activity: ActivityView,
+  current: () => boolean,
+): Promise<void> {
+  if (activity.counts.CHANGES_REQUESTED === 0) return;
+  try {
+    const reviews = await listProjectReviews(ids.projectId);
+    const returned = await Promise.all(reviews
+      .filter(review => review.requirementId === ids.requirementId && review.isCurrent
+        && review.decision === "REQUEST_CHANGES")
+      .map(review => getReview(ids.projectId, review.id)));
+    if (current()) returnedReviews.value = returned;
+  } catch (failure: unknown) {
+    if (current()) returnsError.value = apiErrorMessage(failure);
+  }
+}
+
+/**
+ * 发布修订、改状态或指派都会改变活动、覆盖度与退回明细的派生依据，而路由 id 不变时
+ * `load()` 不会再跑。这里只重读这三块，不碰用户正在编辑的表单。先清空再读：
+ * 读失败时页面显示「无数据」，而不是把上一版本的裁定当成当前结果。
+ */
+async function refreshDerived(ids: { projectId: number; requirementId: number }): Promise<void> {
+  const token = detailLoadToken;
+  const current = () => token === detailLoadToken;
+  reviewActivity.value = null;
+  coverage.value = null;
+  returnedReviews.value = [];
+  returnsError.value = null;
+  const [activity, loadedCoverage] = await Promise.all([
+    getRequirementReviewActivity(ids.projectId, ids.requirementId).catch(() => null),
+    getRequirementCoverage(ids.projectId, ids.requirementId).catch(() => null),
+  ]);
+  if (!current()) return;
+  reviewActivity.value = activity;
+  coverage.value = loadedCoverage;
+  if (activity !== null) await loadReturns(ids, activity, current);
+}
 
 async function run(
   action: (ids: { projectId: number; requirementId: number }) => Promise<RequirementDetail>,
@@ -369,6 +399,7 @@ async function run(
       invalidateGuidance();
     }
     revisions.value = await listRevisions(ids.projectId, ids.requirementId);
+    await refreshDerived(ids);
   } catch (failure: unknown) {
     actionError.value = apiErrorMessage(failure);
   } finally {
