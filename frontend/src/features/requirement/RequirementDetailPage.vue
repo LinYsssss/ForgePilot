@@ -96,6 +96,7 @@ const actionPending = ref(false);
 const qualityReport = ref<QualityReport | null>(null);
 const qualityPending = ref(false);
 const qualityError = ref<string | null>(null);
+let qualityRequest = 0;
 const guidance = ref<ImplementationGuidance | null>(null);
 const guidancePending = ref(false);
 const guidanceError = ref<string | null>(null);
@@ -144,7 +145,17 @@ function invalidateGuidance(): void {
   guidanceError.value = null;
   guidanceCopyFeedback.value = null;
 }
-onBeforeUnmount(invalidateGuidance);
+function invalidateQuality(): void {
+  // 与实现建议同理：DRAFT 保存不换 revisionId，晚到的旧检查结果只能靠请求序号作废。
+  qualityRequest++;
+  qualityReport.value = null;
+  qualityPending.value = false;
+  qualityError.value = null;
+}
+onBeforeUnmount(() => {
+  invalidateGuidance();
+  invalidateQuality();
+});
 
 function target(): { projectId: number; requirementId: number } | null {
   const pid = projectId.value;
@@ -248,10 +259,10 @@ function prose(value: string): string {
 function applyDetail(loaded: RequirementDetail): void {
   const previous = detail.value?.currentRevision;
   const revisionChanged = previous?.id !== loaded.currentRevision.id;
-  if (revisionChanged) qualityReport.value = null;
-  // 服务器也可能返回同一草稿的新内容，不能仅凭相同 id 继续展示旧建议。
+  // 服务器也可能返回同一草稿的新内容，不能仅凭相同 id 继续展示旧检查与旧建议。
   if (revisionChanged || (previous !== undefined
     && JSON.stringify(toDraft(previous)) !== JSON.stringify(toDraft(loaded.currentRevision)))) {
+    invalidateQuality();
     invalidateGuidance();
   }
   detail.value = loaded;
@@ -276,7 +287,7 @@ async function load(): Promise<void> {
   coverage.value = null;
   returnedReviews.value = [];
   returnsError.value = null;
-  qualityReport.value = null;
+  invalidateQuality();
   invalidateGuidance();
   attachments.value = [];
   selectedDocument.value = null;
@@ -354,7 +365,7 @@ async function run(
   try {
     applyDetail(await action(ids));
     if (clearAdvice) {
-      qualityReport.value = null;
+      invalidateQuality();
       invalidateGuidance();
     }
     revisions.value = await listRevisions(ids.projectId, ids.requirementId);
@@ -370,14 +381,16 @@ async function runQualityCheck(): Promise<void> {
   if (ids === null || !canCheckQuality.value) {
     return;
   }
+  const request = ++qualityRequest;
   qualityPending.value = true;
   qualityError.value = null;
   try {
-    qualityReport.value = await checkQuality(ids.projectId, ids.requirementId);
+    const report = await checkQuality(ids.projectId, ids.requirementId);
+    if (request === qualityRequest) qualityReport.value = report;
   } catch (failure: unknown) {
-    qualityError.value = apiErrorMessage(failure);
+    if (request === qualityRequest) qualityError.value = apiErrorMessage(failure);
   } finally {
-    qualityPending.value = false;
+    if (request === qualityRequest) qualityPending.value = false;
   }
 }
 

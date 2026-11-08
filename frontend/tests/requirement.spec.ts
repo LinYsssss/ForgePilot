@@ -342,6 +342,32 @@ describe("requirement detail contract", () => {
     expect(wrapper.get(".guidance-result").text()).toContain("针对新保存内容的建议");
   });
 
+  it("drops a quality report that arrives after the draft it checked was saved", async () => {
+    const late = deferredResponse();
+    const wrapper = await mountDetailPage(["READY"], (path, method) => {
+      if (path.endsWith("/quality")) return late.promise;
+      if (path === "/api/projects/3/requirements/12" && method === "PATCH") {
+        return jsonResponse({ ...detail, currentRevision: { ...revision, title: "新的已保存标题" } });
+      }
+      return undefined;
+    });
+    const check = () => wrapper.get<HTMLButtonElement>(".quality-section button");
+
+    await check().trigger("click");
+    expect(check().element.disabled).toBe(true);
+    await wrapper.get("#edit-title").setValue("新的已保存标题");
+    await wrapper.get("form.requirement-form").trigger("submit");
+    await flushPromises();
+
+    late.resolve(jsonResponse({
+      requirementId: 12, revisionId: 30, revisionSeq: 1, qualityVersion: "quality-2",
+      checkedAt: "2026-08-21T04:00:00Z", rules: [], ai: { summary: "针对旧标题的评估。", issues: [] },
+    }));
+    await flushPromises();
+    expect(wrapper.find(".quality-report").exists()).toBe(false);
+    expect(check().element.disabled).toBe(false);
+  });
+
   it("keeps valid advice on regeneration failure and shares one text for copy and download", async () => {
     let fail = false;
     const wrapper = await mountDetailPage(["READY"], (path) => path.endsWith("/guidance") && fail
