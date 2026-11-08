@@ -359,6 +359,45 @@ class RequirementQualityTest extends PostgresTestBase {
         assertThat(storedQualityOf(revision).isEmpty()).isTrue();
     }
 
+    /**
+     * The order the test above cannot reach: the edit commits while the provider
+     * call is still in flight, so the clearing has already happened when the answer
+     * about the old text comes back. That answer must not land on the new draft.
+     */
+    @Test
+    void anAnswerAboutProseEditedDuringTheCallIsRefusedAndNotStored() {
+        Fixture fixture = new Fixture();
+        long requirement = fixture.requirement("用本地账号登录", "口令错误必须被拒绝");
+        long revision = fixture.currentRevisionOf(requirement);
+        editDuringTheCall(fixture, requirement, new RequirementContent("改过的标题", "用户目前还没有账号",
+                "登录成功后进入项目列表", List.of(new CriterionInput("AC-1", "口令错误必须被拒绝"))));
+
+        assertThat(statusOf(() -> quality.check(fixture.project, fixture.leader, requirement)))
+                .isEqualTo(HttpStatus.CONFLICT);
+        assertThat(storedQualityOf(revision).isEmpty()).isTrue();
+    }
+
+    /** Criteria live in their own table, so a criteria-only edit is the case a revision-row check would miss. */
+    @Test
+    void anAnswerAboutCriteriaEditedDuringTheCallIsRefusedAndNotStored() {
+        Fixture fixture = new Fixture();
+        long requirement = fixture.requirement("用本地账号登录", "口令错误必须被拒绝");
+        long revision = fixture.currentRevisionOf(requirement);
+        editDuringTheCall(fixture, requirement, new RequirementContent("用本地账号登录", "用户目前还没有账号",
+                "登录成功后进入项目列表", List.of(new CriterionInput("AC-1", "连续五次口令错误后锁定十分钟"))));
+
+        assertThat(statusOf(() -> quality.check(fixture.project, fixture.leader, requirement)))
+                .isEqualTo(HttpStatus.CONFLICT);
+        assertThat(storedQualityOf(revision).isEmpty()).isTrue();
+    }
+
+    private void editDuringTheCall(Fixture fixture, long requirement, RequirementContent edited) {
+        when(ai.chat(any(), any(), any(), any())).thenAnswer(call -> {
+            requirements.editDraft(fixture.project, fixture.leader, requirement, edited);
+            return ANSWER;
+        });
+    }
+
     // ---------------------------------------------------------------- endpoint
 
     /** The endpoint itself: routed, authorized and serialized over the real filter chain. */

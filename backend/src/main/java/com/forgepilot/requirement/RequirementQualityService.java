@@ -20,6 +20,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
@@ -39,7 +41,8 @@ import tools.jackson.databind.ObjectMapper;
  *
  * <p>这里同样不在 provider 调用外面开事务，理由与
  * {@link ImplementationGuidanceService} 相同：调用可能跑满网关的 120 秒超时，
- * 而连接池只有五个连接。读取独立完成，调用期间不持有连接，写入只有一条语句。
+ * 而连接池只有五个连接。读取独立完成，调用期间不持有连接；写回是一个只做
+ * 「加锁、比对、更新」的短事务（见 {@link #store}）。
  */
 @Service
 class RequirementQualityService {
@@ -102,10 +105,12 @@ class RequirementQualityService {
     private final AiGateway ai;
     private final ObjectMapper json;
     private final JdbcTemplate jdbc;
+    private final TransactionTemplate transaction;
     private final int promptCharBudget;
 
     RequirementQualityService(RequirementRepository requirements, AcceptanceCriterionRepository criteria,
             ProjectAccessService access, AiGateway ai, ObjectMapper json, JdbcTemplate jdbc,
+            PlatformTransactionManager transactions,
             // 与网关用来裁剪的是同一个配置项，这里再读一次而不是靠猜：
             // 本类必须知道自己的 Prompt 将被拿哪个预算来衡量，
             // 才能报告出「超出预算」这件事。
@@ -116,6 +121,7 @@ class RequirementQualityService {
         this.ai = ai;
         this.json = json;
         this.jdbc = jdbc;
+        this.transaction = new TransactionTemplate(transactions);
         this.promptCharBudget = promptCharBudget;
     }
 
@@ -145,7 +151,7 @@ class RequirementQualityService {
 
         QualityReport report = new QualityReport(requirementId, revision.getId(), revision.getSeq(),
                 QUALITY_VERSION, now(), rules, assessment);
-        store(projectId, report);
+        store(projectId, requirementId, Content.of(revision, acceptanceCriteria), report);
         return report;
     }
 
@@ -264,28 +270,61 @@ class RequirementQualityService {
     }
 
     /**
-     * 一条语句，并像本代码库里每一次写入那样以 {@code project_id} 限定作用域。
-     * 它**有意**不走实体：{@link RequirementRevision} 对这三列没有暴露任何 setter
-     * ——它唯一的修改方法 {@code editProse} 是用来<em>清空</em>它们的——
-     * 而这种不对称正是那条保证：DRAFT 编辑之后绝不可能再被一个过期结果
-     * flush 回去。这里用自动提交就够了，因为只有一行一条语句；
-     * 套一个事务对原子性没有任何增益。
-     *
-     * <p>已知竞态：如果 provider 调用在途期间有一次 DRAFT 原地编辑提交了，
-     * 它会被本次写入覆盖，留下一份描述**旧文本**的结果。另一条路——跨一个
-     * 可能长达 120 秒的调用持有事务——正是本代码库已经明确拒绝的做法。
-     * 两个操作都要求 LEADER，而一个项目恰好只有一个 LEADER，
-     * 因此这需要同一个人开着第二个标签页同时编辑才会发生。
+     * 本次检查所评估的内容：正文三栏加按显示顺序排列的 AC。DRAFT 原地编辑不换修订 id，
+     * 修订上也没有更新时间列，所以「结果是否仍适用」只能按内容本身判断——而且必须
+     * 包含 AC，因为只改 AC 的编辑同样让评估过期。
      */
-    private void store(long projectId, QualityReport report) {
-        jdbc.update("""
-                update requirement_revision
-                   set quality_json = cast(? as jsonb), quality_version = ?, quality_checked_at = ?
+    private record Content(String title, String background, String description, List<List<String>> criteria) {
+
+        static Content of(RequirementRevision revision, List<AcceptanceCriterion> acceptanceCriteria) {
+            return new Content(revision.getTitle(), revision.getBackground(), revision.getDescription(),
+                    acceptanceCriteria.stream().map(c -> List.of(c.getAcKey(), c.getText())).toList());
+        }
+    }
+
+    /**
+     * 只在修订内容仍等于本次检查读到的内容时写入，否则 409 且什么都不写。
+     *
+     * <p>先取 {@code editDraft} / {@code publishRevision} 用的同一把需求行锁，再在锁内
+     * 重读内容：编辑要么已经提交（重读能看到，比对失败），要么排在本事务之后
+     * （它的 {@link RequirementRevision#editProse} 会清掉这里写入的结果）。只靠一条带条件的
+     * UPDATE 不够：只改 AC 且质量列本来为空时，Hibernate 不会更新修订行，那条 UPDATE 就
+     * 碰不到需要等待的行锁，会读到编辑提交前的 AC。锁只覆盖这个短事务，
+     * 不跨越可能长达 120 秒的 provider 调用。
+     *
+     * <p>写入**有意**不走实体：{@link RequirementRevision} 对这三列没有暴露任何 setter，
+     * 它唯一的修改方法 {@code editProse} 是用来<em>清空</em>它们的。已发布修订不可变，
+     * 内容必然相等，于是一个在新修订发布期间完成的检查照旧落在它所评估的那个旧修订上。
+     */
+    private void store(long projectId, long requirementId, Content checked, QualityReport report) {
+        transaction.executeWithoutResult(status -> {
+            requirements.lockActiveByProjectIdAndId(projectId, requirementId)
+                    .orElseThrow(ApiException::notFound);
+            if (!checked.equals(currentContent(projectId, report.revisionId()))) {
+                throw ApiException.conflict("需求内容在检查期间已变化，请重新运行质量检查。");
+            }
+            jdbc.update("""
+                    update requirement_revision
+                       set quality_json = cast(? as jsonb), quality_version = ?, quality_checked_at = ?
+                     where project_id = ? and id = ?
+                    """,
+                    json.writeValueAsString(new QualityReport.Stored(report.rules(), report.ai())),
+                    report.qualityVersion(),
+                    OffsetDateTime.ofInstant(report.checkedAt(), ZoneOffset.UTC),
+                    projectId, report.revisionId());
+        });
+    }
+
+    private Content currentContent(long projectId, long revisionId) {
+        List<List<String>> currentCriteria = jdbc.query("""
+                select ac_key, text from acceptance_criterion
+                 where project_id = ? and requirement_revision_id = ?
+                 order by sort_order
+                """, (row, n) -> List.of(row.getString(1), row.getString(2)), projectId, revisionId);
+        return jdbc.queryForObject("""
+                select title, background, description from requirement_revision
                  where project_id = ? and id = ?
-                """,
-                json.writeValueAsString(new QualityReport.Stored(report.rules(), report.ai())),
-                report.qualityVersion(),
-                OffsetDateTime.ofInstant(report.checkedAt(), ZoneOffset.UTC),
-                projectId, report.revisionId());
+                """, (row, n) -> new Content(row.getString(1), row.getString(2), row.getString(3), currentCriteria),
+                projectId, revisionId);
     }
 }

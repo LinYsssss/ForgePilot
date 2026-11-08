@@ -198,6 +198,7 @@ GitHub 默认 `apiBase=https://api.github.com`；GitLab 默认 `https://gitlab.c
   - 完整 Prompt 在脱敏后不超过预算时调用一次结构化 AI，`ai` 为 `{summary,issues}`。
   - 超预算时返回 `PROMPT_BUDGET_EXCEEDED`，不调用 AI、不做截断后的部分分析，报告仍正常保存且 `ai=null`。
   - 历史版本报告保持原样；DRAFT 正文编辑仍使当前修订上的旧质量结果失效。
+  - 检查进行中若正文或 AC 被编辑，返回 409 `conflict`，不保存这份过期结果；重新运行即可。
 
 ## 需求实现建议
 
