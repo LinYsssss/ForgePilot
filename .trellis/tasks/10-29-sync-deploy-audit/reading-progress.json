@@ -1,7 +1,30 @@
 {
-  "completeFiles": 224,
+  "completeFiles": 351,
   "totalFiles": 351,
-  "readLines": 19389,
+  "readLines": 54446,
   "totalLines": 54446,
-  "complete": false
+  "complete": true,
+  "verifiedAtUTC": "2026-10-30T01:55:41.625606+00:00",
+  "head": "76ed32edc3d0c2eec838ab9d4807b355f91849b9",
+  "remoteMain": "76ed32edc3d0c2eec838ab9d4807b355f91849b9",
+  "contentSha256Verified": true,
+  "scopeFileSetVerified": true,
+  "scopeRoots": [
+    "backend/src",
+    "frontend/src",
+    "frontend/tests",
+    "evaluation/tools",
+    "docs/thesis"
+  ],
+  "groups": {
+    "backend/src/main": 215,
+    "backend/src/test": 63,
+    "docs/thesis": 6,
+    "evaluation/tools": 10,
+    "frontend/src": 39,
+    "frontend/tests": 18
+  },
+  "inventorySha256": "9bb5a49526554fc365521243d6ff46ca5684afd0d37a3559144d5005c474aeae",
+  "ledgerSha256": "253a5f27fa1ab73abbb359c6e5ad705c1f90f43bc777900e1ea2ed480430743f",
+  "scopeNote": "Business source/resources/tests and evaluation/thesis scripts; excludes generated artifacts, operational scripts and historical task materials."
 }

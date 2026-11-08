@@ -3,7 +3,7 @@
   "name": "sync-deploy-audit",
   "title": "最新版本同步部署与全量代码、智能能力和数据核查",
   "description": "",
-  "status": "in_progress",
+  "status": "completed",
   "dev_type": null,
   "scope": null,
   "package": null,
@@ -11,7 +11,7 @@
   "creator": "LinYsssss",
   "assignee": "LinYsssss",
   "createdAt": "2026-10-29",
-  "completedAt": null,
+  "completedAt": "2026-10-30",
   "branch": null,
   "base_branch": "main",
   "worktree_path": null,
@@ -23,6 +23,6 @@
   ],
   "parent": null,
   "relatedFiles": [],
-  "notes": "5021013 业务代码已部署，15 条迁移成功；最新远程 CI 和 18 组追加浏览器走查通过，数据聚合不变。最小改进子任务收尾，全量逐文件阅读仍进行中，阶段报告见 AUDIT.md。",
+  "notes": "同步部署和全量业务代码审计已完成：5021013 业务代码已部署，main=76ed32e；2026-10-30 01:55 UTC 再核远程及公网健康均正常。351/351 文件、54,446 行完整通读，逐文件 SHA/行数及目录文件集合核验通过，见 reading-progress.json。隔离复现质量旧结果写回/显示、发布后派生面板不刷新、首次 PR 旧仓库快照错归属四项缺陷，尚未修复；Halo 按 PR/key 首次标签为32/44确认，不能推断 review-6 准确率或漏报。最终结论和后续顺序见 AUDIT.md 及 REPRODUCTIONS-20261030.md。完成的是审计，缺陷修复及独立效果实验仍待开展；本轮审计材料尚未新增提交/推送。",
   "meta": {}
 }
