@@ -136,6 +136,12 @@ Wrong: `guidance.value = await generateGuidance(...)` followed by an uncondition
 finally, and advance it on save, reload and unmount. Use one formatter for both
 copy and download so neither loses the revision or reference context.
 
+The requirement quality check follows the same rule (`qualityRequest` /
+`invalidateQuality`): any AI result about saved content needs its own request
+generation, advanced together with guidance on save, reload, content change
+and unmount. The backend independently refuses a stale write (409), so the
+page must also surface that error rather than retry silently.
+
 ## Common mistakes
 
 - Installing Pinia for route navigation or a single component's local state.

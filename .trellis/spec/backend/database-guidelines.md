@@ -220,6 +220,16 @@ snapshot merely because they share a transaction.
   and insert/retry. Delivery creation joins the SCM transaction, which already
   locked or inserted the PR. A requirement revision change still needs a human
   request; these locks do not introduce an automatic trigger.
+- A result computed from a read outside any transaction (an AI call that may run
+  120 s) is written back in a short transaction that takes the same lock as the
+  writers of its input and re-reads that input under it. Write only when the
+  input still equals what was read; otherwise 409 and write nothing.
+  `RequirementQualityService.store` compares prose plus every AC, because a
+  criteria-only edit may not touch the revision row at all.
+- `PullRequestSyncService.apply` compares the locked repository's stable
+  identity with the one the snapshot was fetched under. A reproducible
+  fingerprint is no proof of origin; a mismatch is the same 401 as an unknown
+  repository, and is never re-fetched under the new identity.
 - GitHub file pages cannot be pinned to a requested SHA. Read validated metadata
   before and after all pages; compare base/head SHA, head ref, title, updated time,
   and author identity/name. Discard every page on mismatch and allow only one
@@ -237,6 +247,8 @@ snapshot merely because they share a transaction.
 | Two manual requests create the same current identity | Reuse one Review row |
 | GitHub changes during both attempts | 409; persist no mixed input |
 | Confirming GitHub metadata is malformed | 422; persist nothing |
+| Draft prose or AC changed during a quality check | 409; no quality result stored |
+| Repository identity moved after the snapshot was fetched | 401; no pull request row |
 
 ### 5. Good / Base / Bad Cases
 
