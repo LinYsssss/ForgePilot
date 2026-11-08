@@ -1,0 +1,439 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ForgePilot 前端打磨对比</title>
+<style>
+  /* 布局:每个区块左右对照(左"现在"右"建议"),窄屏堆叠;页面本身单主题暗色,与对照对象一致。 */
+  :root {
+    /* 颜色 */
+    --bg: #060910;
+    --panel: #0b1220;
+    --panel-2: #101a2b;
+    --fg: #e9f2f9;
+    --muted: #93a8ba;
+    --line: rgb(184 201 214 / 14%);
+    --accent: #3ddbd9;
+    --ok: #43d69c;
+    --warn: #f5b84b;
+    --bad: #ff7185;
+    --info: #57b8ff;
+    /* 字体 */
+    --sans: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    --mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+    --t-display: 1.5rem;
+    --t-title: 1.0625rem;
+    --t-body: 0.9375rem;
+    --t-caption: 0.8125rem;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    padding-block: 28px 72px;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: var(--sans);
+    font-size: var(--t-body);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1180px; margin-inline: auto; display: grid; gap: 2.5rem; }
+  h1, h2, h3 { text-wrap: balance; margin: 0; }
+  h1 { font-size: var(--t-display); letter-spacing: -0.02em; }
+  h2 { font-size: var(--t-title); letter-spacing: -0.01em; }
+  p { margin: 0; }
+  .lede { color: var(--muted); max-width: 62ch; }
+  .eyebrow { font-size: var(--t-caption); letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent); }
+  .muted { color: var(--muted); }
+  .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+  .rule { height: 1px; background: var(--line); border: 0; margin: 0; }
+
+  header.top { display: grid; gap: 0.75rem; }
+  header.top .meta { display: flex; flex-wrap: wrap; gap: 0.5rem 1.25rem; font-size: var(--t-caption); color: var(--muted); }
+
+  section { display: grid; gap: 1rem; }
+  section > .head { display: grid; gap: 0.35rem; }
+  section > .head p { color: var(--muted); max-width: 78ch; }
+
+  .pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1rem; align-items: start; }
+  .col { display: grid; gap: 0.5rem; min-width: 0; }
+  .tag { font-size: var(--t-caption); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+  .tag.next { color: var(--accent); }
+  .frame { min-width: 0; overflow-x: auto; }
+
+  /* 对照面板的共享 token:两栏只差这些值 */
+  .m {
+    --m-radius: 0.875rem;
+    --m-pad: 1.25rem;
+    --m-shadow: 0 1rem 2.5rem rgb(0 0 0 / 22%);
+    --m-ring: rgb(184 201 214 / 12%);
+    --m-surface: rgb(11 18 32 / 96%);
+    --m-blur: none;
+    --m-meta: 0.8125rem;
+    --m-small: 0.875rem;
+    --m-body: 0.9375rem;
+    --m-title: 1.0625rem;
+    --m-nav: 0.9375rem;
+    --m-btn: 0.875rem;
+    --m-btn-h: 2.5rem;
+    --m-gap: 1.5rem;
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: 0.75rem;
+    padding: 1rem;
+    display: grid;
+    gap: var(--m-gap);
+    font-size: var(--m-body);
+    min-width: 0;
+  }
+  .m.now {
+    --m-radius: 1.125rem;
+    --m-pad: 1.5rem;
+    --m-shadow: 0 1.25rem 4rem rgb(0 0 0 / 26%);
+    --m-ring: #273951;
+    --m-surface: rgb(11 18 32 / 88%);
+    --m-blur: blur(1rem);
+    --m-meta: 0.75rem;
+    --m-small: 0.8125rem;
+    --m-body: 0.875rem;
+    --m-title: 1rem;
+    --m-nav: 0.8125rem;
+    --m-btn: 0.8125rem;
+    --m-btn-h: 2.625rem;
+    --m-gap: 2rem;
+    background: #050812;
+  }
+
+  .shell, .card {
+    position: relative;
+    border: 1px solid var(--m-ring);
+    border-radius: var(--m-radius);
+    background: var(--m-surface);
+    box-shadow: var(--m-shadow);
+    backdrop-filter: var(--m-blur);
+    padding: var(--m-pad);
+    min-width: 0;
+  }
+  .now .shell::after, .now .card::after {
+    content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+    background: linear-gradient(105deg, transparent 22%, rgb(255 255 255 / 10%) 46%, transparent 62%);
+    box-shadow: inset 0 0 0 1px rgb(103 232 249 / 22%);
+  }
+
+  .shell { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 1rem; }
+  .lockup { font-weight: 800; letter-spacing: -0.02em; }
+  .nav { display: flex; flex-wrap: wrap; gap: 0.25rem 0.75rem; justify-content: center; font-size: var(--m-nav); }
+  .nav span { color: var(--muted); padding: 0.25rem 0.5rem; border-radius: 999rem; }
+  .nav span.on { color: var(--fg); background: rgb(61 219 217 / 12%); }
+  .account { font-size: var(--m-nav); color: var(--fg); border: 1px solid var(--m-ring); border-radius: 999rem; padding: 0.3rem 0.7rem; }
+
+  .hero { display: grid; gap: 0.5rem; }
+  .hero h3 { font-size: var(--m-title); }
+  .hero p { color: var(--muted); font-size: var(--m-small); }
+  .caps { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0.75rem; }
+  .cap { border: 1px solid var(--m-ring); border-radius: var(--m-radius); background: var(--panel-2); padding: 0.85rem; display: grid; gap: 0.3rem; }
+  .cap b { font-size: var(--m-small); }
+  .cap small { color: var(--muted); font-size: var(--m-meta); line-height: 1.5; }
+
+  table { width: 100%; border-collapse: collapse; font-size: var(--m-small); }
+  caption { text-align: left; color: var(--muted); font-size: var(--m-meta); padding-bottom: 0.5rem; }
+  th { text-align: left; font-weight: 600; color: var(--muted); font-size: var(--m-meta); letter-spacing: 0.04em; padding: 0.4rem 0.6rem; border-bottom: 1px solid var(--m-ring); white-space: nowrap; }
+  td { padding: 0.5rem 0.6rem; border-bottom: 1px solid rgb(184 201 214 / 8%); vertical-align: top; }
+  tr:last-child td { border-bottom: 0; }
+
+  .badge { display: inline-flex; align-items: center; gap: 0.35rem; border: 1px solid var(--m-ring); border-radius: 999rem; padding: 0.1rem 0.55rem; font-size: var(--m-meta); white-space: nowrap; }
+  .b-ok { color: var(--ok); border-color: rgb(67 214 156 / 40%); }
+  .b-warn { color: var(--warn); border-color: rgb(245 184 75 / 40%); }
+  .b-bad { color: var(--bad); border-color: rgb(255 113 133 / 40%); }
+  .b-info { color: var(--info); border-color: rgb(87 184 255 / 40%); }
+  .b-quiet { color: var(--muted); }
+
+  .strip { display: flex; flex-wrap: wrap; gap: 0.5rem 1.25rem; font-size: var(--m-meta); color: var(--muted); }
+  .strip b { color: var(--fg); font-weight: 600; }
+  .grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 0.75rem; }
+  .kv { border: 1px solid var(--m-ring); border-radius: var(--m-radius); padding: 0.7rem 0.8rem; display: grid; gap: 0.25rem; }
+  .kv dt { font-size: var(--m-meta); color: var(--muted); }
+  .kv dd { margin: 0; font-size: var(--m-small); }
+
+  .finding { display: grid; gap: 0.5rem; }
+  .finding .ev { font-family: var(--mono); font-size: var(--m-meta); background: rgb(3 17 22 / 60%); border-left: 2px solid var(--accent); padding: 0.45rem 0.6rem; border-radius: 0.25rem; overflow-x: auto; white-space: pre; }
+  .actions { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; min-height: var(--m-btn-h); padding: 0.35rem 0.9rem; border: 1px solid var(--m-ring); border-radius: 0.625rem; background: var(--panel-2); color: var(--fg); font-size: var(--m-btn); font-weight: 700; }
+  .btn.primary { background: linear-gradient(135deg, #67e8f9, #20b8c8); color: #031116; border-color: transparent; }
+  .btn.danger { border-color: rgb(255 113 133 / 45%); color: var(--bad); }
+  .hint { font-size: var(--m-meta); color: var(--muted); }
+  .now .btn { position: relative; overflow: hidden; }
+  .now .btn::after { content: ""; position: absolute; top: -40%; bottom: -40%; left: -60%; width: 40%; background: linear-gradient(105deg, transparent, rgb(255 255 255 / 32%), transparent); }
+
+  .os { border: 1px solid #6b7280; border-radius: 0.5rem; background: #f3f4f6; color: #111827; padding: 1rem; display: grid; gap: 0.6rem; font-size: 0.875rem; box-shadow: 0 1.5rem 3rem rgb(0 0 0 / 55%); }
+  .os .bar { font-size: 0.75rem; color: #4b5563; }
+  .os .row { display: flex; justify-content: flex-end; gap: 0.5rem; }
+  .os .ob { border: 1px solid #9ca3af; border-radius: 0.375rem; background: #e5e7eb; padding: 0.3rem 0.8rem; font-size: 0.8125rem; }
+  .os .ob.def { background: #2563eb; border-color: #2563eb; color: #fff; }
+  .confirm { display: grid; gap: 0.6rem; border: 1px solid rgb(255 113 133 / 35%); border-radius: var(--m-radius); padding: 0.9rem; background: rgb(255 113 133 / 6%); }
+  .confirm input { min-height: 2.25rem; border-radius: 0.5rem; border: 1px solid var(--m-ring); background: var(--panel); color: var(--fg); padding: 0.3rem 0.6rem; font: inherit; font-size: var(--m-small); }
+
+  .changes { display: grid; gap: 0.5rem; }
+  .chg { display: grid; grid-template-columns: minmax(120px, 180px) 1fr; gap: 0.5rem 1rem; padding: 0.6rem 0; border-bottom: 1px solid var(--line); align-items: baseline; }
+  .chg:last-child { border-bottom: 0; }
+  .chg dt { color: var(--muted); font-size: var(--t-caption); }
+  .chg dd { margin: 0; display: flex; flex-wrap: wrap; gap: 0.4rem 0.6rem; align-items: center; font-size: var(--t-caption); }
+  .from { color: var(--muted); text-decoration: line-through; }
+  .arrow { color: var(--accent); }
+  .to { color: var(--fg); }
+  @media (max-width: 640px) { .chg { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+
+
+<div class="wrap">
+  <header class="top">
+    <p class="eyebrow">前端打磨 · 契约内</p>
+    <h1>同样的界面,只差 token 与层级</h1>
+    <p class="lede">
+      下面是四段真实界面:左边是现在的样子,右边是建议改法。内容、文案、路由、六个导航入口、
+      暗色主题与动效语汇都不动,只调整字号、表面处理、层级、圆角与确认方式。
+    </p>
+    <div class="meta">
+      <span>对象:frontend/src/styles/tokens.css 与 base.css(1389 行)</span>
+      <span>不改:design-contract.md、89 项浏览器验收基线、交付文档</span>
+    </div>
+  </header>
+
+  <section>
+    <div class="head">
+      <h2>现在到底哪里不对</h2>
+      <p>六条都能在代码里数出来,不是感觉问题。</p>
+    </div>
+    <div class="changes">
+      <div class="chg"><dt>正文偏小</dt><dd><span class="from">元信息 12px · 次要 13px · 正文 14px</span><span class="arrow">→</span><span class="to">13 / 14 / 15px</span><span class="muted">暗底玻璃面上小字最费眼</span></dd></div>
+      <div class="chg"><dt>面板过装饰</dt><dd><span class="from">每块面板:1px 描边 + 88% 玻璃 + blur(1rem) + 26% 黑影 + 两个动画伪元素</span><span class="arrow">→</span><span class="to">描边 + 96% 表面 + 单一柔和阴影,装饰只在悬停/焦点出现</span></dd></div>
+      <div class="chg"><dt>层级单一</dt><dd><span class="from">.panel 与元数据块同一套样式</span><span class="arrow">→</span><span class="to">主块保留抬升,元数据块用安静变体(无模糊无阴影)</span></dd></div>
+      <div class="chg"><dt>圆角偏软</dt><dd><span class="from">面板 1.125–1.5rem</span><span class="arrow">→</span><span class="to">统一到 0.875rem</span><span class="muted">控制台密度更稳</span></dd></div>
+      <div class="chg"><dt>动效过多</dt><dd><span class="from">base.css 20 处 animation(全息描边 4s、扫光 2.4s、脉冲 2.8s、雷达 9s、光球 14s)</span><span class="arrow">→</span><span class="to">只留背景氛围层,面板不再各自动画</span></dd></div>
+      <div class="chg"><dt>确认不一致</dt><dd><span class="from">7 处浏览器原生 confirm</span><span class="arrow">→</span><span class="to">与"归档项目"同款就地确认</span></dd></div>
+    </div>
+  </section>
+
+  <hr class="rule" />
+
+  <section>
+    <div class="head">
+      <h2>一、外壳与工作台</h2>
+      <p>导航、锁标、账户区与三张能力卡。差别在字号、圆角、玻璃厚度和面板上的那层扫光。</p>
+    </div>
+    <div class="pair">
+      <div class="col">
+        <span class="tag">现在</span>
+        <div class="frame">
+          <div class="m now">
+            <div class="shell">
+              <span class="lockup">ForgePilot</span>
+              <nav class="nav"><span class="on">工作台</span><span>项目</span><span>研发需求</span><span>项目知识</span><span>仓库接入</span><span>代码审查</span></nav>
+              <span class="account">林养盛</span>
+            </div>
+            <div class="card hero">
+              <h3>工作台</h3>
+              <p>当前项目 halo-replay · 24 个 PR · 94 轮审查 · 32 条 Finding</p>
+              <div class="caps">
+                <div class="cap"><b>需求质量检查</b><small>确定性规则 + 一次 AI 评估</small></div>
+                <div class="cap"><b>向量增强实现建议</b><small>召回项目知识与需求附件</small></div>
+                <div class="cap"><b>AI 代码审查</b><small>唯一审查引擎 · 证据锚定</small></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col">
+        <span class="tag next">建议</span>
+        <div class="frame">
+          <div class="m">
+            <div class="shell">
+              <span class="lockup">ForgePilot</span>
+              <nav class="nav"><span class="on">工作台</span><span>项目</span><span>研发需求</span><span>项目知识</span><span>仓库接入</span><span>代码审查</span></nav>
+              <span class="account">林养盛</span>
+            </div>
+            <div class="card hero">
+              <h3>工作台</h3>
+              <p>当前项目 halo-replay · 24 个 PR · 94 轮审查 · 32 条 Finding</p>
+              <div class="caps">
+                <div class="cap"><b>需求质量检查</b><small>确定性规则 + 一次 AI 评估</small></div>
+                <div class="cap"><b>向量增强实现建议</b><small>召回项目知识与附件</small></div>
+                <div class="cap"><b>AI 代码审查</b><small>唯一审查引擎 · 证据锚定</small></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="head">
+      <h2>二、审查列表</h2>
+      <p>同一张表、同一批真实数据。建议版把行高与字号调上来,让 head SHA 与时间用等宽对齐。</p>
+    </div>
+    <div class="pair">
+      <div class="col">
+        <span class="tag">现在</span>
+        <div class="frame">
+          <div class="m now">
+            <div class="card">
+              <table>
+                <caption>按服务端返回的时间倒序展示项目内全部 Review。</caption>
+                <thead><tr><th>审查</th><th>PR</th><th>执行状态</th><th>Decision</th><th>有效性</th><th>head SHA</th><th>创建时间</th></tr></thead>
+                <tbody>
+                  <tr><td>审查 181</td><td>halo-replay #5</td><td><span class="badge b-ok">已完成</span></td><td><span class="badge b-warn">退回修改</span></td><td><span class="badge b-ok">当前有效</span></td><td class="mono">7f3a91c</td><td class="mono">09-25 21:16</td></tr>
+                  <tr><td>审查 180</td><td>halo-replay #5</td><td><span class="badge b-ok">已完成</span></td><td><span class="badge b-quiet">待决定</span></td><td><span class="badge b-warn">已过期</span></td><td class="mono">2c9e4d1</td><td class="mono">09-25 20:58</td></tr>
+                  <tr><td>审查 179</td><td>mall #7</td><td><span class="badge b-ok">已完成</span></td><td><span class="badge b-ok">通过并合并</span></td><td><span class="badge b-warn">已过期</span></td><td class="mono">a41b7f2</td><td class="mono">09-25 20:44</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col">
+        <span class="tag next">建议</span>
+        <div class="frame">
+          <div class="m">
+            <div class="card">
+              <table>
+                <caption>按服务端返回的时间倒序展示项目内全部 Review。</caption>
+                <thead><tr><th>审查</th><th>PR</th><th>执行状态</th><th>Decision</th><th>有效性</th><th>head SHA</th><th>创建时间</th></tr></thead>
+                <tbody>
+                  <tr><td>审查 181</td><td>halo-replay #5</td><td><span class="badge b-ok">已完成</span></td><td><span class="badge b-warn">退回修改</span></td><td><span class="badge b-ok">当前有效</span></td><td class="mono">7f3a91c</td><td class="mono">09-25 21:16</td></tr>
+                  <tr><td>审查 180</td><td>halo-replay #5</td><td><span class="badge b-ok">已完成</span></td><td><span class="badge b-quiet">待决定</span></td><td><span class="badge b-warn">已过期</span></td><td class="mono">2c9e4d1</td><td class="mono">09-25 20:58</td></tr>
+                  <tr><td>审查 179</td><td>mall #7</td><td><span class="badge b-ok">已完成</span></td><td><span class="badge b-ok">通过并合并</span></td><td><span class="badge b-warn">已过期</span></td><td class="mono">a41b7f2</td><td class="mono">09-25 20:44</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="head">
+      <h2>三、审查详情与 Finding</h2>
+      <p>密度最高的页面。建议版把元信息收成一条安静的横条,把 Finding 卡抬成主块,证据行用等宽、可横向滚动。</p>
+    </div>
+    <div class="pair">
+      <div class="col">
+        <span class="tag">现在</span>
+        <div class="frame">
+          <div class="m now">
+            <div class="card">
+              <div class="strip">
+                <span>引擎 <b>forgepilot-review</b></span><span>提示词 <b>review-5</b></span><span>模型 <b>gpt-5.6-luna</b></span><span>第 <b>2</b> 次执行</span>
+              </div>
+            </div>
+            <div class="card">
+              <div class="grid2">
+                <dl class="kv"><dt>审查覆盖与未审查文件</dt><dd>12 个文件 · 3 个未审查 · <span class="badge b-warn">有内容被截断</span></dd></dl>
+                <dl class="kv"><dt>验收标准覆盖判定</dt><dd>AC-1 满足 · AC-2 未满足 · AC-3 未判定</dd></dl>
+              </div>
+            </div>
+            <div class="card finding">
+              <div class="strip"><span class="mono">src/main/java/com/halo/plugin/PostService.java:118</span><span class="badge b-bad">SECURITY</span><span class="badge b-quiet">NEW</span><span class="badge b-info">置信度 中</span></div>
+              <p class="hint">当前实现直接拼接查询条件,未对传入的 status 做白名单校验。</p>
+              <div class="ev">+ query.append(" and status = '").append(status).append("'");</div>
+              <div class="actions"><span class="btn">认领</span><span class="btn">驳回</span><span class="btn primary">标记已修复</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col">
+        <span class="tag next">建议</span>
+        <div class="frame">
+          <div class="m">
+            <div class="card">
+              <div class="strip">
+                <span>引擎 <b>forgepilot-review</b></span><span>提示词 <b>review-5</b></span><span>模型 <b>gpt-5.6-luna</b></span><span>第 <b>2</b> 次执行</span>
+              </div>
+            </div>
+            <div class="card">
+              <div class="grid2">
+                <dl class="kv"><dt>审查覆盖与未审查文件</dt><dd>12 个文件 · 3 个未审查 · <span class="badge b-warn">有内容被截断</span></dd></dl>
+                <dl class="kv"><dt>验收标准覆盖判定</dt><dd>AC-1 满足 · AC-2 未满足 · AC-3 未判定</dd></dl>
+              </div>
+            </div>
+            <div class="card finding">
+              <div class="strip"><span class="mono">src/main/java/com/halo/plugin/PostService.java:118</span><span class="badge b-bad">SECURITY</span><span class="badge b-quiet">NEW</span><span class="badge b-info">置信度 中</span></div>
+              <p class="hint">当前实现直接拼接查询条件,未对传入的 status 做白名单校验。</p>
+              <div class="ev">+ query.append(" and status = '").append(status).append("'");</div>
+              <div class="actions"><span class="btn">认领</span><span class="btn">驳回</span><span class="btn primary">标记已修复</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="head">
+      <h2>四、破坏性确认</h2>
+      <p>左边是现在的样子:七处操作会弹出浏览器自己的对话框,不跟随暗色主题,也无法解释后果。右边是"归档项目"已经用上的就地确认,把它推广到其余七处。</p>
+    </div>
+    <div class="pair">
+      <div class="col">
+        <span class="tag">现在</span>
+        <div class="frame">
+          <div class="m now">
+            <div class="card">
+              <div class="actions"><span class="btn danger">删除</span><span class="btn">作废</span><span class="btn">移交负责人</span></div>
+              <p class="hint">点击后由浏览器接管:</p>
+              <div class="os">
+                <div class="bar">127.0.0.1:18081 显示</div>
+                <p>确认删除「接入指引」及其全部向量切片?</p>
+                <div class="row"><span class="ob">取消</span><span class="ob def">确定</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col">
+        <span class="tag next">建议</span>
+        <div class="frame">
+          <div class="m">
+            <div class="card">
+              <div class="actions"><span class="btn danger">删除</span><span class="btn">作废</span><span class="btn">移交负责人</span></div>
+              <p class="hint">点击后就地展开,与"归档项目"同一套写法:</p>
+              <div class="confirm">
+                <b>确认删除「接入指引」</b>
+                <p class="hint">它将从知识列表消失,已有的历史审查引用仍保留。输入文档标题以确认。</p>
+                <input value="接入指引" readonly />
+                <div class="actions"><span class="btn danger">确认删除</span><span class="btn">取消</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <hr class="rule" />
+
+  <section>
+    <div class="head">
+      <h2>改法与代价</h2>
+      <p>全部落在 tokens.css 与 base.css,外加三处模板层调整。契约、路由、文案、接口一律不动,89 项验收基线因此不用重跑。</p>
+    </div>
+    <div class="changes">
+      <div class="chg"><dt>第一步 · token</dt><dd><span class="to">新增字号阶梯(13 / 14 / 15 / 17px)、提高表面不透明度到 96%、阴影减到一层、面板圆角统一 0.875rem</span></dd></div>
+      <div class="chg"><dt>第二步 · 面板</dt><dd><span class="to">去掉面板级动画伪元素,装饰改为悬停与焦点时出现;元数据块换安静变体</span></dd></div>
+      <div class="chg"><dt>第三步 · 样板页</dt><dd><span class="to">登录、工作台、审查详情先落地,你确认后再铺到其余页面</span></dd></div>
+      <div class="chg"><dt>第四步 · 行为</dt><dd><span class="to">七处原生确认换成就地确认;不可操作的按钮给一句原因;通知渠道入口挪到显眼处</span></dd></div>
+      <div class="chg"><dt>每步验收</dt><dd><span class="to">lint · typecheck · 66 项测试 · build 全绿,并给你一张前后对照</span></dd></div>
+    </div>
+    <p class="hint">回滚成本:只改 token 与样式,任何一步都可以单独还原。</p>
+  </section>
+</div>
+
+</body>
+</html>

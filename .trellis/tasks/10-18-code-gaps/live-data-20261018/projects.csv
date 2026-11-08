@@ -1,0 +1,7 @@
+project,name,status,prs,reviews,requirements,findings,findings_review4
+1,mall-order-service,ACTIVE,5,27,7,98,27
+2,tenant-user-center,ACTIVE,5,30,5,111,38
+3,payment-settlement-service,ACTIVE,5,30,5,111,36
+4,halo-replay,ACTIVE,24,94,24,55,32
+5,lin,ACTIVE,0,0,1,0,0
+6,验收专用-guidance3-20261003T012550Z,ARCHIVED,0,0,1,0,0
