@@ -233,6 +233,11 @@ function previousHandling(finding: Finding): string | null {
   return `上一轮：${FINDING_STATUS_LABELS[earlier.status]}${assignee === null ? "" : ` · 认领人 ${assignee}`}`;
 }
 
+/** 判定列表只带 acKey；条文从本轮输入快照里取，避免只剩一列徽标看不出判的是什么。 */
+function acText(acKey: string): string | null {
+  return reviewContext.value?.acceptanceCriteria.find(item => item.acKey === acKey)?.text ?? null;
+}
+
 function memberName(userId: number | null): string | null {
   if (userId === null) {
     return null;
@@ -748,10 +753,12 @@ function eventsErrorFor(findingId: number): string | null {
                     <span class="badge badge-info">向量语义召回相似度 {{ evidence.score.toFixed(3) }}</span>
                   </div>
                   <p>{{ evidence.excerpt }}</p>
+                  <div class="knowledge-foot">
                   <small>来源 {{ evidence.sourceId }} · 文档 {{ evidence.documentId }}</small>
                   <RouterLink v-if="projectId !== null && publicDocumentIds.includes(evidence.documentId)" :to="knowledgeDocumentRoute(projectId, evidence.documentId)">阅读公共原文</RouterLink>
                   <span v-else-if="publicDocumentsError" class="field-hint">原文入口暂时无法加载：{{ publicDocumentsError }}</span>
                   <span v-else class="field-hint">公共原文不可用；可能已删除或为需求附件，以上历史证据仍保留。</span>
+                  </div>
                 </li>
               </ol>
             </section>
@@ -788,6 +795,7 @@ function eventsErrorFor(findingId: number): string | null {
             <span :class="['badge', `badge-${AC_VERDICT_TONES[verdict.verdict]}`]">
               {{ AC_VERDICT_LABELS[verdict.verdict] }}
             </span>
+            <span v-if="acText(verdict.acKey)" class="ac-verdict-text">{{ acText(verdict.acKey) }}</span>
           </li>
         </ul>
       </section>
@@ -1100,13 +1108,24 @@ function eventsErrorFor(findingId: number): string | null {
 }
 
 .knowledge-list {
-  max-height: 18rem;
+  max-height: 32rem;
   overflow: auto;
 }
 
+/* 知识摘录多是 Markdown 原文：保留换行，否则标题、列表会挤成一整段。 */
 .knowledge-list p {
   margin: var(--fp-space-2) 0;
   color: var(--fp-color-text-muted);
+  line-height: 1.7;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.knowledge-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--fp-space-3);
 }
 
 .knowledge-list small {
@@ -1206,10 +1225,22 @@ function eventsErrorFor(findingId: number): string | null {
 }
 
 .ac-verdict {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr);
+  align-items: start;
   gap: var(--fp-space-2);
+  padding: var(--fp-space-2) 0;
+  border-bottom: 0.0625rem solid var(--fp-color-border);
+}
+
+.ac-verdict-text {
+  color: var(--fp-color-text-muted);
+  line-height: 1.6;
+}
+
+.coverage-panel .path-list {
+  max-height: 20rem;
+  overflow: auto;
 }
 
 .subsection-title {

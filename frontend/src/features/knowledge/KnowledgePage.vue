@@ -365,7 +365,7 @@ watch(projectId, load, { immediate: true });
 </template>
 
 <style scoped>
-.document-content { max-height: 30rem; overflow: auto; white-space: pre-wrap; word-break: break-word; }
+.document-content { max-height: 70vh; overflow: auto; padding: var(--fp-space-5); font-family: inherit; font-size: 0.9375rem; line-height: 1.8; white-space: pre-wrap; word-break: break-word; }
 
 .knowledge-summary { display: grid; gap: var(--fp-space-4); grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .knowledge-summary .panel { display: grid; gap: var(--fp-space-1); margin-bottom: var(--fp-space-5); padding: var(--fp-space-4); }
