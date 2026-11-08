@@ -46,7 +46,7 @@
 | `POST /api/projects/{projectId}/requirements/{id}/quality` | LEADER | 200 | 需求质量检查 |
 | `GET /api/projects/{projectId}/requirements/{id}/review-activity` | 成员 | 200 | 派生评审活动 |
 | `GET /api/projects/{projectId}/review-activity` | 成员 | 200 | 全项目活动，按需求 id |
-| `GET /api/projects/{projectId}/requirements/{id}/coverage` | 成员 | 200 | AC 覆盖度 |
+| `GET /api/projects/{projectId}/requirements/{id}/coverage` | 成员 | 200 | AC 覆盖度；`lastReviewId` 为来源审查，`lastReviewStale` 表示其后 PR 已有新代码 |
 | `GET /api/projects/{projectId}/review-calibration` | 成员 | 200 | 置信度校准视图 |
 | `GET /api/projects/{projectId}/ai-usage` | 成员 | 200 | 按 model + useCase 的累计已记录尝试、成败、已上报 Token 与单次延迟分位 |
 | `GET /api/projects/{projectId}/knowledge/documents` | 成员 | 200 | 知识列表（元数据） |

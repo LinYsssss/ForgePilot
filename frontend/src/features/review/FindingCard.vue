@@ -39,6 +39,7 @@ const props = defineProps<{
   selected: boolean;
   actorNames: Record<string, string>;
   comment: string;
+  previousHandling?: string | null;
 }>();
 
 const emit = defineEmits<{
@@ -114,6 +115,7 @@ function updateComment(event: Event): void {
           <span :class="['badge', `badge-${FINDING_CONTINUITY_TONES[finding.continuity]}`]">
             {{ FINDING_CONTINUITY_LABELS[finding.continuity] }}
           </span>
+          <span v-if="previousHandling" class="badge badge-info finding-previous">{{ previousHandling }}</span>
         </dd>
       </div>
       <div>

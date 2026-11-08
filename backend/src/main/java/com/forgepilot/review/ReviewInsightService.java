@@ -84,7 +84,8 @@ public class ReviewInsightService {
         }
         return new RequirementCoverage(requirementId,
                 latest.map(LatestReview::revisionId).orElse(null),
-                latest.map(LatestReview::reviewId).orElse(null), rows);
+                latest.map(LatestReview::reviewId).orElse(null),
+                latest.map(LatestReview::stale).orElse(false), rows);
     }
 
     /**

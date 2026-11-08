@@ -224,6 +224,15 @@ const contextSnapshotText = computed(() => {
     : JSON.stringify(snapshot, null, 2);
 });
 
+/** 延续自上一轮的问题：上一轮的状态与认领人，仅作提示，不改变本轮状态。 */
+function previousHandling(finding: Finding): string | null {
+  if (finding.continuity !== "PERSISTING" || finding.carriedFromFindingId === null) return null;
+  const earlier = previousReview.value?.findings.find(item => item.id === finding.carriedFromFindingId);
+  if (earlier === undefined || earlier.status === "OPEN") return null;
+  const assignee = memberName(earlier.assigneeId);
+  return `上一轮：${FINDING_STATUS_LABELS[earlier.status]}${assignee === null ? "" : ` · 认领人 ${assignee}`}`;
+}
+
 function memberName(userId: number | null): string | null {
   if (userId === null) {
     return null;
@@ -307,7 +316,8 @@ async function load(): Promise<void> {
     history.value = loadedHistory;
     associationSelection.value = loadedPullRequest.requirementId;
     const previous = previousSummary.value;
-    if (previous?.decision === "REQUEST_CHANGES") {
+    // 上一轮详情既用于退回理由，也用于给延续的问题标出上一轮的处理状态。
+    if (previous?.status === "COMPLETED") {
       try {
         const loadedPrevious = await getReview(ids.projectId, previous.id);
         if (isCurrentPage(ids, token)) previousReview.value = loadedPrevious;
@@ -528,7 +538,7 @@ function eventsErrorFor(findingId: number): string | null {
         <p v-if="detail.decision !== 'PENDING'" class="decision-reason">{{ detail.decisionComment || "未填写理由" }}</p>
         <template v-if="previousSummary && projectId !== null">
           <RouterLink :to="reviewDetailRoute(projectId, previousSummary.id)">查看上一轮审查</RouterLink>
-          <p v-if="previousReview" class="decision-reason">上一轮退回理由：{{ previousReview.decisionComment || "未填写理由" }}</p>
+          <p v-if="previousReview?.decision === 'REQUEST_CHANGES'" class="decision-reason">上一轮退回理由：{{ previousReview.decisionComment || "未填写理由" }}</p>
           <p v-if="previousError" class="alert" role="alert">上一轮备注未能加载：{{ previousError }}</p>
         </template>
       </section>
@@ -849,6 +859,7 @@ function eventsErrorFor(findingId: number): string | null {
             v-for="finding in activeFindings"
             :key="finding.id"
             :finding="finding"
+            :previous-handling="previousHandling(finding)"
             :review-decision="detail.decision"
             :assignee-name="memberName(finding.assigneeId)"
             :roles="roles"

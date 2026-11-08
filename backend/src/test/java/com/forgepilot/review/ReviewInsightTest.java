@@ -185,6 +185,21 @@ class ReviewInsightTest extends PostgresTestBase {
                 .satisfies(row -> assertThat(row.verdict()).isEqualTo(AcVerdict.UNKNOWN));
     }
 
+    /** PR 推了新代码后，上一次审查的裁定仍展示，但必须标为已过期。 */
+    @Test
+    void coverageFromAReviewOfAnOlderHeadIsMarkedStale() {
+        Scenario scenario = new Scenario();
+        assertThat(scenario.coverage().lastReviewStale()).as("场景里的审查 head 与 PR 当前 head 不同").isTrue();
+
+        jdbc.update("update pull_request set head_sha = 'head-now', review_input_fingerprint = 'fp-head-now' "
+                + "where id = ?", scenario.pullRequestId);
+        jdbc.update("insert into review (project_id, pull_request_id, head_sha, review_input_fingerprint, "
+                + "requirement_id, requirement_revision_id, status, execution_attempt, summary_json) "
+                + "values (?, ?, 'head-now', 'fp-head-now', ?, ?, 'COMPLETED', 1, '{\"acVerdicts\":[]}')",
+                scenario.projectId, scenario.pullRequestId, scenario.requirementId, scenario.revisionId);
+        assertThat(scenario.coverage().lastReviewStale()).isFalse();
+    }
+
     /** 未决 finding 数只数当前那一次审查，不跨审查累加同一个被延续的问题。 */
     @Test
     void openFindingsAreCountedAgainstTheLatestReviewOnly() {

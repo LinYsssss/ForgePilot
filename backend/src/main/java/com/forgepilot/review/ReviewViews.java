@@ -170,9 +170,12 @@ final class ReviewViews {
      * <p>只看<strong>当前修订</strong>：旧修订上的裁定是针对另一套验收条件得出的，
      * 把它们混进来会让页面展示出一组「对不上号」的结论。因此发布新修订之后，
      * 覆盖度会回到「尚未审查」，直到针对新修订跑过一次审查为止。
+     *
+     * <p>{@code lastReviewStale} 为真表示那次审查之后 PR 已推了新代码（head 或 diff 变了），
+     * 裁定仍原样展示，但界面必须标为已过期，不能当作当前代码的结论。
      */
     record RequirementCoverage(long requirementId, Long requirementRevisionId, Long lastReviewId,
-            List<AcCoverage> criteria) {
+            boolean lastReviewStale, List<AcCoverage> criteria) {
     }
 
     /**

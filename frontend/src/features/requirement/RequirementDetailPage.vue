@@ -871,6 +871,10 @@ function saveReviewer(): Promise<void> {
           当前修订的每条验收条件在最近一次审查里的结论。发布新修订后会回到「尚未审查」——
           旧裁定针对的是另一套验收条件。
         </p>
+        <p v-if="coverage.lastReviewId !== null && projectId !== null" class="field-hint coverage-source">
+          来源：<RouterLink :to="reviewDetailRoute(projectId, coverage.lastReviewId)">审查 #{{ coverage.lastReviewId }}</RouterLink>
+          <span v-if="coverage.lastReviewStale" class="badge badge-warning">已过期：PR 之后有新代码，需重新审查</span>
+        </p>
         <ul class="coverage-list">
           <li v-for="row in coverage.criteria" :key="row.acKey" class="coverage-row">
             <span class="coverage-key">{{ row.acKey }}</span>

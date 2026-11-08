@@ -321,6 +321,8 @@ export interface RequirementCoverage {
   requirementId: number;
   requirementRevisionId: number | null;
   lastReviewId: number | null;
+  /** 那次审查之后 PR 已有新代码；裁定照旧展示但须标为已过期。 */
+  lastReviewStale: boolean;
   criteria: AcCoverage[];
 }
 

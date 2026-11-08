@@ -45,11 +45,16 @@ class ReviewInsightRepository {
      * 把对不上号的结论摆在一起。取 id 最大的那一行，因为审查行只增不改。
      */
     private static final String LATEST_COMPLETED_REVIEW = """
-            select rv.id as review_id, rv.requirement_revision_id as revision_id
+            select rv.id as review_id, rv.requirement_revision_id as revision_id,
+                   (rv.head_sha <> pr.head_sha
+                    or rv.review_input_fingerprint <> pr.review_input_fingerprint) as stale
               from review rv
               join requirement r
                 on r.project_id = rv.project_id
                and r.id = rv.requirement_id
+              join pull_request pr
+                on pr.project_id = rv.project_id
+               and pr.id = rv.pull_request_id
              where rv.project_id = ? and rv.requirement_id = ?
                and rv.status = 'COMPLETED'
                and rv.requirement_revision_id = r.current_revision_id
@@ -158,7 +163,7 @@ class ReviewInsightRepository {
     Optional<LatestReview> latestCompletedReview(long projectId, long requirementId) {
         return jdbc.query(LATEST_COMPLETED_REVIEW,
                 (rs, index) -> new LatestReview(rs.getLong("review_id"),
-                        rs.getObject("revision_id", Long.class)),
+                        rs.getObject("revision_id", Long.class), rs.getBoolean("stale")),
                 projectId, requirementId).stream().findFirst();
     }
 
@@ -232,7 +237,8 @@ class ReviewInsightRepository {
     record Criterion(long acId, String acKey, String text) {
     }
 
-    record LatestReview(long reviewId, Long revisionId) {
+    /** {@code stale}：PR 此后有了新 head 或新 diff，这次审查已不对应当前代码。 */
+    record LatestReview(long reviewId, Long revisionId, boolean stale) {
     }
 
     record Adjudication(long adjudicated, long confirmed) {
