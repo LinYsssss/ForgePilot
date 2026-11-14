@@ -142,7 +142,7 @@
 <main>
 
 <header class="mast">
-  <p class="eyebrow">Test Report · 2026-09-08</p>
+  <p class="eyebrow">Test Report · 2026-11-14</p>
   <h1>ForgePilot 测试报告</h1>
   <p class="standfirst">
     本报告汇总 ForgePilot 的测试策略、执行结果与<strong>覆盖不到的部分</strong>。
@@ -150,17 +150,17 @@
     读起来和「系统没有缺陷」一模一样，而那不是事实。
   </p>
   <div class="note amber">
-    <strong>当前结果与历史快照请分开阅读。</strong>
-    <p>下方数字和主体章节保留 2026-09-08 基线；后续失败、复验和发布记录按日期追加在报告末尾，不将旧快照改写成新结果。</p>
-    <p>近期自动化回归与 CI 已通过；实现建议区另完成了限定的 Chromium 桌面/390px 检查，但不代表全站或所有浏览器均已验收。模型内容目标仅部分达成，三例不能作为准确率或开发效率提升证据。最新部署见 <a href="../../README.md">项目入口</a>，可复算的建议验收小节见 <a href="../thesis/GUIDANCE-ACCEPTANCE.md">论文材料</a>。</p>
+    <strong>本报告的数字来自同一天的一次完整执行。</strong>
+    <p>后端、前端与评测工具的结果均取自 2026-11-14 在当前代码上的实际运行（命令见第 3 章），不是从旧文档抄来的。用例数逐提交变动，引用时请重新执行。</p>
+    <p>自动化通过不等于界面已验收，也不等于模型判断准确：前者见第 8 章，后者由评测体系与<a href="../thesis/README.md">论文材料</a>单独度量。</p>
   </div>
-  <dl class="docmeta" aria-label="2026年9月8日历史快照">
-    <div><dt>后端</dt><dd>379<small>／50 类</small></dd></div>
-    <div><dt>前端</dt><dd>44<small>／15 文件</small></dd></div>
-    <div><dt>评测</dt><dd>48<small>项历史检查</small></dd></div>
+  <dl class="docmeta" aria-label="2026年11月14日执行结果">
+    <div><dt>后端</dt><dd>447<small>／55 类</small></dd></div>
+    <div><dt>前端</dt><dd>72<small>／18 文件</small></dd></div>
+    <div><dt>评测</dt><dd>48<small>项检查</small></dd></div>
+    <div><dt>失败</dt><dd>0</dd></div>
     <div><dt>跳过</dt><dd>0</dd></div>
-    <div><dt>审查修复</dt><dd>3<small>处行为问题</small></dd></div>
-    <div><dt>人工验收</dt><dd>待执行</dd></div>
+    <div><dt>人工验收</dt><dd>部分完成</dd></div>
   </dl>
 </header>
 
@@ -174,9 +174,9 @@
     <tbody>
       <tr><td>后端业务代码</td><td class="n">9 个顶层包</td><td>单元 + 集成 + 真实数据库 + 架构约束</td></tr>
       <tr><td>前端应用</td><td class="n">6 入口 / 11 路由</td><td>组件挂载 + 路由 + 请求契约 + 纯函数</td></tr>
-      <tr><td>评测工具链</td><td class="n">9 个 Python 工具</td><td>unittest + 自洽性自测</td></tr>
-      <tr><td>数据库 schema</td><td class="n">21 表 / 14 迁移</td><td>真实 PostgreSQL + 迁移升级路径</td></tr>
-      <tr><td>部署</td><td class="n">3 容器</td><td>CI 两次空库启动通过；现有部署保留数据升级至 V14，健康与公网检查通过</td></tr>
+      <tr><td>评测工具链</td><td class="n">10 个 Python 文件</td><td>unittest + 自洽性自测</td></tr>
+      <tr><td>数据库 schema</td><td class="n">21 表 / 15 迁移</td><td>真实 PostgreSQL + 迁移升级路径</td></tr>
+      <tr><td>部署</td><td class="n">3 容器</td><td>CI 每次构建两次空库冷启动；线上演示栈保留数据滚动升级</td></tr>
     </tbody>
   </table></div>
 
@@ -221,7 +221,7 @@
     <p>
       理由：一个跑不起来的数据库测试<strong>必须让构建失败</strong>。
       这里的假绿会藏住模型依赖的约束行为——而那些行为恰恰是不能靠服务层保证的部分。
-      这条禁令由 lint 检查强制：<code>grep -rniE 'h2|DisabledIf|assumeTrue|@Disabled'</code> 必须无匹配。
+      这条禁令是工程规范里的固定收尾检查，不在 CI 里：<code>grep -rniE 'h2|disabledWithoutDocker|DisabledIf|assumeTrue|@Disabled' backend/pom.xml backend/src</code> 必须无匹配（本次执行无匹配）。
     </p>
   </div>
 
@@ -231,7 +231,7 @@
   <p>
     三个 <code>DELETE</code> 端点首次交付时只有服务层测试。<strong>路径接线与状态码没有任何证明</strong>——
     一个写错的路径会在服务层测试里全绿，到了前端就是 404。
-    补充的 <code>BatchOneApiTest.theThreeDeleteEndpointsAreWiredAndInvisibleAcrossProjects</code>
+    <code>BatchOneApiTest.theThreeDeleteEndpointsAreWiredAndInvisibleAcrossProjects</code>
     在真实 HTTP 之上断言路径、204 状态码与跨项目不可见性。
   </p>
   <p>项目归档端点按同一原则处理：<code>theArchiveEndpointsAreWiredAndReversible</code> 走真实 HTTP，同时断言归档<strong>什么都不删</strong>。</p>
@@ -266,9 +266,9 @@
       <tr><td>构建命令</td><td class="f">./mvnw -B -ntp verify</td></tr>
       <tr><td>数据库</td><td class="f">pgvector/pgvector:0.8.6-pg15-bookworm（Testcontainers）</td></tr>
       <tr><td>容器复用</td><td>整个测试运行共用<strong>一个</strong>容器，由 <code>PostgresTestBase</code> 持有</td></tr>
-      <tr><td>前端运行时</td><td class="f">Node 24 · vitest 4.1.11 · jsdom 30.0.1</td></tr>
+      <tr><td>前端运行时</td><td class="f">Node 24 · vitest 4.1.12 · jsdom 30.0.1</td></tr>
       <tr><td>评测运行时</td><td class="f">Python 3（仅标准库）</td></tr>
-      <tr><td>宿主机</td><td>4 GB 内存 + 4 GB swap，磁盘 45% 已用</td></tr>
+      <tr><td>宿主机</td><td>4 GB 内存 + 4 GB swap，与线上演示栈同机</td></tr>
     </tbody>
   </table></div>
   <div class="note">
@@ -284,46 +284,27 @@
 <!-- ══════ 4 ══════ -->
 <section id="s4">
   <h2><span class="hn">4</span>后端测试结果</h2>
-  <p><strong>提交 <code>746e40b</code> 的 CI 全套 379 个用例、50 个测试类通过，0 失败、0 错误、0 跳过，打包成功。</strong>结果直接取自 <a href="https://github.com/LinYsssss/ForgePilot/actions/runs/34202968598">2026-09-08 CI 运行</a>日志，后端于 08:10:53 UTC 报告 BUILD SUCCESS。</p>
-  <p>此前本地全套执行发现 1 处成员移除的旧审计文案断言；修正断言并增加 reviewer_id 置空检查后，该类 4 项复核及打包通过。随后代码审查补上开发指派目标角色校验，相关三个测试类共 <strong>24 项通过</strong>，完成于 07:06:12 UTC。页面另修复历史 Review 的负责人归属和重开 Finding 的分组，详见<a href="../../.trellis/tasks/archive/2026-09/09-07-review-collaboration/code-review.md">代码审查记录</a>。这些本地检查保留为修复过程记录，最新全套结果以本次 CI 为准。</p>
+  <p><strong>447 个用例、55 个测试类全部通过，0 失败、0 错误、0 跳过，打包成功。</strong>取自 2026-11-14 固定 JDK 21 容器入口下的一次完整 <code>./mvnw -B -ntp verify</code>，退出码 0，耗时 11 分 14 秒。同一提交（<code>370bfc4</code>）在 <a href="https://github.com/LinYsssss/ForgePilot/actions/runs/42506252157">CI</a> 上四个作业同样全绿。</p>
   <div class="note">
     <span class="label">这些数字是快照，不是不变量</span>
     <p>
-      本章计数来自 <strong>2026-09-08 CI</strong> 的 <code>./mvnw -B -ntp verify</code> 完整运行日志，379 项在同一次执行中全部通过。
-      本地全套、失败类复核及受影响类检查是更早的独立记录；未把旧目录中未执行的 CoreApiJourneyTest XML 计入结果。
-      用例数逐提交变动，因此它<strong>不由任何测试钉住</strong>——读到本文时若已过期，以实际执行结果为准。
-      结构性数字（9 个后端包、21 张表、14 条迁移、6 个一级导航、11 条产品路由）则不同：它们由测试断言，
+      用例数逐提交变动，<strong>不由任何测试钉住</strong>——读到本文时若已过期，以实际执行结果为准。
+      结构性数字（9 个后端包、21 张表、15 条迁移、6 个一级导航、11 条产品路由）则不同：它们由测试断言，
       改动会让套件变红。9.3 记录了把这两类数字混为一谈曾造成的后果。
     </p>
   </div>
 
-  <h3>2026-09-20 可信性修复补充验证</h3>
-  <p>
-    本轮没有覆盖 2026-09-08 CI 快照，而是在证据锚定与质量检查超预算语义修改后重新执行当前工作树。
-    四个直接相关测试类先通过 <strong>59 项</strong>定向测试；随后固定容器路径下的
-    <code>./mvnw -B -ntp verify</code> 完整运行通过 <strong>419 项</strong>，0 失败、0 错误、0 跳过，并成功打包。
-  </p>
-  <div class="tw"><table>
-    <thead><tr><th>本轮检查</th><th class="n">用例</th><th>结果与覆盖重点</th></tr></thead>
-    <tbody>
-      <tr><td class="f">ReviewOutputValidatorTest</td><td class="n">25</td><td>虚构/删除侧/跨 hunk 引用拒绝；唯一命中纠行；重复引用消歧；哈希边界</td></tr>
-      <tr><td class="f">ChangedFileBatcherTest</td><td class="n">12</td><td>AC excerpt 同样锚定到批次可见 diff，新侧不存在的引用被丢弃并告警</td></tr>
-      <tr><td class="f">ReviewPipelineIntegrationTest</td><td class="n">10</td><td>严格锚定后的候选仍通过真实 PostgreSQL 链路落库，分批与失败语义不变</td></tr>
-      <tr><td class="f">RequirementQualityTest</td><td class="n">12</td><td>超预算返回 <code>quality-2</code>、<code>ai=null</code>，provider 零调用且规则结果持久化</td></tr>
-    </tbody>
-  </table></div>
-
   <h3>4.1 按包分布</h3>
   <div class="tw"><table>
-    <thead><tr><th>包</th><th class="n">类</th><th class="n">用例</th><th>侧重</th></tr></thead>
+    <thead><tr><th>包</th><th>类</th><th>用例</th><th>侧重</th></tr></thead>
     <tbody>
-      <tr><td class="f">review</td><td class="n">10</td><td class="n">119</td><td>输出校验、围栏、Finding 血缘/生命周期、指定审查人决策、覆盖度与校准</td></tr>
-      <tr><td class="f">scm</td><td class="n">15</td><td class="n">101</td><td>webhook、权威读取、身份冻结、关联审计、双 Provider 按 SHA 合并与结果确认</td></tr>
-      <tr><td class="f">(根包)</td><td class="n">9</td><td class="n">54</td><td>数据库约束、架构规则、跨切片 HTTP 闭环、迁移升级路径</td></tr>
+      <tr><td class="f">review</td><td class="n">12</td><td class="n">138</td><td>输出校验与证据锚定、围栏、Finding 血缘/生命周期、人工决定、活动聚合、覆盖度/校准/AI 台账</td></tr>
+      <tr><td class="f">scm</td><td class="n">16</td><td class="n">120</td><td>webhook、权威读取与错误映射、身份冻结、关联审计、按 SHA 合并、关闭与远端状态</td></tr>
+      <tr><td class="f">(根包)</td><td class="n">9</td><td class="n">55</td><td>数据库约束、架构规则、跨切片 HTTP 闭环、迁移升级路径</td></tr>
+      <tr><td class="f">requirement</td><td class="n">5</td><td class="n">41</td><td>不可变修订、状态机、指派、质量检查与写回竞态、实现建议、并发排队</td></tr>
+      <tr><td class="f">ai</td><td class="n">3</td><td class="n">33</td><td>网关 HTTP 行为、超时与单次重试、429 退避、温度、Prompt 净化</td></tr>
+      <tr><td class="f">knowledge</td><td class="n">4</td><td class="n">25</td><td>异步入库与分批向量、失败重试、检索/原文隔离、输入防线、向量索引论据</td></tr>
       <tr><td class="f">notification</td><td class="n">2</td><td class="n">18</td><td>origin、加签、errcode、凭据保护、决定提交后发送与回滚不发送</td></tr>
-      <tr><td class="f">requirement</td><td class="n">4</td><td class="n">31</td><td>不可变修订、状态机、审查人指派、质量检查、实现建议</td></tr>
-      <tr><td class="f">ai</td><td class="n">3</td><td class="n">21</td><td>网关 HTTP 行为、超时与单次重试、Prompt 净化</td></tr>
-      <tr><td class="f">knowledge</td><td class="n">3</td><td class="n">18</td><td>入库、检索/原文隔离、向量索引论据</td></tr>
       <tr><td class="f">auth</td><td class="n">2</td><td class="n">10</td><td>认证契约、会话失效、端点暴露面</td></tr>
       <tr><td class="f">project</td><td class="n">1</td><td class="n">4</td><td>项目内授权</td></tr>
       <tr><td class="f">common</td><td class="n">1</td><td class="n">3</td><td>限流配额、窗口与键空间上限</td></tr>
@@ -332,21 +313,25 @@
 
   <h3>4.2 部分关键测试类</h3>
   <div class="tw"><table>
-    <thead><tr><th>测试类</th><th class="n">用例</th><th>它锁住什么</th></tr></thead>
+    <thead><tr><th>测试类</th><th>用例</th><th>它锁住什么</th></tr></thead>
     <tbody>
-      <tr><td class="f">ReviewOutputValidatorTest</td><td class="n">23</td><td>模型回答的每种畸形形态各自的处置；三个哈希<strong>不覆盖模型散文</strong>这条红线</td></tr>
-      <tr><td class="f">GitHubClientGuardTest</td><td class="n">20</td><td>权威字段缺席/为 null/为容器时必须大声失败，而非存下空串</td></tr>
-      <tr><td class="f">AiGatewayTest</td><td class="n">16</td><td>对<strong>真实 socket</strong> 的 HTTP 行为：超时、那唯一一次重试、失败分类</td></tr>
+      <tr><td class="f">GitHubClientGuardTest</td><td class="n">31</td><td>权威字段缺席/为 null/为容器时必须大声失败；限流、5xx、网络错误与其他 HTTP 错误各自的受控错误码</td></tr>
+      <tr><td class="f">AiGatewayTest</td><td class="n">28</td><td>对<strong>真实 socket</strong> 的 HTTP 行为：超时、那唯一一次重试、429 先退避、温度、失败分类、未配置模型时显式失败</td></tr>
+      <tr><td class="f">ReviewOutputValidatorTest</td><td class="n">27</td><td>模型回答的每种畸形形态各自的处置；虚构/删除侧/跨 hunk 引用拒绝、唯一命中纠行；三个哈希<strong>不覆盖模型散文</strong></td></tr>
+      <tr><td class="f">ReviewDecisionTest</td><td class="n">17</td><td>一次性裁定、head 闸门、指定审查人、必填理由、远端失败回滚、拒绝关闭与补记</td></tr>
       <tr><td class="f">DatabaseConstraintTest</td><td class="n">16</td><td>每条约束<strong>真的会拒绝</strong>，且拒绝时的 SQLState 是预期的那个</td></tr>
+      <tr><td class="f">ReviewActivityTest</td><td class="n">15</td><td>派生活动状态的六值/聚合规则、「当前有效」的判定、关闭与外部合并不进待审聚合</td></tr>
       <tr><td class="f">KnowledgeAndScmConstraintTest</td><td class="n">14</td><td>复合外键、MATCH SIMPLE 陷阱、向量维度防线</td></tr>
-      <tr><td class="f">ReviewEngineTest</td><td class="n">13</td><td>引擎整体行为；直接断言执行器 core size（并发上限 2）</td></tr>
-      <tr><td class="f">ReviewActivityTest</td><td class="n">13</td><td>派生活动状态的六值/聚合规则，以及「当前有效」的判定</td></tr>
-      <tr><td class="f">GitHubWebhookIngestionTest</td><td class="n">12</td><td>投递认证、乱序丢弃、事件同事务发布</td></tr>
-      <tr><td class="f">ReviewDecisionTest</td><td class="n">15</td><td>一次性裁定、head 闸门、指定审查人、生命周期、必填理由、远端失败回滚</td></tr>
-      <tr><td class="f">ScmMergeTest</td><td class="n">8</td><td>双 Provider 的 SHA 条件、合并响应、已合并重试及丢响应后的只读确认</td></tr>
-      <tr><td class="f">NotificationChannelTest</td><td class="n">10</td><td>处理人选择、独立事务可见提交、回滚无消息、投递失败不影响决定</td></tr>
+      <tr><td class="f">ReviewEngineTest</td><td class="n">14</td><td>引擎整体行为；直接断言执行器 core size（并发上限 2）</td></tr>
+      <tr><td class="f">RequirementQualityTest</td><td class="n">14</td><td>超预算返回 <code>quality-2</code>、<code>ai=null</code> 且 provider 零调用；检查期间正文或 AC 变了则 409 不写回</td></tr>
+      <tr><td class="f">GitHubWebhookIngestionTest</td><td class="n">13</td><td>投递认证、重放幂等、乱序丢弃、在途的 OPEN 快照不能覆盖已确认的关闭、事件同事务发布、监听失败整体回滚</td></tr>
+      <tr><td class="f">ScmMergeTest</td><td class="n">12</td><td>双 Provider 的 SHA 条件、合并/关闭响应、已合并重试及丢响应后的只读确认</td></tr>
+      <tr><td class="f">ReviewInsightTest</td><td class="n">12</td><td>校准区间与首次判定口径、覆盖度随修订重置并标出过期来源、AI 台账按模型与用途聚合且不跨项目</td></tr>
+      <tr><td class="f">ChangedFileBatcherTest</td><td class="n">12</td><td>分批预算；AC excerpt 同样锚定到批次可见 diff，新侧不存在的引用被丢弃并告警</td></tr>
       <tr><td class="f">RequirementLifecycleTest</td><td class="n">12</td><td>状态/修订、开发与审查人资格、非成员指派拒绝及失败不改变指派/状态</td></tr>
-      <tr><td class="f">RequirementQualityTest</td><td class="n">12</td><td>2026-09-08 当时的质量检查调用契约；DRAFT 编辑使结果失效</td></tr>
+      <tr><td class="f">ReviewPipelineIntegrationTest</td><td class="n">10</td><td>事件进 → 数据库行出的整条链路，只替换 provider；分批与失败语义</td></tr>
+      <tr><td class="f">NotificationChannelTest</td><td class="n">10</td><td>处理人选择、独立事务可见提交、回滚无消息、投递失败不影响决定</td></tr>
+      <tr><td class="f">RequirementConcurrencyTest</td><td class="n">7</td><td>排队中的写入不能复活已作废需求、不能改写刚冻结的修订、不能重复删除</td></tr>
     </tbody>
   </table></div>
 
@@ -388,26 +373,26 @@
 <!-- ══════ 5 ══════ -->
 <section id="s5">
   <h2><span class="hn">5</span>前端测试结果</h2>
-  <p><strong>2026-09-08 审查修复后：44 个用例，15 个测试文件，全部通过。</strong>本次测试开始于 07:03:30 UTC，耗时 44.24 秒。另有 lint（策略检查）、typecheck（<code>vue-tsc</code>）与 <code>vite build</code> 三道门同时通过。</p>
-  <p><strong>2026-09-20 补充：</strong>当前工作树的 lint、typecheck、production build 均通过；Vitest 为 <strong>63 项 / 18 个文件</strong>，全部通过。构建产物为 JS 263.09 kB、CSS 69.00 kB（gzip 85.94 / 12.26 kB）。这组数字不回写上面的历史快照。</p>
-  <p><strong>2026-09-25 补充：</strong>lint、typecheck、production build 均通过；Vitest 仍为 <strong>63 项 / 18 个文件</strong>，全部通过。构建产物为 JS 264.43 kB、CSS 69.07 kB。</p>
-
+  <p><strong>72 个用例，18 个测试文件，全部通过。</strong>另有 lint（策略检查）、typecheck（<code>vue-tsc</code>）与 <code>vite build</code> 三道门同时通过；构建产物为 JS 284.25 kB、CSS 75.35 kB（gzip 93.08 / 13.14 kB）。运行中 jsdom 提示 <code>scrollTo</code> 未实现，这不是失败，也不证明真实浏览器已验收。</p>
   <div class="tw"><table>
-    <thead><tr><th>测试文件</th><th class="n">用例</th><th>它锁住什么</th></tr></thead>
+    <thead><tr><th>测试文件</th><th>用例</th><th>它锁住什么</th></tr></thead>
     <tbody>
+      <tr><td class="f">reviewNavigation.spec.ts</td><td class="n">16</td><td>审查页的操作属于发起它的那次访问：重访、换项目或卸载后旧响应作废；拒绝关闭要求理由与二次确认；运行中审查刷新到终态时不清空表单</td></tr>
+      <tr><td class="f">requirement.spec.ts</td><td class="n">10</td><td>需求修订与 <code>acKey</code> 保持、发布后重读派生面板、未保存内容不生成建议、晚到的质量报告与建议被丢弃、复制与下载同文</td></tr>
       <tr><td class="f">http.spec.ts</td><td class="n">6</td><td>统一请求边界：CSRF 令牌注入、错误体解析、401 处理、无 body 状态码</td></tr>
       <tr><td class="f">routes.spec.ts</td><td class="n">5</td><td><strong>导航与路由形态</strong>：六个一级入口、11 条路由、登录守卫、旧路径重定向</td></tr>
+      <tr><td class="f">workspace.spec.ts</td><td class="n">5</td><td>默认项目规则<strong>只</strong>在 URL 缺 query 时触发；AI 台账按模型分组而不把分组算成不同用途</td></tr>
+      <tr><td class="f">journey.spec.ts</td><td class="n">3</td><td>真实 App 与路由上的三角色闭环：需求 → PR → Finding → 退回 → 修复 → 通过 → DONE；语义地标与带标签控件；凭据只写</td></tr>
       <tr><td class="f">session.spec.ts</td><td class="n">3</td><td>会话引导与清理</td></tr>
       <tr><td class="f">scm.spec.ts</td><td class="n">3</td><td>Token 创建页路径推导（自建实例地址变化时入口跟随）</td></tr>
       <tr><td class="f">reviewContext.spec.ts</td><td class="n">3</td><td>对不可变 Review 上下文的<strong>收窄在归属处发生</strong>，视图不做类型断言</td></tr>
       <tr><td class="f">requirementRowActions.spec.ts</td><td class="n">3</td><td>需求行内操作<strong>不放宽</strong>后端门槛：终态无编辑入口、删除仅对已作废</td></tr>
-      <tr><td class="f">requirement.spec.ts</td><td class="n">4</td><td>需求修订、附件/导出、派生阶段只影响开发中需求</td></tr>
       <tr><td class="f">motion.spec.ts</td><td class="n">3</td><td>减动效模式停止运动但不改变内容</td></tr>
-      <tr><td class="f">journey.spec.ts</td><td class="n">3</td><td>三角色指派/权限、空理由拦截、退回与新轮次、知识阅读及历史摘录；重开项回主列表，PR 解除关联后保留历史 Review 的负责人归属</td></tr>
       <tr><td class="f">cyberParticles.spec.ts</td><td class="n">3</td><td>粒子模拟纯逻辑（与渲染分离故可测）</td></tr>
-      <tr><td class="f">workspace.spec.ts</td><td class="n">2</td><td>默认项目规则<strong>只</strong>在 URL 缺 query 时触发——两个方向写错都有真实后果</td></tr>
+      <tr><td class="f">polling.spec.ts</td><td class="n">2</td><td>有限轮询：前一次请求返回后才排下一次、到终态停止、连续失败有界、可手动重试、卸载即取消</td></tr>
       <tr><td class="f">projectArchive.spec.ts</td><td class="n">2</td><td>归档闸门：前缀、大小写、首尾空格<strong>四种退化方向</strong>全部保持禁用</td></tr>
-      <tr><td class="f">diff.spec.ts</td><td class="n">2</td><td>unified patch 转展示行与<strong>真实</strong> hunk 行号</td></tr>
+      <tr><td class="f">diff.spec.ts</td><td class="n">2</td><td>unified patch 转展示行与<strong>真实 hunk 行号</strong></td></tr>
+      <tr><td class="f">knowledgePolling.spec.ts</td><td class="n">1</td><td>知识页只在存在待处理文档时刷新，直到其就绪</td></tr>
       <tr><td class="f">reviewApi.spec.ts</td><td class="n">1</td><td>Review 请求契约</td></tr>
       <tr><td class="f">calibration.spec.ts</td><td class="n">1</td><td>模型置信度校准视图的请求与响应契约</td></tr>
     </tbody>
@@ -418,7 +403,7 @@
   <ul>
     <li>无 tab、无行尾空格。</li>
     <li><strong>原始色值只允许出现在 <code>tokens.css</code></strong>，其他文件必须用设计令牌。</li>
-    <li><strong>禁止依赖清单</strong>：状态管理库、UI 组件库、HTTP 客户端库、图表库共 13 个包名。</li>
+    <li><strong>禁止依赖清单</strong>：HTTP 客户端、状态管理、CSS 框架、UI 组件库与图表库共 14 个包名。</li>
     <li>扫描范围含 <code>src/</code>、<code>tests/</code> 与根级配置文件。</li>
   </ul>
 
@@ -438,7 +423,7 @@
 <!-- ══════ 6 ══════ -->
 <section id="s6">
   <h2><span class="hn">6</span>评测工具测试</h2>
-  <p>以下为 <strong>48 项检查通过的历史记录</strong>。2026-09-08 本轮未重跑评测工具或正式评测，冻结、holdout 台账和原始输出未改动。</p>
+  <p><strong>48 项检查全部通过</strong>（2026-11-14 执行）。这些检查只验证工具与评分口径，不调用模型；正式评测的冻结、holdout 台账和原始输出未改动、未重跑。</p>
   <div class="tw"><table>
     <thead><tr><th>套件</th><th class="n">检查</th><th>内容</th></tr></thead>
     <tbody>
@@ -486,32 +471,27 @@ python3 evaluation/tools/postfreeze_provider_correction.py verify</code></pre>
 <!-- ══════ 7 ══════ -->
 <section id="s7">
   <h2><span class="hn">7</span>部署验证</h2>
-  <p><strong>提交 <code>746e40b</code> 的 CI 两次全新卷冷启动均通过。</strong>两个独立项目分别于 08:12:04 和 08:12:28 UTC 报告成功，覆盖 V1–V14、21 张业务表及以下脚本契约：</p>
+  <p><strong>CI 每次构建都做两次全新卷冷启动。</strong>两个独立的 Compose 项目各自从空卷起栈，<code>scripts/phase1-compose-smoke.sh</code> 断言以下契约后再清理自己创建的项目与卷；提交 <code>370bfc4</code> 的 <a href="https://github.com/LinYsssss/ForgePilot/actions/runs/42506252157">CI</a> 上两次均通过：</p>
   <ul>
     <li>三个健康检查全部通过，反向代理可达（后端 <code>/actuator/health</code>，经前端代理 <code>/api/actuator/health</code>）。</li>
     <li>PostgreSQL 版本 ≥ 15，<code>vector</code> 扩展已安装，距离运算返回预期值。</li>
-    <li>Flyway <strong>十四条</strong>版本化迁移全部成功，最高版本 V14 成功。</li>
+    <li>Flyway <strong>十五条</strong>版本化迁移全部成功，最高版本 V15 成功。</li>
     <li><code>public</code> 中<strong>恰好</strong>这二十一张业务表，按 C 排序逐字符比对（不依赖容器 locale）。</li>
   </ul>
-  <p><strong>现有 <code>fp-demo</code> 也已完成保留数据的部署升级。</strong>备份校验后只更新 backend/frontend，原 PostgreSQL 容器和 <code>fp-demo_postgres-data</code> 卷保留；V14 于 08:22:23 UTC 应用。升级前后账号/项目/需求/审查数均为 11/3/2/1，三个容器健康，启动日志无 ERROR。08:52 UTC 使用 curl 核对本机与 <a href="https://yasinlin.com/">公网首页</a>、健康接口均为 HTTP 200，JS/CSS 的 SHA-256 与运行容器一致。镜像、备份和命令见<a href="../../.trellis/tasks/archive/2026-09/09-07-review-collaboration/deployment.md">部署记录</a>。</p>
+  <p><strong>线上演示栈 <code>fp-demo</code> 以保留数据的方式升级。</strong>每次发布只重建 backend 与 frontend 镜像，PostgreSQL 容器与数据卷不动，迁移由后端启动时应用。2026-11-14 只读核对：三个容器均 healthy，<code>flyway_schema_history</code> 中 15 条版本化迁移全部成功、最高 V15，<code>public</code> 下 21 张业务表；健康接口在本机经前端代理与<a href="https://yasinlin.com/">公网</a>均返回 <code>UP</code>。逐次发布的镜像身份、备份与核对命令记录在对应的 Trellis 任务里，不在本报告重复。</p>
 
   <div class="note red">
-    <span class="label">历史缺陷：冷启动断言未随迁移更新</span>
+    <span class="label">冷启动脚本的期望值不被后端测试覆盖</span>
     <p>
-      该脚本此前仍断言「<strong>8 条迁移、到 V8</strong>」与一份<strong>缺少 <code>project_deletion_record</code> 的 19 表清单</strong>——
-      V9 与 V10 落地时都漏了同步更新。
+      脚本自己断言迁移条数、最高版本与完整的表清单；<code>FoundationDatabaseTest</code> 里另有一份表清单，
+      <code>mvnw verify</code> 只证明后者——<strong>后端测试证明不了一个 shell 脚本的期望值</strong>。
+      V9 与 V10 落地时脚本就漏了同步，停在「8 条迁移、19 张表」：复现指南指定的冷启动证明与 CI 的这项作业
+      对当时的 schema 必然失败，而后端套件一直全绿。
     </p>
     <p>
-      后果：它是复现指南指定的冷启动证明，也是 CI 每次构建运行两次的作业，
-      <strong>对当前 schema 必然失败</strong>。
-      而 <code>FoundationDatabaseTest</code> 里的表清单是正确的，所以 <code>mvnw verify</code> 一直全绿——
-      <strong>后端测试证明不了一个 shell 脚本的期望值</strong>。
-    </p>
-    <p>
-      其后随通知渠道的 V11–V13 迁移更新；2026-09-08 再同步到 14 条、V14 成功，21 个表的表名字符串不变。
-      由此形成的规则：<strong>新增建表迁移必须同步三处</strong>——
-      <code>FoundationDatabaseTest.EXPECTED_TABLES</code>、脚本的 <code>expected_tables</code>、
-      以及同一脚本内的迁移计数与版本成功检查。
+      由此形成的规则：<strong>每新增一条迁移</strong>，同步脚本里的迁移计数与最高版本检查；
+      <strong>迁移新建了表</strong>，再同步 <code>FoundationDatabaseTest.EXPECTED_TABLES</code> 与脚本的 <code>expected_tables</code>。
+      这条规则目前靠规范约束，没有机制保障。
     </p>
   </div>
 </section>
@@ -534,18 +514,21 @@ python3 evaluation/tools/postfreeze_provider_correction.py verify</code></pre>
       <tr><td>浏览器控制台与网络</td><td>需要真实浏览器开发者工具</td><td>确认无新 error、无被静默吞掉的 4xx/5xx</td></tr>
     </tbody>
   </table></div>
-  <p>完整清单为 <code>frontend/MANUAL-ACCEPTANCE.md</code>，共七个章节；本轮补充了指定审查人、退回/合并、轮次与知识阅读，真实浏览器结果尚待记录。</p>
+  <p>完整清单为 <code>frontend/MANUAL-ACCEPTANCE.md</code>，共七个章节。</p>
 
-  <h3>8.2 当前尚未完成的人工验收项</h3>
-  <div class="note amber">
-    <span class="label">两批待执行</span>
-    <p>
-      <strong>三档宽度与菜单键盘行为</strong>——前端交互整改的两条验收项。
-    </p>
-    <p>
-      <strong>评审协作的真实环境验收</strong>——指定审查人、原分支退回修复与新轮次、双 Provider 实际合并、钉钉实际投递、知识阅读下载。组件/HTTP stub 验证已完成，真实浏览器和外部服务操作未执行。
-    </p>
-  </div>
+  <h3>8.2 人工验收做到了哪一步</h3>
+  <p>以下是有记录可查的人工与线上验证，以及仍然空着的部分。它们各自对应当时的版本，不能当作对当前每一处界面的验收。</p>
+  <div class="tw"><table>
+    <thead><tr><th>范围</th><th>已有的证据</th><th>没有覆盖的</th></tr></thead>
+    <tbody>
+      <tr><td>布局与动效</td><td>2026-10-29：10 个页面 × 1440/768/390 三档宽度 × 两种动效偏好共 60 组，另加当轮改动的三页 18 组，均无整页横向溢出或页面报错</td><td>以审查者身份只读检查，未覆盖其他角色的写操作；此后的界面改动（通知编辑区窄屏布局、审查页排版与全站字号）没有重做这组检查</td></tr>
+      <tr><td>实现建议区</td><td>2026-10-03：Chromium 桌面与 390px 下的未保存禁用、生成状态、来源折叠、剪贴板与下载一致、保存后旧建议失效</td><td>其他浏览器与其余页面</td></tr>
+      <tr><td>真实 GitHub 链路</td><td>15 个演示仓 PR 的部署后复验、24 个第三方真实 PR 的重放、一次经本系统发起的真实合并（数据与复算脚本见<a href="../thesis/README.md">论文材料</a>）</td><td>经本系统发起的真实关闭；成员用自己的 SCM 身份完成「本人 PR」权限闭环</td></tr>
+      <tr><td>真实 GitLab</td><td>无</td><td>全部——webhook、权威读取、合并与关闭都只在回环桩服务上验证过</td></tr>
+      <tr><td>钉钉投递</td><td>无</td><td>全部——加签、发送与失败处理只对桩服务验证过</td></tr>
+      <tr><td>键盘可达性</td><td>无留存记录</td><td>Tab 顺序、焦点环与 Escape 回焦的人工走查</td></tr>
+    </tbody>
+  </table></div>
 
   <h3>8.3 有意不做的测试</h3>
   <p>以下测试<strong>刻意没有写</strong>，理由记录在此以免后续被当作缺口补上：</p>
@@ -556,17 +539,17 @@ python3 evaluation/tools/postfreeze_provider_correction.py verify</code></pre>
     <li><strong>不测模型输出质量</strong>——那属于评测体系，用固定语料与确定性评分器度量，不属于单元测试。</li>
   </ul>
 
-  <h3>8.4 已知限制：Finding 行号连续性</h3>
+  <h3>8.4 已知限制：Finding 身份的连续性</h3>
   <div class="note amber">
     <span class="label">状态：已知 · 暂不改规则</span>
     <p>
-      <code>finding_key</code> 当前包含 patch 新侧行号。无关插入，甚至空提交导致行号整体移动时，
-      即使 <code>evidence_hash</code> 与代码证据没有变化，同一 Finding 也可能被记录为 <code>NEW</code>，
-      从而无法继承上一轮的 <code>SUPPRESSED</code> 状态，削弱 P10 的自动抑制效果。
+      <code>finding_key</code> 包含 patch 新侧行号与模型给出的类别，<code>evidence_hash</code> 基于逐字引用。
+      无关插入造成行号整体移动、同一问题换了类别标签、或引用少了行首缩进时，
+      同一 Finding 都可能被记录为 <code>NEW</code>，从而无法继承上一轮的 <code>SUPPRESSED</code>，削弱 P10 的自动抑制效果。
+      自动化测试钉住的是规则本身（同输入得同 key、哈希不覆盖模型散文），<strong>钉不住模型两轮之间是否给出同样的行号与类别</strong>。
     </p>
     <p>
-      彻底修正需要调整跨 Review 的 key/hash 规则并处理历史数据，超出本次低成本改动范围；
-      因此这里将它作为已知限制明确记录，不把它误写成已解决的连续性保证。
+      彻底修正需要调整跨 Review 的 key/hash 规则并处理历史数据；当前作为已知限制记录，不把它写成已解决的连续性保证。
     </p>
   </div>
 </section>
@@ -574,114 +557,63 @@ python3 evaluation/tools/postfreeze_provider_correction.py verify</code></pre>
 <!-- ══════ 9 ══════ -->
 <section id="s9">
   <h2><span class="hn">9</span>已发现的缺陷</h2>
+  <p>本章只收<strong>测试或审读实际抓到</strong>的问题，以及它们留下的规则。五条均已修复；仍然存在的限制在第 8 章。</p>
 
-  <h3>9.1 已修复：测试套件的类执行顺序依赖</h3>
+  <h3>9.1 已修复：测试套件依赖类的执行顺序</h3>
   <div class="note amber">
-    <span class="label">状态：已确认 · 根因已定位 · 已修复（测试侧）</span>
-    <p><strong>现象</strong></p>
+    <span class="label">状态：根因已定位 · 已修复（只动测试侧）</span>
     <p>
-      仅重命名 <code>BatchOneApiTest</code> 类名与注释（<strong>diff 中没有任何代码行变化</strong>），
-      导致该类 4 个用例在完整构建中失败，全部倒在同一个辅助方法上，
-      断言为 <code>GET /api/auth/me must issue the XSRF-TOKEN cookie</code>，实际取得的 cookie 为 null。
-    </p>
-    <p><strong>决定性证据</strong></p>
-    <ul>
-      <li>单独运行该类：<strong>5/5 全绿</strong>。</li>
-      <li>完整构建：<strong>4/5 失败</strong>。</li>
-      <li><code>SecurityConfig</code> 与该测试类的 diff 均为<strong>纯注释</strong>。</li>
-    </ul>
-    <p><strong>分析（2026-10-17 定位）</strong></p>
-    <p>
-      污染源不在应用代码，而在测试装配：<code>SecurityMockMvcRequestPostProcessors.csrf()</code>
-      （即各测试类里的 <code>.with(csrf())</code>）在装配请求时，经
-      <code>WebTestUtils.setCsrfTokenRepository</code> 把过滤器链里 <code>CsrfFilter</code> 的
-      <code>CsrfTokenRepository</code> 换成 <code>TestCsrfTokenRepository</code>，后者包着一个
-      <code>HttpSessionCsrfTokenRepository</code>。这个替身覆写了 <code>generateToken</code>、
-      <code>saveToken</code> 与 <code>loadToken</code>，<strong>唯独没有覆写
-      <code>loadDeferredToken</code></strong>，于是 token 落进 session，而不是写回响应 cookie。
+      <strong>现象。</strong>仅重命名 <code>BatchOneApiTest</code>（<strong>diff 中没有任何代码行变化</strong>），
+      该类就在完整构建中失败：断言 <code>GET /api/auth/me must issue the XSRF-TOKEN cookie</code>，实际取得的 cookie 为 null；单独运行该类全绿。
     </p>
     <p>
-      该替换作用在<strong>共享的过滤器链</strong>上，并且请求结束后仍留在原处：
-      同一 JVM 里只要有一个类用过 <code>.with(csrf())</code>，其后所有类——包括匿名
-      <code>GET /api/auth/me</code> 的 <code>XSRF-TOKEN</code> 下发——都改用 session 仓库。
-      谁先谁后由测试类的文件系统顺序决定，所以仅重命名 <code>BatchOneApiTest</code> 就换来了失败。
+      <strong>根因。</strong>污染源不在应用代码，而在测试装配：<code>spring-security-test</code> 的 <code>.with(csrf())</code>
+      在装配请求时，把<strong>共享过滤器链</strong>里 <code>CsrfFilter</code> 的 <code>CsrfTokenRepository</code>
+      换成一个包着 <code>HttpSessionCsrfTokenRepository</code> 的测试替身，token 因此落进 session 而不写回响应 cookie。
+      替换在请求结束后仍留在原处：同一 JVM 里只要有一个类用过它，其后所有类都改走 session 仓库。
+      谁先谁后由测试类的文件名顺序决定，所以一次重命名就足以换来失败。
     </p>
     <p>
-      这也解释了 cookie 平时为什么会出现：<code>GET</code> 不在 <code>CsrfFilter</code> 的保护匹配器内，
-      框架本身不解析延迟 token；真正触发解析的是
-      <code>CsrfTokenRequestAttributeHandler.handle()</code> 里那次
-      <code>getParameterName()</code> 调用，它顺带把 token 生成并保存了一次。
-    </p>
-    <p><strong>处置</strong></p>
-    <p>
-      已回退重命名，保留历史类名，套件恢复 333/333。
-      由此形成的规则：<code>phase1-quick.json</code>、<code>phase1-compose-smoke.sh</code>、
-      <code>BatchOneApiTest</code> 这类<strong>历史名字一律保留</strong>，只清理散文。
-    </p>
-    <p><strong>2026-10-17 的定位与修复</strong></p>
-    <p>
-      复现：在仓库外的副本里把该类重命名为 <code>CoreApiJourneyTest</code>，以固定容器入口跑
-      <code>-Dtest='com.forgepilot.review.*Test,CoreApiJourneyTest'</code>，稳定失败
-      <strong>139 项中的 6 项</strong>；单独跑该类则 7/7 通过。副本内加临时探针后，
-      运行期链内容显示 <code>CsrfFilter</code> 持有的 repository 已是
-      <code>TestCsrfTokenRepository</code>（启动期装配的是应用自己的
-      <code>CookieCsrfTokenRepository</code>），失败请求在 <code>CsrfFilter</code> 之后只留下延迟 token 与
-      <code>SupplierCsrfToken</code> 属性、没有 <code>Set-Cookie</code>——与上述机制逐条吻合。
+      <strong>修复。</strong>6 个测试类共 14 处 <code>.with(csrf())</code> 改走应用真实的双提交路径
+      （<code>PostgresTestBase.spaCsrf()</code>：cookie 与 header 回显同一个值），不再有任何全局副作用。
+      生产代码未改——<code>SecurityConfig</code> 的 SPA 接线本身是对的。在仓库外的副本里把该类改名后，
+      原先稳定失败的那条命令 139/139 通过。
     </p>
     <p>
-      修复只动测试侧：6 个测试类共 14 处 <code>.with(csrf())</code> 改走应用真实的双提交路径
-      （<code>PostgresTestBase.spaCsrf()</code>：cookie 与 header 回显同一个值），不再引入任何全局副作用。
-      生产代码未改：<code>SecurityConfig</code> 的 SPA 接线本身是对的，问题出在测试替身。
-      修复后同一条命令 <strong>139/139 全绿</strong>，且重命名后的类仍排在末尾。
-    </p>
-
-    <p><strong>影响与规则</strong></p>
-    <p>
-      套件不再依赖类的执行顺序。仍留一条诊断线索：若再出现「单类运行绿、全量运行红」，
-      先查是否有测试类用了 <code>SecurityMockMvcRequestPostProcessors.csrf()</code>，
-      <strong>不要去改 <code>SecurityConfig</code></strong>。
-    </p>
-    <p><strong>2026-08-29 的复现尝试</strong></p>
-    <p>
-      两次尝试<strong>均未复现</strong>：以 <code>-Dsurefire.runOrder=reversealphabetical</code>
-      跑完整套件全绿；当日新增三个测试类（<code>ReviewInsightTest</code>、
-      <code>DingTalkSenderTest</code>、<code>NotificationChannelTest</code>）之后套件仍然全绿——
-      而上面那条「影响」正预测新增测试类可能触发它。
-    </p>
-    <p>
-      三个数据点说明这个缺陷比当时判断的更窄，但<strong>根因依然未定位</strong>。
-      复现不了就不能宣布它消失，也正因如此<strong>没有</strong>为它加任何「以防万一」的处置：
-      给一个复现不了的问题贴 <code>@DirtiesContext</code>，只会多付一个 Spring 上下文，
-      并让下一个人误以为它已被解决。
-    </p>
-    <p>
-      2026-10-17 补记：当时的两次尝试与今天的机制相符——它们都没有把「用过
-      <code>.with(csrf())</code> 的类」排在 <code>BatchOneApiTest</code> 之前，因此没触发。
-      「不加以防万一的处置」这个判断事后看是对的。
+      <strong>留下的线索。</strong>若再出现「单类运行绿、全量运行红」，先查是否有测试类用了
+      <code>SecurityMockMvcRequestPostProcessors.csrf()</code>，不要去改 <code>SecurityConfig</code>。
+      根因定位之前，这个问题有一个半月复现不了；那段时间<strong>没有</strong>为它加 <code>@DirtiesContext</code> 之类的兜底——
+      给一个复现不了的问题贴处置，只会多付一个 Spring 上下文，并让下一个人误以为它已被解决。
     </p>
   </div>
 
-  <h3>9.2 已修复：冷启动脚本与当前 schema 不一致</h3>
-  <p>详见第 7 章。根因是「加表需同步三处」缺少机制保障，其中两处在 V9/V10 落地时被遗漏，且后端测试按构造无法发现。</p>
+  <h3>9.2 已修复：三处由全量审读发现的竞态</h3>
+  <p>这三处都不是测试抓到的——既有测试各自覆盖了相邻的情形，恰好漏掉中间的窗口。它们先在隔离环境里复现，再修复，复现用例改写成回归断言，并确认撤回修复后断言会失败。</p>
+  <div class="tw"><table>
+    <thead><tr><th>问题</th><th>修复</th><th>回归断言所在</th></tr></thead>
+    <tbody>
+      <tr><td>质量检查进行中需求被编辑，旧结果仍写回新内容</td><td>写回在需求行锁内比较正文与 AC，不一致返回 409 且什么都不写</td><td class="f">RequirementQualityTest</td></tr>
+      <tr><td>草稿保存后，晚到的旧质量报告重新显示在页面上</td><td>质量请求带序号，保存、发布与卸载时作废在途响应</td><td class="f">requirement.spec.ts</td></tr>
+      <tr><td>首个 PR 拉取期间仓库身份被改，旧仓库的快照挂到新身份下</td><td>入库时比较拉取所用的稳定身份，不同则按「查不到该仓库」拒绝</td><td class="f">ScmIdentityFreezeConcurrencyTest</td></tr>
+    </tbody>
+  </table></div>
+  <p>同一轮还修了一处页面内状态问题：发布新修订后覆盖度与评审活动不重读，继续显示旧裁定（<code>requirement.spec.ts</code>）。</p>
 
-  <h3>9.3 已修复：文档中的过期数字</h3>
+  <h3>9.3 已修复：冷启动脚本与 schema 不一致</h3>
+  <p>详见第 7 章。根因是「迁移与脚本期望值需同步」缺少机制保障，且后端测试按构造无法发现。</p>
+
+  <h3>9.4 已修复：文档中的过期数字</h3>
   <p>
-    七个文件（含 <code>README.md</code>、<code>CLAUDE.md</code>、<code>AGENTS.md</code> 与三个子项目 README）
-    仍写着「332 个测试 / 37 个测试」，而当时实际为 333 / 42；产品文档中也<strong>一处未提及</strong>已交付的项目归档能力。
-    当轮已修正。<strong>但这一类缺陷会复发，而且确实复发了</strong>：本报告之后新增限流（338）、
-    覆盖度与校准（348）、通知（358 → 364），每一次这些手写数字都再度落后，
-    <strong>包括本报告自己</strong>——它在 2026-08-29 被发现仍写着 333。
-  </p>
-  <p>
-    当日的处置不是再改一次数，而是把两类数字分开：<strong>结构性数字</strong>
-    （包数、表数、迁移数、导航数、路由数）由测试断言，改动即变红，可以放心写死；
-    <strong>用例数</strong>不被任何东西钉住，因此第 4 章现在明确标注它是某一次运行的快照，
-    并注明日期与产生它的命令。一个标着日期的数字过期时是诚实的，一个不标日期的数字过期时是错的。
+    多份文档曾手写测试用例数，而用例数几乎每次提交都在变：每修正一次，下一次提交又让它落后，
+    <strong>包括本报告自己</strong>。处置不是再改一次数，而是把两类数字分开：<strong>结构性数字</strong>
+    （包数、表数、迁移数、导航数、路由数）由测试断言，改动即变红，可以写死；
+    <strong>用例数</strong>不被任何东西钉住，因此只出现在本报告里，并标明取数日期与产生它的命令。
+    一个标着日期的数字过期时是诚实的，一个不标日期的数字过期时是错的。
   </p>
 
-  <h3>9.4 测试执行过程中暴露的一个方法学问题</h3>
-  <div class="note amber">
-    <span class="label">把构建输出管进 tail 会掩盖真实的失败</span>
+  <h3>9.5 测试执行过程中暴露的一个方法学问题</h3>
+  <div class="note red">
+    <span class="label">把构建输出管进 <code>tail</code> 会掩盖真实的失败</span>
     <p>
       早期执行曾两次将 Maven 输出通过管道传给 <code>tail</code>。管道的退出码来自<strong>最后一个命令</strong>，
       因此 <code>tail</code> 的 0 掩盖了 Maven 的 <code>BUILD FAILURE</code>，一次真实失败被误读为通过。
@@ -701,29 +633,17 @@ python3 evaluation/tools/postfreeze_provider_correction.py verify</code></pre>
   <div class="tw"><table>
     <thead><tr><th>门</th><th>结果</th><th>规模</th></tr></thead>
     <tbody>
-      <tr><td class="f">CI ./mvnw -B -ntp verify</td><td><span class="yes">全套及打包 BUILD SUCCESS</span></td><td class="n">379 / 0 失败 / 0 错误 / 0 跳过</td></tr>
-      <tr><td class="f">-Dtest=ResourceRemovalTest verify</td><td><span class="yes">复核及打包 BUILD SUCCESS</span></td><td class="n">4 / 0 失败 / 0 错误 / 0 跳过</td></tr>
-      <tr><td class="f">-Dtest=RequirementLifecycleTest,ImplementationGuidanceTest,BatchOneApiTest verify</td><td><span class="yes">审查修复后验证及打包 BUILD SUCCESS</span></td><td class="n">24 / 0 失败 / 0 错误 / 0 跳过</td></tr>
+      <tr><td class="f">./mvnw -B -ntp verify</td><td><span class="yes">全套及打包 BUILD SUCCESS</span></td><td class="n">447 / 0 失败 / 0 错误 / 0 跳过</td></tr>
       <tr><td class="f">npm run lint</td><td><span class="yes">通过</span></td><td class="n">4 条策略</td></tr>
       <tr><td class="f">npm run typecheck</td><td><span class="yes">通过</span></td><td class="n">vue-tsc 严格模式</td></tr>
-      <tr><td class="f">npm test -- --run</td><td><span class="yes">通过</span></td><td class="n">44 / 15 文件</td></tr>
-      <tr><td class="f">npm run build</td><td><span class="yes">通过</span></td><td class="n">JS 258.41 kB / CSS 69.00 kB；gzip 84.43 / 12.26 kB</td></tr>
-      <tr><td class="f">评测 unittest</td><td>保留历史通过记录，本轮未重跑该套件</td><td class="n">48 项历史检查</td></tr>
-      <tr><td class="f">CI Evaluation contract</td><td><span class="yes">通过</span></td><td class="n">quick-set / selftest / 合成参考对照 / holdout guard</td></tr>
-      <tr><td class="f">verify-freeze + 端点更正</td><td>保留历史证据，本轮未重跑</td><td class="n">冻结资产未修改</td></tr>
-      <tr><td class="f">冷启动脚本</td><td><span class="yes">CI 两次全新卷启动通过</span></td><td class="n">14 迁移 / 21 表</td></tr>
-      <tr><td class="f">fp-demo 部署</td><td><span class="yes">V14 升级、健康与公网检查通过</span></td><td class="n">3 个健康容器 / 原数据保留</td></tr>
-    </tbody>
-  </table></div>
-
-  <h3>2026-09-20 补充执行结果</h3>
-  <div class="tw"><table>
-    <thead><tr><th>门</th><th>结果</th><th>规模</th></tr></thead>
-    <tbody>
-      <tr><td class="f">定向后端测试</td><td><span class="yes">BUILD SUCCESS</span></td><td class="n">59 / 0 失败 / 0 错误 / 0 跳过</td></tr>
-      <tr><td class="f">当前工作树 ./mvnw -B -ntp verify</td><td><span class="yes">全套及打包 BUILD SUCCESS</span></td><td class="n">419 / 0 失败 / 0 错误 / 0 跳过</td></tr>
-      <tr><td class="f">前端 lint / typecheck / test / build</td><td><span class="yes">四道门通过</span></td><td class="n">63 / 18 文件；JS 263.09 kB / CSS 69.00 kB</td></tr>
-      <tr><td class="f">正式评测与 holdout</td><td>保留历史证据，本轮未重跑</td><td class="n">冻结资产未修改</td></tr>
+      <tr><td class="f">npm test -- --run</td><td><span class="yes">通过</span></td><td class="n">72 / 18 文件</td></tr>
+      <tr><td class="f">npm run build</td><td><span class="yes">通过</span></td><td class="n">JS 284.25 kB / CSS 75.35 kB；gzip 93.08 / 13.14 kB</td></tr>
+      <tr><td class="f">评测 unittest（4 个模块）</td><td><span class="yes">通过</span></td><td class="n">18</td></tr>
+      <tr><td class="f">score.py --selftest</td><td><span class="yes">通过</span></td><td class="n">30</td></tr>
+      <tr><td class="f">verify-freeze + 端点更正校验</td><td><span class="yes">通过</span></td><td class="n">9 个冻结文件哈希未变</td></tr>
+      <tr><td class="f">论文材料复算脚本（5 个）</td><td><span class="yes">通过</span></td><td class="n">汇总值与 CSV 哈希一致</td></tr>
+      <tr><td class="f">CI（提交 370bfc4）</td><td><span class="yes">四个作业通过</span></td><td class="n">后端 / 前端 / 评测契约 / 两次冷启动</td></tr>
+      <tr><td class="f">fp-demo 只读核对</td><td><span class="yes">健康</span></td><td class="n">3 容器 / 15 迁移 / 21 表</td></tr>
     </tbody>
   </table></div>
 
@@ -736,49 +656,42 @@ python3 evaluation/tools/postfreeze_provider_correction.py verify</code></pre>
   </ul>
 
   <h3>10.3 不能由本报告支持的结论</h3>
-  <div class="note amber">
+  <div class="note red">
     <span class="label">三条界限</span>
     <p>
-      <strong>不能得出「界面正确」。</strong>视觉、布局、键盘可达性与动效均无自动化覆盖，
-      且本轮新增功能的人工验收<strong>尚未执行</strong>。
+      <strong>不能得出「界面正确」。</strong>视觉、布局、键盘可达性与动效均无自动化覆盖；
+      已有的浏览器检查（8.2）是只读的，且早于最近几次界面改动。
     </p>
     <p>
-      <strong>不能得出「与真实 GitHub / GitLab 集成已验证」。</strong>
-      webhook 认证与 provider 读取对回环桩服务测试充分，但未对真实凭据与真实投递做过端到端演练。
+      <strong>不能得出「与两家平台的真实集成都已验证」。</strong>GitHub 有真实 PR 与一次真实合并的线上演练；
+      GitLab 与钉钉只对回环桩服务验证过，没有真实实例上的端到端记录。
     </p>
     <p>
-      <strong>不能得出「AI 审查质量」。</strong>那由评测体系度量，样本为 12 例 holdout 且缺陷手工构造，
-      报告给出 95% Wilson 区间并明确声明泛化限制。
+      <strong>不能得出「AI 审查质量」。</strong>审查链路的集成测试用脚本化响应替代模型，证明的是调用链接通与规则执行。
+      模型质量由评测体系度量：holdout 仅 12 例且缺陷为手工构造，报告给出 95% Wilson 区间并明确声明泛化限制；
+      当前提示词版本 <code>review-6</code> 还没有独立的真实样本与人工真值。
     </p>
   </div>
 
   <h3>10.4 建议的后续工作</h3>
   <ol>
-    <li><strong>执行 8.2 的两批人工验收</strong>，把结果记入清单。</li>
-    <li><strong>为「加表需同步三处」增加机制保障</strong>——目前靠规范约束，而它已被遗漏过一次。</li>
-    <li><strong>用一次性账号做真实 provider 端到端演练</strong>，补上 10.3 第二条界限。</li>
+    <li><strong>补做人工验收</strong>：按 <code>frontend/MANUAL-ACCEPTANCE.md</code> 用三种角色在真实浏览器里走一遍写操作，重做三档宽度检查，并把结果留档。</li>
+    <li><strong>用一次性账号做真实 GitLab 与钉钉演练</strong>，补上 10.3 第二条界限。</li>
+    <li><strong>为 <code>review-6</code> 建立独立样例与人工真值</strong>，分开记录命中、误报与漏报；不调参、不重跑已冻结的 holdout。</li>
+    <li><strong>为「迁移与冷启动脚本同步」增加机制保障</strong>——目前靠规范约束，而它已被遗漏过一次。</li>
   </ol>
 </section>
 
 <footer class="end">
   <p>
-    最新业务测试及两次冷启动取自提交 <code>746e40b</code> 的 <a href="https://github.com/LinYsssss/ForgePilot/actions/runs/34202968598">2026-09-08 CI</a>。本地失败及复核过程继续保留，持久摘要见 <a href="../../.trellis/tasks/archive/2026-09/09-07-review-collaboration/validation.md">validation.md</a>；本轮线上升级另见 <a href="../../.trellis/tasks/archive/2026-09/09-07-review-collaboration/deployment.md">deployment.md</a>。历史容量、正式评测与 holdout 保留原口径，未重跑。
-    未通过项、未覆盖项与已知缺陷均如实记录于第 8、9 章。
+    本报告的自动化结果与线上核对均取自 2026-11-14，代码为提交 <code>370bfc4</code> 加上其后一轮不改变行为的整理（去除未引用的代码与样式、合并重复的辅助方法）。
+    正式评测的配置冻结、holdout 台账与原始输出未修改、未重跑；容量实测与各次线上演练保留原测量日期。
+    未覆盖项与已知限制如实记录于第 8 章，已发现的缺陷记录于第 9 章。
   </p>
-  <p>2026-09-20 补充结果来自当前工作树：后端完整 419 项、前端 63 项及四道门均通过；证据锚定与超预算修复的 59 项定向测试通过。正式评测冻结、holdout 台账和原始输出未修改或重跑。</p>
-  <p>2026-09-25 补充：Finding 类型推导（<code>review-4</code>）、网关温度与 429 退避、校验摘要与「本轮未再报告」、认领人限制之后，固定容器路径下的 <code>./mvnw -B -ntp verify</code> 完整运行通过 <strong>421 项</strong>，0 失败、0 错误、0 跳过；新增的两项分别锁住「类型只看 acId」与「非认领人不能标记已修复」，另有一项断言 chat 请求带温度。<code>verify-freeze</code> 与订正校验仍通过。</p>
-  <p>2026-09-30 补充（当前工作树，已部署）：<code>review-5</code> 类型修正、详情提示与认领人规则修正后，固定 JDK 21 容器入口的一次全量 <code>./mvnw -B -ntp verify</code> 通过 <strong>422 项</strong>，0 失败、0 错误、0 跳过；没有再跑定向或第二次全量。前端 lint、typecheck、<strong>63 项 / 18 个文件</strong>测试与 build 均通过。模拟 DOM 提示 scrollTo/Canvas 未实现，构建提示插件耗时；这些不是失败，也不证明真实浏览器已验收。冻结及 endpoint 订正校验通过。未执行浏览器手工验收、部署、PR 空提交或真实模型 C 轮，旧实验数据与迁移未改。</p>
-  <p>同日追加全仓静态审计：现行文档的 161 条本地引用与 71 个 HTML 锚点检查通过；修正占位阶段规范、重复指南、路由清单、README 命令和运维说明。六个 Java 文件仅改注释，去注释后的可执行 token 一致，CI 配置结构不变，因此没有重复上述全量测试。953 个跟踪保护文件的摘要在整理前后相同，正式评测再次通过只读校验；没有删除业务代码或历史数据，也没有增加生产/浏览器验收结论。</p>
-  <p>2026-10-01 实现建议补充（当前工作树，已部署）：<code>guidance-2</code> 的首次后端全量 verify 被工具 600 秒时限中止，<strong>该次未完成完整门禁</strong>；随后 ImplementationGuidanceTest 定向 7 项通过，不能替代全量。前端 lint/typecheck 通过，首次 Vitest 有两个工作进程启动超时；改用单工作进程复验后 18 个文件、66 项测试全部通过，build 成功。冻结/订正校验通过；未执行真实浏览器或模型建议质量验证。</p>
-  <p>随后按用户要求逐项补验：使用独立测试容器运行原命令 <code>./mvnw -B -ntp verify</code>，于 2026-10-01 15:51 UTC 完整通过 <strong>423 项</strong>，0 失败、0 错误、0 跳过，耗时 <strong>18 分 26 秒</strong>；退出码 0，无 OOM。278 个后端输入文件的运行前后摘要一致，完整后端门禁已补齐。未重跑前端，未提交、部署或启动真实模型/浏览器验收。</p>
-  <p>2026-10-03 guidance-3 补充：提交 <code>54e2953</code> 的 CI 全部通过，仅更新后端。固定三个样例各真实生成一次，均为 HTTP 200；Chromium 153 在本地映射入口下验证了未保存禁用、生成状态、来源折叠、真实剪贴板/下载一致、同修订 ID 保存后的失效与受控失败保留，390px 无横向页面溢出。受控响应回放未增加模型调用。内容目标仅部分达成：REQ-3 问题/步骤变少，但正文由 1725 增至 1903 字符，仍存在约束弱化和重复。范围与未覆盖项见<a href="../../.trellis/tasks/archive/2026-10/10-02-guidance3-tightening/release-validation-20261003.md">验收记录</a>，不把三例当准确率评测。</p>
-  <p>2026-10-14 补充：本轮修复与治理（Provider 读取失败映射 503/502/422、embed 未配置 503、知识入库分批、密文解密受控化、软删需求活动聚合、知识删除留痕计数、前端项目选择 composable 抽取与死导出清理、快速语料三处更正）随 <a href="https://github.com/LinYsssss/ForgePilot/actions/runs/38673878678">CI run 38673878678</a>（提交 <code>9795e81</code>）四个 job 全绿：后端固定容器入口完整 <code>./mvnw -B -ntp verify</code> 通过 <strong>432 项</strong>，0 失败、0 错误、0 跳过；前端 lint、typecheck、<strong>66 项 / 18 个文件</strong>与 build 通过；评测契约（validate-corpus、selftest 30 项、参考报告重算比较、holdout guard 与论文摘要校验）通过；空库 Compose 冷启动通过。快速语料更正升 <code>corpusVersion v2</code>，冻结文件未动，参考产物重算一致；case id 因冻结守卫与归档证据保持原名。本地评测全部门与 thesis verify 亦通过。未执行浏览器手工验收、部署与真实模型调用；历史快照、正式评测证据与迁移未改。</p>
   <p>
     配套文档：《ForgePilot 需求规格说明书》（含需求追溯矩阵，本报告的测试类可反查到需求编号）、
-    《ForgePilot 使用与代码手册》、《跟着一次 PR 走完 ForgePilot》、《ForgePilot 安全设计说明》。
+    《ForgePilot 使用与代码手册》、《跟着一次 PR 走完 ForgePilot》、《ForgePilot 安全设计说明》、《ForgePilot 运维手册》。
   </p>
-  <p>2026-10-17 补充：测试套件顺序依赖的根因已定位并修复（详见 9.1）。污染源是 <code>spring-security-test</code> 的 <code>.with(csrf())</code> 后处理器——它把共享过滤器链里 <code>CsrfFilter</code> 的 <code>CsrfTokenRepository</code> 换成 session 仓库，使其后所有测试类的匿名 <code>GET /api/auth/me</code> 不再下发 <code>XSRF-TOKEN</code>；替换效果留在共享链上，谁先谁后由类文件名顺序决定。修复只动测试侧：6 个类共 14 处改走应用真实的双提交路径（cookie 与 header 回显同一值），生产代码未改，<code>SecurityConfig</code> 保持原样。验证：复现器（重命名后的类排在 review 类之后）由 139 项中 6 失败转为 <strong>139/139</strong> 通过；同一个副本与仓库各跑一次固定容器入口的完整 <code>./mvnw -B -ntp verify</code>，均为 <strong>432 项</strong>、0 失败、0 错误、0 跳过，副本那次重命名后的类仍排在末尾——顺序无关性由此成立。前端 <code>vue</code> 与 <code>@vue/compiler-sfc</code> 由 3.5.41 升到 3.5.44（lockfile 同步），<code>npm audit</code> 为 0 漏洞，lint、typecheck、<strong>66 项 / 18 个文件</strong>、build 四道门与 <code>npm ci</code> 全部通过。冻结资产、holdout 台账与迁移未改动或重跑；未执行浏览器人工验收、线上复测与真实模型调用。</p>
-  <p>同日推送并部署：三个提交经 <a href="https://github.com/LinYsssss/ForgePilot/actions/runs/39045618266">CI run 39045618266</a> 四个 job 全绿；15:36 UTC 起重建 backend 与 frontend（镜像 <code>sha256:8337b491…</code> / <code>sha256:6ae8b0cf…</code>），postgres 容器与数据卷未动，Flyway 校验 14 条迁移、schema 已是最新、无需迁移。`/actuator/health` 直连、经 nginx 与公网 <code>yasinlin.com</code> 均 <code>UP</code>，页面引用的 <code>assets/index-BxbeTmqU.js</code> 与 <code>index-D1nIfD3d.css</code> 与本地构建一致。回滚无 schema 依赖，可直接回退前后端镜像。</p>
 </footer>
 
 </main>

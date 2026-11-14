@@ -116,7 +116,7 @@ common, project, scm, review                 ←  notification
 | `requirement_attachment` | Requirement↔Document 关系 | project_id；`(requirement_id,document_id)` unique、`(project_id,document_id)` unique（一个附件只有一个归属需求）；与 Document 的 source_requirement_id 双复合 FK |
 | `knowledge_chunk` | Chunk 与唯一向量 | project_id、document_id、seq、content、metadata、`embedding vector`（无维度）、provider/model/version/dimension |
 | `scm_repository` | 项目的活动仓库与加密凭据 | `project_id` unique；provider、规范化 `instance_identity`、external_id、api_base、encrypted_token/secret、`identity_approval_required`；有 PR 后稳定身份三元组不可修改，api_base 更新须验证同一实例；`UNIQUE(project_id,id)` |
-| `pull_request` | PR/MR 权威快照、作者与需求关联 | `(repository_id,external_number)` unique；当前 title、base_sha、head_sha、`review_input_fingerprint`（由规范化 base/head、changed-file manifest、patch 及可用的稳定 Diff version 确定性计算，title 不参与身份）；`changed_files` JSONB 保存 manifest 与每个 patch，使指纹输入可从数据库复现；source_revision/source_updated_at 仅用于乱序保护；requirement_id nullable + 普通索引；author_external_user_id、author_username（不可变作者快照）、author_user_id（可重算映射，复合 FK 指向 project_member，列级 `ON DELETE SET NULL`）；`UNIQUE(project_id,id)` |
+| `pull_request` | PR/MR 权威快照、作者与需求关联 | `(repository_id,external_number)` unique；当前 title、base_sha、head_sha、`review_input_fingerprint`（由规范化 base/head、changed-file manifest、patch 及可用的稳定 Diff version 确定性计算，title 不参与身份）；`changed_files` JSONB 保存 manifest 与每个 patch，使指纹输入可从数据库复现；`remote_state`（`OPEN/CLOSED/MERGED`，可空表示尚未核验，不进指纹）；source_revision/source_updated_at 仅用于乱序保护；requirement_id nullable + 普通索引；author_external_user_id、author_username（不可变作者快照）、author_user_id（可重算映射，复合 FK 指向 project_member，列级 `ON DELETE SET NULL`）；`UNIQUE(project_id,id)` |
 | `pull_request_requirement_event` | **仅**记录 PR↔需求关联变更审计 | project_id、pull_request_id、from_requirement_id、to_requirement_id、actor_type(`USER/SYSTEM`)、actor_user_id（可空，→ `user_account`）、reason、created_at；CHECK 保证 type 与 actor 组合合法；与关联修改同事务写入 |
 | `review` | 一个 (head SHA、实际 Review 输入、需求版本) 的审查、上下文快照、摘要与 Decision | `UNIQUE NULLS NOT DISTINCT (pull_request_id,head_sha,review_input_fingerprint,requirement_revision_id)`；`UNIQUE(project_id,id)` 供 Finding 父 FK；`UNIQUE(project_id,id,execution_attempt)` 供 Finding 的 attempt 围栏；CHECK 保证 requirement_id 与 requirement_revision_id 同空或同非空、Decision 字段组合合法、终局 Decision 只能落在 COMPLETED 行、RUNNING 必带 token+lease；一次性 Decision 由 PR 行锁 + `WHERE decision='PENDING'` 条件更新保证；触发器冻结四元身份与 context_snapshot_json；project_id、status、decision、decision_by/at/comment、execution_attempt/token/lease、输入快照 `context_snapshot_json` 与输出摘要 `summary_json`（AC verdict、coverage、知识证据、warning）、engine/prompt_version/model 审计列 |
 | `finding` | Review 问题当前态与跨轮血缘 | project_id、review_id、`review_attempt`、requirement_id、requirement_revision_id、ac_id、finding_type、path、line、evidence、`category`、`explanation`、`suggestion`、`confidence`（后四列可空——早于该能力产生的 Finding 确实没有这些内容；`category` 是 `finding_key` 的输入，其余三列一律不得进入任何 hash，见 3.6）、status、assignee_id（nullable，→ project_member）、fingerprint(`finding_key`)、evidence_hash、`basis_hash`、continuity、carried_from_finding_id；永久父 FK `(project_id,review_id,review_attempt) → review(project_id,id,execution_attempt)`——父子关系与 attempt 围栏合一，过期 Worker 的插入由数据库而非应用检查拒绝；血缘 FK `(project_id,carried_from_finding_id)`；`UNIQUE(project_id,id)`、`UNIQUE(review_id,finding_key)`；`category` 与 `confidence` 各有容忍 NULL 的 CHECK 封闭词表，但越界值必须在写库前被映射掉——走到 CHECK 的值中止的是整批插入而不是单行；CHECK 与约束触发器保证父子上下文 NULL-safe 一致 |
@@ -344,7 +344,7 @@ Decision 是一次性人工终局事实，只允许 `PENDING → APPROVE | REQUE
 
 `REJECT` 经同一 SCM 门面关闭 PR/MR，预先核验 head/base，明确 CLOSED 后才写本地决定；没有远端 SHA 原子关闭条件。已关闭且本地仍 PENDING 可只读核验补记，已合并或版本变化不能补记。5xx、响应丢失或不可解析后只读确认一次，仍不明确返回 503 `close_outcome_unknown`，不重复写入、不记录成功。关闭保留源分支和需求，沿用 after-commit 通知。
 
-V15 追加 `pull_request.remote_state`：OPEN/CLOSED/MERGED，历史 NULL 保持未核验。状态不进指纹，Webhook 读取事实；确认合并/关闭也在本地回写。MERGED 不回退；CLOSED 收到 OPEN 快照时在 PR 行锁下再次只读核验，防止已在途快照覆盖刚确认的关闭，允许真实外部重开。终态不发布新审查事件、不启动或恢复 PENDING；已运行及租约过期的 RUNNING 沿原执行/恢复路径结束。历史 NULL 在人工请求/退回时核验状态。活动聚合排除关闭和外部合并，保留本系统已 APPROVE 的合并以支持需求人工完成；不自动 DONE 或取消。
+`pull_request.remote_state` 记录远端 `OPEN/CLOSED/MERGED`，NULL 表示尚未核验。状态不进指纹，由 Webhook 触发的权威读取写入；确认合并/关闭也在本地回写。MERGED 不回退；CLOSED 收到 OPEN 快照时在 PR 行锁下再次只读核验，防止已在途快照覆盖刚确认的关闭，允许真实外部重开。终态不发布新审查事件、不启动或恢复 PENDING；已运行及租约过期的 RUNNING 沿原执行/恢复路径结束。状态为 NULL 的 PR 在人工请求审查或退回时核验。活动聚合排除关闭和外部合并，保留本系统已 APPROVE 的合并以支持需求人工完成；不自动 DONE 或取消。
 
 ### 人工决定通知
 
@@ -409,9 +409,9 @@ sequenceDiagram
 
 ### 3.5 输出校验与证据规则
 
-- `review-6` 起每条 AC 最终必须有 `COVERED | NOT_FOUND | AT_RISK | UNKNOWN`。合法回答漏项、COVERED 没有对应的已校验批次 AC 证据、零文件受审时记为 UNKNOWN 并保留 warning；格式或 Provider 失败仍按原 FAILED 路径处理。有效引用只提供必要证据，不证明语义正确。NOT_FOUND 限于本轮已审变更，旧三值历史报告不改写；尚未审查的覆盖度仍用 null。
+- 每条 AC 最终必须有 `COVERED | NOT_FOUND | AT_RISK | UNKNOWN`。合法回答漏项、COVERED 没有对应的已校验批次 AC 证据、零文件受审时记为 UNKNOWN 并保留 warning；格式或 Provider 失败仍按原 FAILED 路径处理。有效引用只提供必要证据，不证明语义正确。NOT_FOUND 限于本轮已审变更；`review-6` 之前的报告只有前三个值，不回写；尚未审查的覆盖度仍用 null。
 - `acId` 必须属于当前 Requirement Revision；`sourceId` 必须在本次召回白名单；`filePath` 必须在 changed files 内。
-- Finding 类型由模型显式给出，并与 `acId` 核对（`review-5` 起）：`REQUIREMENT` + 本修订合法 AC 保留为需求类，`CODE_QUALITY` + 无 AC 保留为代码质量类。类型与合法引用矛盾时保留为 `CODE_QUALITY`、去掉 AC 引用并记录 warning；缺失/未知类型兼容地按 acId 推导并记录 warning。**先验证引用归属**，不属于本修订的 AC 仍使整条 Finding 丢弃。类型修正不代替源码锚定，也不证明模型判断真实。
+- Finding 类型由模型显式给出，并与 `acId` 核对：`REQUIREMENT` + 本修订合法 AC 保留为需求类，`CODE_QUALITY` + 无 AC 保留为代码质量类。类型与合法引用矛盾时保留为 `CODE_QUALITY`、去掉 AC 引用并记录 warning；缺失/未知类型兼容地按 acId 推导并记录 warning。**先验证引用归属**，不属于本修订的 AC 仍使整条 Finding 丢弃。类型修正不代替源码锚定，也不证明模型判断真实。
 - Finding `evidence` 与批次 AC `excerpt` 必须逐字存在于对应 changed file 的合法 unified-diff hunk 新侧源码中；diff 的 `+`/空格标记、删除行、元数据与截断标记都不是源码。只归一化 CRLF/LF，不裁剪或折叠空白，也不允许跨 hunk 拼接引用。
 - 引用无命中时丢弃该 Finding/AC evidence 并记录 warning；唯一命中时以真实起始行纠正模型的错误或空行号；多处命中仅在模型行号等于候选时消歧，否则保留已验证引用但不输出伪精确行号。`finding_key` 使用锚定后的行号，`evidence_hash` 仍基于原始逐字引用。
 - Finding 证据保存不可变 excerpt + hash，历史 Review 不受知识文档后续变更影响。
@@ -450,11 +450,9 @@ AiGateway.embed(texts, model, context[, beforeAttempt])
 它**不知道** Requirement/Finding/Review 等业务类型，也不暴露 tool loop。
 业务 Prompt 归 `requirement` 与 `review` 各自所有；Requirement Quality 与一次性 Implementation Guidance 共享 AI Gateway 但使用不同 schema。不建 Prompt Registry，不建万能 ContextBuilder。三类 Prompt 都要求模型散文（Finding 的说明与建议、质量意见、实现建议）用简体中文；逐字引用、路径、标识符与枚举值保持原样。
 
-Requirement Quality 先运行确定性规则并按脱敏后的完整 Prompt 计算预算。预算内只调用一次 AI；超预算时生成 `PROMPT_BUDGET_EXCEEDED`、跳过 AI，以 `quality-2` 保存并返回 `ai=null` 的规则结果，不把截断后的部分需求交给模型，也不改变 Requirement 状态。历史结果不迁移。
+Requirement Quality 先运行确定性规则并按脱敏后的完整 Prompt 计算预算。预算内只调用一次 AI；超预算时生成 `PROMPT_BUDGET_EXCEEDED`、跳过 AI，以 `quality-2` 保存并返回 `ai=null` 的规则结果，不把截断后的部分需求交给模型，也不改变 Requirement 状态。结果只在正文与 AC 自发起检查以来未变时写回，否则返回 409。
 
-Implementation Guidance 保持一次 embedding、项目/需求隔离下最多 8 条知识召回及一次 chat 的既有路径（网关瞬时重试规则不变）。`guidance-2` 在原 checklist/rules/risks 字符串数组上增加 summary/questions，并由服务端返回 guidanceVersion；输出仅作结构校验，不证明步骤、AC 关联或风险判断真实。不保存回答，不增加表或会话。页面通过内容脏状态与请求序号防止未保存输入、保存后的晚到回答被误用；DRAFT 可原地编辑，因此不能只靠 revisionId 判定仍适用。复制/导出复用同一浏览器端 Markdown 文本，知识摘录和检索相似度默认折叠。
-
-`guidance-3` 仅收紧文本指令：只提出阻碍实施的未知决策，区分确定约束与条件式建议，将适用知识硬约束落实到步骤，并合并重复动作/验证；不写入样例特例、不用硬条数截断，也不新增语义校验。响应 schema、检索与运行边界不变，真实效果须另以样例验证。
+Implementation Guidance 是一次 embedding、项目/需求隔离下最多 8 条知识召回、一次 chat（网关瞬时重试规则不变）。响应为 summary、questions 与 checklist/rules/risks 字符串数组，并由服务端返回 `guidanceVersion`（当前 `guidance-3`）。指令要求只提出阻碍实施的未知决策、区分确定约束与条件式建议、把适用的知识硬约束落实到步骤、合并重复的动作与验证；不用硬条数截断。输出仅作结构校验，不证明步骤、AC 关联或风险判断真实。不保存回答，不增加表或会话。页面通过内容脏状态与请求序号防止未保存输入、保存后的晚到回答被误用；DRAFT 可原地编辑，因此不能只靠 revisionId 判定仍适用。复制/导出复用同一浏览器端 Markdown 文本，知识摘录和检索相似度默认折叠。
 
 ### 4.2 ReviewContext
 

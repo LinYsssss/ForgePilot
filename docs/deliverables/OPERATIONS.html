@@ -140,7 +140,7 @@
 <main>
 
 <header class="mast">
-  <p class="eyebrow">Operations · 更新 2026-09-08 · 拓扑实测 2026-08-28</p>
+  <p class="eyebrow">Operations · 2026-11-14</p>
   <h1>ForgePilot 运维手册</h1>
   <p class="standfirst">
     这份文档面向<strong>要把这套东西跑起来、或者半夜发现它挂了</strong>的人。
@@ -154,7 +154,7 @@
     <div><dt>外部入口</dt><dd>1<small>／cloudflared</small></dd></div>
     <div><dt>发布端口</dt><dd>全部 127.0.0.1</dd></div>
     <div><dt>持久化</dt><dd>1 个卷</dd></div>
-    <div><dt>拓扑核对</dt><dd>2026-08-28<small>实测</small></dd></div>
+    <div><dt>拓扑核对</dt><dd>2026-11-14<small>实测</small></dd></div>
   </dl>
 </header>
 
@@ -162,7 +162,7 @@
 <section id="s1">
   <h2><span class="hn">1</span>运行拓扑</h2>
 
-  <p>下面这条链是 2026-08-28 在部署机上实际核对过的，不是设计意图：</p>
+  <p>下面这条链是在部署机上实际核对过的（最近一次 2026-11-14），不是设计意图：</p>
 
 <pre><code>公网
   │  <span class="c">Cloudflare 边缘</span>
@@ -376,15 +376,28 @@ gunzip -c forgepilot-YYYY-MM-DD.sql.gz | \
     回退应用版本前必须验证它与已迁移 schema 的兼容性，不能靠删除历史行或修改已应用 SQL 来让校验通过。
   </p>
   <p>
-    本轮 V14 只增加 nullable <code>requirement.reviewer_id</code> 及成员复合外键。
-    可在保留 V14 迁移和可空列的修复版本中回退业务代码；直接切旧版本前先验证兼容性，必要时使用对应备份恢复方案。
+    能直接回退镜像的前提是<strong>两个版本之间没有新迁移</strong>：旧代码遇到库里多出来的迁移记录会以校验失败拒绝启动。
+    中间隔着迁移时，要么在保留该迁移的修复版本里回退业务代码，要么用升级前的备份恢复。
+    所以每次带迁移的升级之前先备份（4.4），并给当前镜像打一个可回退的 tag。
   </p>
-  <h3>4.6 评审协作版本升级</h3>
+
+  <h3>4.6 升级时要核对的东西</h3>
   <p>
-    当前为 14 个迁移、21 张业务表。备份后保留现有 PostgreSQL 卷部署应用，让 Flyway 自动应用 V14；
-    旧需求的审查人为空，由 LEADER 接手，可再从需求详情指派 REVIEWER/LEADER。
-    GitLab 仓库 Token 需 <code>api</code> 及实际合并权限，原来只能读取 MR 的凭据不足以完成“通过并合并”。
-    2026-09-08 已将 <code>746e40b</code> 部署至现有 <code>fp-demo</code>：备份校验后保留原数据库容器和数据卷，只重建前后端；V14、记录数量、三个健康检查及公网资源一致性通过。具体镜像、备份位置和验证见<a href="../../.trellis/tasks/archive/2026-09/09-07-review-collaboration/deployment.md">部署记录</a>。本手册的历史容量数据未重测。
+    当前为 15 个迁移、21 张业务表，V1 之后的每一条迁移都是增量。升级就是 4.1 那条命令：保留 PostgreSQL 卷，
+    后端启动时由 Flyway 自动应用缺的迁移。升级后核对：
+  </p>
+<pre><code><span class="c"># 迁移全部成功，最高版本与代码一致</span>
+docker compose -p fp-demo exec -T postgres \
+  psql -U forgepilot forgepilot -Atc \
+  "select count(*), max(version::int) from flyway_schema_history where success and version is not null;"
+
+<span class="c"># 三个健康检查，以及经 nginx 的同一个契约</span>
+docker compose -p fp-demo ps
+curl -s http://127.0.0.1:18081/api/actuator/health</code></pre>
+  <p>
+    两条容易在升级后才发现的配置前提：GitLab 仓库 Token 需要 <code>api</code> 与<strong>实际合并权限</strong>，
+    只能读取 MR 的凭据完成不了「通过并合并」与「拒绝并关闭」；通知消息里的链接要配 <code>FORGEPILOT_BASE_URL</code>。
+    逐次发布的镜像身份、备份位置与核对结果记在对应的 Trellis 任务里。
   </p>
 </section>
 
@@ -492,7 +505,8 @@ free -m</code></pre>
     <li>收到 <strong>401</strong> → 投递无法验证，可能是未知仓库、载荷不完整、签名或密钥不匹配；不能仅凭状态码区分这些原因。</li>
     <li>收到 <strong>429</strong> → 撞了默认 60 次／分的配额。先检查真实客户端地址解析与异常流量，确认误限再调配额；不要假设 provider 一定自动重投。</li>
     <li>收到 <strong>422</strong> → 已通过验证，但 PR 编号、快照或 diff 存储上限等业务输入不合法。用错误体的 traceId 查对应后端日志。</li>
-    <li>收到 <strong>2xx</strong> 但没有新增 Review → 可能是无关事件、重复投递复用已有 Review，或旧快照被忽略。对照 provider 的事件类型、PR head 与既有审查；不能把 2xx 当作模型已完成，也不能把超限拒绝归入 2xx。</li>
+    <li>收到 <strong>503</strong> <code>provider_unavailable</code> 或 <strong>502</strong> <code>provider_error</code> → 投递通过了验证，但回头向平台读取 PR 时失败：前者是限流、5xx 或网络问题，后者是平台拒绝了这次读取（多半是仓库 Token 失效或权限不足）。</li>
+    <li>收到 <strong>2xx</strong> 但没有新增 Review → 可能是无关事件、重复投递复用已有 Review，或旧快照被忽略。PR 在平台上已关闭或合并时也是如此：照常入库，但不再产生新的审查。对照 provider 的事件类型、PR head 与既有审查；不能把 2xx 当作模型已完成，也不能把超限拒绝归入 2xx。</li>
   </ol>
 
   <h3>6.3 Review 一直 PENDING</h3>
@@ -505,6 +519,10 @@ free -m</code></pre>
   <p>
     所以「PENDING 几分钟」是正常的排队。<strong>超过十分钟仍不动</strong>才需要查：
     多半是 AI 网关调不通（见 6.4），或者线程池里的任务卡在一个不返回的出站调用上。
+  </p>
+  <p>
+    另一种不会动的 PENDING 是正常的：PR 在平台上已经关闭或合并，排队中的审查不再领取。
+    先看审查页上该 PR 的「远端状态」。
   </p>
 
   <h3>6.4 AI 审查全部失败</h3>
@@ -521,7 +539,18 @@ free -m</code></pre>
     只有改写后的失败原因。
   </p>
 
-  <h3>6.5 前端能打开，但所有写操作被拒（403）</h3>
+  <h3>6.5 知识文档一直「正在处理」或「处理失败」</h3>
+  <p>
+    上传只是受理。后台每秒领取一条待处理文档，按批（默认 64 个切片）请求向量，全部成功后才标为可用；
+    文档是<strong>串行</strong>处理的，所以一次传很多大文件时排在后面的会等。
+    失败的文档在页面上显示原因，LEADER 点「重试处理」把它放回队列——<strong>没有自动重试</strong>。
+  </p>
+  <p>
+    一上传就失败，多半是向量模型没配：<code>FORGEPILOT_KNOWLEDGE_EMBEDDING_MODEL</code> 留空时向量请求以
+    <code>ai_unconfigured</code> 失败，文档标为失败并保留这个原因。向量请求同样记在 <code>ai_call_log</code> 里，每批一行，按 6.4 的办法查。
+  </p>
+
+  <h3>6.6 前端能打开，但所有写操作被拒（403）</h3>
   <p>
     先区分 403 的来源：安全过滤器中的 CSRF 拒绝应检查令牌，业务 API 的 <code>forbidden</code> 还可能表示项目角色、指定审查人或开发负责人资格不满足。
   </p>
@@ -531,7 +560,7 @@ free -m</code></pre>
     非成员对项目资源的访问返回 404；项目内角色不足返回 403。最终决定还需检查需求是否在开发中。
   </p>
 
-  <h3>6.6 审查或人工决定完成了，钉钉没收到消息</h3>
+  <h3>6.7 审查或人工决定完成了，钉钉没收到消息</h3>
   <p>
     通知是<strong>尽力而为的旁路</strong>：失败只在后端日志里留一行，不重试、不改审查状态。
     AI 完成/失败与人工退回/合并均在相应业务事务提交后发送；人工决定回滚不会发消息。
@@ -595,7 +624,7 @@ free -m</code></pre>
     <code>up --detach</code> 而不是 <code>restart</code>（第 2 章）。
   </p>
 
-  <h3>6.7 站点打不开，但三个容器都 healthy</h3>
+  <h3>6.8 站点打不开，但三个容器都 healthy</h3>
   <p>问题在容器外面。按这个顺序：</p>
 <pre><code>systemctl status cloudflared          <span class="c"># 隧道进程</span>
 journalctl -u cloudflared --since -1h <span class="c"># 隧道日志</span>
@@ -604,7 +633,7 @@ curl -s http://127.0.0.1:18081/healthz <span class="c"># 本机能不能到 ngin
     最后那条返回 <code>ok</code> 而外部访问不通，就基本可以确定是隧道或 Cloudflare 侧的问题，
     与这套应用无关。
   </p>
-  <h3>6.8 “通过并合并”失败或结果不明</h3>
+  <h3>6.9 「通过并合并」或「拒绝并关闭」失败或结果不明</h3>
   <p>
     403 先查指定审查人及开发负责人当前角色；409 检查需求状态、Review 是否过期/已决定，以及远端 head、冲突、保护分支和仓库 Token 的实际合并权限。
     <code>REQUEST_CHANGES</code> 需非空理由，但不会关闭 PR/MR 或删除分支；开发者继续在原分支提交。
@@ -614,24 +643,28 @@ curl -s http://127.0.0.1:18081/healthz <span class="c"># 本机能不能到 ngin
     已合并且 SHA 一致时，人工重试可只读确认后完成本地记录。不要把超时当作确定未合并，也不要直接改数据库决定字段。
     远端写入与数据库提交不原子，系统没有补偿任务。
   </p>
+  <p>
+    「拒绝并关闭」同理：503 <code>close_outcome_unknown</code> 表示无法证明远端是否已关闭，本地没有记录拒绝。
+    到平台上确认 PR/MR 已关闭后，回到审查页点「核验关闭并补记拒绝」；已合并或代码已变的不能补记。
+  </p>
 </section>
 
 <!-- ══════ 7 ══════ -->
 <section id="s7">
   <h2><span class="hn">7</span>容量与余量</h2>
 
-  <p>2026-08-28 在部署机上的实测基线。它的用处是：下次觉得「是不是内存不够」时有个对照。</p>
+  <p>2026-11-14 在部署机上空闲状态下的实测基线。它的用处是：下次觉得「是不是内存不够」时有个对照。</p>
 
   <div class="tw"><table>
-    <thead><tr><th>容器</th><th>实测占用</th><th>上限</th><th>余量</th></tr></thead>
+    <thead><tr><th>容器</th><th>实测占用</th><th>上限</th><th>占上限</th></tr></thead>
     <tbody>
-      <tr><td class="f">fp-demo-backend-1</td><td class="n">398.5 MiB</td><td class="n">768 MiB</td><td class="n">52%</td></tr>
-      <tr><td class="f">fp-demo-postgres-1</td><td class="n">49.3 MiB</td><td class="n">512 MiB</td><td class="n">10%</td></tr>
-      <tr><td class="f">fp-demo-frontend-1</td><td class="n">6.3 MiB</td><td class="n">64 MiB</td><td class="n">10%</td></tr>
+      <tr><td class="f">fp-demo-backend-1</td><td class="n">422.6 MiB</td><td class="n">768 MiB</td><td class="n">55%</td></tr>
+      <tr><td class="f">fp-demo-postgres-1</td><td class="n">45.0 MiB</td><td class="n">512 MiB</td><td class="n">9%</td></tr>
+      <tr><td class="f">fp-demo-frontend-1</td><td class="n">7.5 MiB</td><td class="n">64 MiB</td><td class="n">12%</td></tr>
     </tbody>
   </table></div>
 
-  <p>宿主机：总内存约 3.9 GB，其中可用约 2.1 GB；磁盘 39 GB，已用 47%。</p>
+  <p>宿主机：总内存约 3.9 GB，其中可用约 2.4 GB，另有 4 GB swap；磁盘 39 GB，<strong>已用 83%</strong>。磁盘是这台机器上最紧的资源——占用主要来自镜像与构建缓存，升级前先看一眼 <code>df -h /</code>，不够时清理不再使用的镜像，而不是动数据卷。</p>
 
   <div class="note amber">
     <span class="label">这几个数字不是随便设的</span>
@@ -694,11 +727,9 @@ curl -s http://127.0.0.1:18081/healthz <span class="c"># 本机能不能到 ngin
 
 <footer class="end">
   <p>
-    本文描述 2026-08-28 的部署形态；第 1 章的拓扑与第 7 章的数字均为当日在部署机上实测，
-    不是本轮重新测量。2026-09-08 只同步 V14 与评审协作的配置、失败模式和操作步骤；
-    健康检查命令取自 <code>compose.yaml</code>。
+    本文描述当前的部署形态。第 1 章的拓扑与第 7 章的占用数字为 2026-11-14 在部署机上实测；
+    JVM 参数与内存上限来自更早的一次完整容量测量，未重测。健康检查命令取自 <code>compose.yaml</code>。
   </p>
-  <p>2026-10-14 源码补充（2026-10-16 已部署）：Provider 读取失败的错误码与 GitLab 对齐——限流、5xx 与网络错误为 <strong>503 <code>provider_unavailable</code></strong>，其余 Provider HTTP 错误 502 <code>provider_error</code>，响应形状不符 422；合并（merge）不在此列。未配置 embedding 模型时向量请求返回 <strong>503 <code>ai_unconfigured</code></strong>：知识入库把该文档标为 FAILED 并保留原因，重传前需先配置模型。知识入库批大小由 <code>FORGEPILOT_KNOWLEDGE_EMBEDDING_BATCH_SIZE</code>（默认 64）控制，每批一行 <code>ai_call_log</code>，全部批次成功后单事务写入；调大前按第 7 章同一套内存口径评估。</p>
   <p>
     相关文档：架构与运行边界见 <code>docs/v2/ARCHITECTURE.md</code>，
     防护措施与残余风险见 <code>SECURITY.html</code>，

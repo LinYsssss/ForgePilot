@@ -132,7 +132,7 @@
 <div class="wrap">
 
 <header class="top">
-  <p class="eyebrow">ForgePilot 代码走查 · 2026-09-08 · 面向会编程但不熟这套技术栈的读者</p>
+  <p class="eyebrow">ForgePilot 代码走查 · 面向会编程但不熟这套技术栈的读者</p>
   <h1>跟着一次 PR 走完 ForgePilot</h1>
   <p class="standfirst">
     ForgePilot 后端按九个包组织。从一次真实调用进入，更容易看清谁调用谁。
@@ -209,7 +209,7 @@ JsonNode payload;
 } <span class="k">catch</span> (ApiException rejected) {
     <span class="k">throw</span> rejected;
 } <span class="k">catch</span> (RuntimeException malformed) {
-    <span class="k">throw</span> unverifiable();                        <span class="c">// 一律答成「无法验证」</span>
+    <span class="k">throw</span> PullRequestSyncService.unauthenticated();   <span class="c">// 一律答成「无法验证」</span>
 }</code></pre>
 
   <div class="trap">
@@ -274,11 +274,10 @@ sync.apply(repository, github.fetch(repository, pullRequestNumber(payload)));</c
     <span class="k">if</span> (signatureHeader == <span class="k">null</span> || !signatureHeader.startsWith(GITHUB_PREFIX)) {
         <span class="k">return</span> <span class="k">false</span>;
     }
-    <span class="k">byte</span>[] expected = HexFormat.of()
-            .formatHex(hmac(secret.getBytes(UTF_8), body))
-            .getBytes(UTF_8);
+    <span class="k">byte</span>[] expected = HexFormat.of().formatHex(hmac(secret.getBytes(StandardCharsets.UTF_8), body))
+            .getBytes(StandardCharsets.UTF_8);
     <span class="k">byte</span>[] provided = signatureHeader.substring(GITHUB_PREFIX.length())
-            .toLowerCase(Locale.ROOT).getBytes(UTF_8);
+            .toLowerCase(Locale.ROOT).getBytes(StandardCharsets.UTF_8);
     <span class="c">// 常数时间比较，且对长度安全：被截断的十六进制摘要只会判为不相等。</span>
     <span class="k">return</span> MessageDigest.isEqual(expected, provided);
 }</code></pre>
@@ -336,12 +335,11 @@ sync.apply(repository, github.fetch(repository, pullRequestNumber(payload)));</c
     JsonNode node = parent.path(field);
     <span class="k">if</span> (!node.isValueNode() || node.isNull()) {
         <span class="k">throw</span> ApiException.unprocessable(
-                <span class="s">"The provider's pull request is missing "</span> + label + <span class="s">"."</span>);
+                <span class="s">"平台返回的 PR 缺少 "</span> + label + <span class="s">"。"</span>);
     }
     String value = node.asString();
     <span class="k">if</span> (value.isBlank()) {
-        <span class="k">throw</span> ApiException.unprocessable(
-                <span class="s">"The provider's pull request has an empty "</span> + label + <span class="s">"."</span>);
+        <span class="k">throw</span> ApiException.unprocessable(<span class="s">"平台返回的 PR 的 "</span> + label + <span class="s">" 为空。"</span>);
     }
     <span class="k">return</span> value;
 }</code></pre>
@@ -402,34 +400,41 @@ sync.apply(repository, github.fetch(repository, pullRequestNumber(payload)));</c
     ScmRepository repository = repositories
             .findWithLockByProjectIdAndId(detached.getProjectId(), detached.getId())
             .orElseThrow(PullRequestSyncService::unauthenticated);
-
+    <span class="k">if</span> (repository.getProvider() != detached.getProvider()
+            || !repository.getInstanceIdentity().equals(detached.getInstanceIdentity())
+            || !repository.getExternalId().equals(detached.getExternalId())) {
+        <span class="k">throw</span> unauthenticated();                    <span class="c">// 快照是按旧身份拉取的，拒收</span>
+    }
+    <span class="k">long</span> projectId = repository.getProjectId();
     String fingerprint = ReviewInputFingerprint.of(repository.getProvider().name(),
             repository.getInstanceIdentity(), repository.getExternalId(), snapshot);
     String manifest = manifest(snapshot.changedFiles());
 
-    PullRequest existing = pullRequests
-            .findWithLockByProjectIdAndRepositoryIdAndExternalNumber(
-                    projectId, repository.getId(), snapshot.externalNumber())
-            .orElse(<span class="k">null</span>);
-
+    PullRequest existing = pullRequests.findWithLockByProjectIdAndRepositoryIdAndExternalNumber(
+            projectId, repository.getId(), snapshot.externalNumber()).orElse(<span class="k">null</span>);
     <span class="k">if</span> (existing != <span class="k">null</span>) {
         <span class="k">if</span> (isOlderThan(snapshot.sourceUpdatedAt(), existing.getSourceUpdatedAt())) {
             <span class="k">return</span>;                                <span class="c">// 乱序到达的旧投递，丢弃</span>
         }
-        existing.applySnapshot(...);
+        <span class="c">// ... 已合并的 PR 不回退；已关闭却收到 OPEN 快照时，先向平台核实是否真的重开</span>
+        existing.applySnapshot(snapshot.baseSha(), snapshot.headSha(), snapshot.title(), fingerprint,
+                manifest, snapshot.sourceRevision(), snapshot.sourceUpdatedAt());
         existing.mapAuthor(authors.userIdFor(projectId, snapshot.authorExternalUserId()));
+        existing.recordRemoteState(snapshot.remoteState());
         pullRequests.flush();
         publish(existing);
         <span class="k">return</span>;
     }
-    <span class="c">// ... 新建分支，末尾同样 publish(created)</span>
+    <span class="c">// ... 新建分支：解析 REQ-&lt;n&gt; 关联，末尾同样 publish(created)</span>
 }</code></pre>
 
   <ul class="lines">
     <li><code>findWithLock…</code><span><strong>行锁</strong>。读这一行的同时锁住它，直到本次事务结束别人不能改。否则两个 webhook 同时到达会互相覆盖。</span></li>
+    <li><code>detached</code><span>第 1 站验签时读到的那一行，也是第 3 站用来向平台拉取的那一行。拉取期间仓库的稳定身份如果被合法地改掉，这份快照就属于<strong>旧仓库</strong>，挂到新身份下是错归属——所以按「查不到该仓库」拒收。</span></li>
     <li><code>fingerprint</code><span>把「仓库身份 + head + 变更清单」算成一个哈希。它回答「这是不是同一次审查」——第 6 站会用到。</span></li>
     <li><code>isOlderThan</code><span>网络投递不保证顺序。带着更旧时间戳的投递必须<strong>丢弃</strong>，否则新状态会被旧状态覆盖。</span></li>
-    <li><code>publish(…)</code><span>发事件。注意它在 <code>return</code> 之前、且在<strong>同一个事务内部</strong>。</span></li>
+    <li><code>recordRemoteState</code><span>PR 在平台上是开放、已关闭还是已合并。它不进指纹，只决定这个 PR 还要不要审。</span></li>
+    <li><code>publish(…)</code><span>发事件。注意它在 <code>return</code> 之前、且在<strong>同一个事务内部</strong>。已关闭或已合并的 PR 不发——终态的 PR 不再产生新的审查。</span></li>
   </ul>
 
   <div class="aside">
@@ -494,6 +499,11 @@ sync.apply(repository, github.fetch(repository, pullRequestNumber(payload)));</c
       Spring 还提供 <code>@TransactionalEventListener</code>，它在事务<strong>提交后</strong>才执行。
       这里<strong>不能</strong>用它——那样「PR 已提交、Review 还没建」就成了一个真实存在的已提交状态，
       而如果紧接着进程崩溃，这个 PR 就永远不会有 Review 了。
+    </p>
+    <p>
+      同一个类里还有第二个监听器，它<strong>确实</strong>用了 <code>@TransactionalEventListener</code>：
+      等这一行提交之后，才把任务交给线程池。提交之前没有任何 worker 能读到这次 Review——
+      建行必须在事务里，开工必须在事务外，所以是两个监听器。
     </p>
     <p>
       顺带一个实现期的坑：这个类和另外两个模块的同类监听器起初都叫
@@ -578,8 +588,10 @@ sync.apply(repository, github.fetch(repository, pullRequestNumber(payload)));</c
                updated_at = now()
          WHERE project_id = :projectId
            AND id = :reviewId
-           AND (status = 'PENDING'
-                OR (status = 'RUNNING' AND lease_until &lt; now()))
+           AND (status = 'PENDING' OR (status = 'RUNNING' AND lease_until &lt; now()))
+           AND (status = 'RUNNING' OR EXISTS (SELECT 1 FROM pull_request p WHERE p.project_id = review.project_id
+               AND p.id = review.pull_request_id
+               AND (p.remote_state IS NULL OR p.remote_state = 'OPEN')))
         """</span>, nativeQuery = <span class="k">true</span>)
 <span class="k">int</span> claim(<span class="k">@Param</span>(<span class="s">"projectId"</span>) <span class="k">long</span> projectId, <span class="k">@Param</span>(<span class="s">"reviewId"</span>) <span class="k">long</span> reviewId,
         <span class="k">@Param</span>(<span class="s">"token"</span>) String token, <span class="k">@Param</span>(<span class="s">"leaseSeconds"</span>) <span class="k">int</span> leaseSeconds);</code></pre>
@@ -590,6 +602,8 @@ sync.apply(repository, github.fetch(repository, pullRequestNumber(payload)));</c
     生成一个只有本次持有者知道的随机令牌 <code>execution_token</code> 和一个到期时间 <code>lease_until</code>。</p>
     <p>而 <code>WHERE</code> 里那个条件是闸门：<strong>只接纳还没人做的（<code>PENDING</code>），
     或者有人做但已经超时的（<code>RUNNING</code> 且租约过期）。</strong></p>
+    <p>最后一个条件只管还没开工的任务：PR 在平台上已经关闭或合并，排着队的 <code>PENDING</code> 就不再领取；
+    已经在跑的那一次不受影响，照原路跑完。</p>
     <p>返回值是 <code>int</code>——<strong>影响了几行</strong>。1 表示抢到了，0 表示没抢到。</p>
   </div>
 
@@ -636,7 +650,7 @@ sync.apply(repository, github.fetch(repository, pullRequestNumber(payload)));</c
     <p>抢到任务之后的完整流程：跑分析 → 处理失败 → 写结果。三个分支各有讲究。</p>
   </div>
 
-  <p class="srcpath">真实代码 —— 全文只有这么长</p>
+  <p class="srcpath">真实代码（日志语句从略）</p>
   <pre><code><span class="k">void</span> run(<span class="k">long</span> projectId, <span class="k">long</span> reviewId) {
     Optional&lt;Claim&gt; taken = claim(projectId, reviewId);
     <span class="k">if</span> (taken.isEmpty()) {
@@ -644,24 +658,38 @@ sync.apply(repository, github.fetch(repository, pullRequestNumber(payload)));</c
     }
     Claim claim = taken.get();
 
-    Optional&lt;ReviewPipeline.Report&gt; report;
+    Boolean committed;
     <span class="k">try</span> {
-        report = pipeline.analyse(claim, () -&gt; renew(claim));
-    } <span class="k">catch</span> (ApiException providerFailure) {
-        fail(claim);                               <span class="c">// ① 模型调不通</span>
-        <span class="k">return</span>;
-    }
-    <span class="k">if</span> (report.isEmpty()) {
-        fail(claim);                               <span class="c">// ② 回答校验不过</span>
+        Optional&lt;ReviewPipeline.Report&gt; report = pipeline.analyse(claim, () -&gt; {
+            <span class="k">if</span> (!renew(claim)) {                     <span class="c">// 每次调模型之前先续租</span>
+                <span class="k">throw new</span> ApiException(HttpStatus.CONFLICT, <span class="s">"review_lease_lost"</span>,
+                        <span class="s">"当前 worker 已不再持有该审查。"</span>);
+            }
+        });
+        <span class="k">if</span> (report.isEmpty()) {
+            failAndPublish(claim);                     <span class="c">// ② 回答校验不过</span>
+            <span class="k">return</span>;
+        }
+
+        committed = finishingTransaction.execute(status -&gt; {
+            pipeline.store(claim, report.get());
+            <span class="k">if</span> (!complete(claim)) {
+                status.setRollbackOnly();               <span class="c">// ③ 租约丢了，回滚</span>
+                <span class="k">return false</span>;
+            }
+            <span class="k">return true</span>;
+        });
+    } <span class="k">catch</span> (RuntimeException failure) {
+        <span class="k">if</span> (failure <span class="k">instanceof</span> ApiException api &amp;&amp; api.getCode().equals(<span class="s">"review_lease_lost"</span>)) {
+            <span class="k">return</span>;                                <span class="c">// ④ 续租失败：什么都不写</span>
+        }
+        failAndPublish(claim);                         <span class="c">// ① 模型调不通，或其他运行时失败</span>
         <span class="k">return</span>;
     }
 
-    finishingTransaction.executeWithoutResult(status -&gt; {
-        pipeline.store(claim, report.get());
-        <span class="k">if</span> (!complete(claim)) {
-            status.setRollbackOnly();               <span class="c">// ③ 租约丢了，回滚</span>
-        }
-    });
+    <span class="k">if</span> (Boolean.TRUE.equals(committed)) {
+        publisher.publishEvent(<span class="k">new</span> ReviewCompleted(projectId, reviewId));
+    }
 }</code></pre>
 
   <h4>① 模型调不通 → 标记 FAILED，而不是让异常逃逸</h4>
@@ -669,11 +697,12 @@ sync.apply(repository, github.fetch(repository, pullRequestNumber(payload)));</c
     如果让异常直接抛出去，这一行会一直停在 <code>RUNNING</code> 直到租约过期，
     然后定时任务重新抢占它、再去调那个同样不可达的 provider——<strong>无限循环</strong>。
     标成 <code>FAILED</code> 会停下来等人处理，而人可以手动点重试。
+    分析或落库途中的其他运行时失败走同一条路：结果事务先回滚，再用同一个令牌把这次尝试标成失败。
   </p>
 
   <h4>② 回答校验不过 → 什么都不写</h4>
   <p>
-    注意是 <code>fail()</code> 而<strong>不是</strong>写一份空报告。
+    注意是标记失败而<strong>不是</strong>写一份空报告。
     因为一份「零条问题」的报告读起来和「这个 PR 很干净」<strong>一模一样</strong>，
     而实际情况是「我们没能得到一个能用的回答」。这两件事的处置完全相反。
   </p>
@@ -684,6 +713,18 @@ sync.apply(repository, github.fetch(repository, pullRequestNumber(payload)));</c
     所以写结果和「把状态改成 COMPLETED」<strong>必须在同一个事务里</strong>，
     并且 <code>complete()</code> 是带条件的——它要求令牌匹配且状态仍是 <code>RUNNING</code>。
     匹配不上就整个回滚：这个尝试已不再拥有那一行，而另一个尝试正在产出它自己的结果。
+  </p>
+
+  <h4>④ 续租失败 → 立刻停手，连 FAILED 都不写</h4>
+  <p>
+    每一次真正发往模型的 HTTP 请求之前都会先续租。续不上说明这一行已经属于别人，
+    旧 worker 此时唯一正确的动作是停下来：它没有资格再对这次 Review 下任何结论。
+  </p>
+
+  <h4>完成事件在事务之外发布</h4>
+  <p>
+    <code>ReviewCompleted</code> 只在结果事务确实提交之后才发。放进事务里，一个随后整体回滚的尝试也会把事件发出去——
+    那就是为一次从未发生的完成发通知。<code>failAndPublish</code> 同理：只有那条带令牌条件的失败更新真的生效了，才发 <code>ReviewFailed</code>。
   </p>
 
   <div class="trap">
@@ -806,6 +847,7 @@ sync.apply(repository, github.fetch(repository, pullRequestNumber(payload)));</c
     <span class="label">三条不可动的规则</span>
     <p>
       <strong>一、重试只有一次，且只对瞬时错误（429 / 5xx / 网络）。</strong>
+      遇到 429 会先等 5 秒再做那一次重试。
       全代码库<strong>别处没有任何重试</strong>，也必须保持没有——这条例外只授权给网关。
     </p>
     <p>
@@ -821,8 +863,17 @@ sync.apply(repository, github.fetch(repository, pullRequestNumber(payload)));</c
 
   <h4>发出去之前的最后一道处理</h4>
   <p>
-    <code>PromptSanitizer</code> 做两件事：掩码看起来像凭据的字符串、把载荷裁剪到预算内。
+    <code>PromptSanitizer</code> 掩码看起来像凭据的字符串。
     它是<strong>纯函数</strong>——不写日志、不碰数据库、不抛异常。
+  </p>
+  <p>
+    超出预算怎么办，分两种：向量化的输入允许裁剪到预算内；而对话请求<strong>绝不悄悄裁剪</strong>——
+    网关在掩码之后按完整 Prompt 计长度，超限就以 <code>ai_prompt_too_large</code> 显式拒绝。
+    一段被默默截掉尾巴的代码，会让模型对它没看到的部分下结论。
+  </p>
+  <p>
+    对话请求默认带 <code>temperature: 0</code>，让同一输入尽量得到同一回答。「尽量」二字是实测结论：
+    同一批 PR 相邻两轮、批次 Prompt 逐字节相同，报告仍不完全一致——所以别把审查结果当成可复现的。
   </p>
   <p>
     最后这点是刻意的：<strong>一份文档不会因为「看起来含 token」而被拒绝</strong>，只会去掉那部分后照常发送。
@@ -850,7 +901,7 @@ sync.apply(repository, github.fetch(repository, pullRequestNumber(payload)));</c
   </div>
 
   <p>
-    2026-09-20 起，校验还覆盖源码引用本身：校验器从每个合法 unified-diff hunk
+    校验还覆盖源码引用本身：校验器从每个合法 unified-diff hunk
     独立重建新侧源码，去掉 diff 标记后逐字查找 Finding <code>evidence</code> 与 AC <code>excerpt</code>。
     无命中会丢弃并记录 warning；唯一命中按真实起始行纠正模型行号；多处命中无法由模型行号消歧时，
     引用仍可保留，但行号为空。引用不能跨 hunk，删除行和截断标记也不能作为证据。
@@ -917,11 +968,28 @@ sync.apply(repository, github.fetch(repository, pullRequestNumber(payload)));</c
     </p>
   </div>
 
-  <h4>沉默的模型无法把报告缩短</h4>
+  <h4>沉默的模型无法把报告缩短，也无法凭空说「已覆盖」</h4>
   <p>
-    被审查修订的<strong>每一条</strong>验收条件最终都会有裁定。
-    模型跳过的那些被填成 <code>NOT_FOUND</code>，<strong>并记一条警告</strong>——
-    这样「模型什么都没说」与「模型说了没有」保持可区分。
+    被审查修订的<strong>每一条</strong>验收条件最终都会有裁定：
+    <code>COVERED</code>、<code>NOT_FOUND</code>、<code>AT_RISK</code> 或 <code>UNKNOWN</code>。
+    下面三种情况一律记为 <code>UNKNOWN</code>（信息不足／待核实），<strong>并各记一条警告</strong>：
+  </p>
+  <ul>
+    <li>模型跳过了这一条——沉默不等于「没实现」。</li>
+    <li>这一轮一个文件都没审到。</li>
+    <li>模型说 <code>COVERED</code>，但各批次没有交上来任何一条通过锚定校验的证据。</li>
+  </ul>
+  <p>
+    这样「模型什么都没说」「模型说了没有」「模型说有却拿不出证据」三件事保持可区分。
+    注意它的边界：证据片段确实存在，只说明引用是真的，<strong>不证明模型的语义判断正确</strong>。
+  </p>
+
+  <h4>问题类型也要和引用对得上</h4>
+  <p>
+    每条问题由模型自报类型：<code>REQUIREMENT</code>（违反某条验收条件）或 <code>CODE_QUALITY</code>。
+    校验器先核对引用归属——引用了不属于本修订的验收条件，整条丢弃；
+    再核对类型与引用是否自洽——自称需求类却没有合法引用、或自称代码质量类却带着引用，
+    保留为不带引用的代码质量类并记警告。类型缺失或写错时按有没有引用推导。
   </p>
 </div>
 
@@ -968,7 +1036,7 @@ sync.apply(repository, github.fetch(repository, pullRequestNumber(payload)));</c
       与此配套的是两个<strong>朝相反方向移动</strong>的版本常量，很容易改错：
     </p>
     <ul>
-      <li><code>ReviewPrompts.VERSION</code>——schema 变了就要递增，源码现在是 <code>"review-5"</code>（2026-09-30，已部署）。</li>
+      <li><code>ReviewPrompts.VERSION</code>——指令或输出 schema 变了就要递增，源码现在是 <code>"review-6"</code>。</li>
       <li><code>FindingKeys.RULE_VERSION</code>——<strong>必须保持 <code>"1"</code></strong>。它进 <code>basis_hash</code>，一改就让全部历史 finding 的血缘断掉。</li>
     </ul>
   </div>
@@ -1003,16 +1071,32 @@ sync.apply(repository, github.fetch(repository, pullRequestNumber(payload)));</c
   <p>
     退回理由去除首尾空白后必须非空，最多 2000 字，原 PR/MR 与分支保持可用。页面复用现有历史接口展示轮次和上次理由。
     历史 Review 按保存的需求 ID 读取该需求的当前指派；PR 解除或更换关联不会改写历史归属。Finding 重开到 OPEN 后回主列表，保留 SUPPRESSED 血缘，只有仍被拒绝的抑制项继续折叠。
-    通过则进入 SCM 门面；下面是完成本地条件更新后的真实代码节选：
+    三种决定各有一步远端动作，而且都排在本地写入<strong>之前</strong>；下面是真实代码节选：
   </p>
 <pre><code>if (decision == ReviewDecision.APPROVE) {
-    scmActions.merge(projectId, decided.getPullRequestId(), decided.getHeadSha());
+    scmActions.merge(projectId, review.getPullRequestId(), review.getHeadSha());
+} else if (decision == ReviewDecision.REJECT) {
+    scmActions.close(projectId, review.getPullRequestId(), review.getHeadSha());
+} else {
+    scmActions.requireOpen(projectId, review.getPullRequestId(), review.getHeadSha());
 }
+
+int updated = decisions.decideIfStillPending(projectId, reviewId, decision.name(), actorId, comment);
+if (updated != 1) {
+    // 那六项条件在片刻之前还成立，现在不成立了。这里既不写入也不重试：
+    // 一次最终的人工裁定，不是可以替调用方去重新尝试的东西。
+    throw ApiException.conflict("该审查已被并发地决定或推进。");
+}
+// ...
 events.publishEvent(new ReviewDecided(projectId, reviewId));</code></pre>
   <p>
-    <code>ScmPullRequestDecisionService</code> 选择 GitHub/GitLab，两者都先核对远端 head、提交 expected SHA、确认真实合并。
-    响应丢失时只读核验，无法确认则以 <code>merge_outcome_unknown</code> 回滚本地决定；远端与数据库无法原子提交，同 SHA 已合并可以在人工重试时确认。
-    退回不进入远端写路径，需求 DONE 仍由 LEADER 单独确认。
+    <code>ScmPullRequestDecisionService</code> 选择 GitHub/GitLab。<strong>通过</strong>先核对远端 head，再把被审查的 SHA 作为并发条件交给合并接口，并确认真的合并了；
+    <strong>拒绝</strong>核对 head 与 base 后关闭 PR/MR，保留分支，也不取消需求；<strong>退回</strong>只确认 PR 仍然开放，不写远端。
+    本地那一步是带 <code>WHERE decision='PENDING'</code> 的条件更新，所以决定只能写一次。
+  </p>
+  <p>
+    远端与数据库无法原子提交。响应丢失时只读核验一次，仍无法确认就以 <code>merge_outcome_unknown</code> 或 <code>close_outcome_unknown</code> 回滚本地决定，交给人去平台上核对；
+    远端其实已经成功的，人工重试时会核对同一个 SHA 并补上本地记录。需求 DONE 仍由 LEADER 单独确认。
   </p>
   <p>
     <code>ReviewDecided</code> 在事务内发布，通知监听器使用 <code>@TransactionalEventListener</code> 提交后发送；AI 完成/失败事件本来就在提交后发布，仍用普通监听器。
@@ -1063,7 +1147,7 @@ events.publishEvent(new ReviewDecided(projectId, reviewId));</code></pre>
       <tr><td class="f">BCrypt</td><td>专门用于存密码的哈希算法，故意算得慢，让暴力破解昂贵。</td></tr>
       <tr><td class="f">SQLState</td><td>数据库错误的标准编码。本项目直接按码断言：<code>23505</code> 唯一冲突、<code>23503</code> 外键违例、<code>23514</code> CHECK 违例、<code>22000</code> 向量维度不一致。</td></tr>
       <tr><td class="f">Testcontainers</td><td>测试时用 Docker 起一个真实数据库。本项目<strong>禁止</strong>用内存数据库替代。</td></tr>
-      <tr><td class="f">Surefire</td><td>Maven 跑测试的插件。它默认的类执行顺序是本项目一个已知脆弱点的来源。</td></tr>
+      <tr><td class="f">Surefire</td><td>Maven 跑测试的插件。它按文件名顺序执行测试类；本项目曾有一个依赖这个顺序的缺陷，经过见测试报告 9.1。</td></tr>
       <tr><td class="f">Precision / Recall</td><td>查准率（报出来的有多少是真的）与查全率（真的有多少被报出来）。评测同时报两者，<strong>不合成单一分数</strong>。</td></tr>
       <tr><td class="f">Wilson 区间</td><td>小样本比例的置信区间算法。评测用它给出区间而不是只给一个点值。</td></tr>
     </tbody>
@@ -1071,9 +1155,6 @@ events.publishEvent(new ReviewDecided(projectId, reviewId));</code></pre>
 </div>
 
 <footer class="end">
-  <p>2026-09-20 补充：第 11 站已加入 diff 新侧逐字证据锚定与行号纠正规则；2026-09-08 主干走查快照和正式评测证据未改写。</p>
-  <p>2026-09-25 补充：第 11 站的 Finding 类型改由是否引用本修订的验收条件推导，模型不再自报类型（<code>review-4</code>）；网关 chat 调用默认温度 0；审查详情显示校验器丢弃与纠行的计数，以及上一轮报告、本轮未再报告的 Finding。</p>
-  <p>2026-09-30 源码补充（已部署）：第 11 站现为 <code>review-5</code>，模型恢复输出 type，合法 AC 与类型矛盾时保留为无 AC 的代码质量类。详情的“未再报告”按同位置/同需求 AC 粗略收窄，不改变血缘与抑制；纠行只计 Finding（含分批候选）。认领清空后开发者可接续标记修复，前端同步隐藏无权按钮。未新增真实模型实验结果。</p>
   <p>
     这份走查覆盖<strong>主干</strong>：一次 PR 从到达到审查完成，并说明人工决定、按 SHA 合并和提交后通知的边界。
     需求管理、知识入库、成员与 SCM 身份绑定的完整操作另见使用手册。

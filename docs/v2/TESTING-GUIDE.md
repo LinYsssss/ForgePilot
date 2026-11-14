@@ -81,15 +81,15 @@ git config --global user.email "<你的邮箱>"
 
 | 组 | 项 | 功能 | 依赖 |
 |---|---|---|---|
-| A | A1–A6 | 认证与账户 | — |
+| A | A1–A7 | 认证与账户 | — |
 | B | B1–B8 | 项目与成员 | A |
 | C | C1–C7 | SCM 身份与仓库接入 | B |
-| D | D1–D5 | 项目知识 | B |
-| E | E1–E10 | 需求与验收条件 | B、D |
-| F | F1–F7 | 推送 → PR → Webhook → Review | C、E |
+| D | D1–D7 | 项目知识 | B |
+| E | E1–E12 | 需求与验收条件 | B、D |
+| F | F1–F9 | 推送 → PR → Webhook → Review | C、E |
 | G | G1–G8 | Finding 生命周期 | F |
-| H | H1–H6 | 审查决策与需求收尾 | G |
-| I | I1–I3 | 通知 | B |
+| H | H1–H9 | 审查决策与需求收尾 | G |
+| I | I1–I4 | 通知 | B |
 | J | J1–J5 | 归档、删除与隔离 | 全部 |
 | K | K1–K10 | 负向与边界 | 全部 |
 
@@ -400,9 +400,9 @@ gh api repos/<owner>/<repo>/hooks/$HOOK/deliveries \
 
 ### D1 上传项目知识
 
-**操作**：**项目知识**（`/knowledge`）→ 选中项目 → 上传或粘贴文档。
+**操作**：**项目知识**（`/knowledge`）→ 选中项目 → 选择 `.txt` 或 `.md` 文件上传。
 
-**预期**：文档状态经 `PENDING → READY`。
+**预期**：上传立即返回，文档先显示「正在处理」；后台完成切块与向量化后状态经 `PENDING → READY`，页面自动刷新为「可用于审查」，不需要手动刷新。
 
 **验证**：
 
@@ -469,6 +469,14 @@ where not exists (select 1 from knowledge_document d
 
 **对应端点**：`GET .../knowledge/documents/{id}/content` 返回 `{documentId,title,text}`，`GET .../download` 返回附件；列表不返回全文或向量。
 
+### D7 处理失败后的重试
+
+**操作**：让一份文档入库失败（最简单的办法：在未配置 Embedding 模型的部署上上传），然后由 LEADER 点「重试处理」。
+
+**预期**：失败的文档显示「处理失败」并带真实原因，**不会**显示成处理中或可用；重试后回到 `PENDING`，由同一个后台处理器重新消费。对非失败状态的文档调用重试返回 409。系统**不会**自动循环重试。
+
+**对应端点**：`POST /api/projects/{projectId}/knowledge/documents/{documentId}/retry`
+
 ---
 
 ## 6. E 组：需求与验收条件
@@ -518,7 +526,7 @@ from acceptance_criterion order by requirement_revision_id, sort_order;"
 
 **预期**：给出**建议**。完整 Prompt 在脱敏后处于预算内时恰好调用一次 AI；超预算时报告包含 `PROMPT_BUDGET_EXCEEDED`、`ai=null`，且 provider 零调用，规则结果仍以 `quality-2` 保存。
 
-**关键**：质量检查**不是工作流状态**，不阻塞任何操作，也**不会自动把需求置为 READY**。DRAFT 期间正文一改，质量检查结果即失效。
+**关键**：质量检查**不是工作流状态**，不阻塞任何操作，也**不会自动把需求置为 READY**。DRAFT 期间正文一改，质量检查结果即失效。检查还在进行时去编辑并保存草稿：这次检查返回 409，旧结果不会写到新内容上，页面也不会显示那份晚到的报告。
 
 **验证**：
 
@@ -583,7 +591,7 @@ select id, project_id, source_type, source_requirement_id, title, status
 from knowledge_document order by id;"
 ```
 
-附件类文档 `source_type = REQUIREMENT_ATTACHMENT` 且 `source_requirement_id` 非空；提升后应变为 `PROJECT_KNOWLEDGE` 且该列为空。
+附件类文档 `source_type = REQUIREMENT_ATTACHMENT` 且 `source_requirement_id` 非空。提升是**复制**而不是改写：提升后多出一行 `PROJECT_KNOWLEDGE`（该列为空），原附件那一行原样保留，仍归属原需求。
 
 **对应端点**：`POST .../attachments/{documentId}/promote`
 
@@ -591,7 +599,9 @@ from knowledge_document order by id;"
 
 **操作**：在需求详情页生成实现建议。由 LEADER 或**被指派的** DEVELOPER 触发。
 
-**预期**：生成一份实现建议。「一次性」指不保存结果、不做多轮对话；可以再次生成，每次都是独立的一次调用。未被指派的 DEVELOPER 触发应返回 403。
+**预期**：生成一份实现建议，含建议概览、开始前需确认的事项、实施清单、项目规则与风险提示，并可展开本次参考的知识资料。「一次性」指不保存结果、不做多轮对话；可以再次生成，每次都是独立的一次调用。未被指派的 DEVELOPER 触发应返回 403。
+
+**再验证两条**：草稿有未保存的修改时不能生成（先保存或发布）；保存后旧建议与在途的回答一并作废。「复制建议」与「下载 Markdown」得到同一份文本，刷新页面后建议不保留。
 
 **验证**：
 
@@ -607,11 +617,11 @@ from ai_call_log where use_case='IMPLEMENTATION_GUIDANCE' order by id desc limit
 
 **预期**：得到结构化 Markdown，包含标题、背景、描述与全部 AC。
 
-### E12 作废需求（软删除）
+### E12 作废与删除需求
 
-**操作**：LEADER 取消/作废一条需求。
+**操作**：LEADER 先把一条需求置为「已作废」；再对这条已作废的需求点「删除」。
 
-**预期**：需求进入 `CANCELED` 并**软删除**（`deleted_at` 与 `deleted_by` 同时写入），列表中不再出现，但**历史审计与既成事实保留**。
+**预期**：这是**两步**。作废只把状态改为 `CANCELED`，需求仍在列表里、可按状态筛出；删除只对已作废的需求开放，执行后**软删除**（`deleted_at` 与 `deleted_by` 同时写入），从列表消失，但**历史审计与既成事实保留**。对未作废的需求调用删除返回 409，重复删除返回 404。
 
 **验证**：
 
@@ -776,7 +786,7 @@ select id, project_id, review_id, requirement_revision_id, ac_id, finding_type,
 from finding order by id;"
 ```
 
-**预期**：每条 Finding 带证据——命中的 AC、代码位置、引用的项目知识片段。源码 `evidence` 必须逐字锚定到对应 diff hunk 的新侧源码（不含 diff 标记）；唯一命中会纠正模型行号，多处命中且模型行号不能消歧时行号为空。删除行、元数据、虚构引用与跨 hunk 拼接均不得进入结果，并应留下 validator warning。
+**预期**：审查详情的「验收标准覆盖判定」对每条 AC 给出 `COVERED / NOT_FOUND / AT_RISK / UNKNOWN` 之一；`UNKNOWN` 表示信息不足、待核实，不等于未实现。每条 Finding 带证据——命中的 AC、代码位置、引用的项目知识片段。源码 `evidence` 必须逐字锚定到对应 diff hunk 的新侧源码（不含 diff 标记）；唯一命中会纠正模型行号，多处命中且模型行号不能消歧时行号为空。删除行、元数据、虚构引用与跨 hunk 拼接均不得进入结果，并应留下 validator warning。
 
 ### G2 三个正交概念分开呈现
 
@@ -912,6 +922,7 @@ order by rv.id;"
 3. 试图通过**改 Base、改需求关联、改需求版本、重新同步 Diff** 来解闸 → **都解不开**。
 4. 在原分支推新 commit，等待新 Review 完成后再 APPROVE → 确认远端合并被审查的 SHA 后成功；页面显示新轮次及上一轮理由，需求仍待 LEADER 确认完成。
 5. 在另一测试 PR/MR 验证远端 head 变化、合并冲突/权限不足 → 不记录本地通过。响应丢失且无法只读确认时返回 503 `merge_outcome_unknown`，人工核查远端后处理，不自动重复写入。GitLab 仓库 Token 需 `api` 和实际合并权限。
+6. 在另一测试 PR/MR 上「拒绝并关闭」→ 必须填理由并二次确认；远端确认已关闭后才记录 `REJECT`，源分支保留，需求不取消，同一 head 同样形成闸门。结果无法确认时返回 503 `close_outcome_unknown` 且不记录；到平台确认已关闭后，用「核验关闭并补记拒绝」补上。
 
 **验证**：
 
@@ -944,13 +955,37 @@ from review order by id;"
 
 **对应端点**：`GET /api/projects/{projectId}/requirements/{requirementId}/review-activity`、`GET /api/projects/{projectId}/review-activity`
 
-### H7 需求覆盖度与审查校准
+### H7 覆盖度、校准与 AI 调用台账
 
-**操作**：查看需求覆盖度与审查校准两个视图。
+三个只读派生视图，都不落表、每次现算。
 
-**对应端点**：`GET .../requirements/{requirementId}/coverage`、`GET .../review-calibration`
+**覆盖度**（需求详情 →「关联审查」）：当前修订每条 AC 在最近一次已完成审查里的结论，并给出来源审查的链接。
 
-### H8 需求 DONE 由人确认
+- 发布新修订后回到「尚未审查」——旧裁定针对的是另一套 AC。
+- 审查之后再向 PR 推新代码，来源审查旁出现「已过期」，裁定仍显示但不能当作当前代码的结论。
+
+**校准**（工作台）：把人工对 Finding 的**首次**确认/驳回当作标签，按三档置信度给出确认率与 95% Wilson 区间；样本不足的档显示「样本不足」。
+
+**AI 调用台账**（工作台，默认折叠）：按请求模型与用途列出次数、成败、已上报 Token 与单次请求耗时的 P50/P95。重试各算一次；它不是账单，也不是准确率。
+
+**对应端点**：`GET .../requirements/{requirementId}/coverage`、`GET .../review-calibration`、`GET .../ai-usage`
+
+### H8 PR 远端状态
+
+**操作**：在平台上直接关闭一个已入库的 PR，等待 webhook；再重开它。
+
+**预期**：审查页的「远端状态」变为已关闭，「请求审查」入口消失并提示历史记录保留；排队中尚未开始的审查不再执行，已在运行的照常结束。重开后恢复为开放。在平台上直接**合并**的 PR 不会显示为本系统的 `APPROVE`。
+
+**验证**：
+
+```bash
+docker exec fp-demo-postgres-1 psql -U forgepilot -d forgepilot -c "
+select id, external_number, remote_state, left(head_sha,8) as head from pull_request order by id desc limit 5;"
+```
+
+`remote_state` 为空表示该 PR 入库后还没有同步过状态，会在下一次人工请求审查或退回时核验。
+
+### H9 需求 DONE 由人确认
 
 **操作**：LEADER 在确认全部关联工作完成后，把需求置为 `DONE`。
 
@@ -1058,7 +1093,7 @@ select * from project_deletion_record order by id;"
 | 动作 | LEADER | DEVELOPER | REVIEWER |
 |---|:--:|:--:|:--:|
 | 创建项目、管理成员与角色 | ✅ | ❌ | ❌ |
-| 配置 SCM 仓库、上传项目知识 | ✅ | ❌ | ❌ |
+| 配置 SCM 仓库、上传项目知识、重试失败文档 | ✅ | ❌ | ❌ |
 | 验证、标注、撤销自己的 SCM 身份 | ✅ | ✅ | ✅ |
 | 为项目选择自己的兼容 SCM 身份 | ✅ | ✅ | ✅ |
 | 严格项目批准/拒绝待审绑定 | ✅ | ❌ | ❌ |
@@ -1075,7 +1110,7 @@ select * from project_deletion_record order by id;"
 | Finding 确认 / 拒绝 | ✅ | ❌ | ✅ |
 | **Finding 认领、标记已修复** | **❌** | **✅（已有认领仅限认领人；无人认领时可接续）** | **❌** |
 | Finding 验证通过 / 打回 | ✅ | ❌ | ✅ |
-| Review 终局 APPROVE / REQUEST_CHANGES | ✅ | ❌ | 仅指定有效审查人 |
+| Review 终局 APPROVE / REQUEST_CHANGES / REJECT | ✅ | ❌ | 仅指定有效审查人 |
 | 取消需求 | ✅ | ❌ | ❌ |
 
 > 注意 LEADER 在「Finding 认领、标记已修复」这一行是 **❌**。单角色 LEADER **走不完** Finding 主链，这是设计而非缺陷。
@@ -1170,6 +1205,7 @@ gh api repos/<owner>/<repo>/hooks/$HOOK/deliveries \
 | **401** | 签名校验失败 | 两侧 secret 不一致。重设新值、两边同时写 |
 | **422** | 被拒绝 | changed-file 超限。**这种情况不留痕** |
 | **503** | Provider 暂时不可用（`provider_unavailable`） | 稍后重投；持续出现则检查出网与 apiBase，见 K10 |
+| **502** | Provider 拒绝了读取（`provider_error`） | 多半是仓库 Token 失效或权限不足，在仓库接入页重填 |
 | **5xx** | 后端异常 | `docker logs fp-demo-backend-1 --tail 200` |
 | 无投递记录 | hook 没建或没开 | 检查 `active` 与 `events` 是否含 `pull_request` |
 
@@ -1195,12 +1231,12 @@ select id, review_id, use_case, model, status, latency_ms, left(coalesce(error,'
 from ai_call_log order by id desc limit 10;"
 ```
 
-- 长时间 `PENDING`：执行器没启动或已停滞，reconciliation 会兜底。
+- 长时间 `PENDING`：执行器没启动或已停滞，reconciliation 会兜底；若 PR 在平台上已关闭或合并，排队中的审查不再执行，属预期（见 H8）。
 - `FAILED`：看 `ai_call_log.error`。
 
 ### 知识检索不到
 
-确认文档 `status = READY` 且 `knowledge_chunk` 有行（见 D1、D2）。`PENDING` 状态下的文档不参与检索。
+确认文档 `status = READY` 且 `knowledge_chunk` 有行（见 D1、D2）。`PENDING` 状态下的文档不参与检索；`FAILED` 的看 `failure_reason`，修好原因后按 D7 重试。
 
 ### 权限报 403 但你觉得应该有权
 
@@ -1302,3 +1338,5 @@ SQL
 7. **进程内 Review 执行不提供消息队列级持久性**，靠 reconciliation 兜底，且 reconciliation 不补建缺失 Review。
 8. **浏览器点击闭环、1440/768/390 三档宽度与 `prefers-reduced-motion` 两种模式为人工验收**，未自动化。
 9. **PostgreSQL 最低版本 15**（复合外键列级 `ON DELETE SET NULL` 与 `UNIQUE NULLS NOT DISTINCT` 两处语法不可替代）。
+10. **远端合并/关闭与本地记录无法原子提交**。结果不明时只读核验一次，仍不明则交人工到平台核对，没有后台补偿。
+11. **远端状态只在同步时更新**。在平台上直接合并的 PR 不会体现为本系统的通过；从未同步过状态的旧 PR 按开放处理，直到下一次人工操作时核验。

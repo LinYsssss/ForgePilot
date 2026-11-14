@@ -142,7 +142,7 @@
 <main>
 
 <header class="mast">
-  <p class="eyebrow">Security Design · 2026-09-08</p>
+  <p class="eyebrow">Security Design · 2026-11-14</p>
   <h1>ForgePilot 安全设计说明</h1>
   <p class="standfirst">
     ForgePilot 持有三类高价值秘密：用户口令、代码仓库的访问令牌、以及 webhook 签名密钥。
@@ -150,7 +150,7 @@
     本文说明针对这些面的防护措施、每条措施的具体实现，以及<strong>明确未被防护的部分</strong>。
   </p>
   <dl class="docmeta">
-    <div><dt>安全需求</dt><dd>11 条<small>（NFR-S）</small></dd></div>
+    <div><dt>安全需求</dt><dd>12 条<small>（NFR-S）</small></dd></div>
     <div><dt>专项测试</dt><dd>8 个类</dd></div>
     <div><dt>公开端点</dt><dd>2<small>／webhook</small></dd></div>
     <div><dt>秘密类型</dt><dd>4</dd></div>
@@ -307,6 +307,13 @@
     nginx 那一个地址，配额变成全体共享，而被丢掉的 webhook 投递不会被 provider 重试。
     剩下的风险见第 10 章第 4 条。
   </p>
+
+  <h3>2.7 浏览器侧的响应头与 Cookie</h3>
+  <p>
+    前端 nginx 对每个响应下发 <code>Strict-Transport-Security</code> 与 <code>Referrer-Policy: strict-origin-when-cross-origin</code>，
+    并给经它代理的后端 Cookie 追加 <code>SameSite=Lax</code>，使会话与 CSRF cookie 只随同站请求发送。
+    Cookie <strong>没有</strong>加 <code>Secure</code>：回环地址上的 HTTP 演示路径必须仍能登录，公网的 HTTPS 由反向代理一侧保证（见第 10 章第 8 条）。
+  </p>
 </section>
 
 <!-- ══════ 3 ══════ -->
@@ -355,7 +362,11 @@
     认领意味着「我来修」，是本人动作。因此系统里<strong>没有「指派 Finding」这个端点</strong>——
     少一个端点，也少一个授权面。
   </p>
-  <h3>3.6 最终决定与远端合并</h3>
+  <p>
+    「标记已修复」同理：已有认领时只有认领人能标记。成员退出项目使认领清空后，本项目任一 DEVELOPER 可以接续，
+    实际操作者由审计事件记录；这不会自动重新认领，也不放宽角色限制。
+  </p>
+  <h3>3.6 最终决定与远端操作</h3>
   <p>
     最终决定只允许<strong>需求指定且仍有效的 REVIEWER 或 LEADER</strong>；未关联、未指定或审查人失效时由 LEADER 处理。
     关联需求必须在 <code>IN_DEVELOPMENT</code> 且有仍具 DEVELOPER/LEADER 资格的开发负责人。
@@ -364,7 +375,8 @@
   <p>
     人工 APPROVE 先校验远端 head，再把被审查的 SHA 交给 GitHub/GitLab 合并接口并确认结果。
     REQUEST_CHANGES 要求非空理由且<strong>不写远端</strong>，保留 PR/MR 与分支。
-    合并响应不明时只读核查，无法确认则返回 <code>merge_outcome_unknown</code> 并回滚本地决定；不自动重复远端写入。验证见 <code>ReviewDecisionTest</code>、<code>ScmMergeTest</code>。
+REJECT 同样必填理由，核对远端 head 与 base 后关闭 PR/MR，远端确认已关闭才记录，源分支与需求都保留。
+    合并或关闭的响应不明时只读核查，无法确认则返回 <code>merge_outcome_unknown</code> / <code>close_outcome_unknown</code> 并回滚本地决定；不自动重复远端写入。验证见 <code>ReviewDecisionTest</code>、<code>ScmMergeTest</code>。
   </p>
   <h3>3.7 知识原文与指派隔离</h3>
   <p>
@@ -388,7 +400,7 @@
       <tr><td>密钥来源</td><td class="f">环境变量 <code>FORGEPILOT_SCM_SECRET_KEY</code></td></tr>
     </tbody>
   </table></div>
-  <p>选 GCM 而非 CBC 的理由是<strong>它自带认证</strong>：密文被篡改会在解密时失败，而不是解出一段垃圾明文。</p>
+  <p>选 GCM 而非 CBC 的理由是<strong>它自带认证</strong>：密文被篡改会在解密时失败，而不是解出一段垃圾明文。库里的密文若不是合法 Base64 或长度不足一个 IV，解密以受控错误拒绝，而不是带着未定义的输入继续。</p>
 
   <h3>4.2 只写不回显</h3>
   <p>访问令牌与 webhook 密钥是<strong>只写字段</strong>：</p>
@@ -412,6 +424,12 @@
     <code>verify-freeze</code> 在不接触任何凭据的前提下核对它们未被改动。
   </p>
   <p>冻结记录本身<strong>只保存 <code>apiKeyPresent: true/false</code></strong>，从不保存密钥或授权头。</p>
+
+  <h3>4.5 一次已处置的凭据暴露</h3>
+  <p>
+    演示环境的测试账号清单曾随一次提交进入公开仓库。处置是把这 10 个账号的口令全部轮换、把清单移出仓库；
+    Git 历史里仍能看到旧口令，但它们已经失效。教训很直接：<strong>演示数据也是凭据</strong>，不进入被跟踪的文件。
+  </p>
 </section>
 
 <!-- ══════ 5 ══════ -->
@@ -454,7 +472,7 @@
 } catch (ApiException rejected) {
     throw rejected;
 } catch (RuntimeException malformed) {
-    throw unverifiable();          <span class="c">// 一律答成「无法验证」</span>
+    throw PullRequestSyncService.unauthenticated();   <span class="c">// 一律答成「无法验证」</span>
 }</code></pre>
   <div class="note red">
     <span class="label">这个保护块防的是两件事</span>
@@ -468,6 +486,10 @@
       <strong>二、不可区分性。</strong>「载荷畸形」「仓库不存在」「签名错误」<strong>答得一模一样</strong>，
       攻击者无法据错误差异探测本部署接入了哪些仓库。
     </p>
+    <p>
+      这个「一模一样」不是靠三处各写一份相同的文案维持的：两个 provider 的接收端与入库服务都取
+      <code>PullRequestSyncService.unauthenticated()</code> 这<strong>同一个定义</strong>，改一处措辞不可能让它们彼此可区分。
+    </p>
   </div>
 
   <h3>5.5 认证之后仍不信任载荷</h3>
@@ -476,6 +498,11 @@
     因此系统<strong>回头向 provider 做一次权威读取</strong>：webhook 是<em>信号</em>，权威快照才是<em>事实</em>。
   </p>
   <p>这同时防住重放：带更旧时间戳的快照被丢弃，不覆盖较新状态。</p>
+  <p>
+    权威读取与入库之间还有一个窗口：仓库的稳定身份在首个 PR 入库之前可以被合法修改。
+    入库时在仓库行锁内比较「拉取所用的身份」与「此刻的身份」，不一致就按查不到该仓库拒收——
+    否则旧仓库的 PR 会挂到新身份之下。
+  </p>
 
   <h3>5.6 权威字段必须大声失败</h3>
   <p>
@@ -489,7 +516,7 @@
   <p>
     <code>author_external_user_id</code> 更严重：<strong>它是授权键</strong>。
     若变成 <code>""</code>，所有「幽灵作者」的 PR 会共享同一个身份，「本人 PR」权限就串了。
-    <code>GitHubClientGuardTest</code> 20 个用例专门覆盖这条路径。
+    <code>GitHubClientGuardTest</code> 专门覆盖这条路径，以及读取失败的处置：限流、5xx 与网络错误答 503，其余 HTTP 错误答 502，响应形状不符答 422——都是本系统自己的文案，不透传 provider 的原始错误体，也不会因响应形状意外而冒出未分类的 500。
   </p>
 </section>
 
@@ -546,7 +573,7 @@
   <p>单一出口的安全价值：所有发往外部的内容必然经过同一处脱敏，不存在绕过路径。</p>
 
   <h3>7.2 发送前的处理</h3>
-  <p><code>PromptSanitizer</code> 做两件事，且<strong>只做这两件</strong>：掩码疑似凭据的字符串、把载荷裁剪到预算内。</p>
+  <p><code>PromptSanitizer</code> 掩码疑似凭据的字符串；对向量化输入，它另外把载荷裁剪到预算内。对话请求<strong>不裁剪</strong>：网关在掩码之后按完整 Prompt 校验预算，超限以 <code>ai_prompt_too_large</code> 显式拒绝——被悄悄截掉的代码会让模型对没看到的部分下结论。</p>
   <div class="note">
     <span class="label">它是纯函数，这是刻意的</span>
     <p>
@@ -590,7 +617,7 @@
 
   <h3>7.6 失败不放大成调用风暴</h3>
   <ul>
-    <li><strong>重试只有一次</strong>，且只对瞬时错误（429/5xx/网络）。全代码库别处<strong>没有任何重试</strong>。</li>
+    <li><strong>重试只有一次</strong>，且只对瞬时错误（429/5xx/网络）；遇到 429 先等 5 秒。全代码库别处<strong>没有任何重试</strong>。</li>
     <li>格式修复<strong>只有一次</strong>，写成 <code>try/catch/try</code> 而非循环——循环会把网关那次有界重试放大成四次调用。</li>
     <li>provider 不可达时 Review 标为 FAILED 并<strong>停下等人工</strong>，而不是让异常逃逸后被对账任务反复重新抢占、反复重调。</li>
   </ul>
@@ -650,9 +677,9 @@
       <tr><td class="f">POST /api/scm/*/webhook</td><td><strong>无</strong>（公开）</td><td>HMAC 覆盖原始字节 · 常数时间比较 · 保护块统一答案 · 不降级 · 60 次／分限流</td><td class="f">WebhookSignatureVerifierTest · GitHub/GitLabWebhookIngestionTest</td></tr>
       <tr><td class="f">POST /api/auth/register</td><td>无</td><td>BCrypt · 输入长度约束 · 5 次／10 分限流</td><td class="f">AuthApiTest</td></tr>
       <tr><td class="f">POST /api/auth/login</td><td>无</td><td>失败不可区分 · traceId 为空 · 20 次／分限流（在认证之前）</td><td class="f">AuthApiTest · RateLimiterTest</td></tr>
-      <tr><td class="f">其余 67 个 API 端点</td><td>会话 + CSRF</td><td>单一授权入口 · 项目隔离复合键 · 404/403 不可区分</td><td class="f">ProjectAuthorizationTest · BatchOneApiTest</td></tr>
+      <tr><td class="f">其余 69 个 API 端点</td><td>会话 + CSRF</td><td>单一授权入口 · 项目隔离复合键 · 404/403 不可区分</td><td class="f">ProjectAuthorizationTest · BatchOneApiTest</td></tr>
       <tr><td class="f">出站至 provider</td><td>—</td><td>协议白名单 · 主机白名单 · 内网地址拒绝 · 每次重校验</td><td class="f">OutboundUrlPolicyTest · GitHubClientGuardTest</td></tr>
-      <tr><td class="f">出站至模型服务</td><td>—</td><td>单一出口 · 凭据掩码 · 预算裁剪 · 输出逐项核验</td><td class="f">PromptSanitizerTest · ReviewOutputValidatorTest</td></tr>
+      <tr><td class="f">出站至模型服务</td><td>—</td><td>单一出口 · 凭据掩码 · 超预算显式拒绝 · 输出逐项核验</td><td class="f">PromptSanitizerTest · ReviewOutputValidatorTest</td></tr>
       <tr><td class="f">出站至钉钉</td><td>—</td><td>origin 钉死在 <code>oapi.dingtalk.com</code> · 加签 · 只发计数不发正文 · 失败不影响审查</td><td class="f">DingTalkSenderTest · NotificationChannelTest</td></tr>
       <tr><td class="f">文件上传</td><td>会话 + LEADER</td><td>入库前四道校验 · 5 MB 上限 · 类型限定</td><td class="f">KnowledgeGuardTest</td></tr>
       <tr><td class="f">GET /actuator/health</td><td>无</td><td>只暴露 health，其余端点返回 404</td><td class="f">ActuatorExposureTest</td></tr>
@@ -731,9 +758,9 @@
       </tr>
       <tr>
         <td class="n">11</td>
-        <td><strong>远端合并与本地提交不原子</strong></td>
-        <td>按 SHA 合并并验证结果；不明响应只读确认，同 SHA 已合并可供人工重试核验，无补偿任务</td>
-        <td>远端成功而本地提交失败时可能暂时不一致；需要核查远端后补记本地决定，不能把超时当作确定未合并</td>
+        <td><strong>远端合并/关闭与本地提交不原子</strong></td>
+        <td>按 SHA 合并、核对后关闭，并验证结果；不明响应只读确认，远端已成功的可在人工重试时核验补记，无补偿任务</td>
+        <td>远端成功而本地提交失败时可能暂时不一致；需要核查远端后补记本地决定，不能把超时当作确定未合并或未关闭</td>
       </tr>
     </tbody>
   </table></div>
@@ -750,15 +777,11 @@
 
 <footer class="end">
   <p>
-    本文描述 2026-09-08 的代码实现。措施对应到实现与测试；真实外部合并、通知和浏览器验收未在本轮执行。
+    本文描述当前代码的防护措施，每条措施对应到实现与测试。真实 GitLab 实例、钉钉投递与完整的浏览器验收不在自动化范围内，现状见测试报告第 8 章。
     第 10 章的十一条残余风险为已知的未防护或仅部分缓解项。
   </p>
-  <p>2026-09-20 补充：模型源码引用已在写入前逐字锚定到 diff 新侧并校正行号；历史安全快照与正式评测证据保持原样。</p>
-  <p>2026-09-25 补充：前端 nginx 下发 <code>Strict-Transport-Security</code> 与 <code>Referrer-Policy</code>，代理响应的 Cookie 追加 <code>SameSite=Lax</code>（09-21）。演示测试账号清单曾随 <code>c63d654</code> 进入公开仓库，10 个账号已全部轮换并移出仓库，历史提交中的旧密码已失效（09-25）。「标记已修复」收紧为仅限认领人（09-25）。</p>
-  <p>2026-09-30 源码补充（已部署）：已有认领时仍只有认领开发者能标记修复；成员退出导致认领清空后，本项目任一 DEVELOPER 可接续，实际操作者由既有事件记录，不自动重新认领，也不放宽角色限制。</p>
-  <p>2026-10-14 源码补充（2026-10-16 已部署）：仓库密文解密对非 Base64 与长度不足的输入返回受控错误，不再可能以未定义行为继续；GitHub 权威读取失败统一为受控错误码（503/502/422）并给出本系统文案，不随响应形状产生未分类的 500，也不透传 Provider 原始错误体。</p>
   <p>
-    配套文档：《ForgePilot 需求规格说明书》（NFR-S1–S11 及其追溯）、《ForgePilot 测试报告》、
+    配套文档：《ForgePilot 需求规格说明书》（NFR-S1–S12 及其追溯）、《ForgePilot 测试报告》、
     《ForgePilot 使用与代码手册》、《跟着一次 PR 走完 ForgePilot》。
   </p>
 </footer>

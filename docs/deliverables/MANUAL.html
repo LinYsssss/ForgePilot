@@ -419,6 +419,7 @@ img, svg { max-width: 100%; height: auto; }
     <li class="sub"><a href="#p-ai">ai</a></li>
     <li class="sub"><a href="#p-scm">scm</a></li>
     <li class="sub"><a href="#p-review">review</a></li>
+    <li class="sub"><a href="#p-notification">notification</a></li>
     <li><a href="#s6"><span class="num">06</span><span>前端代码地图</span></a></li>
     <li><a href="#s7"><span class="num">07</span><span>数据模型 21 表</span></a></li>
     <li><a href="#s8"><span class="num">08</span><span>API 端点</span></a></li>
@@ -433,7 +434,7 @@ img, svg { max-width: 100%; height: auto; }
 <main>
 
 <header class="masthead">
-  <p class="eyebrow">使用与代码手册 · 2026-09-08</p>
+  <p class="eyebrow">使用与代码手册 · 2026-11-14</p>
   <h1>ForgePilot 使用与代码手册</h1>
   <p class="standfirst">
     一个<strong>基于需求上下文增强的 AI 代码审查系统</strong>。它把研发需求、验收条件与项目知识
@@ -444,9 +445,9 @@ img, svg { max-width: 100%; height: auto; }
     <div class="fact"><dt>后端</dt><dd>9<small>个包</small></dd></div>
     <div class="fact"><dt>Review Engine</dt><dd>1</dd></div>
     <div class="fact"><dt>前端</dt><dd>6<small>入口／11 路由</small></dd></div>
-    <div class="fact"><dt>数据表</dt><dd>21<small>／14 迁移</small></dd></div>
+    <div class="fact"><dt>数据表</dt><dd>21<small>／15 迁移</small></dd></div>
     <div class="fact"><dt>SCM Provider</dt><dd>2</dd></div>
-    <div class="fact"><dt>后端验证</dt><dd>已复核<small>见测试报告</small></dd></div>
+    <div class="fact"><dt>后端验证</dt><dd>通过<small>见测试报告</small></dd></div>
     <div class="fact"><dt>前端验证</dt><dd>通过<small>见测试报告</small></dd></div>
   </dl>
 </header>
@@ -486,7 +487,7 @@ img, svg { max-width: 100%; height: auto; }
   <div class="chain-step"><b>分批送模型</b><span>批次只给候选，不下结论</span></div>
   <div class="chain-step"><b>综合阶段</b><span>唯一有资格下裁定的地方</span></div>
   <div class="chain-step"><b>Finding 落库</b><span>三个确定性哈希</span></div>
-  <div class="chain-step"><b>人工闭环</b><span>带理由退回 → 新轮次 → 通过合并</span></div>
+  <div class="chain-step"><b>人工闭环</b><span>带理由退回 → 新轮次 → 通过合并，或拒绝关闭</span></div>
 </div>
 
   <h3>三个角色</h3>
@@ -495,8 +496,8 @@ img, svg { max-width: 100%; height: auto; }
       <thead><tr><th>角色</th><th>能做什么</th></tr></thead>
       <tbody>
         <tr><td class="f">LEADER</td><td>建项目、加成员、写需求并冻结、上传项目知识、配置仓库、记录最终 Decision、归档项目。一个项目<strong>恰好一个</strong> LEADER，只能显式转移。</td></tr>
-        <tr><td class="f">DEVELOPER</td><td>认领 Finding、标记已修复、绑定自己的 SCM 身份、对自己的 PR 纠正需求关联。</td></tr>
-        <tr><td class="f">REVIEWER</td><td>复核 Finding（通过或打回）；只有需求指定且仍有效的审查人可作最终 Decision，LEADER 可接手。</td></tr>
+        <tr><td class="f">DEVELOPER</td><td>认领 Finding、标记已修复、绑定自己的 SCM 身份；对自己的 PR 纠正需求关联、请求审查；为被指派的需求生成实现建议。</td></tr>
+        <tr><td class="f">REVIEWER</td><td>确认或驳回 Finding、复核修复（通过或打回）、请求审查；只有需求指定且仍有效的审查人可作最终 Decision，LEADER 可接手。</td></tr>
       </tbody>
     </table>
   </div>
@@ -554,7 +555,7 @@ img, svg { max-width: 100%; height: auto; }
     <li>
       <strong>冷启动自证</strong>
       这个脚本会新建一个独立 Compose 项目和全新数据卷，等三个健康检查、校验反向代理、pgvector、
-      Flyway 十四条迁移与<strong>恰好二十一张业务表</strong>，然后只删掉它自己建的那套临时资源。2026-09-08 提交 <code>746e40b</code> 的 CI 已通过两次全新卷冷启动。
+      Flyway 十五条迁移与<strong>恰好二十一张业务表</strong>，然后只删掉它自己建的那套临时资源。CI 每次构建都运行它两次。<code>746e40b</code> 的 CI 已通过两次全新卷冷启动。
       <pre><code>FORGEPILOT_BACKEND_PORT=28080 \
 FORGEPILOT_FRONTEND_PORT=28081 \
 scripts/phase1-compose-smoke.sh forgepilot-phase1-defense-clean</code></pre>
@@ -614,15 +615,15 @@ docker compose -p fp-demo up --detach --wait backend frontend</code></pre>
       <caption>六个一级入口 + 11 条路由</caption>
       <thead><tr><th>入口</th><th>路由</th><th>作用</th></tr></thead>
       <tbody>
-        <tr><td>工作台</td><td class="f">/workspace</td><td>项目概况。URL 不带 <code>project</code> 时自动补上列表第一个；手动切换后刷新会停留在手动选择的那个。</td></tr>
+        <tr><td>工作台</td><td class="f">/workspace</td><td>当前项目的指标卡、「我的待办」队列、项目准备情况、进行中的审查与最近动态，另有模型置信度校准表与折叠的 AI 调用台账。URL 不带 <code>project</code> 时自动补上列表第一个；手动切换后刷新会停留在手动选择的那个。</td></tr>
         <tr><td>项目</td><td class="f">/projects</td><td>项目列表与创建。每张卡六个操作入口。</td></tr>
-        <tr><td>—</td><td class="f">/projects/:id/members</td><td>成员目录、角色编辑、SCM 绑定审批。</td></tr>
+        <tr><td>—</td><td class="f">/projects/:id/members</td><td>成员目录、批量添加、角色编辑、SCM 绑定审批，以及本人在该项目使用的 SCM 身份。</td></tr>
         <tr><td>研发需求</td><td class="f">/requirements</td><td>需求列表、筛选、行内操作、创建表单。</td></tr>
-        <tr><td>—</td><td class="f">/requirements/:id</td><td>需求详情：开发/审查人、当前阶段、退回理由、修订历史、附件、质量检查、实现建议。</td></tr>
-        <tr><td>项目知识</td><td class="f">/knowledge</td><td>上传（可多选）、原文阅读/下载、折叠索引详情。</td></tr>
-        <tr><td>仓库接入</td><td class="f">/repositories</td><td>GitHub / GitLab 注册与修改。<code>/projects/:id/settings</code> 重定向到这里。</td></tr>
-        <tr><td>代码审查</td><td class="f">/reviews</td><td>项目级 Review 列表。</td></tr>
-        <tr><td>—</td><td class="f">/reviews/:id</td><td>证据工作台：上下文快照、diff、Finding、人工闭环。</td></tr>
+        <tr><td>—</td><td class="f">/requirements/:id</td><td>需求详情。页首是当前阶段、处理人与被退回时的理由；下分五个标签：需求内容（含状态与指派、编辑或发布新版本）、AI 辅助（质量检查、实现建议）、关联审查（PR 活动分布、验收条件覆盖度）、附件、版本记录。</td></tr>
+        <tr><td>项目知识</td><td class="f">/knowledge</td><td>上传（可多选）、原文阅读/下载、处理失败后的重试、折叠索引详情。</td></tr>
+        <tr><td>仓库接入</td><td class="f">/repositories</td><td>GitHub / GitLab 注册与修改，以及项目的钉钉通知配置。<code>/projects/:id/settings</code> 重定向到这里。</td></tr>
+        <tr><td>代码审查</td><td class="f">/reviews</td><td>项目级 Review 列表（含提示词版本与模型）、需求评审活动概览、单个 PR 的审查历史与手动请求审查。</td></tr>
+        <tr><td>—</td><td class="f">/reviews/:id</td><td>证据工作台：轮次与决定、PR 与需求关联、上下文快照、diff、AC 判定、覆盖清单、Finding、终局决定。</td></tr>
         <tr><td>账户</td><td class="f">/account</td><td>显示名、改密、多个 GitHub/GitLab 身份验证。</td></tr>
         <tr><td>—</td><td class="f">/login</td><td>登录与注册。</td></tr>
       </tbody>
@@ -642,6 +643,7 @@ docker compose -p fp-demo up --detach --wait backend frontend</code></pre>
       <strong>上传项目知识</strong>
       「项目知识」上传 <code>.txt</code> / <code>.md</code>，可一次选多个文件。
       每个文件是<strong>独立一次调用、独立一个事务</strong>，所以逐文件报告成败，一个失败不影响其余。
+      上传只是受理：文档先处于「正在处理」，后台完成切片与向量化后自动变为可用；失败的文档保留原因，LEADER 可点「重试处理」。
       所有成员可阅读/下载公共原文；切片数、已嵌入数、向量维度、Embedding Profile 与索引状态收在“索引详情”。需求附件仍经所属需求入口读取。
     </li>
     <li>
@@ -660,6 +662,7 @@ docker compose -p fp-demo up --detach --wait backend frontend</code></pre>
       <strong>人工闭环</strong>
       指定有效审查人或 LEADER 可填理由退回：新理由去除首尾空白后非空，备注最多 2000 字，原 PR/MR 与分支保留。开发者修复并推新 head 后进入新一轮，详情保留上一轮及退回理由。
       人工“通过并合并”确认合并被审查的 SHA 后才记录 APPROVE；关联需求须在开发中且有有效开发负责人。最终决定一次写入，操作者、时间和理由保留。
+      「拒绝并关闭」同样必填理由并二次确认：远端确认已关闭后才记录 REJECT，源分支保留，需求不取消。
       只有 SUPPRESSED 且 REJECTED 的 Finding 收入抑制折叠组；重开后回主列表，血缘仍保留 SUPPRESSED。
     </li>
     <li>
@@ -752,11 +755,11 @@ docker compose -p fp-demo up --detach --wait backend frontend</code></pre>
     每包先给职责，再逐文件说明。
   </p>
   <p class="lb-key"><span class="lb"></span> 标记<strong>承重文件</strong>：改动它们会影响不变量、哈希稳定性或授权边界，动前先读它自己的 javadoc。</p>
-  <p>每个包还有一个 <code>package-info.java</code>，只承载包级 javadoc，共 9 个，下表不再重复列出。下列源文件/行数是 2026-09-08 工作树快照，不是结构约束。</p>
+  <p>每个包还有一个 <code>package-info.java</code>，只承载包级 javadoc，共 9 个，下表不再重复列出。各包标题旁的文件数与行数（含 <code>package-info.java</code>）是 2026-11-14 的快照，不是结构约束。</p>
 
   <!-- common -->
   <div class="pkg" id="p-common">
-    <div class="pkg-head"><span class="pkg-name">common</span><span class="pkg-count">6 文件 · 260 行</span></div>
+    <div class="pkg-head"><span class="pkg-name">common</span><span class="pkg-count">6 文件 · 306 行</span></div>
     <p class="pkg-role">跨模块横切基础设施，<strong>不承载任何业务语义</strong>。它是依赖图的底，谁都可以依赖它，它不依赖任何人。</p>
     <div class="tw"><table>
       <thead><tr><th>文件</th><th>作用</th></tr></thead>
@@ -764,13 +767,15 @@ docker compose -p fp-demo up --detach --wait backend frontend</code></pre>
         <tr><td class="f">ApiError</td><td>全部 API 失败响应的<strong>唯一</strong>错误体结构：<code>code</code> / <code>message</code> / <code>traceId</code>。</td></tr>
         <tr><td class="f">ApiException</td><td>允许被调用方看到的失败，自带它映射到的 HTTP 状态码与错误码。<code>notFound()</code> / <code>conflict()</code> / <code>forbidden()</code> / <code>unprocessable()</code> 是全代码库统一的抛出方式。</td></tr>
         <tr><td class="f">ApiExceptionHandler <span class="lb"></span></td><td><b>它做什么：</b>把所有失败统一成同一种错误格式返回给前端。<br><b>为什么这么写：</b>把各类失败统一收敛成 <code>ApiError</code>。约束冲突到达这里时其事务<strong>必定已回滚</strong>——任何代码都不得捕获约束冲突后在同一事务里继续执行。</td></tr>
+        <tr><td class="f">RateLimiter</td><td>进程内的固定窗口限流计数器，按调用方给的 key 计数。内存有两道界：窗口翻转时整张表换掉，且键数封顶；封顶后<strong>放过而不是拒绝</strong>——反过来写，攻击者用伪造地址打满表就能让所有人被拒。</td></tr>
+        <tr><td class="f">RateLimitFilter</td><td>按客户端地址限流一组路径（登录、注册、两个 webhook），超限直接答 429。它在 Spring MVC <strong>之前</strong>拒绝，所以自己写唯一错误体；同一条链上有两个实例，「已过此过滤器」的标记必须按实例区分，否则第二个会在每个请求上静默跳过自己。</td></tr>
       </tbody>
     </table></div>
   </div>
 
   <!-- auth -->
   <div class="pkg" id="p-auth">
-    <div class="pkg-head"><span class="pkg-name">auth</span><span class="pkg-count">12 文件 · 625 行</span></div>
+    <div class="pkg-head"><span class="pkg-name">auth</span><span class="pkg-count">12 文件 · 637 行</span></div>
     <p class="pkg-role">本地账号、会话，以及一个只读的用户目录 facade。账号是<strong>全局作用域</strong>，绝不携带 project id。</p>
     <div class="tw"><table>
       <thead><tr><th>文件</th><th>作用</th></tr></thead>
@@ -783,7 +788,7 @@ docker compose -p fp-demo up --detach --wait backend frontend</code></pre>
         <tr><td class="f">SessionVersionFilter <span class="lb"></span></td><td><b>它做什么：</b>每个请求都检查一次会话有没有被改密作废。<br><b>为什么这么写：</b>强制执行 <code>session_version</code>：会话建立时捕获该值，之后每个请求与库中比对，于是一次改密杀掉<strong>除执行改密那个会话之外</strong>的全部会话。</td></tr>
         <tr><td class="f">AccountDetailsService</td><td>把表单登录的用户名解析到 <code>user_account</code>。</td></tr>
         <tr><td class="f">AccountPrincipal</td><td>已认证账号，携带 id 与认证时读到的 <code>session_version</code>，使二者此后不必再按用户名查一次。</td></tr>
-        <tr><td class="f">UserDirectory <span class="lb"></span></td><td><b>它做什么：</b>别的模块想查账号信息，只能走这个只读门面。<br><b>为什么这么写：</b>其他模块读取账号数据的<strong>唯一</strong>途径。查询 facade 而非仓库，所以各模块既碰不到 <code>UserAccountRepository</code>，也碰不到会话如何建立。</td></tr>
+        <tr><td class="f">UserDirectory <span class="lb"></span></td><td><b>它做什么：</b>别的模块想查账号信息，只能走这个只读门面。<br><b>为什么这么写：</b>其他模块读取账号数据的<strong>唯一</strong>途径。查询 facade 而非仓库，所以各模块既碰不到 <code>UserAccountRepository</code>，也碰不到会话如何建立。各模块的控制器也经它的 <code>idOf</code> 把登录身份解析为 user id，再作为参数传给业务服务。</td></tr>
         <tr><td class="f">AccountView</td><td>其他模块被允许看到的账号信息。<strong>绝不携带口令哈希</strong>。</td></tr>
         <tr><td class="f">AccountResponse</td><td>认证端点的 HTTP 响应体。与 <code>AccountView</code> 并存不复用，因为契约只公开 <code>id/username/displayName</code>——<code>enabled</code> 属于内部事实。</td></tr>
       </tbody>
@@ -796,7 +801,7 @@ docker compose -p fp-demo up --detach --wait backend frontend</code></pre>
 
   <!-- project -->
   <div class="pkg" id="p-project">
-    <div class="pkg-head"><span class="pkg-name">project</span><span class="pkg-count">20 文件 · 1009 行</span></div>
+    <div class="pkg-head"><span class="pkg-name">project</span><span class="pkg-count">20 文件 · 984 行</span></div>
     <p class="pkg-role">项目边界：项目、成员、项目角色与<strong>项目内授权</strong>。所有其他模块的授权都经由这里。</p>
     <div class="tw"><table>
       <thead><tr><th>文件</th><th>作用</th></tr></thead>
@@ -826,7 +831,7 @@ docker compose -p fp-demo up --detach --wait backend frontend</code></pre>
 
   <!-- requirement -->
   <div class="pkg" id="p-requirement">
-    <div class="pkg-head"><span class="pkg-name">requirement</span><span class="pkg-count">25 文件 · 1992 行</span></div>
+    <div class="pkg-head"><span class="pkg-name">requirement</span><span class="pkg-count">25 文件 · 2054 行</span></div>
     <p class="pkg-role">需求、它们<strong>不可变的修订</strong>，支配二者的状态机，以及两个一次性 AI 能力（质量检查、实现建议）。</p>
     <div class="tw"><table>
       <thead><tr><th>文件</th><th>作用</th></tr></thead>
@@ -850,9 +855,9 @@ docker compose -p fp-demo up --detach --wait backend frontend</code></pre>
         <tr><td class="f">RequirementAttachment</td><td>需求与知识文档之间的关系，也是附件归属的<strong>唯一事实源</strong>。</td></tr>
         <tr><td class="f">RequirementAttachmentRepository</td><td>附件关系的仓库。</td></tr>
         <tr><td class="f">RequirementAttachmentService</td><td>附件的唯一拥有者。文档上的 scope 只是投影，归属事实在关系表。</td></tr>
-        <tr><td class="f">RequirementQualityService</td><td>需求质量检查：先跑确定性规则，完整 Prompt 在脱敏后处于预算内时调用<strong>一次</strong>结构化 AI；超预算则跳过 AI，仍保存并返回规则结果。结果归属具体修订，<code>QUALITY_VERSION</code> 现为 <code>quality-2</code>。</td></tr>
+        <tr><td class="f">RequirementQualityService</td><td>需求质量检查：先跑确定性规则，完整 Prompt 在脱敏后处于预算内时调用<strong>一次</strong>结构化 AI；超预算则跳过 AI，仍保存并返回规则结果。结果归属具体修订，<code>QUALITY_VERSION</code> 为 <code>quality-2</code>。模型调用在事务之外，写回时在需求行锁内比较正文与 AC：检查期间内容变了就返回 409 且什么都不写，旧结果不会盖到新内容上。</td></tr>
         <tr><td class="f">QualityReport</td><td>质量检查结果。含 <code>DUPLICATE_CRITERION</code>（两条 AC 文本完全相同会让同一缺陷以两个 key 报告两次，而抑制按 key 生效）与 <code>PROMPT_BUDGET_EXCEEDED</code>（不截断后做部分分析，而是返回 <code>ai=null</code> 的确定性报告）。</td></tr>
-        <tr><td class="f">ImplementationGuidanceService</td><td>一次性、知识增强的实现建议。只读已保存需求、其 AC 与当前需求可见的知识；<code>guidance-2</code> 输出概览、待确认事项、带验证办法的清单、规则与风险，不读取仓库源码或保存正文。</td></tr>
+        <tr><td class="f">ImplementationGuidanceService</td><td>一次性、知识增强的实现建议（<code>guidance-3</code>）。只读已保存需求、其 AC 与当前需求可见的知识；输出概览、待确认事项、带适用 AC 与验证办法的清单、规则与风险。只做结构校验，不读取仓库源码，不保存正文。</td></tr>
         <tr><td class="f">ImplementationGuidance</td><td>建议结果，携带需求修订与建议版本；标识适用范围，不保证建议正确。</td></tr>
         <tr><td class="f">RemovedMemberAssignmentListener</td><td>成员离开项目时清除需求开发与审查人指派，并把清理数量写入现有删除审计。</td></tr>
       </tbody>
@@ -861,7 +866,7 @@ docker compose -p fp-demo up --detach --wait backend frontend</code></pre>
 
   <!-- knowledge -->
   <div class="pkg" id="p-knowledge">
-    <div class="pkg-head"><span class="pkg-name">knowledge</span><span class="pkg-count">13 文件 · 926 行</span></div>
+    <div class="pkg-head"><span class="pkg-name">knowledge</span><span class="pkg-count">14 文件 · 1043 行</span></div>
     <p class="pkg-role">项目知识的入库与检索。本模块只把需求 id 当作<strong>不透明作用域取值</strong>接收，从不查询任何需求。</p>
     <div class="tw"><table>
       <thead><tr><th>文件</th><th>作用</th></tr></thead>
@@ -871,8 +876,9 @@ docker compose -p fp-demo up --detach --wait backend frontend</code></pre>
         <tr><td class="f">KnowledgeChunk <span class="lb"></span></td><td><b>它做什么：</b>知识文档切出来的一小段，附带它的向量。<br><b>为什么这么写：</b>可检索切片 + 产生其向量的 Embedding 档案。<code>embedding</code> 列<strong>刻意不做映射</strong>：映射成 <code>String</code> 能通过 <code>ddl-auto=validate</code> 却让每次运行时写入以 42804 失败，是四个选项里最糟的。</td></tr>
         <tr><td class="f">KnowledgeChunkRepository</td><td>切片仓库。切片与向量是派生数据，随文档一起消亡。</td></tr>
         <tr><td class="f">ChunkSearchRepository <span class="lb"></span></td><td><b>它做什么：</b>按语义相似度检索知识片段，全项目唯一能写向量 SQL 的地方。<br><b>为什么这么写：</b>全代码库<strong>唯一</strong>允许出现 <code>::vector</code> 与 <code>&lt;=&gt;</code> 的地方。<code>writeEmbedding</code> 里那道维度检查是本项目<strong>唯一真正的防线</strong>——一行维度不匹配就会让该项目<em>每一个</em>相似度查询以 22000 失败，而无维度列建不出索引。</td></tr>
-        <tr><td class="f">KnowledgeService</td><td>入库与检索的业务入口。<code>projectId</code> 是检索里的<strong>硬过滤</strong>，实测在排序表达式之前求值，所以别的项目的行既不会出现也不会污染结果。</td></tr>
-        <tr><td class="f">KnowledgeController</td><td>元数据列表、单文档上传/删除、公共知识原文 content/download。<code>KnowledgeService.publicContent</code> 校验成员、项目和公共来源，需求附件不能绕过归属；<strong>原始向量始终不返回</strong>。</td></tr>
+        <tr><td class="f">KnowledgeService</td><td>入库与检索的业务入口。上传只在短事务里保存一行 <code>PENDING</code> 文档就返回，向量化交给后台；失败的文档可由 LEADER 重试回到 <code>PENDING</code>。<code>projectId</code> 是检索里的<strong>硬过滤</strong>，实测在排序表达式之前求值，所以别的项目的行既不会出现也不会污染结果。</td></tr>
+        <tr><td class="f">KnowledgeIngestionProcessor</td><td>后台入库：按 id 串行领取下一条 <code>PENDING</code> 文档，读取后释放事务，在<strong>不占用数据库连接</strong>的情况下分批请求向量（默认每批 64，每批一行调用记录），全部成功后以一个事务写入切片与向量并标记 <code>READY</code>。任何一步失败都回滚派生行并标记 <code>FAILED</code>，保留原因。</td></tr>
+        <tr><td class="f">KnowledgeController</td><td>元数据列表、单文档上传/删除、失败重试、公共知识原文 content/download。<code>KnowledgeService.publicContent</code> 校验成员、项目和公共来源，需求附件不能绕过归属；<strong>原始向量始终不返回</strong>。</td></tr>
         <tr><td class="f">KnowledgeUploadValidator</td><td>在分块或向量化<strong>之前</strong>拒绝绝不该入库的文本。四道检查里两道数据库根本做不到；另两道提前做是为了不为「证明落不了库」的输入向 embedding provider 付费。</td></tr>
         <tr><td class="f">KnowledgeReadRepository</td><td>知识页面的聚合读取。维度与向量不映射到实体，故用一次分组 SQL 产出状态与档案。</td></tr>
         <tr><td class="f">KnowledgeDocumentView</td><td>面向产品的文档摘要。正文与原始向量都不属于这个 HTTP 契约。</td></tr>
@@ -884,14 +890,14 @@ docker compose -p fp-demo up --detach --wait backend frontend</code></pre>
 
   <!-- ai -->
   <div class="pkg" id="p-ai">
-    <div class="pkg-head"><span class="pkg-name">ai</span><span class="pkg-count">9 文件 · 636 行</span></div>
+    <div class="pkg-head"><span class="pkg-name">ai</span><span class="pkg-count">9 文件 · 709 行</span></div>
     <p class="pkg-role">通往 OpenAI 兼容 provider 的<strong>唯一技术入口</strong>。它只依赖 <code>common</code>，不认识任何业务类型。</p>
     <div class="tw"><table>
       <thead><tr><th>文件</th><th>作用</th></tr></thead>
       <tbody>
-        <tr><td class="f">AiGateway <span class="lb"></span></td><td><b>它做什么：</b>全项目唯一能向 AI 服务发请求的类。<br><b>为什么这么写：</b>HTTP、鉴权、超时、那<strong>唯一一次</strong>有界重试、调用记录。业务归属以不透明 id 经 <code>AiCallContext</code> 传入，因此 <code>ai</code> 仍只依赖 <code>common</code>。未配置的部署在<strong>调用时</strong>失败而非启动时失败。</td></tr>
-        <tr><td class="f">AiFailurePolicy <span class="lb"></span></td><td><b>它做什么：</b>判断一次失败该不该重试，全项目唯一允许重试的地方。<br><b>为什么这么写：</b>本项目允许的唯一一次重试及其适用规则（仅 429/5xx/网络）。<strong>其他任何地方都没有重试，也必须保持没有</strong>。</td></tr>
-        <tr><td class="f">PromptSanitizer</td><td>内容发往 provider 前的最后一道处理：掩码疑似凭据、裁剪到预算内。纯函数——不写日志、不碰数据库、不抛异常；文档不会因「看起来含 token」被拒绝，只会去掉那部分照常发送。</td></tr>
+        <tr><td class="f">AiGateway <span class="lb"></span></td><td><b>它做什么：</b>全项目唯一能向 AI 服务发请求的类。<br><b>为什么这么写：</b>HTTP、鉴权、超时、那<strong>唯一一次</strong>有界重试、调用记录。业务归属以不透明 id 经 <code>AiCallContext</code> 传入，因此 <code>ai</code> 仍只依赖 <code>common</code>。对话请求默认带 <code>temperature: 0</code>；脱敏后的完整 Prompt 超预算时以 <code>ai_prompt_too_large</code> 显式拒绝，不悄悄裁剪。未配置的部署在<strong>调用时</strong>失败而非启动时失败。</td></tr>
+        <tr><td class="f">AiFailurePolicy <span class="lb"></span></td><td><b>它做什么：</b>判断一次失败该不该重试，全项目唯一允许重试的地方。<br><b>为什么这么写：</b>本项目允许的唯一一次重试及其适用规则（仅 429/5xx/网络；429 先等 5 秒）。<strong>其他任何地方都没有重试，也必须保持没有</strong>。</td></tr>
+        <tr><td class="f">PromptSanitizer</td><td>内容发往 provider 前的最后一道处理：掩码疑似凭据；向量化输入另可裁剪到预算内，对话 Prompt 则由网关校验预算。纯函数——不写日志、不碰数据库、不抛异常；文档不会因「看起来含 token」被拒绝，只会去掉那部分照常发送。</td></tr>
         <tr><td class="f">AiCallContext</td><td>标明一次调用属于哪些业务行，以 <code>Long</code> 形式的不透明 id 携带。</td></tr>
         <tr><td class="f">AiCallLog</td><td>一次<strong>尝试</strong>而非一次调用——重试过的调用留下两行，这是事后审计「恰好只重试一次」的唯一手段。</td></tr>
         <tr><td class="f">AiCallLogRepository</td><td>每次读取都带 <code>projectId</code>。</td></tr>
@@ -903,7 +909,7 @@ docker compose -p fp-demo up --detach --wait backend frontend</code></pre>
 
   <!-- scm -->
   <div class="pkg" id="p-scm">
-    <div class="pkg-head"><span class="pkg-name">scm</span><span class="pkg-count">50 文件 · 3472 行</span></div>
+    <div class="pkg-head"><span class="pkg-name">scm</span><span class="pkg-count">51 文件 · 3799 行</span></div>
     <p class="pkg-role">源码托管接入：仓库配置与静态加密凭据、webhook 认证、权威 PR 快照、成员 SCM 身份与项目绑定。</p>
 
     <h4>仓库与凭据</h4>
@@ -915,7 +921,7 @@ docker compose -p fp-demo up --detach --wait backend frontend</code></pre>
         <tr><td class="f">ScmRepositoryService <span class="lb"></span></td><td><b>它做什么：</b>注册和修改仓库配置。<br><b>为什么这么写：</b>仓库注册与重配置，仅 LEADER。逐次提交的服务层不变式在先取得的行锁下强制执行。一旦有 PR 存在，身份即冻结，而 <code>api_base</code> 仍可移动。</td></tr>
         <tr><td class="f">ScmRepositoryResponse</td><td>成员可读的安全连接信息。<strong>token 与 webhook 密钥都不出现</strong>。</td></tr>
         <tr><td class="f">ScmController</td><td>仓库端点 + PR 读取 + 需求关联纠正。所有字段可选，null 表示该部分配置不变。</td></tr>
-        <tr><td class="f">ScmSecretCipher <span class="lb"></span></td><td><b>它做什么：</b>加解密 token 和 webhook 密钥。<br><b>为什么这么写：</b>对 provider token 与 webhook 密钥做静态加密，单个对称密钥。<strong>不做密钥轮换</strong>——轮换需要密钥版本列加一次重加密扫描，那是新的结构。</td></tr>
+        <tr><td class="f">ScmSecretCipher <span class="lb"></span></td><td><b>它做什么：</b>加解密 token 和 webhook 密钥。<br><b>为什么这么写：</b>对 provider token 与 webhook 密钥做静态加密（AES-256-GCM），单个对称密钥；格式不对或长度不足的密文以受控错误拒绝。<strong>不做密钥轮换</strong>——轮换需要密钥版本列加一次重加密扫描，那是新的结构。</td></tr>
         <tr><td class="f">ScmProvider</td><td>能对接的 provider 枚举：GitHub / GitLab。</td></tr>
         <tr><td class="f">InstanceIdentity</td><td>把 <code>api_base</code> 归一化成稳定身份中的「实例」那一半。</td></tr>
         <tr><td class="f">OutboundUrlPolicy <span class="lb"></span></td><td><b>它做什么：</b>在向外网发请求前检查目标地址允不允许。<br><b>为什么这么写：</b>判定是否允许向调用方提供的 URL 发起出站调用。每次调用都<strong>重新校验</strong>，因为该列可由 LEADER 配置而策略可能已收紧（SSRF 防线）。</td></tr>
@@ -930,11 +936,12 @@ docker compose -p fp-demo up --detach --wait backend frontend</code></pre>
         <tr><td class="f">ScmWebhookSecurityConfig <span class="lb"></span></td><td><b>它做什么：</b>让两个 webhook 端点走自己的认证方式，不走常规登录检查。<br><b>为什么这么写：</b>两个 webhook 端点各自对原始字节认证，因此被排除在常规过滤器链之外。</td></tr>
         <tr><td class="f">github/GitHubWebhookController</td><td>GitHub webhook 端点。路径里<strong>不带 projectId</strong>——一次投递并不知道自己属于哪个项目，靠载荷定位仓库。</td></tr>
         <tr><td class="f">gitlab/GitLabWebhookController</td><td>GitLab 接收端：先认证原始字节，再拉取权威快照。</td></tr>
-        <tr><td class="f">github/GitHubClient <span class="lb"></span></td><td><b>它做什么：</b>向 GitHub 发请求，读取 PR 的权威状态。<br><b>为什么这么写：</b>从 GitHub 读权威 PR 快照；合并校验 head、提交 expected SHA 并验证 merged，响应不明时只读确认。base URI 来自 <code>api_base</code>，<strong>代码中绝不硬编码任何 host</strong>。<code>required()</code> 让缺席/null/容器的权威字段<strong>大声失败</strong>——<code>asString()</code> 对缺失节点返回 <code>""</code>，会写下空 SHA 或空作者 id 而数据库抓不住。</td></tr>
-        <tr><td class="f">gitlab/GitLabClient</td><td>读取内部自洽的权威 MR 快照，并以 expected SHA 合并、确认 merged 状态；不删除源分支，模糊响应仅只读确认。</td></tr>
+        <tr><td class="f">github/GitHubClient <span class="lb"></span></td><td><b>它做什么：</b>向 GitHub 发请求：读取 PR 的权威状态，以及合并与关闭。<br><b>为什么这么写：</b>从 GitHub 读权威 PR 快照；合并校验 head、提交 expected SHA 并验证 merged，关闭先核对 head 与 base，响应不明时都只读确认。读取失败有固定映射：限流、5xx 与网络错误 503 <code>provider_unavailable</code>，其余 HTTP 错误 502 <code>provider_error</code>，响应形状不符 422。base URI 来自 <code>api_base</code>，<strong>代码中绝不硬编码任何 host</strong>。<code>required()</code> 让缺席/null/容器的权威字段<strong>大声失败</strong>——<code>asString()</code> 对缺失节点返回 <code>""</code>，会写下空 SHA 或空作者 id 而数据库抓不住。</td></tr>
+        <tr><td class="f">gitlab/GitLabClient</td><td>读取内部自洽的权威 MR 快照；以 expected SHA 合并并确认 merged 状态，关闭前核对 head 与 base；不删除源分支，模糊响应仅只读确认。读取失败的错误映射与 GitHub 一致。</td></tr>
         <tr><td class="f">PullRequestSnapshot</td><td>provider 声明的 PR 当前状态。一次 webhook 投递只是<strong>信号</strong>，内容以这次权威读取为准。</td></tr>
-        <tr><td class="f">PullRequestSyncService <span class="lb"></span></td><td><b>它做什么：</b>把读到的 PR 状态写进数据库，并通知下游。<br><b>为什么这么写：</b>把「已认证投递 + 权威快照」变成 <code>pull_request</code> 行。变更文件清单连同每个 patch 作为<strong>一个</strong> JSONB 值存下，超限时入库显式失败而不是静默截断。</td></tr>
-        <tr><td class="f">PullRequest</td><td>PR 的权威快照实体。<code>author_user_id</code> 是全库<strong>唯一</strong>带 <code>ON DELETE SET NULL</code> 的外键；不可变快照是 <code>author_external_user_id</code> / <code>author_username</code>。</td></tr>
+        <tr><td class="f">PullRequestState</td><td><code>OPEN</code> / <code>CLOSED</code> / <code>MERGED</code>。已合并不回退；已关闭收到 <code>OPEN</code> 快照时先向平台核实，允许真实的外部重开。</td></tr>
+        <tr><td class="f">PullRequestSyncService <span class="lb"></span></td><td><b>它做什么：</b>把读到的 PR 状态写进数据库，并通知下游。<br><b>为什么这么写：</b>把「已认证投递 + 权威快照」变成 <code>pull_request</code> 行。入库时在仓库行锁内比较拉取所用的稳定身份，身份已变的快照按「查不到该仓库」拒收。变更文件清单连同每个 patch 作为<strong>一个</strong> JSONB 值存下，超限时入库显式失败而不是静默截断。已关闭或已合并的 PR 照常入库，但不再发出审查事件。两个 webhook 接收端的拒绝答复也统一取自这里的 <code>unauthenticated()</code>，保证每一种「不可信」答得一字不差。</td></tr>
+        <tr><td class="f">PullRequest</td><td>PR 的权威快照实体。<code>author_user_id</code> 是全库<strong>唯一</strong>带 <code>ON DELETE SET NULL</code> 的外键；不可变快照是 <code>author_external_user_id</code> / <code>author_username</code>。<code>remote_state</code> 记录远端的开放/关闭/合并，可空表示尚未核验，不进指纹。</td></tr>
         <tr><td class="f">PullRequestRepository</td><td>PR 仓库。</td></tr>
         <tr><td class="f">PullRequestResponse</td><td>PR/MR 编号、标题、状态与作者外部账号/平台成员映射。变更文件清单由 Review 快照展示，不重复返回。</td></tr>
         <tr><td class="f">ChangedFile</td><td>清单中的一条。provider 没提供 patch 时 <code>patch</code> 为 null，「缺席」与「空」是两个不同的事实。</td></tr>
@@ -952,7 +959,7 @@ docker compose -p fp-demo up --detach --wait backend frontend</code></pre>
         <tr><td class="f">PullRequestRequirementEvent</td><td>关联变更的审计记录，与变更本身同一事务。</td></tr>
         <tr><td class="f">PullRequestRequirementEventRepository</td><td>审计仓库。</td></tr>
         <tr><td class="f">PullRequestDecisionGate</td><td>「当前 head 上是否已有终局裁定？」接口在本包、实现在 <code>review</code>，因此编译期方向仍是 <code>review → scm</code>。</td></tr>
-        <tr><td class="f">PullRequestDecisionActions · ScmPullRequestDecisionService</td><td>人工合并的现有 SCM 边界，接收 projectId、pullRequestId 与 expectedHeadSha，按仓库选择 GitHub/GitLab；不拥有 Review 决定。</td></tr>
+        <tr><td class="f">PullRequestDecisionActions · ScmPullRequestDecisionService</td><td>人工决定落到远端的 SCM 边界：<code>merge</code>（按被审查的 SHA 合并）、<code>close</code>（拒绝时关闭）、<code>requireOpen</code>（退回或请求审查前确认 PR 仍开放）。接收 projectId、pullRequestId 与 expectedHeadSha，按仓库选择 GitHub/GitLab；不拥有 Review 决定。</td></tr>
         <tr><td class="f">ScmActorType</td><td>是谁改动了关联。没有第三种情况，也没有匿名。</td></tr>
       </tbody>
     </table></div>
@@ -983,7 +990,7 @@ docker compose -p fp-demo up --detach --wait backend frontend</code></pre>
 
   <!-- review -->
   <div class="pkg" id="p-review">
-    <div class="pkg-head"><span class="pkg-name">review</span><span class="pkg-count">50 文件 · 5841 行</span></div>
+    <div class="pkg-head"><span class="pkg-name">review</span><span class="pkg-count">50 文件 · 6187 行</span></div>
     <p class="pkg-role">唯一的 Review Engine，以及 Finding 的人工闭环。全项目最大的包，因为这里是那条因果链的落点。</p>
 
     <h4>执行引擎</h4>
@@ -994,15 +1001,15 @@ docker compose -p fp-demo up --detach --wait backend frontend</code></pre>
         <tr><td class="f">Review <span class="lb"></span></td><td><b>它做什么：</b>一次审查记录，把当时的全部输入都冻结在这一行里。<br><b>为什么这么写：</b>针对<strong>一组冻结输入</strong>的一次审查：某个 head 的 PR、某个 diff 指纹、某个需求修订。数据库触发器拒绝事后改动其身份列。</td></tr>
         <tr><td class="f">ReviewRepository</td><td>每次读取都限定项目内，所以猜到的外项目 id 与不存在的 id 同答。</td></tr>
         <tr><td class="f">ReviewStatus</td><td><strong>执行</strong>状态，与 <code>ReviewDecision</code> 正交。</td></tr>
-        <tr><td class="f">ReviewClaimRepository <span class="lb"></span></td><td><b>它做什么：</b>让后台线程「抢」审查任务，保证同一次只有一个线程做。<br><b>为什么这么写：</b>凡是「影响行数本身即判定结果」的语句都在这里，全是带条件的原生 SQL——先读后写会把 WHERE 刚关上的窗口重新打开。抢占是<strong>一条语句</strong>里的原子条件更新，同时铸出围栏三元组。所有时间来自 <code>now()</code>，偏旧的参照时间只会找出<em>更少</em>过期租约，绝不抢活着的 worker。</td></tr>
-        <tr><td class="f">ReviewExecutor <span class="lb"></span></td><td><b>它做什么：</b>后台线程的主流程：抢任务、跑分析、写结果。<br><b>为什么这么写：</b>worker 一侧：抢占、持有、做完。租约续期即心跳，因此没有第二套存活检测。已过期的 worker <strong>连标记 FAILED 都不许</strong>——这是最常被遗忘的那道围栏。</td></tr>
+        <tr><td class="f">ReviewClaimRepository <span class="lb"></span></td><td><b>它做什么：</b>让后台线程「抢」审查任务，保证同一次只有一个线程做。<br><b>为什么这么写：</b>凡是「影响行数本身即判定结果」的语句都在这里，全是带条件的原生 SQL——先读后写会把 <code>WHERE</code> 刚关上的窗口重新打开。抢占是<strong>一条语句</strong>里的原子条件更新，同时铸出围栏三元组；PR 已关闭或合并时，排队中的任务不再领取。所有时间来自 <code>now()</code>，偏旧的参照时间只会找出<em>更少</em>过期租约，绝不抢活着的 worker。</td></tr>
+        <tr><td class="f">ReviewExecutor <span class="lb"></span></td><td><b>它做什么：</b>后台线程的主流程：抢任务、跑分析、写结果。<br><b>为什么这么写：</b>worker 一侧：抢占、持有、做完。租约续期即心跳，因此没有第二套存活检测；每次调模型前先续租，续不上就立刻停手。<strong>已过期的 worker 连标记 FAILED 都不许</strong>——这是最常被遗忘的那道围栏。完成与失败事件都在事务提交之后才发布。</td></tr>
         <tr><td class="f">ReviewExecutorConfig</td><td>线程池与调度器。并发上限<strong>冻结为 2</strong>，依据是 4 GB 主机上的实测（两个 300 文件 Review、各带 3,989,101 字符清单，无截断、无重启、无 OOM）。</td></tr>
         <tr><td class="f">ReviewPipeline <span class="lb"></span></td><td><b>它做什么：</b>一次审查的完整流程编排。<br><b>为什么这么写：</b>完整流程：从被抢占的行到落库的报告。小 PR 与大 PR<strong>走完全相同的路径</strong>——「让批次直接下结论」的捷径正是被明令禁止的第二条流水线。</td></tr>
         <tr><td class="f">ChangedFileBatcher <span class="lb"></span></td><td><b>它做什么：</b>把变更文件切成若干批，因为大 PR 一次塞不进模型。<br><b>为什么这么写：</b>把变更文件切批并运行分批阶段。批次只产出候选与证据。第一个「解析不过、修复也救不回来」的批次让<strong>整次 Review</strong> 失败并丢弃已有产出——只报告了五个批次中三个的 Review 看上去是完整的，而它对另外两个的判断是错的。</td></tr>
-        <tr><td class="f">ReviewPrompts <span class="lb"></span></td><td><b>它做什么：</b>发给模型的两段提示词和两个输出格式定义。<br><b>为什么这么写：</b>两个 Prompt 与两个 schema，以常量形式存在。三条承重规则都为了让抑制机制保持诚实。<code>VERSION</code> 源码现为 <code>review-5</code>（2026-09-30，已部署）。</td></tr>
+        <tr><td class="f">ReviewPrompts <span class="lb"></span></td><td><b>它做什么：</b>发给模型的两段提示词和两个输出格式定义。<br><b>为什么这么写：</b>两个 Prompt 与两个 schema，以常量形式存在。三条承重规则都为了让抑制机制保持诚实。<code>VERSION</code> 为 <code>review-6</code>；指令或输出 schema 一变就必须递增。</td></tr>
         <tr><td class="f">ReviewOutputValidator <span class="lb"></span></td><td><b>它做什么：</b>检查模型的回答是否可用，不可用就判定失败。<br><b>为什么这么写：</b>把模型回答变成通过结构、引用归属和源码证据锚定校验的结果，或变成 FAILED 裁定；<strong>不保证模型的语义判断为真</strong>。Finding 与 AC 引用必须逐字存在于对应 diff hunk 的新侧源码；唯一命中纠正行号，多处命中无法消歧时不输出精确行号，编造、删除侧或跨 hunk 引用被丢弃并记入 warnings。结构非法只给<strong>一次</strong>格式修复；校验发生在写入<strong>之前</strong>。</td></tr>
         <tr><td class="f">ReviewOutput</td><td>校验后的结果。FAILED 的 Review <strong>根本没有</strong> Report 而不是有一个空的——「绝无残缺报告」因此是关于类型的事实。</td></tr>
-        <tr><td class="f">AcVerdict</td><td><code>COVERED</code> / <code>NOT_FOUND</code> / <code>AT_RISK</code>。<strong>只有综合阶段有资格下裁定</strong>；被审查修订的每一条 AC 最终都有裁定，模型跳过的填成 <code>NOT_FOUND</code>，所以沉默的模型永远无法把报告缩短。</td></tr>
+        <tr><td class="f">AcVerdict</td><td><code>COVERED</code> / <code>NOT_FOUND</code> / <code>AT_RISK</code> / <code>UNKNOWN</code>。<strong>只有综合阶段有资格下裁定</strong>；被审查修订的每一条 AC 最终都有裁定。模型跳过的、一个文件都没审到的、说已覆盖却没有已校验证据的，一律记为 <code>UNKNOWN</code>——沉默的模型既无法把报告缩短，也无法凭空说「已覆盖」。</td></tr>
         <tr><td class="f">ReviewReconciliationScheduler</td><td>把「已落库但不再推进」的 Review 放回轨道。它的唯一查询 FROM 子句里<strong>有且仅有 <code>review</code> 一张表</strong>——由 review 驱动的结果集必然是已存在行的子集，所以无论条件写得多错都不可能产出一个从未创建的 Review。</td></tr>
         <tr><td class="f">PullRequestChangedListener</td><td>自动触发的两半，是两个方法而非一个——实测表明这不是风格选择。</td></tr>
       </tbody>
@@ -1035,8 +1042,8 @@ docker compose -p fp-demo up --detach --wait backend frontend</code></pre>
     <div class="tw"><table>
       <thead><tr><th>文件</th><th>作用</th></tr></thead>
       <tbody>
-        <tr><td class="f">ReviewDecision</td><td>一次性人工裁定，只允许 <code>PENDING → APPROVE | REQUEST_CHANGES</code>。</td></tr>
-        <tr><td class="f">ReviewDecisionService <span class="lb"></span></td><td><b>它做什么：</b>校验指定审查人、开发负责人、需求状态及 Review 当前输入，在 PR 行锁内记录一次性决定。<br><b>为什么这么写：</b>退回理由必填且不写远端；通过调用 SCM 按审查 SHA 合并，失败回滚；详情返回 decisionBlockReason，提交后才通知。</td></tr>
+        <tr><td class="f">ReviewDecision</td><td>一次性人工裁定，只允许 <code>PENDING → APPROVE | REQUEST_CHANGES | REJECT</code>。</td></tr>
+        <tr><td class="f">ReviewDecisionService <span class="lb"></span></td><td><b>它做什么：</b>校验指定审查人、开发负责人、需求状态及 Review 当前输入，在 PR 行锁内记录一次性决定。<br><b>为什么这么写：</b>三种决定各有一步远端动作，且都排在本地写入之前：通过按审查 SHA 合并，拒绝核对后关闭 PR/MR，退回只确认 PR 仍开放；远端失败或结果不明则回滚。退回与拒绝必填理由；详情返回 decisionBlockReason，提交后才通知。</td></tr>
         <tr><td class="f">DecisionRepository <span class="lb"></span></td><td><b>它做什么：</b>裁定与问题重开的 SQL。<br><b>为什么这么写：</b>支撑两条人工闭环的语句。重开 Finding <strong>只</strong>在 <code>continuity = SUPPRESSED</code> 时允许，且这条规则住在 SQL 的<strong>条件里</strong>而不是一次会留下窗口的前置读取里——CHECK 表达不了它（需要子查询）。</td></tr>
         <tr><td class="f">ReviewDecisionGate</td><td><code>PullRequestDecisionGate</code> 的实现，住在 <code>review</code> 因为 Decision 是它的数据。</td></tr>
         <tr><td class="f">ReviewController</td><td>发起、读取、决策。返回 <code>executionAttempt</code>。</td></tr>
@@ -1044,8 +1051,9 @@ docker compose -p fp-demo up --detach --wait backend frontend</code></pre>
         <tr><td class="f">ReviewActivityService</td><td>只读派生量，每次读取<strong>现算</strong>、不落表。</td></tr>
         <tr><td class="f">ReviewActivityRepository <span class="lb"></span></td><td><b>它做什么：</b>一次查询算出项目内所有 PR 的当前审查状态。<br><b>为什么这么写：</b>那<strong>一次</strong>读取。两条 SQL 不能一视同仁加 <code>deleted_at is null</code>：<code>requirementIds</code> 要过滤，但 <code>left join requirement</code> 不能——它只是取 <code>current_revision_id</code> 来匹配「当前有效 Review」，过滤会让修订变 NULL 从而改写判定。</td></tr>
         <tr><td class="f">ReviewActivityController</td><td>活动状态端点。由 <code>review</code> 提供而非需求端点，否则依赖图成环。</td></tr>
-        <tr><td class="f">ReviewInsightService</td><td>两个派生视图：<strong>需求覆盖度</strong>把每次审查的逐条 AC 裁定收拢回当前修订；<strong>模型校准</strong>拿人工裁决去度量模型自报的置信度。都不存储，每次现算。</td></tr>
-        <tr><td class="f">ReviewInsightRepository</td><td>覆盖度只看<strong>当前修订</strong>——旧修订的裁定针对的是另一套 AC，混进来就是把对不上号的结论摆在一起。校准的标签取自 <code>finding_event</code> 里<strong>首次</strong> <code>OPEN → CONFIRMED|REJECTED</code>，不取当前状态：驳回可以被重开，当前状态会把样本的标签翻过来。</td></tr>
+        <tr><td class="f">ReviewInsightService</td><td>三个只读派生视图，都不存储、每次现算：<strong>需求覆盖度</strong>把最近一次审查的逐条 AC 裁定收拢回当前修订，并标出来源审查是否已过期；<strong>模型校准</strong>拿人工裁决去度量模型自报的置信度；<strong>AI 调用台账</strong>按请求模型与用途聚合本项目已记录的调用。</td></tr>
+        <tr><td class="f">ReviewInsightController</td><td>覆盖度、校准与 AI 调用台账三个只读端点。</td></tr>
+        <tr><td class="f">ReviewInsightRepository</td><td>覆盖度只看<strong>当前修订</strong>的最近一次已完成审查，并比较它与 PR 当前的 head 和输入指纹来判断是否过期——旧修订的裁定针对的是另一套 AC，混进来就是把对不上号的结论摆在一起。校准的标签取自 <code>finding_event</code> 里<strong>首次</strong> <code>OPEN → CONFIRMED|REJECTED</code>，不取当前状态：驳回可以被重开，当前状态会把样本的标签翻过来。</td></tr>
         <tr><td class="f">Wilson</td><td>95% Wilson 区间，公式与常数逐字对应 <code>evaluation/tools/formal_evaluation.py</code>。用 Wilson 而非 Wald，是因为本用途的 n 一开始就很小，而 Wald 在比例贴近 0 或 1 时会给出宽度为零的区间——恰好在最该显出不确定性的时候假装确定。</td></tr>
         <tr><td class="f">ReviewCompleted</td><td>Review 成功落库后，在事务<strong>提交之后</strong>发布；失败的 Review 使用同样的提交后时机发布 <code>ReviewFailed</code>。两者都不会为未提交的状态触发通知。</td></tr>
         <tr><td class="f">ReviewFailed</td><td>Review 已持久化为 <code>FAILED</code> 后发布的轻量事件；通知正文只说明未生成可用报告，不携带 provider 原始错误。</td></tr>
@@ -1056,16 +1064,22 @@ docker compose -p fp-demo up --detach --wait backend frontend</code></pre>
     </table></div>
   </div>
 
-  <div class="pkg">
-    <h3><code>notification</code> — 审查结果的对外送达</h3>
+  <!-- notification -->
+  <div class="pkg" id="p-notification">
+    <div class="pkg-head"><span class="pkg-name">notification</span><span class="pkg-count">10 文件 · 780 行</span></div>
+    <p class="pkg-role">审查结果的对外送达：项目的钉钉渠道配置，以及 AI 完成/失败、人工决定之后的群消息。它是<strong>尽力而为的旁路</strong>——失败只记日志，不影响审查的任何状态。</p>
     <div class="tw"><table>
-      <thead><tr><th>类</th><th>它做什么，以及为什么这么写</th></tr></thead>
+      <thead><tr><th>文件</th><th>作用</th></tr></thead>
       <tbody>
         <tr><td class="f">ReviewCompletedListener</td><td>AI 完成/失败事件已在提交后发布，继续用普通 <code>@EventListener</code>；人工决定事件在事务内发布，用 <code>@TransactionalEventListener</code> 提交后处理。失败在此结束，不影响已提交决定。消息按阶段选择审查人/开发负责人/LEADER，含项目详情链接，不含理由。</td></tr>
         <tr><td class="f">DingTalkSender</td><td>origin <strong>钉死</strong>在 <code>oapi.dingtalk.com/</code>，带结尾斜杠——少了它 <code>oapi.dingtalk.com.evil.com</code> 就能通过前缀比对，而这是本模块唯一的 SSRF 防线。<strong>只看 HTTP 状态码是不够的</strong>：钉钉的关键词不匹配、签名错、token 失效全都答 200，真正的结果在响应体 <code>errcode</code> 里；认不出的响应体判为失败，因为把「不知道」记成「已送达」是最坏的答案。</td></tr>
         <tr><td class="f">NotificationChannelService</td><td>LEADER 才能配或发送测试消息。凭据<strong>只进不出</strong>：webhook URL 里带着 <code>access_token</code>，回显它等于把发消息权限一并交出。加签密钥可空，NULL 表示不加签——与「空串」不是一回事，用空串算出的签名看着像样却必然被拒。测试消息不创建 Review、不调用 AI，并带上已配置的关键词。</td></tr>
         <tr><td class="f">NotificationChannel</td><td><code>keyword</code> 明文存储且照常回显：它不是凭据，而是「消息为什么没到」最常见的原因，读不回来就只能靠反复重配去猜。</td></tr>
         <tr><td class="f">ReviewNotificationRepository</td><td>跨模块取数用朴素 SQL，与 <code>ReviewActivityRepository</code> 同理。<strong>只取计数与标题</strong>，不取 finding 正文与 patch——群聊的可见范围与本系统的权限模型不是一回事。</td></tr>
+        <tr><td class="f">NotificationChannelController</td><td>渠道配置的读取、保存、移除与测试消息四个端点，均在项目路径下。</td></tr>
+        <tr><td class="f">NotificationChannelRepository</td><td>渠道配置的仓库，每次读取都带 <code>projectId</code>。</td></tr>
+        <tr><td class="f">NotificationChannelType</td><td>渠道枚举，目前只有 <code>DINGTALK</code>，与 SQL 里的 CHECK 一一对应。</td></tr>
+        <tr><td class="f">NotificationViews</td><td>本模块的响应体。<strong>不含任何凭据</strong>：只返回配过没有、开着没有、是否加签、关键词与更新时间。</td></tr>
       </tbody>
     </table></div>
   </div>
@@ -1074,7 +1088,7 @@ docker compose -p fp-demo up --detach --wait backend frontend</code></pre>
 <!-- ═══════════════════ 06 ═══════════════════ -->
 <section id="s6">
   <h2><span class="h-num">06</span>前端代码地图</h2>
-  <p>Vue 3 + TypeScript + Vite，<code>frontend/src/</code> 下按 feature 组织。无状态管理库、无 UI 组件库、无 HTTP 客户端库——这些都被 lint 明确禁止。</p>
+  <p>Vue 3 + TypeScript + Vite，<code>frontend/src/</code> 下按 feature 组织。无状态管理库、无 UI 组件库、无 HTTP 客户端库——这些都被 lint 明确禁止。下表的行数是 2026-11-14 的快照。</p>
 
   <div class="tw"><table>
     <caption>基础设施与外壳</caption>
@@ -1083,10 +1097,13 @@ docker compose -p fp-demo up --detach --wait backend frontend</code></pre>
       <tr><td class="f">main.ts</td><td class="n">13</td><td>应用入口。</td></tr>
       <tr><td class="f">App.vue</td><td class="n">19</td><td>根组件。</td></tr>
       <tr><td class="f">app/router.ts</td><td class="n">32</td><td>路由器工厂，接受 history 实现以便测试注入 memory history。</td></tr>
-      <tr><td class="f">app/routes.ts</td><td class="n">214</td><td>路由表 + <code>TOP_LEVEL_NAVIGATION</code> 六个入口 + 路由构造函数。<strong>导航与路由形态由 <code>routes.spec.ts</code> 断言锁死。</strong></td></tr>
-      <tr><td class="f">components/AppShell.vue</td><td class="n">171</td><td>顶部应用栏：横版 Logo 居左、六入口页面水平居中、账户操作居右，<strong>没有侧栏</strong>。账户弹层有点击外部/Escape/路由三条关闭路径。</td></tr>
-      <tr><td class="f">lib/http.ts <span class="lb"></span></td><td class="n">104</td><td><b>它做什么：</b>前端所有请求的统一出口，自动带上 CSRF 令牌。<br><b>为什么这么写：</b>统一请求边界：唯一错误体结构、写请求自动携带 <code>X-XSRF-TOKEN</code>、same-origin cookie、401 处理器。全部 API 调用都经它。</td></tr>
-      <tr><td class="f">lib/datetime.ts</td><td class="n">9</td><td>按查看者本地化设置渲染 ISO-8601。</td></tr>
+      <tr><td class="f">app/routes.ts</td><td class="n">204</td><td>路由表 + <code>TOP_LEVEL_NAVIGATION</code> 六个入口 + 路由构造函数。<strong>导航与路由形态由 <code>routes.spec.ts</code> 断言锁死。</strong></td></tr>
+      <tr><td class="f">components/AppShell.vue</td><td class="n">217</td><td>顶部应用栏：横版 Logo 居左、六入口页面水平居中、账户操作居右，<strong>没有侧栏</strong>。账户区是头像下拉菜单（账户设置、退出登录），有点击外部/Escape/路由三条关闭路径。页面按完整路径重挂，所以切换记录后不会残留上一条的状态。</td></tr>
+      <tr><td class="f">lib/http.ts <span class="lb"></span></td><td class="n">109</td><td><b>它做什么：</b>前端所有请求的统一出口，自动带上 CSRF 令牌。<br><b>为什么这么写：</b>统一请求边界：唯一错误体结构、写请求自动携带 <code>X-XSRF-TOKEN</code>、same-origin cookie、401 处理器。全部 API 调用都经它。</td></tr>
+      <tr><td class="f">lib/datetime.ts</td><td class="n">20</td><td>按查看者本地化设置渲染 ISO-8601，另有「几分钟前」式的相对时间。</td></tr>
+      <tr><td class="f">composables/useProjectSelection.ts</td><td class="n">101</td><td>页面级的项目选择：项目列表、由路由查询参数派生的选中项目、切换导航。工作台、需求、审查、知识、仓库与项目页共用，每页一份实例，不跨页面缓存。</td></tr>
+      <tr><td class="f">composables/useFinitePolling.ts</td><td class="n">89</td><td>有限轮询：前一次请求返回后才排下一次，到终态、页面隐藏或卸载即停，连续失败有上限并可手动重试。审查与知识页用它刷新「处理中」的状态。</td></tr>
+      <tr><td class="f">styles/tokens.css · styles/base.css</td><td class="n">115 · 1318</td><td>设计令牌与全局样式。原始色值只允许出现在 <code>tokens.css</code>，由 lint 强制。</td></tr>
       <tr><td class="f">env.d.ts</td><td class="n">1</td><td>Vite 类型声明。</td></tr>
       <tr><td class="f">components/motion/CyberParticleField.vue</td><td class="n">170</td><td>Canvas 粒子场背景。</td></tr>
       <tr><td class="f">components/motion/cyberParticles.ts</td><td class="n">102</td><td>粒子模拟纯逻辑，与渲染分离以便测试。减动效模式停止持续运动但不改变内容。</td></tr>
@@ -1098,29 +1115,30 @@ docker compose -p fp-demo up --detach --wait backend frontend</code></pre>
     <thead><tr><th>文件</th><th class="n">行</th><th>作用</th></tr></thead>
     <tbody>
       <tr><td class="f">features/auth/session.ts</td><td class="n">87</td><td>会话状态与引导。</td></tr>
-      <tr><td class="f">features/auth/LoginPage.vue</td><td class="n">519</td><td>登录与注册。只出现<strong>一个</strong>应用图标。</td></tr>
-      <tr><td class="f">features/auth/AccountSettingsPage.vue</td><td class="n">271</td><td><code>/account</code>：显示名、改密、多个 SCM 身份验证。口令输入<strong>只</strong>在这里，账户弹层里没有。</td></tr>
-      <tr><td class="f">features/workspace/WorkspacePage.vue</td><td class="n">607</td><td>工作台。以真实列表 API 组合概况，<strong>没有任何虚构的评分或健康度</strong>。URL 缺 <code>project</code> 时补第一个，不引入客户端存储。</td></tr>
+      <tr><td class="f">features/auth/LoginPage.vue</td><td class="n">505</td><td>登录与注册。只出现<strong>一个</strong>应用图标。</td></tr>
+      <tr><td class="f">features/auth/AccountSettingsPage.vue</td><td class="n">270</td><td><code>/account</code>：显示名、改密、多个 SCM 身份验证。口令输入<strong>只</strong>在这里，账户弹层里没有。</td></tr>
+      <tr><td class="f">features/workspace/WorkspacePage.vue</td><td class="n">1270</td><td>工作台。指标卡、「我的待办」队列（可只看待我处理）、项目准备、进行中的审查与最近动态，另有模型置信度校准表与折叠的 AI 调用台账。全部由真实列表 API 在浏览器端组合，<strong>没有任何虚构的评分或健康度</strong>。URL 缺 <code>project</code> 时补第一个，不引入客户端存储。</td></tr>
       <tr><td class="f">features/project/api.ts</td><td class="n">128</td><td>项目、成员、归档／取消归档的请求层。</td></tr>
-      <tr><td class="f">features/project/ProjectsPage.vue</td><td class="n">420</td><td>项目列表与创建；每卡六入口；归档确认面板（复制项目名 + 一字不差重输才解锁）；已归档折叠组与恢复。</td></tr>
-      <tr><td class="f">features/project/ProjectMembersPage.vue</td><td class="n">628</td><td>成员目录四列表格 + 文本/角色筛选 + 批量添加（50 上限、2 字符下限、行角色非空）+ 角色编辑 + 绑定审批。</td></tr>
-      <tr><td class="f">features/requirement/api.ts</td><td class="n">293</td><td>需求全部请求 + <code>toDraft</code> 转换。</td></tr>
+      <tr><td class="f">features/project/ProjectsPage.vue</td><td class="n">411</td><td>项目列表与创建；每卡六入口；归档确认面板（复制项目名 + 一字不差重输才解锁）；已归档折叠组与恢复。</td></tr>
+      <tr><td class="f">features/project/ProjectMembersPage.vue</td><td class="n">638</td><td>成员目录四列表格 + 文本/角色筛选 + 批量添加（50 上限；少于两个字符且非纯数字时不发请求；行角色非空）+ 角色编辑 + 绑定审批（失败有提示，请求期间按钮禁用）。</td></tr>
+      <tr><td class="f">features/requirement/api.ts</td><td class="n">297</td><td>需求全部请求 + <code>toDraft</code> 转换。</td></tr>
       <tr><td class="f">features/requirement/status.ts</td><td class="n">82</td><td>状态词汇、流转表和终态判定；共享 <code>requirementPhase/requirementHandler</code> 只对开发中需求派生阶段和处理人，生命周期仍独立展示。</td></tr>
-      <tr><td class="f">features/requirement/RequirementsPage.vue</td><td class="n">498</td><td>需求列表、三个可组合筛选、行内操作（按状态门控，不放宽后端前置条件）、创建 disclosure。</td></tr>
-      <tr><td class="f">features/requirement/RequirementDetailPage.vue</td><td class="n">1039</td><td>详情：开发/审查人指派、当前阶段、退回理由/决定人/时间、生命周期和活动、修订、附件、质量检查、实现建议。长 AI 输出定高滚动。</td></tr>
-      <tr><td class="f">features/requirement/AcceptanceCriteriaEditor.vue</td><td class="n">98</td><td>验收条件编辑器。<code>sortOrder</code> 由数组顺序推导。</td></tr>
-      <tr><td class="f">features/knowledge/api.ts</td><td class="n">51</td><td>知识列表保留元数据；独立 content/download 接口按需读原文，始终不返回原始向量。</td></tr>
-      <tr><td class="f">features/knowledge/KnowledgePage.vue</td><td class="n">341</td><td>原文阅读/下载、多文件上传、公共文档删除、折叠索引详情；项目/文档切换以请求序号拒绝旧响应。</td></tr>
-      <tr><td class="f">features/scm/api.ts</td><td class="n">263</td><td>仓库、身份、绑定请求层 + Token 创建页路径推导（自建实例地址变了入口跟着变）。</td></tr>
-      <tr><td class="f">features/scm/RepositoryPage.vue</td><td class="n">514</td><td>仓库注册与修改。token 与 webhook 密钥<strong>只写字段</strong>，任何位置不回显。</td></tr>
-      <tr><td class="f">features/review/api.ts</td><td class="n">358</td><td>Review、Finding、活动状态请求层与类型。</td></tr>
-      <tr><td class="f">features/review/labels.ts <span class="lb"></span></td><td class="n">256</td><td><b>它做什么：</b>四种状态标记的文案与配色，规定它们不许合并。<br><b>为什么这么写：</b>四个标记的词汇与修饰符。<strong>禁止合并其中任何两个</strong>：Review 执行状态、Finding 人工状态、跨轮血缘、一次性 Decision。类别与置信度<strong>刻意没有</strong>色调映射——它们不是严重度。</td></tr>
+      <tr><td class="f">features/requirement/RequirementsPage.vue</td><td class="n">467</td><td>需求列表、三个可组合筛选、行内操作（按状态门控，不放宽后端前置条件）、创建 disclosure。</td></tr>
+      <tr><td class="f">features/requirement/RequirementDetailPage.vue</td><td class="n">1472</td><td>详情：页首元信息条（当前阶段、处理人、评审活动、开发/审查人）与退回理由，下分五个标签——需求内容（状态与指派、编辑或发布新版本）、AI 辅助（质量检查、实现建议）、关联审查（PR 活动分布、验收条件覆盖度及其来源审查是否过期）、附件、版本记录。保存或发布后重读派生面板，并用请求序号作废在途的质量检查与建议回答。长 AI 输出定高滚动。</td></tr>
+      <tr><td class="f">features/requirement/AcceptanceCriteriaEditor.vue</td><td class="n">121</td><td>验收条件编辑器。<code>sortOrder</code> 由数组顺序推导。</td></tr>
+      <tr><td class="f">features/knowledge/api.ts</td><td class="n">54</td><td>知识列表保留元数据；独立 content/download 接口按需读原文，始终不返回原始向量。</td></tr>
+      <tr><td class="f">features/knowledge/KnowledgePage.vue</td><td class="n">394</td><td>原文阅读/下载、多文件上传、失败重试、公共文档删除、折叠索引详情；存在处理中的文档时自动刷新状态；项目/文档切换以请求序号拒绝旧响应。</td></tr>
+      <tr><td class="f">features/scm/api.ts</td><td class="n">264</td><td>仓库、身份、绑定请求层 + Token 创建页路径推导（自建实例地址变了入口跟着变）。</td></tr>
+      <tr><td class="f">features/scm/RepositoryPage.vue</td><td class="n">512</td><td>仓库注册与修改，以及项目的钉钉通知配置与测试消息。token、webhook 密钥与通知地址都是<strong>只写字段</strong>，任何位置不回显。</td></tr>
+      <tr><td class="f">features/notification/api.ts</td><td class="n">56</td><td>钉钉通知渠道的请求层。</td></tr>
+      <tr><td class="f">features/review/api.ts</td><td class="n">399</td><td>Review、Finding、活动状态、覆盖度、校准与 AI 调用台账的请求层与类型。</td></tr>
+      <tr><td class="f">features/review/labels.ts <span class="lb"></span></td><td class="n">295</td><td><b>它做什么：</b>四种状态标记的文案与配色，规定它们不许合并。<br><b>为什么这么写：</b>四个标记的词汇与修饰符。<strong>禁止合并其中任何两个</strong>：Review 执行状态、Finding 人工状态、跨轮血缘、一次性 Decision。类别与置信度<strong>刻意没有</strong>色调映射——它们不是严重度。</td></tr>
       <tr><td class="f">features/review/context.ts</td><td class="n">236</td><td>在归属处对外部 JSON 做一次收窄。视图<strong>绝不</strong>对不可变上下文做类型断言或私自重解读。</td></tr>
       <tr><td class="f">features/review/diff.ts</td><td class="n">69</td><td>把 unified patch 转成稳定展示行与<strong>真实</strong> hunk 行号。</td></tr>
-      <tr><td class="f">features/review/ReviewsPage.vue</td><td class="n">442</td><td>项目级 Review 列表，四个筛选；内部 PR 记录 id 输入只在底部「故障恢复」disclosure。</td></tr>
-      <tr><td class="f">features/review/ReviewDetailPage.vue</td><td class="n">1120</td><td>证据工作台、轮次与上次退回理由、PR/MR 身份、作者映射、服务端决定资格与 head 闸门；公共原文可读，原文删除或查询失败时保留历史摘录。原始 JSON 位于底部折叠区。</td></tr>
-      <tr><td class="f">features/review/FindingCard.vue</td><td class="n">433</td><td>Finding 卡片，层次为<strong>问题说明 → 代码证据 → 修复建议</strong>；三个哈希收进可核验性折叠区。</td></tr>
-      <tr><td class="f">features/review/DiffEvidenceViewer.vue</td><td class="n">194</td><td>diff 渲染。增/删/上下文/分段样式可辨，长行局部滚动，无 patch 有明确空态。</td></tr>
+      <tr><td class="f">features/review/ReviewsPage.vue</td><td class="n">502</td><td>项目级 Review 列表（含提示词版本与模型），三个筛选加搜索；需求评审活动概览；单个 PR 的审查历史、远端状态与手动请求审查；内部 PR 记录 id 输入只在底部「故障恢复」disclosure。</td></tr>
+      <tr><td class="f">features/review/ReviewDetailPage.vue</td><td class="n">1298</td><td>证据工作台、轮次与上次退回理由、PR/MR 身份、作者映射、需求关联纠正、AC 判定（带条文）、覆盖清单、服务端决定资格与 head 闸门；三种终局决定，拒绝关闭前二次确认。延续的 Finding 提示上一轮的处理状态；另列「上一轮报告、本轮未再报告」。公共原文可读，原文删除或查询失败时保留历史摘录。原始 JSON 位于底部折叠区。</td></tr>
+      <tr><td class="f">features/review/FindingCard.vue</td><td class="n">441</td><td>Finding 卡片，层次为<strong>问题说明 → 代码证据 → 修复建议</strong>；三个哈希收进可核验性折叠区。</td></tr>
+      <tr><td class="f">features/review/DiffEvidenceViewer.vue</td><td class="n">195</td><td>diff 渲染。增/删/上下文/分段样式可辨，长行局部滚动，无 patch 有明确空态。</td></tr>
     </tbody>
   </table></div>
 
@@ -1142,7 +1160,7 @@ docker compose -p fp-demo up --detach --wait backend frontend</code></pre>
 <!-- ═══════════════════ 07 ═══════════════════ -->
 <section id="s7">
   <h2><span class="h-num">07</span>数据模型 21 表</h2>
-  <p>PostgreSQL 15 + pgvector 0.8.6，Flyway 管理，<strong>十四条迁移 V1–V14</strong>。V14 仅为需求增加可空审查人及成员复合外键，不新增表；旧数据回退 LEADER。<code>ddl-auto</code> 是 <code>validate</code>，Hibernate 只验证从不生成。</p>
+  <p>PostgreSQL 15 + pgvector 0.8.6，Flyway 管理，<strong>十五条迁移 V1–V15</strong>，V1 之后的每一条都是增量。<code>ddl-auto</code> 是 <code>validate</code>，Hibernate 只验证从不生成。</p>
 
   <div class="tw"><table>
     <thead><tr><th>表</th><th>归属</th><th>作用</th></tr></thead>
@@ -1162,11 +1180,12 @@ docker compose -p fp-demo up --detach --wait backend frontend</code></pre>
       <tr><td class="f">scm_repository</td><td>scm</td><td>项目唯一活动仓库 + 加密凭据。稳定身份全局唯一。</td></tr>
       <tr><td class="f">scm_identity</td><td>scm</td><td>用户自己拥有的 provider 身份。</td></tr>
       <tr><td class="f">project_member_scm_binding</td><td>scm</td><td>项目内身份选择与审批历史。</td></tr>
-      <tr><td class="f">pull_request</td><td>scm</td><td>权威 PR 快照。变更清单以<strong>一个</strong> JSONB 存下。<code>author_user_id</code> 是全库唯一带 <code>ON DELETE SET NULL</code> 的外键。</td></tr>
+      <tr><td class="f">pull_request</td><td>scm</td><td>权威 PR 快照。变更清单以<strong>一个</strong> JSONB 存下。<code>author_user_id</code> 是全库唯一带 <code>ON DELETE SET NULL</code> 的外键。<code>remote_state</code> 记远端开放/关闭/合并，可空表示尚未核验。</td></tr>
       <tr><td class="f">pull_request_requirement_event</td><td>scm</td><td>关联变更审计，与变更同事务。</td></tr>
       <tr><td class="f">review</td><td>review</td><td>一次审查 + 冻结的上下文快照 + 围栏三元组。触发器拒绝事后改身份列。</td></tr>
       <tr><td class="f">finding</td><td>review</td><td>报出的问题 + 三个确定性哈希 + 模型散文三列。<code>fk_finding_review</code> 指向 <code>(project_id, id, execution_attempt)</code>。</td></tr>
       <tr><td class="f">finding_event</td><td>review</td><td>人工决定的永久审计。</td></tr>
+      <tr><td class="f">project_notification_channel</td><td>notification</td><td>项目的钉钉通知渠道。webhook 地址与加签密钥是密文，永不回显；加签密钥可空表示不加签。</td></tr>
     </tbody>
   </table></div>
 
@@ -1178,12 +1197,14 @@ docker compose -p fp-demo up --detach --wait backend frontend</code></pre>
   </ul>
 
   <div class="note amber">
-    <span class="label">加表要同步改三处</span>
+    <span class="label">迁移要和冷启动脚本一起改</span>
     <p>
-      漏掉任何一处都<strong>不会</strong>让单元测试变红：<code>FoundationDatabaseTest.EXPECTED_TABLES</code>、
-      <code>scripts/phase1-compose-smoke.sh</code> 的 <code>expected_tables</code>、以及同一脚本里的
-      <code>migration_count</code> 与按版本取 <code>success</code> 的那一行。
-      V9/V10 落地时后两处都漏了，脚本长期停在「V8 + 19 张表」，CI 的 compose job 与冷启动自证因此一直是失败的——
+      <strong>每加一条迁移</strong>，同步 <code>scripts/phase1-compose-smoke.sh</code> 里的迁移条数与按版本取 <code>success</code> 的那一行；
+      <strong>迁移新建了表</strong>，再同步 <code>FoundationDatabaseTest.EXPECTED_TABLES</code> 与脚本的 <code>expected_tables</code>。
+      漏掉脚本那两处<strong>不会</strong>让单元测试变红。
+    </p>
+    <p>
+      V9/V10 落地时脚本就漏了，长期停在「V8 + 19 张表」，CI 的 compose job 与冷启动自证因此一直是失败的——
       而 <code>mvnw verify</code> 全绿，<strong>后端测试证明不了一个 shell 脚本</strong>。
     </p>
   </div>
@@ -1206,7 +1227,7 @@ docker compose -p fp-demo up --detach --wait backend frontend</code></pre>
 <!-- ═══════════════════ 08 ═══════════════════ -->
 <section id="s8">
   <h2><span class="h-num">08</span>API 端点</h2>
-  <p>下表按业务列出主要端点。会话写请求需要 <code>X-XSRF-TOKEN</code>；两个 webhook 使用独立验签。失败统一为 <code>ApiError</code>，完整评审协作契约见 <code>docs/v2/API.md</code>。</p>
+  <p>下表按业务列出主要端点。会话写请求需要 <code>X-XSRF-TOKEN</code>；两个 webhook 使用独立验签。失败统一为 <code>ApiError</code>，字段级契约见 <code>docs/v2/API.md</code>。登录与登出由安全过滤器链直接处理（<code>POST /api/auth/login</code>、<code>POST /api/auth/logout</code>），不在控制器里。</p>
 
   <div class="tw"><table>
     <caption>认证 · /api/auth</caption>
@@ -1256,8 +1277,8 @@ docker compose -p fp-demo up --detach --wait backend frontend</code></pre>
       <tr><td><span class="verb get">GET</span></td><td class="f">…/attachments/{documentId}/content</td><td>读完整原文。</td></tr>
       <tr><td><span class="verb get">GET</span></td><td class="f">…/attachments/{documentId}/download</td><td>按原文件名下载。</td></tr>
       <tr><td><span class="verb post">POST</span></td><td class="f">…/attachments/{documentId}/promote</td><td>提升为公共知识（<strong>复制</strong>，非改写）。</td></tr>
-      <tr><td><span class="verb post">POST</span></td><td class="f">/{requirementId}/quality</td><td>质量检查：规则 + 预算内一次结构化 AI 调用；超预算返回 <code>quality-2</code>、<code>ai=null</code> 的规则报告。不改需求状态。</td></tr>
-      <tr><td><span class="verb post">POST</span></td><td class="f">/{requirementId}/guidance</td><td>一次性实现建议。</td></tr>
+      <tr><td><span class="verb post">POST</span></td><td class="f">/{requirementId}/quality</td><td>质量检查：规则 + 预算内一次结构化 AI 调用；超预算返回 <code>quality-2</code>、<code>ai=null</code> 的规则报告。不改需求状态。检查期间正文或 AC 被编辑则返回 409，不保存这份过期结果。</td></tr>
+      <tr><td><span class="verb post">POST</span></td><td class="f">/{requirementId}/guidance</td><td>一次性实现建议（<code>guidance-3</code>）。LEADER 或该需求被指派的 DEVELOPER；只读已保存内容，不保存回答。</td></tr>
       <tr><td><span class="verb get">GET</span></td><td class="f">/{requirementId}/review-activity</td><td>该需求的派生评审活动。</td></tr>
     </tbody>
   </table></div>
@@ -1269,9 +1290,10 @@ docker compose -p fp-demo up --detach --wait backend frontend</code></pre>
       <tr><td><span class="verb get">GET</span></td><td class="f">…/knowledge/documents</td><td>文档列表 + 切片/向量状态。</td></tr>
       <tr><td><span class="verb get">GET</span></td><td class="f">…/knowledge/documents/{documentId}/content</td><td>成员读取公共原文 <code>{documentId,title,text}</code>；附件、非成员、跨项目或缺失返回 404。</td></tr>
       <tr><td><span class="verb get">GET</span></td><td class="f">…/knowledge/documents/{documentId}/download</td><td>同样范围校验，UTF-8 text/plain 附件，文件名取标题。</td></tr>
-      <tr><td><span class="verb post">POST</span></td><td class="f">…/knowledge/documents</td><td>上传单个文档。批量上传是前端 N 次调用它。</td></tr>
+      <tr><td><span class="verb post">POST</span></td><td class="f">…/knowledge/documents</td><td>上传单个文档，先受理为 <code>PENDING</code>，后台完成向量化。批量上传是前端 N 次调用它。</td></tr>
       <tr><td><span class="verb del">DELETE</span></td><td class="f">…/knowledge/documents/{documentId}</td><td>硬删（同事务显式删 chunk）。附件来源的文档被<strong>拒绝</strong>。</td></tr>
       <tr><td><span class="verb post">POST</span></td><td class="f">…/knowledge/documents/{documentId}/promote</td><td>提升为公共知识。</td></tr>
+      <tr><td><span class="verb post">POST</span></td><td class="f">…/knowledge/documents/{documentId}/retry</td><td>LEADER 把处理失败的文档放回 <code>PENDING</code> 重新入库；非失败状态返 409，没有自动循环重试。</td></tr>
       <tr><td><span class="verb get">GET</span></td><td class="f">…/scm/repositories</td><td>安全元数据，不含凭据。</td></tr>
       <tr><td><span class="verb post">POST</span></td><td class="f">…/scm/repositories</td><td>注册仓库。</td></tr>
       <tr><td><span class="verb patch">PATCH</span></td><td class="f">…/scm/repositories/{repositoryId}</td><td>改配置。字段留空表示保持原值。</td></tr>
@@ -1303,18 +1325,19 @@ docker compose -p fp-demo up --detach --wait backend frontend</code></pre>
     <caption>PR · Review · Finding</caption>
     <thead><tr><th>方法</th><th>路径</th><th>说明</th></tr></thead>
     <tbody>
-      <tr><td><span class="verb get">GET</span></td><td class="f">…/pull-requests/{pullRequestId}</td><td>PR 快照。</td></tr>
+      <tr><td><span class="verb get">GET</span></td><td class="f">…/pull-requests/{pullRequestId}</td><td>PR 快照，含 <code>remoteState</code>（<code>OPEN/CLOSED/MERGED</code>，null 表示尚未核验）。</td></tr>
       <tr><td><span class="verb put">PUT</span></td><td class="f">…/pull-requests/{pullRequestId}/requirement</td><td>人工纠正需求关联，同事务写审计。</td></tr>
       <tr><td><span class="verb get">GET</span></td><td class="f">…/pull-requests/{pullRequestId}/reviews</td><td>该 PR 的全部审查，旧行全保留。</td></tr>
-      <tr><td><span class="verb post">POST</span></td><td class="f">…/pull-requests/{pullRequestId}/reviews</td><td>发起／重试。返回 <code>executionAttempt</code>。两人同点重试得到「一次重试 + 一个 409」。</td></tr>
-      <tr><td><span class="verb get">GET</span></td><td class="f">…/reviews</td><td>项目级 Review 列表。</td></tr>
+      <tr><td><span class="verb post">POST</span></td><td class="f">…/pull-requests/{pullRequestId}/reviews</td><td>发起／重试。返回 <code>executionAttempt</code>。两人同点重试得到「一次重试 + 一个 409」；PR 已关闭或合并时返 409。</td></tr>
+      <tr><td><span class="verb get">GET</span></td><td class="f">…/reviews</td><td>项目级 Review 列表，含 PR 编号与标题、远端状态、提示词版本与模型。</td></tr>
       <tr><td><span class="verb get">GET</span></td><td class="f">…/reviews/{reviewId}</td><td>快照、覆盖清单、AC、Finding、决定理由及 <code>decisionBlockReason</code>；仅显式 null 表示无权限/需求状态阻碍。</td></tr>
-      <tr><td><span class="verb post">POST</span></td><td class="f">…/reviews/{reviewId}/decision</td><td>指定有效审查人/LEADER 作一次性裁定；退回必填理由且保留分支，通过须确认同 SHA 合并；结果不明返回 503 <code>merge_outcome_unknown</code>。</td></tr>
+      <tr><td><span class="verb post">POST</span></td><td class="f">…/reviews/{reviewId}/decision</td><td>指定有效审查人/LEADER 作一次性裁定；退回与拒绝必填理由。通过须确认同 SHA 合并，拒绝须确认远端已关闭，退回保留 PR 与分支；结果不明返回 503 <code>merge_outcome_unknown</code> / <code>close_outcome_unknown</code>，不记录成功。</td></tr>
       <tr><td><span class="verb post">POST</span></td><td class="f">…/findings/{findingId}/status</td><td>Finding 流转，可带备注。</td></tr>
       <tr><td><span class="verb get">GET</span></td><td class="f">…/findings/{findingId}/events</td><td>审计轨迹。项目内任何成员可读。</td></tr>
       <tr><td><span class="verb get">GET</span></td><td class="f">…/review-activity</td><td>项目内全部需求的派生活动。</td></tr>
-      <tr><td><span class="verb get">GET</span></td><td class="f">…/requirements/{requirementId}/coverage</td><td>当前需求修订的 AC 覆盖度派生视图。</td></tr>
+      <tr><td><span class="verb get">GET</span></td><td class="f">…/requirements/{requirementId}/coverage</td><td>当前需求修订的 AC 覆盖度派生视图；<code>lastReviewId</code> 是来源审查，<code>lastReviewStale</code> 表示其后 PR 已有新代码。</td></tr>
       <tr><td><span class="verb get">GET</span></td><td class="f">…/review-calibration</td><td>基于人工 Finding 决策的模型置信度校准视图。</td></tr>
+      <tr><td><span class="verb get">GET</span></td><td class="f">…/ai-usage</td><td>本项目已记录的 AI 调用，按请求模型与用途聚合：次数、成败、已上报 Token、单次请求耗时的 P50/P95。重试各算一次；不是账单，也不是准确率。</td></tr>
       <tr><td><span class="verb post">POST</span></td><td class="f">/api/scm/github/webhook</td><td>GitHub Webhook 接收。<strong>不带 projectId</strong>，靠载荷定位仓库。</td></tr>
       <tr><td><span class="verb post">POST</span></td><td class="f">/api/scm/gitlab/webhook</td><td>GitLab Webhook 接收。<strong>不带 projectId</strong>，靠载荷定位仓库。</td></tr>
     </tbody>
@@ -1372,7 +1395,7 @@ python3 evaluation/tools/formal_evaluation.py report \
 <!-- ═══════════════════ 10 ═══════════════════ -->
 <section id="s10">
   <h2><span class="h-num">10</span>运行边界</h2>
-  <p>全部是<strong>实测值而非估算</strong>；调整任何一行都要连带更新架构文档里的这张表。</p>
+  <p>系统运行时遵守的上限与默认值；并发上限来自一次实测而非估算。调整任何一行都要连带更新架构文档里的这张表。</p>
   <div class="tw"><table>
     <thead><tr><th>参数</th><th class="n">冻结值</th><th>说明</th></tr></thead>
     <tbody>
@@ -1380,7 +1403,9 @@ python3 evaluation/tools/formal_evaluation.py report \
       <tr><td>单文件 patch 最大字符</td><td class="n">60,000</td><td>超出按<strong>行边界</strong>截断并标注。</td></tr>
       <tr><td>单 Batch 输入预算</td><td class="n">60,000</td><td><code>ChangedFileBatcher</code> 的分批依据。</td></tr>
       <tr><td>LLM 单次调用超时</td><td class="n">120 s</td><td>超时按瞬时失败处理。</td></tr>
-      <tr><td>LLM 重试次数</td><td class="n">1</td><td>仅瞬时错误（429/5xx/网络）。<strong>全代码库别处没有重试。</strong></td></tr>
+      <tr><td>LLM 重试次数</td><td class="n">1</td><td>仅瞬时错误（429/5xx/网络）；429 先等 5 秒。<strong>全代码库别处没有重试。</strong></td></tr>
+      <tr><td>Chat 温度</td><td class="n">0</td><td>可配置；留空则不发送该字段。</td></tr>
+      <tr><td>向量请求批大小</td><td class="n">64</td><td>知识入库时每次向量请求携带的切片数，可配置。</td></tr>
       <tr><td>并发 Review 上限</td><td class="n">2</td><td>实测得出，见下。资源更紧的部署可显式降为 1。</td></tr>
       <tr><td>单文件上传上限</td><td class="n">5 MB</td><td><code>KnowledgeUploadValidator</code>。</td></tr>
       <tr><td>检索 TopK</td><td class="n">8</td><td>project-scoped 硬过滤。</td></tr>
@@ -1400,7 +1425,7 @@ python3 evaluation/tools/formal_evaluation.py report \
 <!-- ═══════════════════ 11 ═══════════════════ -->
 <section id="s11">
   <h2><span class="h-num">11</span>红线</h2>
-  <p>下面三类文件<strong>改一个字节就会造成实际损坏</strong>，而损坏不会在编辑时报错。</p>
+  <p>下面四条里，前三类文件<strong>改一个字节就会造成实际损坏</strong>，而损坏不会在编辑时报错。</p>
 
   <div class="note red">
     <span class="label">一 · 被配置冻结哈希钉住的 9 个评测文件</span>
@@ -1432,7 +1457,7 @@ python3 evaluation/tools/formal_evaluation.py report \
   <div class="note red">
     <span class="label">三 · 两个朝相反方向移动的版本常量</span>
     <p>
-      <code>ReviewPrompts.VERSION</code> 源码现为 <code>"review-5"</code>（2026-09-30，已部署），schema 变化时递增。
+      <code>ReviewPrompts.VERSION</code> 源码现为 <code>"review-6"</code>，指令或输出 schema 变化时递增。
       <code>FindingKeys.RULE_VERSION</code> <strong>必须保持 <code>"1"</code></strong>——它进 <code>basis_hash</code>，
       一改就让全部历史 Finding 的血缘断掉。
     </p>
@@ -1440,15 +1465,15 @@ python3 evaluation/tools/formal_evaluation.py report \
   </div>
 
   <div class="note amber">
-    <span class="label">四 · 测试套件有潜伏的类执行顺序依赖</span>
+    <span class="label">四 · 被引用的历史名字不要顺手改</span>
     <p>
-      把 <code>BatchOneApiTest</code> 改名（<strong>只改类名与注释，没有任何代码行变化</strong>）会让它在完整 <code>verify</code> 里 4 个测试失败，
-      全部倒在 <code>GET /api/auth/me must issue the XSRF-TOKEN cookie</code>；而单独跑 <code>-Dtest=</code> 该类<strong>5/5 全绿</strong>。
-      Surefire 默认 <code>runOrder=filesystem</code>，改名把它挪到了另一个位置，某个先跑的类留下的状态让匿名请求不再下发 CSRF cookie。<strong>根因未定位。</strong>
+      <code>phase1-quick.json</code>、<code>phase1-compose-smoke.sh</code>、<code>java-broken-build</code> 这类带着早期阶段痕迹的名字<strong>一律保留</strong>，只清理散文。
+      它们被冻结的评分器、CI 配置、复现指南与归档的运行证据按名字引用；评测工具里的保留集守卫还会扫描全仓，改名必然冲突。
     </p>
     <p>
-      所以：<code>phase1-quick.json</code>、<code>phase1-compose-smoke.sh</code>、<code>BatchOneApiTest</code> 这类历史名字<strong>一律保留</strong>，只清理散文。
-      遇到那条断言失败，先用 <code>-Dtest=&lt;类名&gt;</code> 单跑确认是顺序依赖，<strong>不要去改 <code>SecurityConfig</code></strong>。
+      另留一条排查线索：若出现「单个测试类运行通过、全量运行失败」，先查是否有测试类用了
+      <code>SecurityMockMvcRequestPostProcessors.csrf()</code>——它会改写共享过滤器链里的 CSRF 仓库并留在原处，
+      让其后的类都拿不到 <code>XSRF-TOKEN</code> cookie。测试一律走 <code>PostgresTestBase.spaCsrf()</code>；<strong>不要去改 <code>SecurityConfig</code></strong>。经过见测试报告 9.1。
     </p>
   </div>
 </section>
@@ -1456,13 +1481,14 @@ python3 evaluation/tools/formal_evaluation.py report \
 <!-- ═══════════════════ 12 ═══════════════════ -->
 <section id="s12">
   <h2><span class="h-num">12</span>测试与质量门</h2>
+  <p>下表是 2026-11-14 一次完整执行的结果。用例数逐提交变动，逐类分布、未覆盖范围与已发现的缺陷见 <code>TEST-REPORT.html</code>。</p>
 
   <div class="tw"><table>
     <thead><tr><th>范围</th><th class="n">规模</th><th>说明</th></tr></thead>
     <tbody>
-      <tr><td>后端</td><td class="n">379 / 50 类</td><td>2026-09-08 提交 746e40b 的 CI 全套及打包通过，0 失败、0 错误、0 跳过；此前本地旧断言修复、4 项复核和 24 项审查补充验证保留在测试报告。</td></tr>
-      <tr><td>前端</td><td class="n">44 / 15 文件</td><td>2026-09-08 lint、严格类型、测试与构建通过。</td></tr>
-      <tr><td>评测</td><td class="n">历史 18 + 30</td><td>沿用原测试记录，本轮未重跑或修改冻结资产；具体限制见 TEST-REPORT.html。</td></tr>
+      <tr><td>后端</td><td class="n">447 / 55 类</td><td>固定 JDK 21 容器入口的完整 <code>./mvnw -B -ntp verify</code>，0 失败、0 错误、0 跳过。</td></tr>
+      <tr><td>前端</td><td class="n">72 / 18 文件</td><td>lint、严格类型、测试与构建四道门。</td></tr>
+      <tr><td>评测</td><td class="n">18 + 30</td><td>四个 unittest 模块与评分器自测；只验证工具与口径，不调用模型，不触碰冻结资产。</td></tr>
     </tbody>
   </table></div>
 
@@ -1553,7 +1579,7 @@ python3 evaluation/tools/score.py --selftest</code></pre>
       <tr><td class="f">BCrypt</td><td>专门用于存密码的哈希算法，故意算得慢，让暴力破解昂贵。</td></tr>
       <tr><td class="f">SQLState</td><td>数据库错误的标准编码。本项目直接按码断言：<code>23505</code> 唯一冲突、<code>23503</code> 外键违例、<code>23514</code> CHECK 违例、<code>22000</code> 向量维度不一致。</td></tr>
       <tr><td class="f">Testcontainers</td><td>测试时用 Docker 起一个真实数据库。本项目<strong>禁止</strong>用内存数据库替代。</td></tr>
-      <tr><td class="f">Surefire</td><td>Maven 跑测试的插件。它默认的类执行顺序是本项目一个已知脆弱点的来源。</td></tr>
+      <tr><td class="f">Surefire</td><td>Maven 跑测试的插件。它按文件名顺序执行测试类；本项目曾有一个依赖这个顺序的缺陷，经过见测试报告 9.1。</td></tr>
       <tr><td class="f">Precision / Recall</td><td>查准率（报出来的有多少是真的）与查全率（真的有多少被报出来）。评测同时报两者，<strong>不合成单一分数</strong>。</td></tr>
       <tr><td class="f">Wilson 区间</td><td>小样本比例的置信区间算法。评测用它给出区间而不是只给一个点值。</td></tr>
     </tbody>
@@ -1562,14 +1588,10 @@ python3 evaluation/tools/score.py --selftest</code></pre>
 
 <footer class="end">
   <p>
-    本手册已按 2026-09-08 工作树同步：9 个后端包、21 张表、14 条迁移、6 个一级导航、11 条产品路由。
-    源文件/行数仅是当日快照；测试结果见 TEST-REPORT.html。本轮 CI 与两次冷启动通过，现有部署已保留数据升级至 V14，见<a href="../../.trellis/tasks/archive/2026-09/09-07-review-collaboration/deployment.md">部署记录</a>。历史容量/评测证据保留原测量日期，真实远端合并及钉钉投递未执行。
+    本手册描述当前代码：9 个后端包、21 张表、15 条迁移、6 个一级导航、11 条产品路由，这组结构性数字由测试钉住。
+    文件数、行数与用例数是 2026-11-14 的快照，引用时以实际代码与执行结果为准。
+    变更历史在 Git 提交与 <code>.trellis/tasks/</code> 的任务记录里；容量实测与正式评测保留原测量日期。
   </p>
-  <p>2026-09-20 补充：输出校验新增 diff 新侧逐字证据锚定与真实行号纠正；需求质量检查超预算时跳过 AI。此补充不改写上述 2026-09-08 快照或正式评测证据。</p>
-  <p>2026-09-25 补充：框架级错误进入统一错误体、用户可见文案统一为中文（09-21）；审查输出改为中文（09-23）；Finding 类型改由 acId 推导、chat 默认温度 0、429 先退避再重试、审查详情显示校验摘要与「本轮未再报告」、标记已修复仅限认领人（09-25，<code>review-4</code>）。</p>
-  <p>2026-09-30 源码补充（已部署）：<code>review-5</code> 恢复模型 type，类型与合法 AC 矛盾时保留为无 AC 的代码质量类，外来引用仍拒绝；详情只按同位置/同需求 AC 粗略排除重复提示，不改变血缘。无人认领时开发者可接续标记修复，其他开发者不再看到无权按钮。纠行计数仅含 Finding（含分批候选），不代表最终 Finding 数。旧实验与上述历史快照不变，未进行新一轮真实模型复测。</p>
-  <p>2026-10-01 源码补充（已部署）：实现建议新增概览和待确认事项，清单要求说明适用 AC 与验证办法；资料与技术信息默认折叠。先保存草稿/发布修订再生成，保存后旧建议及晚到回答失效；重新生成失败保留仍适用的旧建议。支持本地复制/Markdown 下载，刷新后不保留正文。建议版本为 <code>guidance-2</code>，尚未进行真实模型样例质量验证。</p>
-  <p>2026-10-14 源码补充（2026-10-16 已部署）：工作台、需求、审查、知识、仓库五个页面与项目页的项目列表加载抽取为共享 composable（<code>frontend/src/composables/useProjectSelection.ts</code>），交互与导航行为不变；diff 证据视图的改动类型按 Provider 词表中文化显示（新增/删除/修改/重命名，未知值原样显示）。知识文档删除在删除留痕中记录切片数。项目级评审活动聚合不再包含需求已软删的 PR。知识入库按可配置批大小（默认 64）分批请求向量，每批一行 <code>ai_call_log</code>，全部成功后仍以单事务写入，失败文档保留原因。</p>
   <p>
     更权威的单一定义处在仓库里：架构与数据模型见 <code>docs/v2/ARCHITECTURE.md</code>，
     产品规则见 <code>docs/v2/PRD.md</code>，端点契约见 <code>docs/v2/API.md</code>，

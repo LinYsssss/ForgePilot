@@ -22,30 +22,14 @@ scripts/phase1-compose-smoke.sh forgepilot-phase1-defense-clean
 
 Choose two unused loopback ports if those are occupied. For an interactive demonstration, use `docker compose up --build --detach --wait`, then open the configured frontend loopback address. The backend health contract is `/actuator/health`; through the frontend proxy it is `/api/actuator/health`.
 
-The current schema is V14, with 21 business tables. V14 adds only a nullable
-requirement reviewer and its project-member foreign key; existing null assignments
-fall back to LEADER. Upgrade an existing deployment with its database volume retained,
-never with the disposable cold-start cleanup procedure. On 2026-09-08, commit
-`746e40b` passed the full CI suite and two fresh-volume Compose cold starts, then
-was deployed to the existing `fp-demo` stack. V14 applied successfully; the original
-PostgreSQL container, volume and baseline record counts were retained. Container,
-loopback and public health checks passed, and served assets matched the running
-frontend image. See the [deployment record](../../.trellis/tasks/archive/2026-09/09-07-review-collaboration/deployment.md)
-and current test report for the exact evidence and remaining manual checks. The
-currently deployed backend and frontend are built from `3a251d7` (2026-10-16;
-provider error mapping, embedding batching, quick-corpus v2, and the frontend
-consolidation), the tip of `main` after the audit-fix branch merge; its
-[deployment record](../../.trellis/tasks/10-14-review-outstanding-followups/deployment-20261016.md)
-lists the image identities and checks. The previous backend-only deployment,
-`54e2953` (2026-10-03; review-5 and guidance-3), retained its frontend image.
-That round's
-[release and acceptance record](../../.trellis/tasks/archive/2026-10/10-02-guidance3-tightening/release-validation-20261003.md)
-covers three real guidance requests and local Chromium checks at desktop/390px
-widths. Program interaction checks passed, but content goals were only partly met;
-no new PR-review round or formal evaluation was run. The previous
-[guidance-2 rollout](../../.trellis/tasks/archive/2026-10/10-01-guidance-usability/deployment-20261002.md)
-and the ea51e6a deployment remain as historical evidence; the latter is in
-`.trellis/tasks/archive/2026-09/09-25-review-quality-round/deployment.md`.
+The current schema is V15, with 21 business tables. Every migration after V1 is additive,
+so an existing deployment is upgraded by rebuilding the images against its retained
+database volume — never with the disposable cold-start cleanup procedure above. Back up
+the database first; `docs/deliverables/OPERATIONS.html` lists the checks to run afterwards.
+
+The public demonstration stack (`fp-demo`) tracks `main`. Per-release evidence — image
+identities, backups, health checks and browser checks — is kept with the Trellis task
+that shipped it under `.trellis/tasks/`, not in this guide.
 
 ## 2. Build and test gates
 
@@ -89,12 +73,14 @@ Use three disposable accounts and one disposable project. The signed-in shell ha
 1. A LEADER creates the project and requirement, adds DEVELOPER and REVIEWER members, assigns the developer and reviewer, uploads project knowledge on **Project Knowledge**, and configures either GitHub or GitLab on **Repository Integration** (`/repositories`; the legacy `/projects/:id/settings` path redirects there). Tokens and webhook secrets are write-only. GitLab's repository token needs `api` and actual merge permission.
 2. A merge/pull request webhook authenticates the untouched body, triggers an authoritative provider read, links `REQ-<id>` when present, and creates the shared PENDING Review.
 3. The assigned REVIEWER or LEADER returns the completed Review with a reason. Show it on the requirement and Review pages; the PR/MR and original branch remain open for developer updates. Other REVIEWER members can handle findings but cannot make this final decision.
+   A REJECT instead closes the PR/MR after a second confirmation and keeps the branch and the requirement.
 4. The DEVELOPER fixes the code and updates the same branch. Show the new round, previous return reason and author mapping, then explicitly approve a dedicated disposable PR/MR: this merges the reviewed SHA. The requirement must be in development with a valid developer, and DONE remains a separate LEADER action.
 5. Read/download public knowledge as a member. Show the distinction between its current original and a historical Review excerpt. If a test DingTalk channel is enabled, demonstrate after-commit AI/decision notifications with responsible names and `/reviews/{id}?project={projectId}` links; configure `FORGEPILOT_BASE_URL` for links.
 
-These are manual acceptance steps, not claims of a live merge or notification in
-the 2026-09-08 validation. On `merge_outcome_unknown`, verify the remote merge state
-before deciding how to retry; no background compensation is provided.
+These are manual acceptance steps; the automated suites drive both providers through
+scripted HTTP, not a live merge or notification. On `merge_outcome_unknown` or
+`close_outcome_unknown`, verify the remote merge state
+state before deciding how to retry; no background compensation is provided.
 
 One thing to state honestly if asked during the walkthrough: semantic knowledge retrieval runs without a vector index. That is a deliberate choice, not an oversight — the frozen 4096-dimension embedding profile exceeds every exact index form pgvector 0.8.6 offers, and the two buildable forms are lossy pre-filters that would need a rerank stage. At MVP corpus scale the sequential scan returns the exact cosine ordering, which `KnowledgeVectorIndexTest` demonstrates at the frozen dimension. None of this affects the recorded evaluation, whose runner builds its own context and never calls the running application's retrieval path.
 

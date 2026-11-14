@@ -22,19 +22,16 @@ ForgePilot 是一个面向软件研发流程的轻量级 AI 研发协作与代�
 
 | 维度 | 事实 |
 |---|---|
-| 后端 | Spring Boot 4.1 模块化单体，9 个顶层业务包，21 张业务表 / 14 个 Flyway 迁移 |
+| 后端 | Spring Boot 4.1 模块化单体，9 个顶层业务包，21 张业务表 / 15 个 Flyway 迁移 |
 | 前端 | Vue 3 + TypeScript + Vite，6 个一级导航 / 11 条产品路由 |
 | SCM | GitHub 与 GitLab 双 Provider；用户多身份、标签与用途、项目绑定与可选 Leader 审批 |
 | AI | 单一 OpenAI-compatible 网关，服务需求质量检查、一次性实现建议与唯一 Review Engine |
 | 知识 | PostgreSQL 15 + pgvector，按 `project_id` 与当前 Requirement 双重硬过滤 |
 | 评测 | 三臂对照实验，holdout 只跑一次 |
 
-验证使用 Testcontainers 真实 PostgreSQL 15 + pgvector。`review-5` 与 `guidance-3` 已部署，最新自动化验证见[测试报告](docs/deliverables/TEST-REPORT.html)。
+验证使用 Testcontainers 真实 PostgreSQL 15 + pgvector；最近一次全套执行结果见[测试报告](docs/deliverables/TEST-REPORT.html)。当前提示词与规则版本为 `review-6`、`guidance-3`、`quality-2`。
 
-最近一次后端部署为 `54e2953`（2026-10-03，构建来源为 `fix/review-guidance-usability` 分支）；前端代码未变，继续使用原镜像。备份、三条真实建议和限定浏览器验收见[发布与验收记录](.trellis/tasks/archive/2026-10/10-02-guidance3-tightening/release-validation-20261003.md)：程序交互通过，内容目标仅部分达成，不能只按问题/步骤条数下降宣称整体更简洁。2026-09-20 的 `4121cea` 部署保留了现有 PostgreSQL 数据和 V14 schema；随后 15 个真实 GitHub PR
-快照全部完成复验，45 次 AI 调用全部成功并关联到对应 Review。论文引用口径、
-逐例数据和复算脚本见[生产复验结果](docs/thesis/PRODUCTION-REVALIDATION.md)，
-正式三臂评测仍使用下文所述的不可变证据。
+除正式三臂评测外，另有几组各自独立的线上证据：部署后调用链复验、演示仓与第三方真实 PR 重放、相邻两轮稳定性复测、实现建议验收。它们的口径、逐例数据和复算脚本集中在[论文材料](docs/thesis/README.md)，不与下文的正式评测合并分母。
 
 ## 从这里开始
 
@@ -50,7 +47,7 @@ ForgePilot 是一个面向软件研发流程的轻量级 AI 研发协作与代�
 ## 仓库结构
 
 ```text
-backend/       Spring Boot 模块化单体，9 个业务包 / 21 张表 / 14 个 Flyway 迁移
+backend/       Spring Boot 模块化单体，9 个业务包 / 21 张表 / 15 个 Flyway 迁移
 frontend/      Vue 3 + TypeScript + Vite 前端，6 个一级导航 / 11 条产品路由
 evaluation/    评测工具链、确定性打分器与冻结配置
 docs/v2/       产品与架构的唯一事实源
@@ -108,8 +105,12 @@ holdout 仅 12 例，样本偏小，结论为描述性而非总体推断；语�
 
 - **语义检索没有向量索引**，走顺序扫描的精确余弦序。冻结的 `Qwen3-Embedding-8B` 是 4096 维，超过 pgvector 0.8.6 全部精确索引形态的维度上限，可建的两种形态都是有损预筛，因此选择不建。
 - **需求状态转换不单独留痕**（`DRAFT→READY`、指派、`CANCELED`、`DONE`）。
+- **Finding 身份对行号与类别敏感**：无关插入造成行号移动或模型换了类别标签时，同一问题会被判为新问题，无法继承上一轮的抑制。
+- **远端合并/关闭与本地数据库无法原子提交**：结果不明时只读核验一次，仍不明则交人工核查，没有补偿任务。
 - **超限 changed-file 投递不留痕**：整条按 422 拒绝。
 - **浏览器点击闭环、响应式与视觉漂移检查为人工验收**，未自动化。
+
+完整清单见 [PRD §7](docs/v2/PRD.md)。
 
 ## License
 

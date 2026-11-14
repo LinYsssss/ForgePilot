@@ -29,8 +29,8 @@ high-risk boundaries, not framework behavior or trivial getters.
   `requestJson<T>` for JSON I/O.
 - Use token-backed styles and keep DOM order aligned with operational reading
   order. Pair status color with text or another non-color cue.
-- Keep empty, error, disabled, and focus states explicit. Do not imply that a
-  foundation placeholder is a completed product feature.
+- Keep empty, error, disabled, and focus states explicit. Do not present an
+  unfinished or failed state as a completed result.
 - Keep changes bounded to the relevant frontend/module and update the design
   contract when a new token or interaction rule is genuinely required.
 

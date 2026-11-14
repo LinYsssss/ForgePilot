@@ -1,7 +1,7 @@
 # Backend
 
-ForgePilot 的 Spring Boot 模块化单体：9 个顶层业务包、21 张业务表、14 个 Flyway 迁移。
-最新全套执行、失败类复核、审查修复后的相关用例与打包结果见 [测试报告](../docs/deliverables/TEST-REPORT.html)。
+ForgePilot 的 Spring Boot 模块化单体：9 个顶层业务包、21 张业务表、15 个 Flyway 迁移。
+最近一次全套执行与打包结果见 [测试报告](../docs/deliverables/TEST-REPORT.html)。
 
 本地入口是 `./mvnw`；它使用仓库锁定的 Maven 3.9.16，不要求全局 Maven。分发包 URL 与
 sha256 校验值只在 `.mvn/wrapper/maven-wrapper.properties` 中定义。需要 Java 21
@@ -31,7 +31,7 @@ H2、跳过测试或 Docker 条件分支替代。
 允许的顶层业务包仅为下列九个，各自职责见同名 `package-info.java`：
 
 ```text
-common       统一错误模型与异常处理
+common       统一错误模型、异常处理与按客户端地址限流
 auth         账号、会话、CSRF、鉴权入口
 project      项目、成员目录、多角色与项目隔离
 requirement  需求、验收条件、不可变修订、质量检查与实现建议
@@ -45,6 +45,6 @@ notification 项目通知渠道配置、AI 完成/失败与人工决定推送（
 新增顶层包、业务表或运行时依赖必须先在 `docs/v2/ARCHITECTURE.md` 中说明现有模型为何无法表达它；
 ArchUnit 会强制顶层包无环且 `scm` 不依赖 `review`。
 
-评审协作沿用现有模块：V14 只为需求增加可空审查人引用；最终决定校验指定审查人、开发负责人及需求状态。
-`APPROVE` 通过 SCM 门面以被审查的 head SHA 合并并确认结果，`REQUEST_CHANGES` 必须有理由且不写远端。
+最终决定校验指定审查人、开发负责人与需求状态，并经 SCM 门面落到远端：`APPROVE` 以被审查的 head SHA
+合并并确认结果，`REJECT` 确认远端已关闭后才记录，`REQUEST_CHANGES` 必须有理由且不写远端。
 API 与异常恢复契约见 [API.md](../docs/v2/API.md) 和 [ARCHITECTURE.md](../docs/v2/ARCHITECTURE.md)。

@@ -96,7 +96,7 @@ AI 台账返回 `{rows, totalCalls}`；每行含 `model, useCase, calls, succeed
 
 ## 项目与成员
 
-项目响应把旧 `myRole` 替换为 `myRoles: ProjectRole[]`。成员响应为：
+项目响应以 `myRoles: ProjectRole[]` 返回调用人的角色集合。成员响应为：
 
 ```json
 {"userId":12,"username":"lin","displayName":"林工","roles":["DEVELOPER","REVIEWER"]}
@@ -204,11 +204,11 @@ GitHub 默认 `apiBase=https://api.github.com`；GitLab 默认 `https://gitlab.c
 
 - `POST /api/projects/{projectId}/requirements/{requirementId}/guidance`
   - 仅 LEADER 或该需求被指派的 DEVELOPER；读取服务端已保存内容，不接收未保存表单，不改变状态或保存建议正文。
-  - 响应：`{requirementId,revisionId,revisionSeq,checklist,rules,risks,knowledgeSources,summary,questions,guidanceVersion}`。当前建议版本为 `guidance-3`，响应结构与 `guidance-2` 相同；部署与样例验收范围见 README。
+  - 响应：`{requirementId,revisionId,revisionSeq,checklist,rules,risks,knowledgeSources,summary,questions,guidanceVersion}`。当前建议版本为 `guidance-3`；真实样例的验收范围与局限见[实现建议验收](../thesis/GUIDANCE-ACCEPTANCE.md)。
   - `summary` 是非空白概览，`questions` 是待确认事项；questions、checklist、rules、risks 均为字符串数组，可为空。空风险列表不证明没有风险。
   - 清单由 Prompt 要求说明动作、适用 AC 与验证办法；服务端只校验结构，不从散文提取或证明 AC 覆盖。缺字段、错误类型或空白概览返回 502 / `ai_malformed_result`，不增加格式修复轮。
   - `knowledgeSources` 是本次实际召回的参考资料，不代表逐条建议已经验证；similarity 仅表示检索相关程度。
-  - 新增字段是增量扩展，前端兼容缺少这些字段的旧服务，但不把缺少 questions 解释成“没有待确认事项”。
+  - 前端不把缺少 questions 解释成“没有待确认事项”。
   - 页面在有未保存/未发布内容时禁止生成，并在保存成功、内容/版本变化后撤销旧建议和在途回答；DRAFT 的修订 ID 不变也须撤销。重新生成失败仅保留仍适用的旧建议。其他标签页的变化仍需刷新得知。
   - 复制与 Markdown 下载只在浏览器本地执行，带需求/修订/建议版本及参考资料；刷新后建议不保留。Clipboard 不可用时提示下载，不提供后端历史接口。
 
@@ -218,11 +218,11 @@ GitHub 默认 `apiBase=https://api.github.com`；GitLab 默认 `https://gitlab.c
   - 请求：`{"userId":12}`；`{"userId":null}` 清空指派。
   - 仅 LEADER；目标须为本项目 REVIEWER/LEADER。`DONE` / `CANCELED` 返回 409。
   - 成功 200，返回更新后的 `RequirementDetail`；不改变生命周期或创建 Revision。
-- 需求列表与详情新增 `reviewerId: number|null`、`reviewerName: string|null`。
+- 需求列表与详情包含 `reviewerId: number|null`、`reviewerName: string|null`。
   - 名称仅在该成员仍有 REVIEWER/LEADER 资格时返回；因此保留历史引用时 `reviewerId` 有值但 `reviewerName` 可以为 null。
   - 未指定或失效由 LEADER 接手；移除成员时引用置空。
 
-开发指派继续使用 `POST .../requirements/{id}/assignee` 和非空 `userId`，服务端校验目标必须是本项目 DEVELOPER/LEADER：无资格成员返回 403，非成员返回 404，失败不改变原指派或需求状态。两类指派各自独立。
+开发指派使用 `POST .../requirements/{id}/assignee` 和非空 `userId`，服务端校验目标必须是本项目 DEVELOPER/LEADER：无资格成员返回 403，非成员返回 404，失败不改变原指派或需求状态。两类指派各自独立。
 
 ## Review 最终决定与历史
 
@@ -236,16 +236,16 @@ GitHub 默认 `apiBase=https://api.github.com`；GitLab 默认 `https://gitlab.c
   - `REQUEST_CHANGES` 不调用远端写接口，保留 PR/MR 与分支。`APPROVE` 合并被审查的 SHA，Provider 确认合并后才提交本地决定；不会把需求改为 `DONE`。
   - `REJECT` 核验远端 head/base 后关闭整个 PR/MR，明确关闭后记录本地拒绝，保留分支、不取消需求；界面要求理由和二次确认。本地仍 PENDING、远端已 CLOSED 可只读核验补记；已 MERGED 或版本变化拒绝补记。关闭不具有远端 SHA 原子条件。
 - `GET /api/projects/{projectId}/reviews/{reviewId}`
-  - 新增 `decisionBlockReason: string|null`，仅表示调用人权限和需求状态限制。
+  - `decisionBlockReason: string|null`，仅表示调用人权限和需求状态限制。
   - `validation: {droppedFindings, correctedLines}|null`：整条丢弃的 Finding 数与 Finding 纠行事件数；纠行包含分批候选、不含 AC 证据，因此可大于最终 Finding 数。无摘要时为 null，丢弃内容不回显，类型降级后保留的项不算丢弃。
   - `notReported: Finding[]`：上一轮已完成审查的 key 差集，再排除本轮同类型同文件的同位置（非空行号）/同需求同非空 ac_key 候选。只对已完成的一轮派生，不落库，不改变血缘/抑制，不等于已修复；这是粗粒度提示去重，不保证语义等价。
-  - Finding 的 `findingType` 在 `review-5` 起由模型显式给出并校验；合法引用与类型矛盾时保留 CODE_QUALITY、清空 AC 并记 warning，缺失/未知类型按 acId 兜底。外来 AC 仍整条拒绝；旧报告不回填。
-  - `review-6` 起 AC verdict 增加 UNKNOWN（信息不足/待核实）：合法结构漏答、无已校验证据的 COVERED、零受审文件降级并记录 warning。旧三值报告原样读取；尚未审查仍为 null，格式/Provider 失败仍失败。
+  - Finding 的 `findingType` 由模型显式给出并校验；合法引用与类型矛盾时保留 CODE_QUALITY、清空 AC 并记 warning，缺失/未知类型按 acId 兜底。外来 AC 仍整条拒绝；旧报告不回填。
+  - AC verdict 为 `COVERED/NOT_FOUND/AT_RISK/UNKNOWN`，UNKNOWN 表示信息不足/待核实：合法结构漏答、无已校验证据的 COVERED、零受审文件降级并记录 warning。`review-6` 之前的三值报告原样读取；尚未审查仍为 null，格式/Provider 失败仍失败。
   - 前端仅在 `decisionBlockReason` 显式为 null，且 `isCurrent=true`、`status=COMPLETED`、`decision=PENDING`、无 head 退回/拒绝闸门时展示决定按钮；终态限制相应操作，CLOSED 保留核验补记拒绝入口。
 - `GET /api/projects/{projectId}/pull-requests/{pullRequestId}/reviews`
-  - 返回现有 `{id,headSha,requirementRevisionId,status,decision,isCurrent,createdAt}[]`，按创建时间、ID 从旧到新排序。
+  - 返回 `{id,headSha,requirementRevisionId,status,decision,isCurrent,createdAt}[]`，按创建时间、ID 从旧到新排序。
   - UI 从该序列推导轮次，按需读取上一轮详情中的退回理由，不增加轮次字段或历史表。
-- 项目审查列表包含 `provider`、`pullRequestNumber`、`pullRequestTitle`；PR 详情包含 `title` 及原有作者映射字段。两者均含 `remoteState: OPEN|CLOSED|MERGED|null`；null 表示尚未核验，人工请求审查/退回前核验。终态不能启动新审查，历史保留；活动聚合不伪造外部合并为 APPROVE。
+- 项目审查列表包含 `provider`、`pullRequestNumber`、`pullRequestTitle`；PR 详情包含 `title` 及作者映射字段。两者均含 `remoteState: OPEN|CLOSED|MERGED|null`；null 表示尚未核验，人工请求审查/退回前核验。终态不能启动新审查，历史保留；活动聚合不伪造外部合并为 APPROVE。
 
 | 情况 | HTTP / code | 处理 |
 |---|---|---|
@@ -274,7 +274,7 @@ Embedding Profile 已在同一事务提交；`FAILED` 携带受控的 `failureRe
 `POST /api/projects/{projectId}/knowledge/documents/{documentId}/retry` 仅限 LEADER
 手动重试 `FAILED` 文档，返回 200 和 `KnowledgeDocumentView`：状态回到 `PENDING`、
 `failureReason` 清空，由同一个入库处理器重新消费。非失败状态返回 409，非 LEADER
-返回 403，跨项目或不存在的文档返回 404；不新增自动循环重试。
+返回 403，跨项目或不存在的文档返回 404；没有自动循环重试。
 
 项目知识与需求附件页面只在存在 `PENDING` 项时轮询，前一次请求结束后才安排下一次；
 页面离开、标签页隐藏或全部进入终态时停止。连续刷新失败有上限，并显示手动重试入口。

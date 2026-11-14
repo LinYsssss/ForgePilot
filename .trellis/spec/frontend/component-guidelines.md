@@ -21,8 +21,8 @@ const title = computed(() => String(route.meta.title ?? "ForgePilot"));
 </script>
 
 <template>
-  <section aria-labelledby="foundation-title">
-    <h1 id="foundation-title">{{ title }}</h1>
+  <section aria-labelledby="page-title">
+    <h1 id="page-title">{{ title }}</h1>
   </section>
 </template>
 ```
