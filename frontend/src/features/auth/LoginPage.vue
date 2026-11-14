@@ -247,17 +247,8 @@ async function submit(): Promise<void> {
   filter: drop-shadow(0 0 1.25rem var(--fp-color-accent-glow));
 }
 
-.login-brand .eyebrow,
-.login-brand-note {
+.login-brand .eyebrow {
   margin: 0;
-}
-
-.login-brand-note {
-  margin-top: var(--fp-space-1);
-  color: var(--fp-color-text-subtle);
-  font: 0.6875rem/1.5 var(--fp-font-mono);
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
 }
 
 .login-cyber-radar {
