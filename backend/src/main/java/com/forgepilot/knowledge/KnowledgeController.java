@@ -8,9 +8,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import java.util.List;
 
-import com.forgepilot.auth.AccountView;
 import com.forgepilot.auth.UserDirectory;
-import com.forgepilot.common.ApiException;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
@@ -39,19 +37,20 @@ class KnowledgeController {
 
     @GetMapping
     List<KnowledgeDocumentView> list(@PathVariable long projectId, Principal principal) {
-        return knowledge.listProjectKnowledge(projectId, userIdOf(principal));
+        return knowledge.listProjectKnowledge(projectId, users.idOf(principal));
     }
 
     @GetMapping("/{documentId}/content")
     KnowledgeService.DocumentContent content(@PathVariable long projectId, @PathVariable long documentId,
             Principal principal) {
-        return knowledge.publicContent(projectId, userIdOf(principal), documentId);
+        return knowledge.publicContent(projectId, users.idOf(principal), documentId);
     }
 
     @GetMapping("/{documentId}/download")
     ResponseEntity<byte[]> download(@PathVariable long projectId, @PathVariable long documentId,
             Principal principal) {
-        KnowledgeService.DocumentContent document = knowledge.publicContent(projectId, userIdOf(principal), documentId);
+        KnowledgeService.DocumentContent document =
+                knowledge.publicContent(projectId, users.idOf(principal), documentId);
         return ResponseEntity.ok()
                 .contentType(new MediaType("text", "plain", StandardCharsets.UTF_8))
                 .header(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition.attachment()
@@ -63,7 +62,7 @@ class KnowledgeController {
     @ResponseStatus(HttpStatus.CREATED)
     KnowledgeDocumentView create(@PathVariable long projectId, @Valid @RequestBody DocumentRequest request,
             Principal principal) {
-        long actorId = userIdOf(principal);
+        long actorId = users.idOf(principal);
         long documentId = knowledge.createProjectKnowledge(projectId, actorId, request.title(), request.text());
         return knowledge.document(projectId, actorId, documentId);
     }
@@ -72,7 +71,7 @@ class KnowledgeController {
     @PostMapping("/{documentId}/retry")
     KnowledgeDocumentView retry(@PathVariable long projectId, @PathVariable long documentId,
             Principal principal) {
-        long actorId = userIdOf(principal);
+        long actorId = users.idOf(principal);
         long retriedId = knowledge.retryProjectKnowledge(projectId, actorId, documentId);
         return knowledge.document(projectId, actorId, retriedId);
     }
@@ -81,7 +80,7 @@ class KnowledgeController {
     @ResponseStatus(HttpStatus.CREATED)
     KnowledgeDocumentView promote(@PathVariable long projectId, @PathVariable long documentId,
             Principal principal) {
-        long actorId = userIdOf(principal);
+        long actorId = users.idOf(principal);
         long promotedId = knowledge.promoteToProjectKnowledge(projectId, actorId, documentId);
         return knowledge.document(projectId, actorId, promotedId);
     }
@@ -95,12 +94,7 @@ class KnowledgeController {
     @DeleteMapping("/{documentId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     void delete(@PathVariable long projectId, @PathVariable long documentId, Principal principal) {
-        knowledge.deleteProjectKnowledge(projectId, userIdOf(principal), documentId);
-    }
-
-    private long userIdOf(Principal principal) {
-        return users.byUsername(principal.getName()).map(AccountView::id)
-                .orElseThrow(ApiException::notFound);
+        knowledge.deleteProjectKnowledge(projectId, users.idOf(principal), documentId);
     }
 
     record DocumentRequest(@NotBlank @Size(max = 255) String title, @NotBlank String text) {

@@ -4,9 +4,7 @@ import java.security.Principal;
 import java.util.List;
 import java.util.Set;
 
-import com.forgepilot.auth.AccountView;
 import com.forgepilot.auth.UserDirectory;
-import com.forgepilot.common.ApiException;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.NotEmpty;
@@ -38,46 +36,41 @@ class ProjectMemberController {
 
     @GetMapping
     List<MemberResponse> list(@PathVariable long projectId, Principal principal) {
-        return members.list(projectId, userIdOf(principal));
+        return members.list(projectId, users.idOf(principal));
     }
 
     @GetMapping("/candidates")
     List<MemberCandidateResponse> candidates(@PathVariable long projectId,
             @RequestParam String q, @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size, Principal principal) {
-        return members.search(projectId, userIdOf(principal), q, page, size);
+        return members.search(projectId, users.idOf(principal), q, page, size);
     }
 
     @PostMapping("/batch")
     @ResponseStatus(HttpStatus.CREATED)
     List<MemberResponse> addBatch(@PathVariable long projectId,
             @Valid @RequestBody BatchRequest request, Principal principal) {
-        return members.addBatch(projectId, userIdOf(principal), request.members().stream()
+        return members.addBatch(projectId, users.idOf(principal), request.members().stream()
                 .map(row -> new ProjectMemberService.BatchMember(row.userId(), row.roles())).toList());
     }
 
     @PatchMapping("/{userId}/roles")
     MemberResponse updateRoles(@PathVariable long projectId, @PathVariable long userId,
             @Valid @RequestBody RolesRequest request, Principal principal) {
-        return members.updateRoles(projectId, userIdOf(principal), userId, request.roles());
+        return members.updateRoles(projectId, users.idOf(principal), userId, request.roles());
     }
 
     @DeleteMapping("/{userId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     void remove(@PathVariable long projectId, @PathVariable long userId, Principal principal) {
-        members.remove(projectId, userIdOf(principal), userId);
+        members.remove(projectId, users.idOf(principal), userId);
     }
 
     @PostMapping("/leader-transfer")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     void transferLeader(@PathVariable long projectId, @Valid @RequestBody LeaderTransferRequest request,
             Principal principal) {
-        members.transferLeader(projectId, userIdOf(principal), request.targetUserId());
-    }
-
-    private long userIdOf(Principal principal) {
-        return users.byUsername(principal.getName()).map(AccountView::id)
-                .orElseThrow(ApiException::notFound);
+        members.transferLeader(projectId, users.idOf(principal), request.targetUserId());
     }
 
     record BatchRequest(@NotEmpty @Size(max = 50) List<@Valid BatchRow> members) {

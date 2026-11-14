@@ -2,9 +2,7 @@ package com.forgepilot.notification;
 
 import java.security.Principal;
 
-import com.forgepilot.auth.AccountView;
 import com.forgepilot.auth.UserDirectory;
-import com.forgepilot.common.ApiException;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
@@ -34,7 +32,7 @@ class NotificationChannelController {
 
     @GetMapping
     NotificationViews.ChannelView get(@PathVariable long projectId, Principal principal) {
-        return channels.view(projectId, userIdOf(principal));
+        return channels.view(projectId, users.idOf(principal));
     }
 
     /**
@@ -44,24 +42,19 @@ class NotificationChannelController {
     @PutMapping
     NotificationViews.ChannelView configure(@PathVariable long projectId,
             @Valid @RequestBody ConfigureRequest request, Principal principal) {
-        return channels.configure(projectId, userIdOf(principal), request.webhookUrl(),
+        return channels.configure(projectId, users.idOf(principal), request.webhookUrl(),
                 request.secret(), request.keyword(), request.enabled());
     }
 
     @DeleteMapping
     @ResponseStatus(HttpStatus.NO_CONTENT)
     void remove(@PathVariable long projectId, Principal principal) {
-        channels.remove(projectId, userIdOf(principal));
+        channels.remove(projectId, users.idOf(principal));
     }
 
     @PostMapping("/test")
     NotificationViews.TestResult test(@PathVariable long projectId, Principal principal) {
-        return new NotificationViews.TestResult(channels.sendTest(projectId, userIdOf(principal)));
-    }
-
-    private long userIdOf(Principal principal) {
-        return users.byUsername(principal.getName()).map(AccountView::id)
-                .orElseThrow(ApiException::notFound);
+        return new NotificationViews.TestResult(channels.sendTest(projectId, users.idOf(principal)));
     }
 
     /**

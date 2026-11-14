@@ -3,9 +3,7 @@ package com.forgepilot.review;
 import java.security.Principal;
 import java.util.List;
 
-import com.forgepilot.auth.AccountView;
 import com.forgepilot.auth.UserDirectory;
-import com.forgepilot.common.ApiException;
 import com.forgepilot.review.ReviewViews.DecisionResult;
 import com.forgepilot.review.ReviewViews.ProjectReviewRow;
 import com.forgepilot.review.ReviewViews.ReviewDetail;
@@ -57,25 +55,25 @@ class ReviewController {
     @ResponseStatus(HttpStatus.ACCEPTED)
     ReviewRequested request(@PathVariable long projectId, @PathVariable long pullRequestId,
             Principal principal) {
-        Review review = reviews.requestReview(projectId, pullRequestId, userIdOf(principal));
+        Review review = reviews.requestReview(projectId, pullRequestId, users.idOf(principal));
         return new ReviewRequested(review.getId(), review.getStatus(), review.getExecutionAttempt());
     }
 
     /** 代码审查页面的列表。限定项目内、最新在前，MVP 阶段不做分页。 */
     @GetMapping("/reviews")
     List<ProjectReviewRow> list(@PathVariable long projectId, Principal principal) {
-        return decisions.listForProject(projectId, userIdOf(principal));
+        return decisions.listForProject(projectId, users.idOf(principal));
     }
 
     @GetMapping("/reviews/{reviewId}")
     ReviewDetail get(@PathVariable long projectId, @PathVariable long reviewId, Principal principal) {
-        return decisions.detail(projectId, userIdOf(principal), reviewId);
+        return decisions.detail(projectId, users.idOf(principal), reviewId);
     }
 
     @GetMapping("/pull-requests/{pullRequestId}/reviews")
     List<ReviewSummary> history(@PathVariable long projectId, @PathVariable long pullRequestId,
             Principal principal) {
-        return decisions.history(projectId, userIdOf(principal), pullRequestId);
+        return decisions.history(projectId, users.idOf(principal), pullRequestId);
     }
 
     /**
@@ -85,14 +83,8 @@ class ReviewController {
     @PostMapping("/reviews/{reviewId}/decision")
     DecisionResult decide(@PathVariable long projectId, @PathVariable long reviewId,
             @Valid @RequestBody DecisionRequest request, Principal principal) {
-        return decisions.decide(projectId, userIdOf(principal), reviewId, request.decision(),
+        return decisions.decide(projectId, users.idOf(principal), reviewId, request.decision(),
                 request.comment());
-    }
-
-    /** 在这里——控制器层——完成解析：业务服务永远看不到 Spring Security。 */
-    private long userIdOf(Principal principal) {
-        return users.byUsername(principal.getName()).map(AccountView::id)
-                .orElseThrow(ApiException::notFound);
     }
 
     /**

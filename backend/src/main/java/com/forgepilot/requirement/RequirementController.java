@@ -4,9 +4,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.Principal;
 import java.util.List;
 
-import com.forgepilot.auth.AccountView;
 import com.forgepilot.auth.UserDirectory;
-import com.forgepilot.common.ApiException;
 import com.forgepilot.knowledge.KnowledgeDocumentView;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
@@ -49,64 +47,64 @@ class RequirementController {
 
     @GetMapping
     List<RequirementSummary> list(@PathVariable long projectId, Principal principal) {
-        return requirements.list(projectId, userIdOf(principal));
+        return requirements.list(projectId, users.idOf(principal));
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     RequirementDetail create(@PathVariable long projectId, @Valid @RequestBody RequirementContent request,
             Principal principal) {
-        return requirements.create(projectId, userIdOf(principal), request);
+        return requirements.create(projectId, users.idOf(principal), request);
     }
 
     @GetMapping("/{requirementId}")
     RequirementDetail get(@PathVariable long projectId, @PathVariable long requirementId, Principal principal) {
-        return requirements.get(projectId, userIdOf(principal), requirementId);
+        return requirements.get(projectId, users.idOf(principal), requirementId);
     }
 
     @PatchMapping("/{requirementId}")
     RequirementDetail editDraft(@PathVariable long projectId, @PathVariable long requirementId,
             @Valid @RequestBody RequirementContent request, Principal principal) {
-        return requirements.editDraft(projectId, userIdOf(principal), requirementId, request);
+        return requirements.editDraft(projectId, users.idOf(principal), requirementId, request);
     }
 
     /** 只有作废需求可以删除，且是软删：审计与既成事实必须留下。 */
     @DeleteMapping("/{requirementId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     void delete(@PathVariable long projectId, @PathVariable long requirementId, Principal principal) {
-        requirements.delete(projectId, userIdOf(principal), requirementId);
+        requirements.delete(projectId, users.idOf(principal), requirementId);
     }
 
     @GetMapping("/{requirementId}/revisions")
     List<RevisionView> revisions(@PathVariable long projectId, @PathVariable long requirementId,
             Principal principal) {
-        return requirements.listRevisions(projectId, userIdOf(principal), requirementId);
+        return requirements.listRevisions(projectId, users.idOf(principal), requirementId);
     }
 
     @PostMapping("/{requirementId}/revisions")
     @ResponseStatus(HttpStatus.CREATED)
     RequirementDetail publishRevision(@PathVariable long projectId, @PathVariable long requirementId,
             @Valid @RequestBody PublishRevisionRequest request, Principal principal) {
-        return requirements.publishRevision(projectId, userIdOf(principal), requirementId,
+        return requirements.publishRevision(projectId, users.idOf(principal), requirementId,
                 request.content(), request.changeReason());
     }
 
     @PostMapping("/{requirementId}/status")
     RequirementDetail changeStatus(@PathVariable long projectId, @PathVariable long requirementId,
             @Valid @RequestBody StatusRequest request, Principal principal) {
-        return requirements.changeStatus(projectId, userIdOf(principal), requirementId, request.status());
+        return requirements.changeStatus(projectId, users.idOf(principal), requirementId, request.status());
     }
 
     @PostMapping("/{requirementId}/assignee")
     RequirementDetail assign(@PathVariable long projectId, @PathVariable long requirementId,
             @Valid @RequestBody AssigneeRequest request, Principal principal) {
-        return requirements.assign(projectId, userIdOf(principal), requirementId, request.userId());
+        return requirements.assign(projectId, users.idOf(principal), requirementId, request.userId());
     }
 
     @PostMapping("/{requirementId}/reviewer")
     RequirementDetail assignReviewer(@PathVariable long projectId, @PathVariable long requirementId,
             @RequestBody ReviewerRequest request, Principal principal) {
-        return requirements.assignReviewer(projectId, userIdOf(principal), requirementId, request.userId());
+        return requirements.assignReviewer(projectId, users.idOf(principal), requirementId, request.userId());
     }
 
     record ReviewerRequest(Long userId) { }
@@ -114,27 +112,27 @@ class RequirementController {
     @GetMapping("/{requirementId}/attachments")
     List<KnowledgeDocumentView> attachments(@PathVariable long projectId, @PathVariable long requirementId,
             Principal principal) {
-        return this.attachments.list(projectId, userIdOf(principal), requirementId);
+        return this.attachments.list(projectId, users.idOf(principal), requirementId);
     }
 
     @PostMapping("/{requirementId}/attachments")
     @ResponseStatus(HttpStatus.CREATED)
     KnowledgeDocumentView attach(@PathVariable long projectId, @PathVariable long requirementId,
             @Valid @RequestBody AttachmentRequest request, Principal principal) {
-        return attachments.create(projectId, userIdOf(principal), requirementId, request.title(), request.text());
+        return attachments.create(projectId, users.idOf(principal), requirementId, request.title(), request.text());
     }
 
     @GetMapping("/{requirementId}/attachments/{documentId}/content")
     RequirementAttachmentService.AttachmentContent attachmentContent(@PathVariable long projectId,
             @PathVariable long requirementId, @PathVariable long documentId, Principal principal) {
-        return attachments.content(projectId, userIdOf(principal), requirementId, documentId);
+        return attachments.content(projectId, users.idOf(principal), requirementId, documentId);
     }
 
     @GetMapping("/{requirementId}/attachments/{documentId}/download")
     ResponseEntity<byte[]> downloadAttachment(@PathVariable long projectId, @PathVariable long requirementId,
             @PathVariable long documentId, Principal principal) {
         RequirementAttachmentService.AttachmentContent content = attachments
-                .content(projectId, userIdOf(principal), requirementId, documentId);
+                .content(projectId, users.idOf(principal), requirementId, documentId);
         byte[] body = content.text().getBytes(StandardCharsets.UTF_8);
         MediaType type = new MediaType(MediaType.parseMediaType(content.mediaType()), StandardCharsets.UTF_8);
         return ResponseEntity.ok()
@@ -149,7 +147,7 @@ class RequirementController {
     @ResponseStatus(HttpStatus.CREATED)
     KnowledgeDocumentView promoteAttachment(@PathVariable long projectId, @PathVariable long requirementId,
             @PathVariable long documentId, Principal principal) {
-        return attachments.promote(projectId, userIdOf(principal), requirementId, documentId);
+        return attachments.promote(projectId, users.idOf(principal), requirementId, documentId);
     }
 
     /**
@@ -159,7 +157,7 @@ class RequirementController {
     @PostMapping("/{requirementId}/guidance")
     ImplementationGuidance generateGuidance(@PathVariable long projectId,
             @PathVariable long requirementId, Principal principal) {
-        return guidance.generate(projectId, userIdOf(principal), requirementId);
+        return guidance.generate(projectId, users.idOf(principal), requirementId);
     }
 
     /**
@@ -170,17 +168,7 @@ class RequirementController {
     @PostMapping("/{requirementId}/quality")
     QualityReport checkQuality(@PathVariable long projectId, @PathVariable long requirementId,
             Principal principal) {
-        return quality.check(projectId, userIdOf(principal), requirementId);
-    }
-
-    /**
-     * 登录身份在这里——控制器层——通过只读账号 facade 解析为 user id。
-     * 业务服务永远看不到 Spring Security，本功能模块也不依赖会话是如何建立的
-     * （ARCHITECTURE.md 1.3）。
-     */
-    private long userIdOf(Principal principal) {
-        return users.byUsername(principal.getName()).map(AccountView::id)
-                .orElseThrow(ApiException::notFound);
+        return quality.check(projectId, users.idOf(principal), requirementId);
     }
 
     /** API.md 的线上形态：{@code EditDraft} 再加上必填的变更原因。 */

@@ -3,9 +3,7 @@ package com.forgepilot.review;
 import java.security.Principal;
 import java.util.Map;
 
-import com.forgepilot.auth.AccountView;
 import com.forgepilot.auth.UserDirectory;
-import com.forgepilot.common.ApiException;
 import com.forgepilot.review.ReviewActivityService.ActivityView;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -36,17 +34,12 @@ class ReviewActivityController {
     @GetMapping("/requirements/{requirementId}/review-activity")
     ActivityView forRequirement(@PathVariable long projectId, @PathVariable long requirementId,
             Principal principal) {
-        return activities.forRequirement(projectId, userIdOf(principal), requirementId);
+        return activities.forRequirement(projectId, users.idOf(principal), requirementId);
     }
 
     /** 以需求 id 为键，使列表页一次调用就能读到整列数据。 */
     @GetMapping("/review-activity")
     Map<Long, ActivityView> forProject(@PathVariable long projectId, Principal principal) {
-        return activities.forProject(projectId, userIdOf(principal));
-    }
-
-    private long userIdOf(Principal principal) {
-        return users.byUsername(principal.getName()).map(AccountView::id)
-                .orElseThrow(ApiException::notFound);
+        return activities.forProject(projectId, users.idOf(principal));
     }
 }

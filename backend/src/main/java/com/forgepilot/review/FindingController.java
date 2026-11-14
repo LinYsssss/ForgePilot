@@ -3,9 +3,7 @@ package com.forgepilot.review;
 import java.security.Principal;
 import java.util.List;
 
-import com.forgepilot.auth.AccountView;
 import com.forgepilot.auth.UserDirectory;
-import com.forgepilot.common.ApiException;
 import com.forgepilot.review.ReviewViews.FindingEventView;
 import com.forgepilot.review.ReviewViews.FindingStatusResult;
 import jakarta.validation.Valid;
@@ -40,19 +38,14 @@ class FindingController {
     @PostMapping("/status")
     FindingStatusResult move(@PathVariable long projectId, @PathVariable long findingId,
             @Valid @RequestBody StatusRequest request, Principal principal) {
-        return lifecycle.move(projectId, userIdOf(principal), findingId, request.status(),
+        return lifecycle.move(projectId, users.idOf(principal), findingId, request.status(),
                 request.comment());
     }
 
     @GetMapping("/events")
     List<FindingEventView> events(@PathVariable long projectId, @PathVariable long findingId,
             Principal principal) {
-        return lifecycle.history(projectId, userIdOf(principal), findingId);
-    }
-
-    private long userIdOf(Principal principal) {
-        return users.byUsername(principal.getName()).map(AccountView::id)
-                .orElseThrow(ApiException::notFound);
+        return lifecycle.history(projectId, users.idOf(principal), findingId);
     }
 
     /** 传的是目标状态而非「流转」：起点是那一行当时实际持有的状态。 */

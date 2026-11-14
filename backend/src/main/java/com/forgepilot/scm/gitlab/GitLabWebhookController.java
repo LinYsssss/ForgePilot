@@ -53,7 +53,7 @@ class GitLabWebhookController {
         } catch (ApiException rejected) {
             throw rejected;
         } catch (RuntimeException malformed) {
-            throw unauthenticated();
+            throw PullRequestSyncService.unauthenticated();
         }
 
         if (!MERGE_REQUEST_EVENT.equals(event)) {
@@ -66,7 +66,7 @@ class GitLabWebhookController {
         try {
             return json.readTree(body);
         } catch (JacksonException unparseable) {
-            throw unauthenticated();
+            throw PullRequestSyncService.unauthenticated();
         }
     }
 
@@ -74,18 +74,18 @@ class GitLabWebhookController {
         try {
             URI uri = new URI(webUrl);
             if (uri.getHost() == null || uri.getScheme() == null) {
-                throw unauthenticated();
+                throw PullRequestSyncService.unauthenticated();
             }
             return InstanceIdentity.of(uri);
         } catch (URISyntaxException malformed) {
-            throw unauthenticated();
+            throw PullRequestSyncService.unauthenticated();
         }
     }
 
     private static String requiredText(JsonNode parent, String field) {
         JsonNode node = parent.path(field);
         if (!node.isTextual() || node.asString().isBlank()) {
-            throw unauthenticated();
+            throw PullRequestSyncService.unauthenticated();
         }
         return node.asString();
     }
@@ -93,7 +93,7 @@ class GitLabWebhookController {
     private static String requiredValue(JsonNode parent, String field) {
         JsonNode node = parent.path(field);
         if (!node.isValueNode() || node.isNull() || node.asString().isBlank()) {
-            throw unauthenticated();
+            throw PullRequestSyncService.unauthenticated();
         }
         return node.asString();
     }
@@ -104,10 +104,5 @@ class GitLabWebhookController {
             throw ApiException.unprocessable("投递中没有 MR IID。");
         }
         return iid.asInt();
-    }
-
-    private static ApiException unauthenticated() {
-        return new ApiException(HttpStatus.UNAUTHORIZED, "unauthorized",
-                "投递无法通过验证。");
     }
 }

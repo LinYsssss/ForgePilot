@@ -72,7 +72,7 @@ class GitHubWebhookController {
         } catch (ApiException rejected) {
             throw rejected;
         } catch (RuntimeException malformed) {
-            throw unverifiable();
+            throw PullRequestSyncService.unauthenticated();
         }
 
         if (!PULL_REQUEST_EVENT.equals(event)) {
@@ -87,7 +87,7 @@ class GitHubWebhookController {
         try {
             return json.readTree(body);
         } catch (JacksonException unparseable) {
-            throw unauthenticated();
+            throw PullRequestSyncService.unauthenticated();
         }
     }
 
@@ -99,26 +99,20 @@ class GitHubWebhookController {
         try {
             URI url = new URI(htmlUrl);
             if (url.getHost() == null || url.getScheme() == null) {
-                throw unauthenticated();
+                throw PullRequestSyncService.unauthenticated();
             }
             return InstanceIdentity.of(url);
         } catch (URISyntaxException malformed) {
-            throw unauthenticated();
+            throw PullRequestSyncService.unauthenticated();
         }
     }
 
     /** 无法路由的投递，与「指向未知仓库」的投递答得一模一样。 */
     private static String required(JsonNode node) {
         if (node.isMissingNode() || node.isNull()) {
-            throw unauthenticated();
+            throw PullRequestSyncService.unauthenticated();
         }
         return node.asString();
-    }
-
-    /** 与签名错误同一形态：调用方无法从差异中学到任何东西。 */
-    private static ApiException unverifiable() {
-        return new ApiException(HttpStatus.UNAUTHORIZED, "unauthorized",
-                "投递无法通过验证。");
     }
 
     /** 到这一步签名已通过校验，因此可以说明具体哪里出了问题。 */
@@ -128,9 +122,5 @@ class GitHubWebhookController {
             throw ApiException.unprocessable("投递中没有 PR 编号。");
         }
         return number.asInt();
-    }
-
-    private static ApiException unauthenticated() {
-        return new ApiException(HttpStatus.UNAUTHORIZED, "unauthorized", "投递无法通过验证。");
     }
 }

@@ -77,23 +77,33 @@ class FindingLifecycleTest extends PostgresTestBase {
     // ------------------------------------------------------------ state machine
 
     /**
-     * The service's transition table and {@link FindingStatus}'s must describe the
-     * same state machine. A pair that existed in one and not the other would either
-     * be reachable without appearing in the documented lifecycle, or documented and
+     * PRD.md 5, transcribed pair by pair. The service's table is the only production
+     * encoding of the lifecycle; this literal is the independent copy it is held to.
+     *
+     * <p>{@code REJECTED -> OPEN} is listed although the pair alone does not make the
+     * move legal: only an inherited suppression may be reopened, which is asserted
+     * further down.
+     */
+    private static final Map<FindingStatus, Set<FindingStatus>> STATE_MACHINE = Map.of(
+            FindingStatus.OPEN, EnumSet.of(FindingStatus.CONFIRMED, FindingStatus.REJECTED),
+            FindingStatus.CONFIRMED, EnumSet.of(FindingStatus.IN_PROGRESS, FindingStatus.REJECTED),
+            FindingStatus.IN_PROGRESS, EnumSet.of(FindingStatus.FIXED),
+            FindingStatus.FIXED, EnumSet.of(FindingStatus.VERIFIED, FindingStatus.IN_PROGRESS),
+            FindingStatus.VERIFIED, EnumSet.of(FindingStatus.CLOSED),
+            FindingStatus.CLOSED, EnumSet.noneOf(FindingStatus.class),
+            FindingStatus.REJECTED, EnumSet.of(FindingStatus.OPEN));
+
+    /**
+     * A pair the service allowed and the lifecycle did not would be reachable without
+     * appearing in the documented state machine; the reverse would be documented and
      * unreachable.
      */
     @Test
     void theTransitionTableAndTheStateMachineDescribeTheSameLifecycle() {
         for (FindingStatus from : FindingStatus.values()) {
-            Set<FindingStatus> allowedByService = FindingLifecycleService.moves().get(from).keySet();
-            Set<FindingStatus> allowedByStateMachine = EnumSet.noneOf(FindingStatus.class);
-            for (FindingStatus to : FindingStatus.values()) {
-                if (from.canMoveTo(to)) {
-                    allowedByStateMachine.add(to);
-                }
-            }
-            assertThat(allowedByService).as("transitions out of %s", from)
-                    .containsExactlyInAnyOrderElementsOf(allowedByStateMachine);
+            assertThat(FindingLifecycleService.moves().get(from).keySet())
+                    .as("transitions out of %s", from)
+                    .containsExactlyInAnyOrderElementsOf(STATE_MACHINE.get(from));
         }
     }
 

@@ -47,10 +47,12 @@ public class FindingLifecycleService {
      * 使测试可以逐格断言而不必用散文再复述一遍；
      * 也使一次授权变更成为一次**表的**变更，而不是控制流的变更。
      *
-     * <p>它的键集恰好就是 {@link FindingStatus} 允许的那些状态对；
-     * 有一个测试把两处编码绑在一起对照，因为一个只存在于这里、
-     * 却不存在于状态机里的流转，会成为一条根本没在状态机中出现过、
-     * 却依然可达的路径。
+     * <p>这是状态机在生产代码里唯一的一处编码。测试另持一份按 PRD.md 5 抄写的
+     * 流转表与它逐对比较：这里多出的一对，就是一条规格里没有、却依然可达的路径。
+     *
+     * <p>{@code REJECTED -> OPEN} 在表里，但仅凭这一格还走不通：PRD.md 5
+     * <strong>只</strong>允许重开被继承的抑制项，因此 {@code move} 还要求
+     * {@code continuity = SUPPRESSED}。普通的驳回是终态，而那个附加条件无法在这张表里表达。
      */
     private static final Map<FindingStatus, Map<FindingStatus, Move>> MOVES = Map.of(
             FindingStatus.OPEN, Map.of(

@@ -217,7 +217,12 @@ public class PullRequestSyncService {
         return manifest;
     }
 
-    private static ApiException unauthenticated() {
+    /**
+     * 每一种「这次投递不可信」共用的唯一答复：仓库查不到、签名不对、载荷在验签之前就
+     * 解析不了，答的都是它。两个 provider 的接收端也调用这里而不各写一份——只要有一处
+     * 的措辞不同，调用方就能从差异里分辨出是哪一步失败，进而枚举本部署接入了哪些仓库。
+     */
+    public static ApiException unauthenticated() {
         return new ApiException(HttpStatus.UNAUTHORIZED, "unauthorized", "投递无法通过验证。");
     }
 }

@@ -3,9 +3,7 @@ package com.forgepilot.scm;
 import java.security.Principal;
 import java.util.List;
 
-import com.forgepilot.auth.AccountView;
 import com.forgepilot.auth.UserDirectory;
-import com.forgepilot.common.ApiException;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -35,31 +33,26 @@ class ScmIdentityController {
 
     @GetMapping
     List<ScmIdentityResponse> list(Principal principal) {
-        return identities.list(userIdOf(principal));
+        return identities.list(users.idOf(principal));
     }
 
     @PostMapping("/verify")
     @ResponseStatus(HttpStatus.CREATED)
     ScmIdentityResponse verify(@Valid @RequestBody VerifyRequest request, Principal principal) {
-        return identities.verify(userIdOf(principal), request.provider(), request.apiBase(),
+        return identities.verify(users.idOf(principal), request.provider(), request.apiBase(),
                 request.oneTimeToken(), request.label(), request.usageType());
     }
 
     @PatchMapping("/{identityId}")
     ScmIdentityResponse update(@PathVariable long identityId, @Valid @RequestBody UpdateRequest request,
             Principal principal) {
-        return identities.update(userIdOf(principal), identityId, request.label(), request.usageType());
+        return identities.update(users.idOf(principal), identityId, request.label(), request.usageType());
     }
 
     @DeleteMapping("/{identityId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     void revoke(@PathVariable long identityId, Principal principal) {
-        identities.revoke(userIdOf(principal), identityId);
-    }
-
-    private long userIdOf(Principal principal) {
-        return users.byUsername(principal.getName()).map(AccountView::id)
-                .orElseThrow(ApiException::notFound);
+        identities.revoke(users.idOf(principal), identityId);
     }
 
     record VerifyRequest(@NotNull ScmProvider provider, @NotBlank @Size(max = 512) String apiBase,

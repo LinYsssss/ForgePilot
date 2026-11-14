@@ -3,9 +3,7 @@ package com.forgepilot.scm;
 import java.security.Principal;
 import java.util.List;
 
-import com.forgepilot.auth.AccountView;
 import com.forgepilot.auth.UserDirectory;
-import com.forgepilot.common.ApiException;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -38,21 +36,21 @@ class ScmController {
 
     @GetMapping("/scm/repositories")
     List<ScmRepositoryResponse> list(@PathVariable long projectId, Principal principal) {
-        return repositories.list(projectId, userIdOf(principal));
+        return repositories.list(projectId, users.idOf(principal));
     }
 
     @PostMapping("/scm/repositories")
     @ResponseStatus(HttpStatus.CREATED)
     ScmRepositoryResponse register(@PathVariable long projectId, @Valid @RequestBody RegisterRequest request,
             Principal principal) {
-        return repositories.register(projectId, userIdOf(principal), request.provider(), request.externalId(),
+        return repositories.register(projectId, users.idOf(principal), request.provider(), request.externalId(),
                 request.apiBase(), request.token(), request.webhookSecret());
     }
 
     @PatchMapping("/scm/repositories/{repositoryId}")
     ScmRepositoryResponse update(@PathVariable long projectId, @PathVariable long repositoryId,
             @Valid @RequestBody UpdateRequest request, Principal principal) {
-        return repositories.update(projectId, userIdOf(principal), repositoryId, request.provider(),
+        return repositories.update(projectId, users.idOf(principal), repositoryId, request.provider(),
                 request.externalId(), request.apiBase(), request.token(), request.webhookSecret(),
                 request.identityApprovalRequired());
     }
@@ -60,7 +58,7 @@ class ScmController {
     @GetMapping("/pull-requests/{pullRequestId}")
     PullRequestResponse pullRequest(@PathVariable long projectId, @PathVariable long pullRequestId,
             Principal principal) {
-        return repositories.pullRequest(projectId, userIdOf(principal), pullRequestId);
+        return repositories.pullRequest(projectId, users.idOf(principal), pullRequestId);
     }
 
     /**
@@ -71,18 +69,8 @@ class ScmController {
     @PutMapping("/pull-requests/{pullRequestId}/requirement")
     PullRequestResponse setRequirement(@PathVariable long projectId, @PathVariable long pullRequestId,
             @Valid @RequestBody AssociationRequest request, Principal principal) {
-        return associations.correct(projectId, userIdOf(principal), pullRequestId,
+        return associations.correct(projectId, users.idOf(principal), pullRequestId,
                 request.requirementId(), request.reason());
-    }
-
-    /**
-     * 登录身份在这里——控制器层——通过只读账号 facade 解析为 user id。
-     * 业务服务永远看不到 Spring Security
-     * （ARCHITECTURE.md 1.3）。
-     */
-    private long userIdOf(Principal principal) {
-        return users.byUsername(principal.getName()).map(AccountView::id)
-                .orElseThrow(ApiException::notFound);
     }
 
     record RegisterRequest(

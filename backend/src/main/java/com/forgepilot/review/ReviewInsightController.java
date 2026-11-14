@@ -2,9 +2,7 @@ package com.forgepilot.review;
 
 import java.security.Principal;
 
-import com.forgepilot.auth.AccountView;
 import com.forgepilot.auth.UserDirectory;
-import com.forgepilot.common.ApiException;
 import com.forgepilot.review.ReviewViews.AiUsage;
 import com.forgepilot.review.ReviewViews.RequirementCoverage;
 import com.forgepilot.review.ReviewViews.ReviewCalibration;
@@ -37,21 +35,16 @@ class ReviewInsightController {
     @GetMapping("/requirements/{requirementId}/coverage")
     RequirementCoverage coverage(@PathVariable long projectId, @PathVariable long requirementId,
             Principal principal) {
-        return insights.coverage(projectId, userIdOf(principal), requirementId);
+        return insights.coverage(projectId, users.idOf(principal), requirementId);
     }
 
     @GetMapping("/review-calibration")
     ReviewCalibration calibration(@PathVariable long projectId, Principal principal) {
-        return insights.calibration(projectId, userIdOf(principal));
+        return insights.calibration(projectId, users.idOf(principal));
     }
 
     @GetMapping("/ai-usage")
     AiUsage usage(@PathVariable long projectId, Principal principal) {
-        return insights.aiUsage(projectId, userIdOf(principal));
-    }
-
-    private long userIdOf(Principal principal) {
-        return users.byUsername(principal.getName()).map(AccountView::id)
-                .orElseThrow(ApiException::notFound);
+        return insights.aiUsage(projectId, users.idOf(principal));
     }
 }
