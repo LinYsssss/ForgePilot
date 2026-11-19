@@ -151,12 +151,12 @@
   </p>
   <div class="note amber">
     <strong>本报告的数字来自同一天的一次完整执行。</strong>
-    <p>后端、前端与评测工具的结果均取自 2026-11-14 在当前代码上的实际运行（命令见第 3 章），不是从旧文档抄来的。用例数逐提交变动，引用时请重新执行。</p>
+    <p>后端与前端的结果取自 2026-11-19、评测工具的结果取自 2026-11-14 在当前代码上的实际运行（命令见第 3 章），不是从旧文档抄来的。用例数逐提交变动，引用时请重新执行。</p>
     <p>自动化通过不等于界面已验收，也不等于模型判断准确：前者见第 8 章，后者由评测体系与<a href="../thesis/README.md">论文材料</a>单独度量。</p>
   </div>
-  <dl class="docmeta" aria-label="2026年11月14日执行结果">
-    <div><dt>后端</dt><dd>447<small>／55 类</small></dd></div>
-    <div><dt>前端</dt><dd>72<small>／18 文件</small></dd></div>
+  <dl class="docmeta" aria-label="2026年11月19日执行结果">
+    <div><dt>后端</dt><dd>450<small>／56 类</small></dd></div>
+    <div><dt>前端</dt><dd>73<small>／19 文件</small></dd></div>
     <div><dt>评测</dt><dd>48<small>项检查</small></dd></div>
     <div><dt>失败</dt><dd>0</dd></div>
     <div><dt>跳过</dt><dd>0</dd></div>
@@ -284,7 +284,7 @@
 <!-- ══════ 4 ══════ -->
 <section id="s4">
   <h2><span class="hn">4</span>后端测试结果</h2>
-  <p><strong>447 个用例、55 个测试类全部通过，0 失败、0 错误、0 跳过，打包成功。</strong>取自 2026-11-14 固定 JDK 21 容器入口下的一次完整 <code>./mvnw -B -ntp verify</code>，退出码 0，耗时 11 分 14 秒。同一提交（<code>370bfc4</code>）在 <a href="https://github.com/LinYsssss/ForgePilot/actions/runs/42506252157">CI</a> 上四个作业同样全绿。</p>
+  <p><strong>450 个用例、56 个测试类全部通过，0 失败、0 错误、0 跳过，打包成功。</strong>取自 2026-11-19 固定 JDK 21 容器入口下的一次完整 <code>./mvnw -B -ntp verify</code>，退出码 0，耗时 9 分 47 秒。每次推送的四个 CI 作业结果见 <a href="https://github.com/LinYsssss/ForgePilot/actions">Actions</a>。</p>
   <div class="note">
     <span class="label">这些数字是快照，不是不变量</span>
     <p>
@@ -301,7 +301,7 @@
       <tr><td class="f">review</td><td class="n">12</td><td class="n">138</td><td>输出校验与证据锚定、围栏、Finding 血缘/生命周期、人工决定、活动聚合、覆盖度/校准/AI 台账</td></tr>
       <tr><td class="f">scm</td><td class="n">16</td><td class="n">120</td><td>webhook、权威读取与错误映射、身份冻结、关联审计、按 SHA 合并、关闭与远端状态</td></tr>
       <tr><td class="f">(根包)</td><td class="n">9</td><td class="n">55</td><td>数据库约束、架构规则、跨切片 HTTP 闭环、迁移升级路径</td></tr>
-      <tr><td class="f">requirement</td><td class="n">5</td><td class="n">41</td><td>不可变修订、状态机、指派、质量检查与写回竞态、实现建议、并发排队</td></tr>
+      <tr><td class="f">requirement</td><td class="n">6</td><td class="n">44</td><td>不可变修订、状态机、指派、从文档提取草稿、质量检查与写回竞态、实现建议、并发排队</td></tr>
       <tr><td class="f">ai</td><td class="n">3</td><td class="n">33</td><td>网关 HTTP 行为、超时与单次重试、429 退避、温度、Prompt 净化</td></tr>
       <tr><td class="f">knowledge</td><td class="n">4</td><td class="n">25</td><td>异步入库与分批向量、失败重试、检索/原文隔离、输入防线、向量索引论据</td></tr>
       <tr><td class="f">notification</td><td class="n">2</td><td class="n">18</td><td>origin、加签、errcode、凭据保护、决定提交后发送与回滚不发送</td></tr>
@@ -373,7 +373,7 @@
 <!-- ══════ 5 ══════ -->
 <section id="s5">
   <h2><span class="hn">5</span>前端测试结果</h2>
-  <p><strong>72 个用例，18 个测试文件，全部通过。</strong>另有 lint（策略检查）、typecheck（<code>vue-tsc</code>）与 <code>vite build</code> 三道门同时通过；构建产物为 JS 284.25 kB、CSS 75.35 kB（gzip 93.08 / 13.14 kB）。运行中 jsdom 提示 <code>scrollTo</code> 未实现，这不是失败，也不证明真实浏览器已验收。</p>
+  <p><strong>73 个用例，19 个测试文件，全部通过。</strong>另有 lint（策略检查）、typecheck（<code>vue-tsc</code>）与 <code>vite build</code> 三道门同时通过；构建产物为 JS 286.20 kB、CSS 75.35 kB（gzip 93.65 / 13.14 kB）。运行中 jsdom 提示 <code>scrollTo</code> 未实现，这不是失败，也不证明真实浏览器已验收。</p>
   <div class="tw"><table>
     <thead><tr><th>测试文件</th><th>用例</th><th>它锁住什么</th></tr></thead>
     <tbody>
@@ -633,11 +633,11 @@ python3 evaluation/tools/postfreeze_provider_correction.py verify</code></pre>
   <div class="tw"><table>
     <thead><tr><th>门</th><th>结果</th><th>规模</th></tr></thead>
     <tbody>
-      <tr><td class="f">./mvnw -B -ntp verify</td><td><span class="yes">全套及打包 BUILD SUCCESS</span></td><td class="n">447 / 0 失败 / 0 错误 / 0 跳过</td></tr>
+      <tr><td class="f">./mvnw -B -ntp verify</td><td><span class="yes">全套及打包 BUILD SUCCESS</span></td><td class="n">450 / 0 失败 / 0 错误 / 0 跳过</td></tr>
       <tr><td class="f">npm run lint</td><td><span class="yes">通过</span></td><td class="n">4 条策略</td></tr>
       <tr><td class="f">npm run typecheck</td><td><span class="yes">通过</span></td><td class="n">vue-tsc 严格模式</td></tr>
-      <tr><td class="f">npm test -- --run</td><td><span class="yes">通过</span></td><td class="n">72 / 18 文件</td></tr>
-      <tr><td class="f">npm run build</td><td><span class="yes">通过</span></td><td class="n">JS 284.25 kB / CSS 75.35 kB；gzip 93.08 / 13.14 kB</td></tr>
+      <tr><td class="f">npm test -- --run</td><td><span class="yes">通过</span></td><td class="n">73 / 19 文件</td></tr>
+      <tr><td class="f">npm run build</td><td><span class="yes">通过</span></td><td class="n">JS 286.20 kB / CSS 75.35 kB；gzip 93.65 / 13.14 kB</td></tr>
       <tr><td class="f">评测 unittest（4 个模块）</td><td><span class="yes">通过</span></td><td class="n">18</td></tr>
       <tr><td class="f">score.py --selftest</td><td><span class="yes">通过</span></td><td class="n">30</td></tr>
       <tr><td class="f">verify-freeze + 端点更正校验</td><td><span class="yes">通过</span></td><td class="n">9 个冻结文件哈希未变</td></tr>
@@ -684,7 +684,7 @@ python3 evaluation/tools/postfreeze_provider_correction.py verify</code></pre>
 
 <footer class="end">
   <p>
-    本报告的自动化结果与线上核对均取自 2026-11-14，代码为提交 <code>370bfc4</code> 加上其后一轮不改变行为的整理（去除未引用的代码与样式、合并重复的辅助方法）。
+    后端与前端的自动化结果取自 2026-11-19 的当前代码；评测工具检查与线上只读核对取自 2026-11-14，其后的改动不涉及评测工具、迁移与部署结构。
     正式评测的配置冻结、holdout 台账与原始输出未修改、未重跑；容量实测与各次线上演练保留原测量日期。
     未覆盖项与已知限制如实记录于第 8 章，已发现的缺陷记录于第 9 章。
   </p>

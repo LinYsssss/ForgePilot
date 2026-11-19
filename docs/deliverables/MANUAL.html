@@ -855,6 +855,7 @@ docker compose -p fp-demo up --detach --wait backend frontend</code></pre>
         <tr><td class="f">RequirementAttachment</td><td>需求与知识文档之间的关系，也是附件归属的<strong>唯一事实源</strong>。</td></tr>
         <tr><td class="f">RequirementAttachmentRepository</td><td>附件关系的仓库。</td></tr>
         <tr><td class="f">RequirementAttachmentService</td><td>附件的唯一拥有者。文档上的 scope 只是投影，归属事实在关系表。</td></tr>
+        <tr><td class="f">RequirementDraftService</td><td>从需求文档提取草稿：<strong>一次</strong>结构化 AI 调用，返回标题、背景、描述与验收条件文本，供新建表单预填。不写任何表，回答不符合结构即失败；保存仍由负责人经创建接口完成。</td></tr>
         <tr><td class="f">RequirementQualityService</td><td>需求质量检查：先跑确定性规则，完整 Prompt 在脱敏后处于预算内时调用<strong>一次</strong>结构化 AI；超预算则跳过 AI，仍保存并返回规则结果。结果归属具体修订，<code>QUALITY_VERSION</code> 为 <code>quality-2</code>。模型调用在事务之外，写回时在需求行锁内比较正文与 AC：检查期间内容变了就返回 409 且什么都不写，旧结果不会盖到新内容上。</td></tr>
         <tr><td class="f">QualityReport</td><td>质量检查结果。含 <code>DUPLICATE_CRITERION</code>（两条 AC 文本完全相同会让同一缺陷以两个 key 报告两次，而抑制按 key 生效）与 <code>PROMPT_BUDGET_EXCEEDED</code>（不截断后做部分分析，而是返回 <code>ai=null</code> 的确定性报告）。</td></tr>
         <tr><td class="f">ImplementationGuidanceService</td><td>一次性、知识增强的实现建议（<code>guidance-3</code>）。只读已保存需求、其 AC 与当前需求可见的知识；输出概览、待确认事项、带适用 AC 与验证办法的清单、规则与风险。只做结构校验，不读取仓库源码，不保存正文。</td></tr>

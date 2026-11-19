@@ -53,6 +53,7 @@ flowchart LR
 | 严格项目批准/拒绝成员待审身份绑定 | ✅ | ❌ | ❌ |
 | 配置项目钉钉通知、发送测试消息 | ✅ | ❌ | ❌ |
 | 创建/编辑需求与 AC | ✅ | ❌ | ❌ |
+| 从需求文档提取需求草稿 | ✅ | ❌ | ❌ |
 | 上传 `.txt/.md` 需求文档 | ✅ | ❌ | ❌ |
 | 阅读/下载需求文档、导出结构化需求 | ✅ | ✅ | ✅ |
 | 阅读/下载公共项目知识原文 | ✅ | ✅ | ✅ |
@@ -81,6 +82,7 @@ flowchart LR
 - 一个项目一个活动 GitHub/GitLab 仓库；PR/MR 与 Requirement 关联。
 - Requirement 附件复用 Project Knowledge 文档，不做双份解析；首版只允许 LEADER 上传 `.txt/.md`，所有项目成员可阅读和下载。
 - Requirement 详情并列结构化 Revision 与需求文档；结构化内容可导出 Markdown，两者不自动同步或映射。
+- Requirement Draft：新建需求时可粘贴或选择一份 `.txt/.md` 需求文档，由一次结构化 AI 调用整理出标题、背景、描述与 AC 草稿并填入表单；草稿不落库，是否采用、如何修改由 LEADER 在提交创建时决定。回答不符合结构即失败，不返回空草稿；不证明草稿完整或正确。
 - Requirement Quality Check：确定性规则 + 预算内一次结构化 AI 分析；完整 Prompt 超预算时保留规则结果、跳过 AI，不做截断后的部分分析。
 - Requirement Implementation Guidance：基于已保存的 Requirement、AC 与项目知识生成一次性概览、待确认事项、实施清单、规则与风险；步骤说明适用 AC 和验证办法，但不读取仓库源码或证明建议正确。未保存内容先保存/发布再生成，保存后旧建议失效；支持本地复制/Markdown 下载，不保存对话或建议历史。
 - Project Knowledge：上传、切片、Embedding、项目内检索、按需阅读与下载公共知识原文；需求附件仍经所属需求入口读取。

@@ -30,6 +30,7 @@
 | `DELETE /api/projects/{projectId}/members/{userId}` | LEADER | 204 | 移除成员 |
 | `GET /api/projects/{projectId}/requirements` | 成员 | 200 | 需求列表 |
 | `POST /api/projects/{projectId}/requirements` | LEADER | 201 | 创建 DRAFT 需求 |
+| `POST /api/projects/{projectId}/requirements/draft` | LEADER | 200 | 从需求文档提取未保存的草稿 |
 | `GET /api/projects/{projectId}/requirements/{id}` | 成员 | 200 | 需求详情 |
 | `PATCH /api/projects/{projectId}/requirements/{id}` | LEADER | 200 | 原地编辑 DRAFT |
 | `DELETE /api/projects/{projectId}/requirements/{id}` | LEADER | 204 | 软删已取消需求 |
@@ -189,6 +190,14 @@ GitHub 默认 `apiBase=https://api.github.com`；GitLab 默认 `https://gitlab.c
 ## PR 作者映射
 
 远端 PR 保存的 `authorExternalUserId/authorUsername` 是不可变快照。`authorUserId` 是可重算投影：只有 Provider、实例、稳定外部用户 ID 与当前活动绑定一致时才有值。撤销、替换或审批绑定会重算项目内既有 PR；任何“本人 PR”授权均按稳定 ID 判断，不按用户名。
+
+## 需求草稿提取
+
+- `POST /api/projects/{projectId}/requirements/draft`
+  - 仅 LEADER；请求 `{text}`，为需求文档全文，非空且不超过 60000 字符。
+  - 响应：`{title,background,description,acceptanceCriteria}`，`acceptanceCriteria` 为字符串数组，可能为空；`background`、`description` 可能为空串。
+  - 调用一次结构化 AI，不创建需求、不写任何表；保存仍由 `POST .../requirements` 完成，`ac_key` 在那时分配。
+  - 回答不符合结构返回 502 `ai_malformed_result`；完整 Prompt 超预算返回 422 `ai_prompt_too_large`。
 
 ## 需求质量检查
 

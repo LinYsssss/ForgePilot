@@ -276,6 +276,7 @@
       <tr><td>创建 / 编辑需求与 AC</td><td class="yes">✅</td><td class="no">—</td><td class="no">—</td><td class="id">FR-C1–C5</td></tr>
       <tr><td>上传需求文档</td><td class="yes">✅</td><td class="no">—</td><td class="no">—</td><td class="id">FR-C8</td></tr>
       <tr><td>阅读 / 下载需求文档、导出结构化需求</td><td class="yes">✅</td><td class="yes">✅</td><td class="yes">✅</td><td class="id">FR-C8, C9</td></tr>
+      <tr><td>从需求文档提取需求草稿</td><td class="yes">✅</td><td class="no">—</td><td class="no">—</td><td class="id">FR-C14</td></tr>
       <tr><td>运行需求质量检查</td><td class="yes">✅</td><td class="no">—</td><td class="no">—</td><td class="id">FR-C10</td></tr>
       <tr><td>需求 DRAFT → READY、指派开发与审查人</td><td class="yes">✅</td><td class="no">—</td><td class="no">—</td><td class="id">FR-C4, C7</td></tr>
       <tr><td>生成一次性实现建议</td><td class="yes">✅</td><td><span class="cond">仅被指派需求</span></td><td class="no">—</td><td class="id">FR-C11</td></tr>
@@ -350,6 +351,7 @@
       <tr><td class="id">FR-C11</td><td>一次性知识增强实现建议：概览、待确认事项、实施清单、规则与风险</td><td>只读已保存的需求与项目知识，有未保存内容时不能生成；无输入框、无对话历史，回答不落库，可本地复制或下载 Markdown；需求内容变更后旧建议与在途回答一并作废</td></tr>
       <tr><td class="id">FR-C12</td><td>已作废需求可软删</td><td>非作废需求返回 409；重复删除返回 404；AI 调用审计与 PR 关联事实<strong>保持完整</strong></td></tr>
       <tr><td class="id">FR-C13</td><td>AI、Webhook、PR、Review <strong>一律不得</strong>推进需求状态</td><td>状态变更只能由具备权限的人触发</td></tr>
+      <tr><td class="id">FR-C14</td><td>新建需求时可从需求文档提取草稿：标题、背景、描述与验收条件</td><td>仅 LEADER；<strong>一次</strong>结构化 AI 调用，草稿只填入表单、<strong>不落库</strong>；回答不符合结构即失败，不返回空草稿；保存仍由负责人提交</td></tr>
     </tbody>
   </table></div>
 
@@ -610,6 +612,7 @@
       <tr><td class="id">FR-C11</td><td class="f">PRD §4</td><td class="f">ImplementationGuidanceService</td><td class="f">ImplementationGuidanceTest · requirement.spec.ts</td></tr>
       <tr><td class="id">FR-C12</td><td class="f">ARCH §2.3</td><td class="f">RequirementService.delete</td><td class="f">ResourceRemovalTest · BatchOneApiTest · requirementRowActions.spec.ts</td></tr>
       <tr><td class="id">FR-C13</td><td class="f">PRD §5</td><td class="f">（无写入路径即为实现）</td><td class="f">ReviewActivityTest · ArchitectureRulesTest</td></tr>
+      <tr><td class="id">FR-C14</td><td class="f">PRD §4</td><td class="f">RequirementDraftService · RequirementsPage.vue</td><td class="f">RequirementDraftTest · requirementDraft.spec.ts</td></tr>
       <tr><td class="id">FR-D1, D2</td><td class="f">ARCH §5</td><td class="f">KnowledgeService · KnowledgeIngestionProcessor · KnowledgeUploadValidator · KnowledgePage.vue</td><td class="f">KnowledgeServiceTest · KnowledgeIngestionProcessorTest · KnowledgeGuardTest · knowledgePolling.spec.ts</td></tr>
       <tr><td class="id">FR-D3</td><td class="f">ARCH §5</td><td class="f">ChunkSearchRepository.search</td><td class="f">KnowledgeServiceTest · KnowledgeVectorIndexTest</td></tr>
       <tr><td class="id">FR-D4</td><td class="f">ARCH §2.3</td><td class="f">RequirementAttachmentService · KnowledgeService.promote</td><td class="f">KnowledgeServiceTest · RequirementAttachmentServiceTest</td></tr>

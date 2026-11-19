@@ -450,6 +450,8 @@ AiGateway.embed(texts, model, context[, beforeAttempt])
 它**不知道** Requirement/Finding/Review 等业务类型，也不暴露 tool loop。
 业务 Prompt 归 `requirement` 与 `review` 各自所有；Requirement Quality 与一次性 Implementation Guidance 共享 AI Gateway 但使用不同 schema。不建 Prompt Registry，不建万能 ContextBuilder。三类 Prompt 都要求模型散文（Finding 的说明与建议、质量意见、实现建议）用简体中文；逐字引用、路径、标识符与枚举值保持原样。
 
+Requirement Draft 是创建需求前的一次 chat：把 LEADER 提供的需求文档作为不可信内容，按独立 schema 返回标题、背景、描述与 AC 文本数组，仅作结构校验，不写任何表，保存仍走创建接口。调用按项目归属并复用 `REQUIREMENT_QUALITY` 用途——`ai_call_log.use_case` 是数据库封闭词表，不为它新增迁移；超预算沿用网关的 `ai_prompt_too_large`。
+
 Requirement Quality 先运行确定性规则并按脱敏后的完整 Prompt 计算预算。预算内只调用一次 AI；超预算时生成 `PROMPT_BUDGET_EXCEEDED`、跳过 AI，以 `quality-2` 保存并返回 `ai=null` 的规则结果，不把截断后的部分需求交给模型，也不改变 Requirement 状态。结果只在正文与 AC 自发起检查以来未变时写回，否则返回 409。
 
 Implementation Guidance 是一次 embedding、项目/需求隔离下最多 8 条知识召回、一次 chat（网关瞬时重试规则不变）。响应为 summary、questions 与 checklist/rules/risks 字符串数组，并由服务端返回 `guidanceVersion`（当前 `guidance-3`）。指令要求只提出阻碍实施的未知决策、区分确定约束与条件式建议、把适用的知识硬约束落实到步骤、合并重复的动作与验证；不用硬条数截断。输出仅作结构校验，不证明步骤、AC 关联或风险判断真实。不保存回答，不增加表或会话。页面通过内容脏状态与请求序号防止未保存输入、保存后的晚到回答被误用；DRAFT 可原地编辑，因此不能只靠 revisionId 判定仍适用。复制/导出复用同一浏览器端 Markdown 文本，知识摘录和检索相似度默认折叠。

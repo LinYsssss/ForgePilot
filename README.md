@@ -25,7 +25,7 @@ ForgePilot 是一个面向软件研发流程的轻量级 AI 研发协作与代�
 | 后端 | Spring Boot 4.1 模块化单体，9 个顶层业务包，21 张业务表 / 15 个 Flyway 迁移 |
 | 前端 | Vue 3 + TypeScript + Vite，6 个一级导航 / 11 条产品路由 |
 | SCM | GitHub 与 GitLab 双 Provider；用户多身份、标签与用途、项目绑定与可选 Leader 审批 |
-| AI | 单一 OpenAI-compatible 网关，服务需求质量检查、一次性实现建议与唯一 Review Engine |
+| AI | 单一 OpenAI-compatible 网关，服务需求草稿提取、需求质量检查、一次性实现建议与唯一 Review Engine |
 | 知识 | PostgreSQL 15 + pgvector，按 `project_id` 与当前 Requirement 双重硬过滤 |
 | 评测 | 三臂对照实验，holdout 只跑一次 |
 
