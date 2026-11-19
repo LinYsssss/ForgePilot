@@ -16,6 +16,7 @@ import {
   changeStatus,
   createRequirement,
   deleteRequirement,
+  draftFromDocument,
   listRequirements,
   type AcceptanceCriterionDraft,
   type RequirementSummary,
@@ -54,6 +55,56 @@ const criteria = ref<AcceptanceCriterionDraft[]>([{ text: "" }]);
 const creating = ref(false);
 const createError = ref<string | null>(null);
 let requirementsLoadToken = 0;
+
+const documentText = ref("");
+const drafting = ref(false);
+const draftError = ref<string | null>(null);
+const draftNotice = ref<string | null>(null);
+
+async function loadDocumentFile(event: Event): Promise<void> {
+  const file = (event.target as HTMLInputElement).files?.[0];
+  if (file !== undefined) {
+    documentText.value = await file.text();
+  }
+}
+
+/**
+ * 用模型把文档整理成草稿并填进下面的表单。草稿不落库：是否采用、怎么改，
+ * 仍由负责人在提交「创建需求」时决定。
+ */
+async function extractDraft(): Promise<void> {
+  const id = projectId.value;
+  if (id === null || documentText.value.trim() === "") {
+    return;
+  }
+  const filled = title.value !== "" || background.value !== "" || description.value !== ""
+    || criteria.value.some((item) => item.text.trim() !== "");
+  if (filled && !window.confirm("提取结果会覆盖表单中已填写的内容，是否继续？")) {
+    return;
+  }
+  drafting.value = true;
+  draftError.value = null;
+  draftNotice.value = null;
+  try {
+    const draft = await draftFromDocument(id, documentText.value);
+    if (projectId.value !== id) {
+      return;
+    }
+    title.value = draft.title;
+    background.value = draft.background;
+    description.value = draft.description;
+    criteria.value = draft.acceptanceCriteria.length === 0
+      ? [{ text: "" }]
+      : draft.acceptanceCriteria.map((text) => ({ text }));
+    draftNotice.value = draft.acceptanceCriteria.length === 0
+      ? "文档中没有提取到可验收的条件，请手工填写。"
+      : `已提取 ${draft.acceptanceCriteria.length} 条验收条件草稿，请逐条核对、修改后再创建。`;
+  } catch (failure: unknown) {
+    draftError.value = apiErrorMessage(failure);
+  } finally {
+    drafting.value = false;
+  }
+}
 
 const filteredRequirements = computed(() => {
   const query = search.value.trim().toLocaleLowerCase();
@@ -312,6 +363,28 @@ async function removeRequirement(item: RequirementSummary): Promise<void> {
               <h2 class="panel-title">创建需求契约</h2>
             </div>
             <p class="field-hint">创建后先处于草稿状态；发布就绪后内容以版本保存。</p>
+          </div>
+          <div class="field">
+            <label for="requirement-document">从需求文档提取（可选）</label>
+            <textarea
+              id="requirement-document"
+              v-model="documentText"
+              rows="4"
+              maxlength="60000"
+              placeholder="粘贴需求文档，或在下方选择 .txt / .md 文件"
+            ></textarea>
+            <div class="form-actions">
+              <input type="file" accept=".txt,.md,text/plain,text/markdown" aria-label="选择需求文档" @change="loadDocumentFile" />
+              <button
+                type="button"
+                class="button button-quiet"
+                :disabled="drafting || documentText.trim() === ''"
+                @click="extractDraft"
+              >{{ drafting ? "提取中…" : "提取草稿" }}</button>
+            </div>
+            <p class="field-hint">由 AI 整理出标题、背景、描述与验收条件草稿，只填入下方表单，不会自动保存。</p>
+            <p v-if="draftNotice" class="field-hint" role="status">{{ draftNotice }}</p>
+            <p v-if="draftError" class="alert" role="alert">{{ draftError }}</p>
           </div>
           <div class="field">
             <label for="requirement-title">标题</label>

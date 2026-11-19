@@ -287,7 +287,7 @@ const AI_USE_CASE_LABELS: Record<string, string> = {
   REVIEW: "代码审查",
   EMBEDDING: "知识向量化",
   IMPLEMENTATION_GUIDANCE: "实现建议",
-  REQUIREMENT_QUALITY: "需求质量检查",
+  REQUIREMENT_QUALITY: "需求质量检查与草稿提取",
 };
 
 export function aiUseCaseLabel(useCase: string): string {

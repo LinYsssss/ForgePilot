@@ -229,6 +229,22 @@ export function deleteRequirement(projectId: number, requirementId: number): Pro
   return requestJson<void>(`${requirementsPath(projectId)}/${requirementId}`, { method: "DELETE" });
 }
 
+/** 模型从需求文档整理出的未保存草稿；验收条件只有文本。 */
+export interface RequirementDraft {
+  title: string;
+  background: string;
+  description: string;
+  acceptanceCriteria: string[];
+}
+
+/** 只返回草稿，不创建需求；保存仍走 {@link createRequirement}。 */
+export function draftFromDocument(projectId: number, text: string): Promise<RequirementDraft> {
+  return requestJson<RequirementDraft>(`${requirementsPath(projectId)}/draft`, {
+    method: "POST",
+    body: JSON.stringify({ text }),
+  });
+}
+
 export function checkQuality(
   projectId: number,
   requirementId: number,
