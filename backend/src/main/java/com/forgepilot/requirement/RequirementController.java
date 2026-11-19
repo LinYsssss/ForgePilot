@@ -34,14 +34,17 @@ class RequirementController {
     private final ImplementationGuidanceService guidance;
     private final RequirementQualityService quality;
     private final RequirementAttachmentService attachments;
+    private final RequirementDraftService drafts;
     private final UserDirectory users;
 
     RequirementController(RequirementService requirements, ImplementationGuidanceService guidance,
-            RequirementQualityService quality, RequirementAttachmentService attachments, UserDirectory users) {
+            RequirementQualityService quality, RequirementAttachmentService attachments,
+            RequirementDraftService drafts, UserDirectory users) {
         this.requirements = requirements;
         this.guidance = guidance;
         this.quality = quality;
         this.attachments = attachments;
+        this.drafts = drafts;
         this.users = users;
     }
 
@@ -55,6 +58,20 @@ class RequirementController {
     RequirementDetail create(@PathVariable long projectId, @Valid @RequestBody RequirementContent request,
             Principal principal) {
         return requirements.create(projectId, users.idOf(principal), request);
+    }
+
+    /**
+     * 从一份需求文档整理出未保存的草稿，供新建表单预填。它不创建任何东西；
+     * 保存仍走上面的 {@link #create}。
+     */
+    @PostMapping("/draft")
+    RequirementDraftService.RequirementDraft draft(@PathVariable long projectId,
+            @Valid @RequestBody DraftRequest request, Principal principal) {
+        return drafts.draft(projectId, users.idOf(principal), request.text());
+    }
+
+    /** 上限与 Prompt 字符预算一致：更长的文档网关本来也会拒绝。 */
+    record DraftRequest(@NotBlank @Size(max = 60000) String text) {
     }
 
     @GetMapping("/{requirementId}")
