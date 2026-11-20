@@ -8,6 +8,7 @@ Trellis 任务归档，正式三臂评测继续由不可变的 `evaluation/` 证
 - **正式三臂评测**：预先登记的主结果，不被后续小样例替换。
 - **敏感性分析**：事后分析语料提示与匹配口径的影响。
 - **生产复验、PR 演练与稳定性复测**：对应各自的历史版本与运行条件。
+- **`review-6` 线上一轮**：当前提示词版本在同一批 PR 上的运行结果、已报告 Finding 的逐条判定与一次完整闭环；判定由 AI 助手代为执行、作者尚未复核，且不含漏报。
 - **实现建议验收**：最新三样例与限定浏览器检查，程序交互通过、内容目标部分达成；不是准确率或开发效率研究。
 
 ## 材料索引
@@ -23,6 +24,10 @@ Trellis 任务归档，正式三臂评测继续由不可变的 `evaluation/` 证
 | [verify-live-exercises.py](./verify-live-exercises.py) | 复算上述两组数据的全部汇总值并校验哈希 |
 | [stability-20260925.csv](./stability-20260925.csv) | 2026-09-25 稳定性复测：同一批 PR 相邻两轮审查的逐 PR 对比（叙述见 LIVE-EXERCISES 第五节） |
 | [verify-stability.py](./verify-stability.py) | 复算稳定性复测的全部汇总值并校验哈希 |
+| [REVIEW6-ROUND.md](./REVIEW6-ROUND.md) | 2026-11-15/16 `review-6` 线上一轮：38 个开放 PR 重审、54 条 Finding 逐条判定、与此前判定的一致性、终局决定与修复闭环 |
+| [review6-round-20261116.csv](./review6-round-20261116.csv) | 该轮 40 条审查的逐例数据，含调用与 token、Finding 分布、与上一轮同一问题数、警告分类、AC 裁定与决定 |
+| [review6-findings-20261116.csv](./review6-findings-20261116.csv) | 该轮 54 条 Finding 的逐条数据，含类型、置信度、连续性、判定与此前轮次的判定次数 |
+| [verify-review6-round.py](./verify-review6-round.py) | 复算该轮的全部汇总值，核对明细与汇总一致并校验哈希 |
 | [EVALUATION-SENSITIVITY.md](./EVALUATION-SENSITIVITY.md) | 正式三臂评测的效度分析：语料里的定位提示、三种匹配口径下的重算，以及一次去提示敏感性实验 |
 | [evaluation-sensitivity-20260925.csv](./evaluation-sensitivity-20260925.csv) | 冻结结果与去提示实验的逐例匹配数（不透明编号，不含用例 ID） |
 | [verify-evaluation-sensitivity.py](./verify-evaluation-sensitivity.py) | 复算上述全部汇总值，并断言原规则一列与冻结报告相等 |
@@ -36,9 +41,10 @@ Trellis 任务归档，正式三臂评测继续由不可变的 `evaluation/` 证
 python3 docs/thesis/verify-production-revalidation.py
 python3 docs/thesis/verify-live-exercises.py
 python3 docs/thesis/verify-stability.py
+python3 docs/thesis/verify-review6-round.py
 python3 docs/thesis/verify-evaluation-sensitivity.py
 python3 docs/thesis/verify-guidance-acceptance.py
 ```
 
-生产复验衡量运行完成率、审计关联、快照一致性、覆盖记账与时延；线上演练衡量校验器纠行、跨轮抑制、闭环合并、第三方代码上的 Finding 精确率与相邻两轮的稳定性。模型质量的
+生产复验衡量运行完成率、审计关联、快照一致性、覆盖记账与时延；线上演练衡量校验器纠行、跨轮抑制、闭环合并、第三方代码上的 Finding 精确率与相邻两轮的稳定性；`review-6` 一轮衡量当前版本的运行行为、已报告 Finding 的确认率与换模型后 Finding 身份的延续程度。模型质量的
 精确率、召回率和需求违规召回率必须引用正式三臂评测，各组证据不能合并分母；引用正式评测时同时说明效度分析里的定位提示与口径问题。
