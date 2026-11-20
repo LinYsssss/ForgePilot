@@ -56,6 +56,8 @@ const creating = ref(false);
 const createError = ref<string | null>(null);
 let requirementsLoadToken = 0;
 
+/** 与后端草稿接口的上限一致；选择文件不受 textarea 的 maxlength 约束，所以这里再判一次。 */
+const DOCUMENT_MAX_CHARS = 60000;
 const documentText = ref("");
 const drafting = ref(false);
 const draftError = ref<string | null>(null);
@@ -75,6 +77,11 @@ async function loadDocumentFile(event: Event): Promise<void> {
 async function extractDraft(): Promise<void> {
   const id = projectId.value;
   if (id === null || documentText.value.trim() === "") {
+    return;
+  }
+  if (documentText.value.length > DOCUMENT_MAX_CHARS) {
+    draftNotice.value = null;
+    draftError.value = `文档有 ${documentText.value.length} 个字符，超过 ${DOCUMENT_MAX_CHARS} 字符的上限，请删减后再提取。`;
     return;
   }
   const filled = title.value !== "" || background.value !== "" || description.value !== ""
@@ -370,7 +377,7 @@ async function removeRequirement(item: RequirementSummary): Promise<void> {
               id="requirement-document"
               v-model="documentText"
               rows="4"
-              maxlength="60000"
+              :maxlength="DOCUMENT_MAX_CHARS"
               placeholder="粘贴需求文档，或在下方选择 .txt / .md 文件"
             ></textarea>
             <div class="form-actions">
