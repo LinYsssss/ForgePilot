@@ -97,4 +97,24 @@ describe("requirement draft from a document", () => {
     expect(push).toHaveBeenCalledTimes(1);
     wrapper.unmount();
   });
+
+  it("refuses a document over the limit before sending anything, and says why", async () => {
+    // 选择文件不受 textarea maxlength 约束；不在这里拦下，用户只会从后端得到一句看不出原因的校验错误。
+    const calls: Call[] = [];
+    stubServer(calls);
+    await bootstrapSession();
+    const router = createAppRouter(createMemoryHistory());
+    await router.push("/requirements?project=3");
+    await router.isReady();
+    const wrapper = mount(App, { global: { plugins: [router] } });
+    await flushPromises();
+
+    await wrapper.get("#requirement-document").setValue("读".repeat(60001));
+    await wrapper.findAll("button").find((button) => button.text() === "提取草稿")!.trigger("click");
+    await flushPromises();
+
+    expect(calls).toEqual([]);
+    expect(wrapper.get("form.requirement-create [role=alert]").text()).toContain("超过 60000 字符的上限");
+    wrapper.unmount();
+  });
 });
