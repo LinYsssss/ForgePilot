@@ -32,7 +32,6 @@ import {
   shortSha,
   pullRequestLabel,
   PULL_REQUEST_ACTIVITIES,
-  PULL_REQUEST_ACTIVITY_LABELS,
   REVIEW_ACTIVITY_LABELS,
   REVIEW_ACTIVITY_TONES,
   REVIEW_DECISION_LABELS,
@@ -361,7 +360,7 @@ async function triggerReview(): Promise<void> {
             <span v-else class="badge badge-neutral">未返回</span>
             <small v-if="row.activity">
               <span v-for="state in PULL_REQUEST_ACTIVITIES" :key="state">
-                {{ PULL_REQUEST_ACTIVITY_LABELS[state] }} {{ row.activity.counts[state] }}
+                {{ REVIEW_ACTIVITY_LABELS[state] }} {{ row.activity.counts[state] }}
               </span>
             </small>
           </li>

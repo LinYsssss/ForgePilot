@@ -443,18 +443,20 @@ async function move(
     if (!isCurrentPage(ids, token)) return;
     detail.value = loadedReview;
     if (String(findingId) in eventsByFinding.value) {
-      const events = await listFindingEvents(ids.projectId, findingId);
-      if (!isCurrentPage(ids, token)) return;
-      eventsByFinding.value = {
-        ...eventsByFinding.value,
-        [String(findingId)]: events,
-      };
+      await loadEvents(ids, token, findingId);
     }
   } catch (failure: unknown) {
     if (isCurrentPage(ids, token)) findingError.value = `${action} 失败：${apiErrorMessage(failure)}`;
   } finally {
     if (isCurrentPage(ids, token) && findingPending.value === findingId) findingPending.value = null;
   }
+}
+
+/** 读一条 Finding 的审计记录；页面在此期间换了数据就丢弃结果。 */
+async function loadEvents(ids: NonNullable<ReturnType<typeof displayedTarget>>, token: number, findingId: number): Promise<void> {
+  const events = await listFindingEvents(ids.projectId, findingId);
+  if (!isCurrentPage(ids, token)) return;
+  eventsByFinding.value = { ...eventsByFinding.value, [String(findingId)]: events };
 }
 
 function setFindingComment(findingId: number, comment: string): void {
@@ -478,12 +480,7 @@ async function showEvents(findingId: number): Promise<void> {
   eventsPendingFor.value = findingId;
   eventsError.value = null;
   try {
-    const events = await listFindingEvents(ids.projectId, findingId);
-    if (!isCurrentPage(ids, token)) return;
-    eventsByFinding.value = {
-      ...eventsByFinding.value,
-      [String(findingId)]: events,
-    };
+    await loadEvents(ids, token, findingId);
   } catch (failure: unknown) {
     if (isCurrentPage(ids, token)) eventsError.value = { findingId, message: apiErrorMessage(failure) };
   } finally {

@@ -21,7 +21,6 @@ import {
   AC_VERDICT_LABELS,
   AC_VERDICT_TONES,
   PULL_REQUEST_ACTIVITIES,
-  PULL_REQUEST_ACTIVITY_LABELS,
   REVIEW_ACTIVITY_LABELS,
   REVIEW_ACTIVITY_TONES,
 } from "../review/labels";
@@ -855,7 +854,7 @@ function saveReviewer(): Promise<void> {
         <p class="field-hint">需求状态由人维护；这里是 PR 与 Review 的只读派生量。</p>
         <dl class="activity-counts">
           <div v-for="state in PULL_REQUEST_ACTIVITIES" :key="state">
-            <dt>{{ PULL_REQUEST_ACTIVITY_LABELS[state] }}</dt>
+            <dt>{{ REVIEW_ACTIVITY_LABELS[state] }}</dt>
             <dd>{{ reviewActivity.counts[state] }}</dd>
           </div>
         </dl>

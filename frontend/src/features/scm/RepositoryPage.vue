@@ -68,8 +68,6 @@ async function load(): Promise<void> {
   token.value = "";
   webhookSecret.value = "";
   identityApprovalRequired.value = false;
-  notification.value = null;
-  notifyError.value = null;
   error.value = null;
   if (id === null) return;
   loading.value = true;
@@ -81,16 +79,28 @@ async function load(): Promise<void> {
       apiBase.value = repository.value.apiBase;
       identityApprovalRequired.value = repository.value.identityApprovalRequired;
     }
-    // 通知配置只有 LEADER 读得到，非 LEADER 会拿到 403。那不是错误，是这一块
-    // 不显示——所以它不进上面的 try，也不写 error。
-    notification.value = await getNotificationChannel(id).catch(() => null);
-    // 关键词不是凭据，读得回来就回填，免得每次改配置都要重打一遍。
-    notifyKeyword.value = notification.value?.keyword ?? "";
   } catch (failure: unknown) {
     error.value = apiErrorMessage(failure);
   } finally {
     loading.value = false;
   }
+}
+
+/**
+ * 通知配置只有 LEADER 读得到，所以只在确知是 LEADER 时才请求——角色来自项目列表，
+ * 它可能晚于仓库配置返回，因此这里单独监听而不是塞进 {@link load}。
+ * 读不到时这一块不显示，不影响仓库配置本身。
+ */
+async function loadNotification(): Promise<void> {
+  const id = projectId.value;
+  notification.value = null;
+  notifyError.value = null;
+  if (id === null || !isLeader.value) return;
+  const loaded = await getNotificationChannel(id).catch(() => null);
+  if (projectId.value !== id) return;
+  notification.value = loaded;
+  // 关键词不是凭据，读得回来就回填，免得每次改配置都要重打一遍。
+  notifyKeyword.value = loaded?.keyword ?? "";
 }
 
 async function saveNotification(): Promise<void> {
@@ -178,6 +188,7 @@ async function save(): Promise<void> {
 }
 
 watch(projectId, load, { immediate: true });
+watch([projectId, isLeader], loadNotification, { immediate: true });
 </script>
 <template>
   <section aria-labelledby="repositories-title">

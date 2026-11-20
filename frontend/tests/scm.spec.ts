@@ -81,6 +81,41 @@ describe("SCM provider settings", () => {
     expect(wrapper.text()).toContain("只写，不回显");
   });
 
+  it("asks for the LEADER-only notification settings only when the viewer is the LEADER", async () => {
+    // 非 LEADER 读这份配置只会得到 403；页面本来就不给他们显示这一块，因此不该发这个请求。
+    for (const [role, expected] of [["REVIEWER", 0], ["LEADER", 1]] as const) {
+      clearSession();
+      const requests: string[] = [];
+      vi.stubGlobal(
+        "fetch",
+        vi.fn((input: string | URL | Request) => {
+          const path = String(input);
+          requests.push(path);
+          const body = path === "/api/auth/me"
+            ? { id: 1, username: "member", displayName: "成员" }
+            : path === "/api/projects"
+              ? [{ id: 1, name: "ForgePilot", status: "ACTIVE", createdAt: "2026-08-22T00:00:00Z", myRoles: [role] }]
+              : path === "/api/projects/1/notifications/dingtalk"
+                ? { configured: false, enabled: false, signed: false, keyword: null, updatedAt: null }
+                : [];
+          return Promise.resolve(response(body));
+        }),
+      );
+
+      await bootstrapSession();
+      const router = createAppRouter(createMemoryHistory());
+      await router.push("/repositories?project=1");
+      const wrapper = mount(App, { global: { plugins: [router] } });
+      await flushPromises();
+      await flushPromises();
+
+      expect(requests.filter((path) => path === "/api/projects/1/notifications/dingtalk")).toHaveLength(expected);
+      expect(wrapper.find(".notification-editor").exists()).toBe(expected === 1);
+      wrapper.unmount();
+      vi.unstubAllGlobals();
+    }
+  });
+
   it("restores an existing safe repository and updates with its loaded id", async () => {
     const requests: string[] = [];
     vi.stubGlobal(

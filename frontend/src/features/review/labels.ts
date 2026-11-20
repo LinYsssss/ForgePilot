@@ -168,15 +168,6 @@ export const FINDING_ACTION_LABELS: Record<FindingAction, string> = {
   REOPEN: "重开",
 };
 
-export const PULL_REQUEST_ACTIVITY_LABELS: Record<PullRequestActivity, string> = {
-  REVIEW_REQUIRED: "待审查",
-  FAILED: "审查失败",
-  CHANGES_REQUESTED: "已退回",
-  REVIEWING: "审查中",
-  PENDING: "排队中",
-  APPROVED: "已通过",
-};
-
 /** 那张稠密六键计数表的遍历顺序，使列的顺序保持稳定。 */
 export const PULL_REQUEST_ACTIVITIES: readonly PullRequestActivity[] = [
   "REVIEW_REQUIRED",
