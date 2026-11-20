@@ -1,0 +1,473 @@
+{
+  "name": "draft-flow",
+  "base": "https://yasinlin.com",
+  "startedAt": "2026-11-19T11:54:52.462Z",
+  "checks": [
+    {
+      "label": "T1 负责人能展开新建表单并看到「从需求文档提取」",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "label": "T1 文档为空时「提取草稿」不可点",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "label": "T1 文档提取区排在标题之前",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "label": "T2 填入文档后「提取草稿」可点",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "label": "T2 提取进行中按钮显示「提取中…」并禁用",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "label": "T2 草稿接口返回 200",
+      "ok": true,
+      "detail": {
+        "status": 200
+      }
+    },
+    {
+      "label": "T2 标题、背景、描述填入表单且与接口返回一致",
+      "ok": true,
+      "detail": {
+        "title": "图书预约功能"
+      }
+    },
+    {
+      "label": "T2 每条验收条件各占一行且与接口返回一致",
+      "ok": true,
+      "detail": {
+        "rows": 7
+      }
+    },
+    {
+      "label": "T2 至少拆出 5 条验收条件",
+      "ok": true,
+      "detail": [
+        "读者可以对当前无可借册数的图书发起预约。",
+        "有书归还时，系统按预约先后顺序通知排在第一位的读者。",
+        "系统为排在第一位的读者保留归还图书 3 天。",
+        "排在第一位的读者过期未取时，系统将图书顺延给下一位。",
+        "每位读者同时最多预约 5 本。",
+        "读者已经在借的书不能再预约同一本。",
+        "POST /api/reservations 接口支持幂等，重复提交不能产生两条预约。"
+      ]
+    },
+    {
+      "label": "T2 页面提示提取条数并要求逐条核对",
+      "ok": true,
+      "detail": "已提取 7 条验收条件草稿，请逐条核对、修改后再创建。"
+    },
+    {
+      "label": "T2 文档里的注入语句没有生效",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "label": "T2 「待定/待确认」的事项没有被写成验收条件",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "label": "T2 提取本身不创建需求",
+      "ok": true,
+      "detail": {
+        "before": 0,
+        "after": 0
+      }
+    },
+    {
+      "label": "T3 创建请求发送的是修改后的表单内容",
+      "ok": true,
+      "detail": {
+        "criteria": 7
+      }
+    },
+    {
+      "label": "T3 创建后进入详情页，验收条件按顺序编号 AC-1…AC-n",
+      "ok": false,
+      "detail": {
+        "count": 14,
+        "first": "AC-1 读者可以对当前无可借册数的图书发起预约。（已人工修改）"
+      }
+    },
+    {
+      "label": "T3 服务端保存的内容与表单一致，状态为草稿",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "label": "T3 需求数只增加 1",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "label": "T4 表单已有内容时先弹出覆盖确认",
+      "ok": true,
+      "detail": "提取结果会覆盖表单中已填写的内容，是否继续？"
+    },
+    {
+      "label": "T4 取消后不发请求，已填内容保留",
+      "ok": true,
+      "detail": {
+        "calls": 0
+      }
+    },
+    {
+      "label": "T4 确认后表单被新草稿覆盖",
+      "ok": true,
+      "detail": "读者证挂失"
+    },
+    {
+      "label": "T5 选择 .md 文件后内容进入文档框",
+      "ok": true,
+      "detail": {
+        "length": 67
+      }
+    },
+    {
+      "label": "T5 文件内容可拆出验收条件",
+      "ok": true,
+      "detail": [
+        "借阅到期前 3 天给读者发送一次站内提醒。",
+        "借阅到期当天给读者发送一次站内提醒。",
+        "已归还的图书不发送提醒。",
+        "每册图书每天最多发送 1 条提醒。"
+      ]
+    },
+    {
+      "label": "T6（模型行为）没有可验收内容的文档返回空列表",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "label": "T6 页面提示没有提取到并要求手工填写",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "label": "T6 留下一条空白的验收条件行",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "label": "T6 验收条件为空白时无法提交创建",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "label": "T7 接口失败时页面显示服务端给出的原因",
+      "ok": true,
+      "detail": "AI 服务返回的结构无法解析为需求草稿。"
+    },
+    {
+      "label": "T7 失败后表单保持原样、按钮恢复可点",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "label": "T8 超过 60000 字符的文件被拒绝且不调用模型",
+      "ok": true,
+      "detail": {
+        "chars": 63000,
+        "status": 422
+      }
+    },
+    {
+      "label": "T8 超长时页面提示说清了原因",
+      "ok": false,
+      "detail": "请求内容不符合要求。"
+    },
+    {
+      "label": "T9 非负责人看不到新建表单和文档提取区",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "label": "T9 非负责人直接调用接口被拒绝",
+      "ok": true,
+      "detail": {
+        "status": 403
+      }
+    },
+    {
+      "label": "T10 由草稿创建的需求可运行质量检查并显示报告",
+      "ok": true,
+      "detail": "检查版本 v1 规则集 quality-2 检查时间 2026年11月19日 11:58 确定性规则 规则没有发现问题。 AI 结构化评估 需求描述过于简略，整体不足以直接实现；部分验收标准缺少可判定的定义或触发条件。 "
+    },
+    {
+      "label": "T10 负责人可把它置为就绪",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "label": "T10 首次指派开发后进入开发中",
+      "ok": true,
+      "detail": {
+        "status": "IN_DEVELOPMENT",
+        "assigneeId": 6
+      }
+    },
+    {
+      "label": "T10 可指定审查人",
+      "ok": true,
+      "detail": {
+        "reviewerId": 10
+      }
+    },
+    {
+      "label": "T10 开发账号没有「运行检查」按钮",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "label": "T10 被指派的开发可为该需求生成实现建议",
+      "ok": true,
+      "detail": {
+        "checklist": 4,
+        "knowledgeSources": 1,
+        "version": "guidance-3"
+      }
+    },
+    {
+      "label": "T10 实现建议引用了由草稿而来的 AC 编号",
+      "ok": true,
+      "detail": "盘点预约、借阅、还书和通知所需的数据与业务入口，确认能够按图书和馆域维护预约先后顺序；预约记录的每次查询均须带 `library_id`，列表查询须分页且单页不超过 100 条。验证所有相关查询均有馆域过滤，分页不能超过上限。（AC-2、AC-7）"
+    },
+    {
+      "label": "T11 台账把这类调用显示为「需求质量检查与草稿提取」",
+      "ok": true,
+      "detail": [
+        "知识向量化 Qwen/Qwen3-Embedding-8B 2 2 0 5.4 s 11.7 s 278 今天 11:59",
+        "实现建议 gpt-6-luna 1 1 0 14.3 s 14.3 s 1,482 今天 12:00",
+        "需求质量检查与草稿提取 gpt-6-luna 5 5 0 5.1 s 9.3 s 2,535 今天 11:58"
+      ]
+    },
+    {
+      "label": "T12 1440px / 正常动效：无页面级横向溢出，控件都在视口内",
+      "ok": true,
+      "detail": {
+        "viewport": 1440,
+        "overflow": 0,
+        "fileLeft": 65,
+        "fileRight": 1375,
+        "buttonLeft": 65,
+        "buttonRight": 151,
+        "buttonWidth": 86,
+        "boxWidth": 1310
+      }
+    },
+    {
+      "label": "T12 三档宽度：步骤执行出错",
+      "ok": false,
+      "detail": "locator.screenshot: Timeout 21579.717999999993ms exceeded."
+    }
+  ],
+  "pageErrors": [],
+  "consoleErrors": [
+    {
+      "tag": "login",
+      "text": "Failed to load resource: the server responded with a status of 401 ()"
+    },
+    {
+      "tag": "T7 接口失败（模拟 502）",
+      "text": "Failed to load resource: the server responded with a status of 502 (Bad Gateway)"
+    },
+    {
+      "tag": "T8 超长文档",
+      "text": "Failed to load resource: the server responded with a status of 422 ()"
+    },
+    {
+      "tag": "T9 非负责人（dev03）",
+      "text": "Failed to load resource: the server responded with a status of 401 ()"
+    },
+    {
+      "tag": "T9 非负责人（dev03）",
+      "text": "Failed to load resource: the server responded with a status of 403 ()"
+    },
+    {
+      "tag": "T10 下游流程（dev03）",
+      "text": "Failed to load resource: the server responded with a status of 401 ()"
+    }
+  ],
+  "failedResponses": [
+    {
+      "tag": "login",
+      "method": "GET",
+      "path": "/api/auth/me",
+      "status": 401
+    },
+    {
+      "tag": "T7 接口失败（模拟 502）",
+      "method": "POST",
+      "path": "/api/projects/8/requirements/draft",
+      "status": 502
+    },
+    {
+      "tag": "T8 超长文档",
+      "method": "POST",
+      "path": "/api/projects/8/requirements/draft",
+      "status": 422
+    },
+    {
+      "tag": "T9 非负责人（dev03）",
+      "method": "GET",
+      "path": "/api/auth/me",
+      "status": 401
+    },
+    {
+      "tag": "T9 非负责人（dev03）",
+      "method": "POST",
+      "path": "/api/projects/8/requirements/draft",
+      "status": 403
+    },
+    {
+      "tag": "T10 下游流程（dev03）",
+      "method": "GET",
+      "path": "/api/auth/me",
+      "status": 401
+    }
+  ],
+  "writes": [
+    {
+      "tag": "login",
+      "method": "POST",
+      "path": "/api/auth/login",
+      "status": 200
+    },
+    {
+      "tag": "T2 提取",
+      "method": "POST",
+      "path": "/api/projects/8/requirements/draft",
+      "status": 200
+    },
+    {
+      "tag": "T3 修改并创建",
+      "method": "POST",
+      "path": "/api/projects/8/requirements",
+      "status": 201
+    },
+    {
+      "tag": "T4 覆盖确认",
+      "method": "POST",
+      "path": "/api/projects/8/requirements/draft",
+      "status": 200
+    },
+    {
+      "tag": "T5 选择文件",
+      "method": "POST",
+      "path": "/api/projects/8/requirements/draft",
+      "status": 200
+    },
+    {
+      "tag": "T6 无可验收内容",
+      "method": "POST",
+      "path": "/api/projects/8/requirements/draft",
+      "status": 200
+    },
+    {
+      "tag": "T7 接口失败（模拟 502）",
+      "method": "POST",
+      "path": "/api/projects/8/requirements/draft",
+      "status": 502
+    },
+    {
+      "tag": "T8 超长文档",
+      "method": "POST",
+      "path": "/api/projects/8/requirements/draft",
+      "status": 422
+    },
+    {
+      "tag": "T9 非负责人（dev03）",
+      "method": "POST",
+      "path": "/api/auth/login",
+      "status": 200
+    },
+    {
+      "tag": "T9 非负责人（dev03）",
+      "method": "POST",
+      "path": "/api/projects/8/requirements/draft",
+      "status": 403
+    },
+    {
+      "tag": "T10 下游流程",
+      "method": "POST",
+      "path": "/api/projects/8/requirements/51/quality",
+      "status": 200
+    },
+    {
+      "tag": "T10 下游流程",
+      "method": "POST",
+      "path": "/api/projects/8/requirements/51/status",
+      "status": 200
+    },
+    {
+      "tag": "T10 下游流程",
+      "method": "POST",
+      "path": "/api/projects/8/requirements/51/assignee",
+      "status": 200
+    },
+    {
+      "tag": "T10 下游流程",
+      "method": "POST",
+      "path": "/api/projects/8/requirements/51/reviewer",
+      "status": 200
+    },
+    {
+      "tag": "T10 下游流程（dev03）",
+      "method": "POST",
+      "path": "/api/auth/login",
+      "status": 200
+    },
+    {
+      "tag": "T10 下游流程（dev03）",
+      "method": "POST",
+      "path": "/api/projects/8/requirements/51/guidance",
+      "status": 200
+    }
+  ],
+  "requirementId": 51,
+  "projectId": 8,
+  "dialogs": [
+    {
+      "phase": "T4 覆盖确认",
+      "message": "提取结果会覆盖表单中已填写的内容，是否继续？",
+      "mode": "dismiss"
+    },
+    {
+      "phase": "T4 覆盖确认",
+      "message": "提取结果会覆盖表单中已填写的内容，是否继续？",
+      "mode": "accept"
+    },
+    {
+      "phase": "T5 选择文件",
+      "message": "提取结果会覆盖表单中已填写的内容，是否继续？",
+      "mode": "accept"
+    },
+    {
+      "phase": "T6 无可验收内容",
+      "message": "提取结果会覆盖表单中已填写的内容，是否继续？",
+      "mode": "accept"
+    },
+    {
+      "phase": "T7 接口失败（模拟 502）",
+      "message": "提取结果会覆盖表单中已填写的内容，是否继续？",
+      "mode": "accept"
+    },
+    {
+      "phase": "T8 超长文档",
+      "message": "提取结果会覆盖表单中已填写的内容，是否继续？",
+      "mode": "accept"
+    }
+  ],
+  "finishedAt": "2026-11-19T12:01:12.967Z"
+}

@@ -1,0 +1,175 @@
+{
+  "name": "followup",
+  "base": "https://yasinlin.com",
+  "startedAt": "2026-11-20T02:24:58.987Z",
+  "checks": [
+    {
+      "label": "页面加载的是本地新构建的前端",
+      "ok": true,
+      "detail": {
+        "built": "index-CrbImn4i.js"
+      }
+    },
+    {
+      "label": "T3 详情页当前修订的验收条件按顺序编号 AC-1…AC-n",
+      "ok": true,
+      "detail": {
+        "count": 7,
+        "first": "AC-1 读者可以对当前无可借册数的图书发起预约。（已人工修改）",
+        "last": "AC-7 预约记录的查询必须带 library_id 条件。"
+      }
+    },
+    {
+      "label": "T3 人工修改与新增的两条都在",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "label": "T8 超长文档给出字符数与上限，且不发请求",
+      "ok": true,
+      "detail": {
+        "text": "文档有 63000 个字符，超过 60000 字符的上限，请删减后再提取。",
+        "calls": 0
+      }
+    },
+    {
+      "label": "T8 刚好 60000 字符不被前端拦下，请求发到后端",
+      "ok": true,
+      "detail": {
+        "status": 422
+      }
+    },
+    {
+      "label": "T8 文档加指令超出 Prompt 预算时，页面显示后端给出的原因",
+      "ok": true,
+      "detail": {
+        "code": "ai_prompt_too_large",
+        "shown": "完整的 AI Prompt 超出了配置的字符预算。"
+      }
+    },
+    {
+      "label": "T12 1440px / 正常动效：无页面级横向溢出，控件都在视口内",
+      "ok": true,
+      "detail": {
+        "viewport": 1440,
+        "overflow": 0,
+        "fileLeft": 75,
+        "fileRight": 1365,
+        "buttonLeft": 75,
+        "buttonRight": 160,
+        "buttonHeight": 41,
+        "boxWidth": 1290
+      }
+    },
+    {
+      "label": "T12 1440px / 减动效：无页面级横向溢出，控件都在视口内",
+      "ok": true,
+      "detail": {
+        "viewport": 1440,
+        "overflow": 0,
+        "fileLeft": 65,
+        "fileRight": 1375,
+        "buttonLeft": 65,
+        "buttonRight": 151,
+        "buttonHeight": 42,
+        "boxWidth": 1310
+      }
+    },
+    {
+      "label": "T12 768px / 正常动效：无页面级横向溢出，控件都在视口内",
+      "ok": true,
+      "detail": {
+        "viewport": 768,
+        "overflow": 0,
+        "fileLeft": 55,
+        "fileRight": 713,
+        "buttonLeft": 55,
+        "buttonRight": 140,
+        "buttonHeight": 41,
+        "boxWidth": 658
+      }
+    },
+    {
+      "label": "T12 768px / 减动效：无页面级横向溢出，控件都在视口内",
+      "ok": true,
+      "detail": {
+        "viewport": 768,
+        "overflow": 0,
+        "fileLeft": 50,
+        "fileRight": 718,
+        "buttonLeft": 50,
+        "buttonRight": 136,
+        "buttonHeight": 42,
+        "boxWidth": 668
+      }
+    },
+    {
+      "label": "T12 390px / 正常动效：无页面级横向溢出，控件都在视口内",
+      "ok": true,
+      "detail": {
+        "viewport": 390,
+        "overflow": 0,
+        "fileLeft": 37,
+        "fileRight": 353,
+        "buttonLeft": 37,
+        "buttonRight": 353,
+        "buttonHeight": 42,
+        "boxWidth": 316
+      }
+    },
+    {
+      "label": "T12 390px / 减动效：无页面级横向溢出，控件都在视口内",
+      "ok": true,
+      "detail": {
+        "viewport": 390,
+        "overflow": 0,
+        "fileLeft": 37,
+        "fileRight": 353,
+        "buttonLeft": 37,
+        "buttonRight": 353,
+        "buttonHeight": 42,
+        "boxWidth": 316
+      }
+    }
+  ],
+  "pageErrors": [],
+  "consoleErrors": [
+    {
+      "tag": "login",
+      "text": "Failed to load resource: the server responded with a status of 401 ()"
+    },
+    {
+      "tag": "T8 超长文档",
+      "text": "Failed to load resource: the server responded with a status of 422 ()"
+    }
+  ],
+  "failedResponses": [
+    {
+      "tag": "login",
+      "method": "GET",
+      "path": "/api/auth/me",
+      "status": 401
+    },
+    {
+      "tag": "T8 超长文档",
+      "method": "POST",
+      "path": "/api/projects/8/requirements/draft",
+      "status": 422
+    }
+  ],
+  "writes": [
+    {
+      "tag": "login",
+      "method": "POST",
+      "path": "/api/auth/login",
+      "status": 200
+    },
+    {
+      "tag": "T8 超长文档",
+      "method": "POST",
+      "path": "/api/projects/8/requirements/draft",
+      "status": 422
+    }
+  ],
+  "finishedAt": "2026-11-20T02:27:26.623Z"
+}

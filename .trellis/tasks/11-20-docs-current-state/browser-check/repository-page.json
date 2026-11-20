@@ -1,0 +1,92 @@
+{
+  "name": "repository-page",
+  "base": "https://yasinlin.com",
+  "startedAt": "2026-11-20T11:45:26.462Z",
+  "checks": [
+    {
+      "label": "rev01（非负责人）：不请求通知配置，页面没有任何失败的请求",
+      "ok": true,
+      "detail": {
+        "notifications": [],
+        "editor": 0,
+        "failed": []
+      }
+    },
+    {
+      "label": "dev01（非负责人）：不请求通知配置，页面没有任何失败的请求",
+      "ok": true,
+      "detail": {
+        "notifications": [],
+        "editor": 0,
+        "failed": []
+      }
+    },
+    {
+      "label": "dev02（负责人）：请求通知配置一次且成功，通知配置区可见",
+      "ok": true,
+      "detail": {
+        "notifications": [
+          200
+        ],
+        "editor": 1,
+        "failed": []
+      }
+    }
+  ],
+  "pageErrors": [],
+  "consoleErrors": [
+    {
+      "tag": "login rev01",
+      "text": "Failed to load resource: the server responded with a status of 401 ()"
+    },
+    {
+      "tag": "login dev01",
+      "text": "Failed to load resource: the server responded with a status of 401 ()"
+    },
+    {
+      "tag": "login dev02",
+      "text": "Failed to load resource: the server responded with a status of 401 ()"
+    }
+  ],
+  "failedResponses": [
+    {
+      "tag": "login rev01",
+      "method": "GET",
+      "path": "/api/auth/me",
+      "status": 401
+    },
+    {
+      "tag": "login dev01",
+      "method": "GET",
+      "path": "/api/auth/me",
+      "status": 401
+    },
+    {
+      "tag": "login dev02",
+      "method": "GET",
+      "path": "/api/auth/me",
+      "status": 401
+    }
+  ],
+  "writes": [
+    {
+      "tag": "login rev01",
+      "method": "POST",
+      "path": "/api/auth/login",
+      "status": 200
+    },
+    {
+      "tag": "login dev01",
+      "method": "POST",
+      "path": "/api/auth/login",
+      "status": 200
+    },
+    {
+      "tag": "login dev02",
+      "method": "POST",
+      "path": "/api/auth/login",
+      "status": 200
+    }
+  ],
+  "finishedAt": "2026-11-20T11:46:29.333Z"
+}
