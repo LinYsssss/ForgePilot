@@ -19,7 +19,7 @@ com.forgepilot
 ├── common        # 统一错误体（ApiError / ApiException / ApiExceptionHandler）与按客户端地址限流
 ├── auth          # 登录、Cookie/Session、Spring Security
 ├── project       # Project、Member、Role、ProjectAccessService
-├── requirement   # Requirement、AC、附件关系、质量检查、一次性实现建议
+├── requirement   # Requirement、AC、附件关系、草稿提取、质量检查、一次性实现建议
 ├── scm           # Repository、PR、Webhook、GitHub/GitLab provider
 ├── knowledge     # Document、Chunk、ingestion、search
 ├── ai            # provider-neutral chat/embed gateway
@@ -57,7 +57,7 @@ review/  ReviewController · ReviewService · ReviewRepository · Review · Find
 | 模块 | 只负责 | 明确不负责 |
 |---|---|---|
 | `project` | 成员目录、多角色、项目隔离、仓库/知识入口 | Sprint、工时、看板、通用审批流 |
-| `requirement` | 需求、AC、指派、质量检查、附件关系、一次性实现建议 | 通用任务管理、聊天平台、多轮会话 |
+| `requirement` | 需求、AC、指派、附件关系、从文档提取草稿、质量检查、一次性实现建议 | 通用任务管理、聊天平台、多轮会话 |
 | `scm` | 仓库凭据、用户 SCM 身份、项目身份绑定、Webhook、PR 元数据与 patch、`REQ-N` 解析 | Review 结论、本地 Git 工作区 |
 | `knowledge` | 文档、Chunk、Embedding、项目内检索 | Requirement 状态、Review 编排、代码索引 |
 | `ai` | OpenAI-compatible chat/embed 协议与调用记录 | 业务 Prompt、Agent 编排、自动决策 |
@@ -448,9 +448,9 @@ AiGateway.embed(texts, model, context[, beforeAttempt])
 
 `ai` 负责 HTTP、认证、超时、一次有限重试、调用元数据、Token/延迟与错误分类。`context` 是不透明的调用归属（项目、Review、需求修订），`beforeAttempt` 在每次 HTTP 尝试前执行，供 Review 续租。chat 请求默认带 `temperature: 0`（`FORGEPILOT_AI_TEMPERATURE`，留空则不发送）；429 之后先等待 `rate-limit-backoff`（默认 5 s）再做那一次重试。
 它**不知道** Requirement/Finding/Review 等业务类型，也不暴露 tool loop。
-业务 Prompt 归 `requirement` 与 `review` 各自所有；Requirement Quality 与一次性 Implementation Guidance 共享 AI Gateway 但使用不同 schema。不建 Prompt Registry，不建万能 ContextBuilder。三类 Prompt 都要求模型散文（Finding 的说明与建议、质量意见、实现建议）用简体中文；逐字引用、路径、标识符与枚举值保持原样。
+业务 Prompt 归 `requirement` 与 `review` 各自所有：`requirement` 有 Draft、Quality 与一次性 Implementation Guidance 三个，`review` 有审查引擎的一组，它们共享 AI Gateway 但各用各的 schema。不建 Prompt Registry，不建万能 ContextBuilder。每个 Prompt 都要求模型散文（草稿正文、质量意见、实现建议、Finding 的说明与建议）用简体中文；逐字引用、路径、标识符与枚举值保持原样。
 
-Requirement Draft 是创建需求前的一次 chat：把 LEADER 提供的需求文档作为不可信内容，按独立 schema 返回标题、背景、描述与 AC 文本数组，仅作结构校验，不写任何表，保存仍走创建接口。调用按项目归属并复用 `REQUIREMENT_QUALITY` 用途——`ai_call_log.use_case` 是数据库封闭词表，不为它新增迁移；超预算沿用网关的 `ai_prompt_too_large`。
+Requirement Draft 发生在需求存在之前：LEADER 提供一份需求文档（不超过 60000 字符），一次 chat 把它整理成标题、背景、描述与一组 AC 文本。文档按不可信内容对待；回答只做结构校验，空白条目丢弃，不符合结构即失败而不是返回空草稿。它不写任何表——草稿回到新建表单，保存仍走创建接口，`ac_key` 在那时分配。调用按项目归属，在台账里与 Quality 共用 `REQUIREMENT_QUALITY` 用途：`ai_call_log.use_case` 是数据库里的封闭词表，为一次撰写辅助新增迁移不值得。完整 Prompt 超预算时沿用网关的 `ai_prompt_too_large`。
 
 Requirement Quality 先运行确定性规则并按脱敏后的完整 Prompt 计算预算。预算内只调用一次 AI；超预算时生成 `PROMPT_BUDGET_EXCEEDED`、跳过 AI，以 `quality-2` 保存并返回 `ai=null` 的规则结果，不把截断后的部分需求交给模型，也不改变 Requirement 状态。结果只在正文与 AC 自发起检查以来未变时写回，否则返回 409。
 
@@ -516,11 +516,11 @@ Requirement、文档、PR 标题、代码注释**全部是不可信数据**，�
 ```
 
 工作台是浏览器端组合现有列表 API 的只读项目总览，不新增 Dashboard 表、缓存或统计服务。Knowledge 与 Repository 是正式一级页面；Metrics、Agent、Patch、AI Logs 仍不做一级页面。
-工作台、需求和 Review 页面突出三段上下文内 AI 能力，但不得创建通用 AI/Assistant 入口、聊天框或第二条运行管线。Knowledge 页面展示真实文档/Chunk 数、已嵌入数、向量维度和 Embedding Profile；任何 HTTP 响应均不得返回原始向量。
+AI 能力只出现在所属的业务上下文里——新建需求时的草稿提取、需求详情的质量检查与实现建议、审查详情的 Finding，工作台只读汇总它们的调用台账与校准——不得创建通用 AI/Assistant 入口、聊天框或第二条运行管线。Knowledge 页面展示真实文档/Chunk 数、已嵌入数、向量维度和 Embedding Profile；任何 HTTP 响应均不得返回原始向量。
 需求详情将结构化 Revision 与需求文档分区展示：前者可在浏览器导出 Markdown，后者按需读取存储原文并下载。`.md` 首版作为源文本展示，不引入 HTML 渲染或解析依赖。
 同一页面只使用一种可见 Logo：已登录 Shell 使用横版 Logo，登录页只使用应用图标，应用图标同时作为 favicon；不得在登录页并排堆放两份 Logo。
 普通用户不获得手工向量查询调试台；项目成员只读查看文档状态、失败原因与真实向量索引元数据，LEADER 执行上传和提升。
-一次性实现建议位于 Requirement 详情页，不创建 Assistant 一级菜单或 Conversation 页面。
+草稿提取位于新建需求表单，一次性实现建议位于 Requirement 详情页；都不创建 Assistant 一级菜单或 Conversation 页面。
 AI 置信度、Finding 人工状态、Review Decision 在 UI 上必须明确分开呈现；需求生命周期与评审活动保持两个独立事实，`requirementPhase()` 仅对 `IN_DEVELOPMENT` 派生醒目的当前阶段，并保留生命周期标签，`requirementHandler()` 复用同一判定展示处理人。置信度真实落库，但只记 `HIGH/MEDIUM/LOW` 三档而非数值——模型自报的把握未经校准，精确数字会暗示它校准过；它不进任何 hash，也不参与任何自动门禁或状态流转。Finding 的展示层次为「问题说明 → 代码证据 → 修复建议」，其中说明与建议是模型自己的话、证据是逐字引用，二者在界面上必须可区分，`finding_key` 与两个 hash 收进可核验性折叠区而不作为主要阅读内容。
 
 审查详情复用 PR 历史与上一轮详情展示轮次、上次退回理由和当前决定；需求详情按当前退回活动读取对应理由。PR/MR 的远端编号、标题、作者账号与平台成员映射分别展示。知识页以阅读/下载为主要动作，索引元数据收入折叠详情；公共原文请求失败与原文已删除分别提示，已有历史摘录仍可阅读。切换项目或文档时用请求序号防止旧响应覆盖当前内容。

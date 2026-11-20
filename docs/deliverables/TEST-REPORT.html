@@ -142,7 +142,7 @@
 <main>
 
 <header class="mast">
-  <p class="eyebrow">Test Report · 2026-11-14</p>
+  <p class="eyebrow">Test Report · 2026-11-20</p>
   <h1>ForgePilot 测试报告</h1>
   <p class="standfirst">
     本报告汇总 ForgePilot 的测试策略、执行结果与<strong>覆盖不到的部分</strong>。
@@ -151,12 +151,12 @@
   </p>
   <div class="note amber">
     <strong>本报告的数字来自同一天的一次完整执行。</strong>
-    <p>后端与前端的结果取自 2026-11-19、评测工具的结果取自 2026-11-14 在当前代码上的实际运行（命令见第 3 章），不是从旧文档抄来的。用例数逐提交变动，引用时请重新执行。</p>
+    <p>后端、前端与评测工具的结果均取自 2026-11-20 在当前代码上的实际运行（命令见第 3 章），不是从旧文档抄来的。用例数逐提交变动，引用时请重新执行。</p>
     <p>自动化通过不等于界面已验收，也不等于模型判断准确：前者见第 8 章，后者由评测体系与<a href="../thesis/README.md">论文材料</a>单独度量。</p>
   </div>
-  <dl class="docmeta" aria-label="2026年11月19日执行结果">
+  <dl class="docmeta" aria-label="2026年11月20日执行结果">
     <div><dt>后端</dt><dd>450<small>／56 类</small></dd></div>
-    <div><dt>前端</dt><dd>73<small>／19 文件</small></dd></div>
+    <div><dt>前端</dt><dd>75<small>／19 文件</small></dd></div>
     <div><dt>评测</dt><dd>48<small>项检查</small></dd></div>
     <div><dt>失败</dt><dd>0</dd></div>
     <div><dt>跳过</dt><dd>0</dd></div>
@@ -284,7 +284,7 @@
 <!-- ══════ 4 ══════ -->
 <section id="s4">
   <h2><span class="hn">4</span>后端测试结果</h2>
-  <p><strong>450 个用例、56 个测试类全部通过，0 失败、0 错误、0 跳过，打包成功。</strong>取自 2026-11-19 固定 JDK 21 容器入口下的一次完整 <code>./mvnw -B -ntp verify</code>，退出码 0，耗时 9 分 47 秒。每次推送的四个 CI 作业结果见 <a href="https://github.com/LinYsssss/ForgePilot/actions">Actions</a>。</p>
+  <p><strong>450 个用例、56 个测试类全部通过，0 失败、0 错误、0 跳过，打包成功。</strong>取自 2026-11-20 固定 JDK 21 容器入口下的一次完整 <code>./mvnw -B -ntp verify</code>，退出码 0，耗时 14 分 04 秒。每次推送的四个 CI 作业结果见 <a href="https://github.com/LinYsssss/ForgePilot/actions">Actions</a>。</p>
   <div class="note">
     <span class="label">这些数字是快照，不是不变量</span>
     <p>
@@ -373,7 +373,7 @@
 <!-- ══════ 5 ══════ -->
 <section id="s5">
   <h2><span class="hn">5</span>前端测试结果</h2>
-  <p><strong>73 个用例，19 个测试文件，全部通过。</strong>另有 lint（策略检查）、typecheck（<code>vue-tsc</code>）与 <code>vite build</code> 三道门同时通过；构建产物为 JS 286.20 kB、CSS 75.35 kB（gzip 93.65 / 13.14 kB）。运行中 jsdom 提示 <code>scrollTo</code> 未实现，这不是失败，也不证明真实浏览器已验收。</p>
+  <p><strong>75 个用例，19 个测试文件，全部通过。</strong>另有 lint（策略检查）、typecheck（<code>vue-tsc</code>）与 <code>vite build</code> 三道门同时通过；构建产物为 JS 286.27 kB、CSS 75.35 kB（gzip 93.75 / 13.14 kB）。运行中 jsdom 提示 <code>scrollTo</code> 未实现，这不是失败，也不证明真实浏览器已验收。</p>
   <div class="tw"><table>
     <thead><tr><th>测试文件</th><th>用例</th><th>它锁住什么</th></tr></thead>
     <tbody>
@@ -382,13 +382,14 @@
       <tr><td class="f">http.spec.ts</td><td class="n">6</td><td>统一请求边界：CSRF 令牌注入、错误体解析、401 处理、无 body 状态码</td></tr>
       <tr><td class="f">routes.spec.ts</td><td class="n">5</td><td><strong>导航与路由形态</strong>：六个一级入口、11 条路由、登录守卫、旧路径重定向</td></tr>
       <tr><td class="f">workspace.spec.ts</td><td class="n">5</td><td>默认项目规则<strong>只</strong>在 URL 缺 query 时触发；AI 台账按模型分组而不把分组算成不同用途</td></tr>
+      <tr><td class="f">scm.spec.ts</td><td class="n">4</td><td>两家 Provider 及其默认地址；仓库页的注册默认值与按已载入的 id 更新；通知配置只为负责人请求</td></tr>
       <tr><td class="f">journey.spec.ts</td><td class="n">3</td><td>真实 App 与路由上的三角色闭环：需求 → PR → Finding → 退回 → 修复 → 通过 → DONE；语义地标与带标签控件；凭据只写</td></tr>
       <tr><td class="f">session.spec.ts</td><td class="n">3</td><td>会话引导与清理</td></tr>
-      <tr><td class="f">scm.spec.ts</td><td class="n">3</td><td>Token 创建页路径推导（自建实例地址变化时入口跟随）</td></tr>
       <tr><td class="f">reviewContext.spec.ts</td><td class="n">3</td><td>对不可变 Review 上下文的<strong>收窄在归属处发生</strong>，视图不做类型断言</td></tr>
       <tr><td class="f">requirementRowActions.spec.ts</td><td class="n">3</td><td>需求行内操作<strong>不放宽</strong>后端门槛：终态无编辑入口、删除仅对已作废</td></tr>
       <tr><td class="f">motion.spec.ts</td><td class="n">3</td><td>减动效模式停止运动但不改变内容</td></tr>
       <tr><td class="f">cyberParticles.spec.ts</td><td class="n">3</td><td>粒子模拟纯逻辑（与渲染分离故可测）</td></tr>
+      <tr><td class="f">requirementDraft.spec.ts</td><td class="n">2</td><td>从文档提取的草稿只填入表单，创建请求发送的是修改后的表单内容；超长文档在发请求之前被拦下并说明原因</td></tr>
       <tr><td class="f">polling.spec.ts</td><td class="n">2</td><td>有限轮询：前一次请求返回后才排下一次、到终态停止、连续失败有界、可手动重试、卸载即取消</td></tr>
       <tr><td class="f">projectArchive.spec.ts</td><td class="n">2</td><td>归档闸门：前缀、大小写、首尾空格<strong>四种退化方向</strong>全部保持禁用</td></tr>
       <tr><td class="f">diff.spec.ts</td><td class="n">2</td><td>unified patch 转展示行与<strong>真实 hunk 行号</strong></td></tr>
@@ -423,7 +424,7 @@
 <!-- ══════ 6 ══════ -->
 <section id="s6">
   <h2><span class="hn">6</span>评测工具测试</h2>
-  <p><strong>48 项检查全部通过</strong>（2026-11-14 执行）。这些检查只验证工具与评分口径，不调用模型；正式评测的冻结、holdout 台账和原始输出未改动、未重跑。</p>
+  <p><strong>48 项检查全部通过。</strong>这些检查只验证工具与评分口径，不调用模型；正式评测的冻结、holdout 台账和原始输出未改动、未重跑。</p>
   <div class="tw"><table>
     <thead><tr><th>套件</th><th class="n">检查</th><th>内容</th></tr></thead>
     <tbody>
@@ -471,14 +472,14 @@ python3 evaluation/tools/postfreeze_provider_correction.py verify</code></pre>
 <!-- ══════ 7 ══════ -->
 <section id="s7">
   <h2><span class="hn">7</span>部署验证</h2>
-  <p><strong>CI 每次构建都做两次全新卷冷启动。</strong>两个独立的 Compose 项目各自从空卷起栈，<code>scripts/phase1-compose-smoke.sh</code> 断言以下契约后再清理自己创建的项目与卷；提交 <code>370bfc4</code> 的 <a href="https://github.com/LinYsssss/ForgePilot/actions/runs/42506252157">CI</a> 上两次均通过：</p>
+  <p><strong>CI 每次构建都做两次全新卷冷启动。</strong>两个独立的 Compose 项目各自从空卷起栈，<code>scripts/phase1-compose-smoke.sh</code> 断言以下契约后再清理自己创建的项目与卷；2026-11-19 推送的提交 <code>f6c5232</code> 的 <a href="https://github.com/LinYsssss/ForgePilot/actions/runs/44494840076">CI</a> 上两次均通过：</p>
   <ul>
     <li>三个健康检查全部通过，反向代理可达（后端 <code>/actuator/health</code>，经前端代理 <code>/api/actuator/health</code>）。</li>
     <li>PostgreSQL 版本 ≥ 15，<code>vector</code> 扩展已安装，距离运算返回预期值。</li>
     <li>Flyway <strong>十五条</strong>版本化迁移全部成功，最高版本 V15 成功。</li>
     <li><code>public</code> 中<strong>恰好</strong>这二十一张业务表，按 C 排序逐字符比对（不依赖容器 locale）。</li>
   </ul>
-  <p><strong>线上演示栈 <code>fp-demo</code> 以保留数据的方式升级。</strong>每次发布只重建 backend 与 frontend 镜像，PostgreSQL 容器与数据卷不动，迁移由后端启动时应用。2026-11-14 只读核对：三个容器均 healthy，<code>flyway_schema_history</code> 中 15 条版本化迁移全部成功、最高 V15，<code>public</code> 下 21 张业务表；健康接口在本机经前端代理与<a href="https://yasinlin.com/">公网</a>均返回 <code>UP</code>。逐次发布的镜像身份、备份与核对命令记录在对应的 Trellis 任务里，不在本报告重复。</p>
+  <p><strong>线上演示栈 <code>fp-demo</code> 以保留数据的方式升级。</strong>每次发布只重建 backend 与 frontend 镜像，PostgreSQL 容器与数据卷不动，迁移由后端启动时应用。2026-11-20 只读核对：三个容器均 healthy，<code>flyway_schema_history</code> 中 15 条版本化迁移全部成功、最高 V15，<code>public</code> 下 21 张业务表；健康接口在本机经前端代理与<a href="https://yasinlin.com/">公网</a>均返回 <code>UP</code>。逐次发布的镜像身份、备份与核对命令记录在对应的 Trellis 任务里，不在本报告重复。</p>
 
   <div class="note red">
     <span class="label">冷启动脚本的期望值不被后端测试覆盖</span>
@@ -516,16 +517,18 @@ python3 evaluation/tools/postfreeze_provider_correction.py verify</code></pre>
   </table></div>
   <p>完整清单为 <code>frontend/MANUAL-ACCEPTANCE.md</code>，共七个章节。</p>
 
-  <h3>8.2 人工验收做到了哪一步</h3>
-  <p>以下是有记录可查的人工与线上验证，以及仍然空着的部分。它们各自对应当时的版本，不能当作对当前每一处界面的验收。</p>
+  <h3>8.2 真实浏览器与线上验证做到了哪一步</h3>
+  <p>以下是有记录可查的真实浏览器检查与线上验证，以及仍然空着的部分。2026-11 的浏览器检查由脚本驱动 Chromium 完成，使用测试账号，不是人工逐项目视；它们各自对应当时的版本，不能当作对每一处界面的验收。</p>
   <div class="tw"><table>
     <thead><tr><th>范围</th><th>已有的证据</th><th>没有覆盖的</th></tr></thead>
     <tbody>
-      <tr><td>布局与动效</td><td>2026-10-29：10 个页面 × 1440/768/390 三档宽度 × 两种动效偏好共 60 组，另加当轮改动的三页 18 组，均无整页横向溢出或页面报错</td><td>以审查者身份只读检查，未覆盖其他角色的写操作；此后的界面改动（通知编辑区窄屏布局、审查页排版与全站字号）没有重做这组检查</td></tr>
-      <tr><td>实现建议区</td><td>2026-10-03：Chromium 桌面与 390px 下的未保存禁用、生成状态、来源折叠、剪贴板与下载一致、保存后旧建议失效</td><td>其他浏览器与其余页面</td></tr>
-      <tr><td>真实 GitHub 链路</td><td>15 个演示仓 PR 的部署后复验、24 个第三方真实 PR 的重放、一次经本系统发起的真实合并（数据与复算脚本见<a href="../thesis/README.md">论文材料</a>）</td><td>经本系统发起的真实关闭；成员用自己的 SCM 身份完成「本人 PR」权限闭环</td></tr>
+      <tr><td>布局与动效</td><td>2026-10-29：10 个页面 × 1440/768/390 三档宽度 × 两种动效偏好共 60 组。2026-11-19：工作台、项目、成员、需求、知识、仓库接入、审查列表、六种状态的审查详情与账户页，以审查人和开发两种账号在 1440 与 390 两档各打开一遍，共 38 组。2026-11-20：新建需求表单在三档宽度 × 两种动效偏好下 6 组。均无整页横向溢出或页面报错</td><td>负责人账号的视角；768 档只查了新建需求表单；Chromium 以外的浏览器</td></tr>
+      <tr><td>新建需求与草稿提取</td><td>2026-11-19/20：从文档提取、修改后创建、覆盖确认、选择文件、无可验收内容、接口失败、超长文档、非负责人不可见；由草稿创建的需求继续完成质量检查、置为就绪、指派与实现建议。调用的是线上真实模型</td><td>提取质量只看了四份样例文档，不是对模型拆分准确性的度量</td></tr>
+      <tr><td>实现建议区</td><td>2026-10-03：Chromium 桌面与 390px 下的未保存禁用、生成状态、来源折叠、剪贴板与下载一致、保存后旧建议失效</td><td>其他浏览器</td></tr>
+      <tr><td>控制台与网络</td><td>2026-11-19：上述 38 组只读访问全程无页面错误、无写请求；发现的一处被吞掉的 403 已修复（9.5）并在真实浏览器复查</td><td>写操作过程中的网络行为只在新建需求流程里看过</td></tr>
+      <tr><td>真实 GitHub 链路</td><td>15 个演示仓 PR 的部署后复验、24 个第三方真实 PR 的重放、38 个开放 PR 在当前提示词版本上的重审；经本系统发起的两次真实合并与一次真实关闭；成员绑定自己的 SCM 身份后，「本人 PR」的授权与拒绝各验证一次（数据与复算脚本见<a href="../thesis/README.md">论文材料</a>）</td><td>开启严格审批后的绑定审批；开发者以本人 PR 身份修改需求关联</td></tr>
       <tr><td>真实 GitLab</td><td>无</td><td>全部——webhook、权威读取、合并与关闭都只在回环桩服务上验证过</td></tr>
-      <tr><td>钉钉投递</td><td>无</td><td>全部——加签、发送与失败处理只对桩服务验证过</td></tr>
+      <tr><td>钉钉投递</td><td>无留存证据</td><td>全部——加签、发送与失败处理只对桩服务验证过</td></tr>
       <tr><td>键盘可达性</td><td>无留存记录</td><td>Tab 顺序、焦点环与 Escape 回焦的人工走查</td></tr>
     </tbody>
   </table></div>
@@ -557,7 +560,7 @@ python3 evaluation/tools/postfreeze_provider_correction.py verify</code></pre>
 <!-- ══════ 9 ══════ -->
 <section id="s9">
   <h2><span class="hn">9</span>已发现的缺陷</h2>
-  <p>本章只收<strong>测试或审读实际抓到</strong>的问题，以及它们留下的规则。五条均已修复；仍然存在的限制在第 8 章。</p>
+  <p>本章只收<strong>测试或审读实际抓到</strong>的问题，以及它们留下的规则。六条均已修复；仍然存在的限制在第 8 章。</p>
 
   <h3>9.1 已修复：测试套件依赖类的执行顺序</h3>
   <div class="note amber">
@@ -611,7 +614,17 @@ python3 evaluation/tools/postfreeze_provider_correction.py verify</code></pre>
     一个标着日期的数字过期时是诚实的，一个不标日期的数字过期时是错的。
   </p>
 
-  <h3>9.5 测试执行过程中暴露的一个方法学问题</h3>
+  <h3>9.5 已修复：真实浏览器检查发现的两处界面问题</h3>
+  <p>这两处都不是组件测试抓到的——它们各自需要真实的文件选择控件和真实的网络面板才看得见。修复后各补了一条组件测试，并在真实浏览器里复查。</p>
+  <div class="tw"><table>
+    <thead><tr><th>问题</th><th>修复</th><th>回归断言所在</th></tr></thead>
+    <tbody>
+      <tr><td>选择一份超过 60000 字符的需求文档后点「提取草稿」，页面只显示「请求内容不符合要求」——输入框的长度上限管不到文件选择，超长文本照样发给了后端</td><td>提取前先判长度，说明文档的字符数与上限，不发请求</td><td class="f">requirementDraft.spec.ts</td></tr>
+      <tr><td>非负责人打开仓库接入页时，页面会请求只有负责人可读的通知配置并得到 403；页面把它吞掉了，用户看不到，但控制台与后端日志各多一条</td><td>等确知当前成员是负责人再请求</td><td class="f">scm.spec.ts</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>9.6 测试执行过程中暴露的一个方法学问题</h3>
   <div class="note red">
     <span class="label">把构建输出管进 <code>tail</code> 会掩盖真实的失败</span>
     <p>
@@ -636,13 +649,13 @@ python3 evaluation/tools/postfreeze_provider_correction.py verify</code></pre>
       <tr><td class="f">./mvnw -B -ntp verify</td><td><span class="yes">全套及打包 BUILD SUCCESS</span></td><td class="n">450 / 0 失败 / 0 错误 / 0 跳过</td></tr>
       <tr><td class="f">npm run lint</td><td><span class="yes">通过</span></td><td class="n">4 条策略</td></tr>
       <tr><td class="f">npm run typecheck</td><td><span class="yes">通过</span></td><td class="n">vue-tsc 严格模式</td></tr>
-      <tr><td class="f">npm test -- --run</td><td><span class="yes">通过</span></td><td class="n">73 / 19 文件</td></tr>
-      <tr><td class="f">npm run build</td><td><span class="yes">通过</span></td><td class="n">JS 286.20 kB / CSS 75.35 kB；gzip 93.65 / 13.14 kB</td></tr>
+      <tr><td class="f">npm test -- --run</td><td><span class="yes">通过</span></td><td class="n">75 / 19 文件</td></tr>
+      <tr><td class="f">npm run build</td><td><span class="yes">通过</span></td><td class="n">JS 286.27 kB / CSS 75.35 kB；gzip 93.75 / 13.14 kB</td></tr>
       <tr><td class="f">评测 unittest（4 个模块）</td><td><span class="yes">通过</span></td><td class="n">18</td></tr>
       <tr><td class="f">score.py --selftest</td><td><span class="yes">通过</span></td><td class="n">30</td></tr>
       <tr><td class="f">verify-freeze + 端点更正校验</td><td><span class="yes">通过</span></td><td class="n">9 个冻结文件哈希未变</td></tr>
-      <tr><td class="f">论文材料复算脚本（5 个）</td><td><span class="yes">通过</span></td><td class="n">汇总值与 CSV 哈希一致</td></tr>
-      <tr><td class="f">CI（提交 370bfc4）</td><td><span class="yes">四个作业通过</span></td><td class="n">后端 / 前端 / 评测契约 / 两次冷启动</td></tr>
+      <tr><td class="f">论文材料复算脚本（6 个）</td><td><span class="yes">通过</span></td><td class="n">汇总值与 CSV 哈希一致</td></tr>
+      <tr><td class="f">CI（提交 f6c5232）</td><td><span class="yes">四个作业通过</span></td><td class="n">后端 / 前端 / 评测契约 / 两次冷启动</td></tr>
       <tr><td class="f">fp-demo 只读核对</td><td><span class="yes">健康</span></td><td class="n">3 容器 / 15 迁移 / 21 表</td></tr>
     </tbody>
   </table></div>
@@ -659,32 +672,33 @@ python3 evaluation/tools/postfreeze_provider_correction.py verify</code></pre>
   <div class="note red">
     <span class="label">三条界限</span>
     <p>
-      <strong>不能得出「界面正确」。</strong>视觉、布局、键盘可达性与动效均无自动化覆盖；
-      已有的浏览器检查（8.2）是只读的，且早于最近几次界面改动。
+      <strong>不能得出「界面正确」。</strong>视觉、布局、键盘可达性与动效没有自动化门禁；
+      已有的真实浏览器检查（8.2）是脚本驱动的抽查，只用了一种浏览器和两种测试账号，键盘可达性没有任何记录。
     </p>
     <p>
-      <strong>不能得出「与两家平台的真实集成都已验证」。</strong>GitHub 有真实 PR 与一次真实合并的线上演练；
+      <strong>不能得出「与两家平台的真实集成都已验证」。</strong>GitHub 有真实 PR、两次真实合并与一次真实关闭的线上记录；
       GitLab 与钉钉只对回环桩服务验证过，没有真实实例上的端到端记录。
     </p>
     <p>
       <strong>不能得出「AI 审查质量」。</strong>审查链路的集成测试用脚本化响应替代模型，证明的是调用链接通与规则执行。
-      模型质量由评测体系度量：holdout 仅 12 例且缺陷为手工构造，报告给出 95% Wilson 区间并明确声明泛化限制；
-      当前提示词版本 <code>review-6</code> 还没有独立的真实样本与人工真值。
+      模型质量由评测体系度量：holdout 仅 12 例且缺陷为手工构造，报告给出 95% Wilson 区间并明确声明泛化限制。
+      当前提示词版本 <code>review-6</code> 有一轮线上样本：54 条已报告的 Finding 逐条判定后确认 44 条，其中第三方真实代码上只确认 12 条里的 3 条。
+      这组数字的判定由 AI 助手代为执行、只有一个判定人、没有独立真值，测不了漏报（见<a href="../thesis/REVIEW6-ROUND.md">论文材料</a>）。
     </p>
   </div>
 
   <h3>10.4 建议的后续工作</h3>
   <ol>
-    <li><strong>补做人工验收</strong>：按 <code>frontend/MANUAL-ACCEPTANCE.md</code> 用三种角色在真实浏览器里走一遍写操作，重做三档宽度检查，并把结果留档。</li>
+    <li><strong>补做人工验收</strong>：用负责人账号把写操作与三档宽度走一遍，并做一次键盘可达性走查，结果留档。清单见 <code>frontend/MANUAL-ACCEPTANCE.md</code>。</li>
     <li><strong>用一次性账号做真实 GitLab 与钉钉演练</strong>，补上 10.3 第二条界限。</li>
-    <li><strong>为 <code>review-6</code> 建立独立样例与人工真值</strong>，分开记录命中、误报与漏报；不调参、不重跑已冻结的 holdout。</li>
+    <li><strong>由作者复核 <code>review-6</code> 一轮的判定</strong>，先看与此前判定相左的三条；再为它建立独立真值以度量漏报。不调参、不重跑已冻结的 holdout。</li>
     <li><strong>为「迁移与冷启动脚本同步」增加机制保障</strong>——目前靠规范约束，而它已被遗漏过一次。</li>
   </ol>
 </section>
 
 <footer class="end">
   <p>
-    后端与前端的自动化结果取自 2026-11-19 的当前代码；评测工具检查与线上只读核对取自 2026-11-14，其后的改动不涉及评测工具、迁移与部署结构。
+    本报告的自动化结果与线上只读核对均取自 2026-11-20 的当前代码。
     正式评测的配置冻结、holdout 台账与原始输出未修改、未重跑；容量实测与各次线上演练保留原测量日期。
     未覆盖项与已知限制如实记录于第 8 章，已发现的缺陷记录于第 9 章。
   </p>

@@ -85,7 +85,7 @@ git config --global user.email "<你的邮箱>"
 | B | B1–B8 | 项目与成员 | A |
 | C | C1–C7 | SCM 身份与仓库接入 | B |
 | D | D1–D7 | 项目知识 | B |
-| E | E1–E12 | 需求与验收条件 | B、D |
+| E | E1–E13 | 需求与验收条件 | B、D |
 | F | F1–F9 | 推送 → PR → Webhook → Review | C、E |
 | G | G1–G8 | Finding 生命周期 | F |
 | H | H1–H9 | 审查决策与需求收尾 | G |
@@ -498,7 +498,26 @@ order by r.id;"
 
 **记下 `r.id`——它是全局递增的，不是项目内编号，F 组要用。**
 
-### E2 DRAFT 阶段可原地编辑
+### E2 从需求文档提取草稿
+
+审查按验收条件逐条裁定；需求只是一份文档时，先让 AI 把它拆成草稿，再由人核对。
+
+**操作**：在「新建需求」表单顶部粘贴一段需求文档，或选择一份 `.txt/.md` 文件，点「提取草稿」。
+
+**预期**：标题、背景、描述与若干条验收条件被填入表单，并提示提取了几条；此时需求列表**没有**新增条目。修改其中几条、删掉或添加一条后点「创建需求」，保存的是表单里的内容。表单里已有内容时，提取前会先询问是否覆盖。
+
+**关键**：草稿是 AI 整理的结果，不保证完整或正确，文档里「待定」的事项不应出现在验收条件里，逐条核对后再创建。文档没有可验收的内容时提示「没有提取到」，由人手工填写；超过 60000 字符的文档在提取前被拦下并说明原因。非 LEADER 看不到新建表单，直接调用接口返回 403。
+
+**验证**：提取之后、创建之前，下面的计数不变；台账里多一行 `REQUIREMENT_QUALITY` 用途的调用，归在项目名下、不带需求 id。
+
+```bash
+docker exec fp-demo-postgres-1 psql -U forgepilot -d forgepilot -c "
+select count(*) from requirement where project_id = <项目id>;
+select use_case, model, status, requirement_id, created_at
+from ai_call_log where project_id = <项目id> order by id desc limit 3;"
+```
+
+### E3 DRAFT 阶段可原地编辑
 
 **操作**：修改 DRAFT 需求的标题、描述与 AC。
 
@@ -506,7 +525,7 @@ order by r.id;"
 
 **验证**：`select count(*) from requirement_revision where requirement_id=<id>;` 仍为 1。
 
-### E3 稳定的 ac_key
+### E4 稳定的 ac_key
 
 **操作**：记录每条 AC 的 `ac_key`，然后调整 AC 顺序或修改其中一条的文字。
 
@@ -520,15 +539,7 @@ select requirement_revision_id, ac_key, sort_order, left(text,40)
 from acceptance_criterion order by requirement_revision_id, sort_order;"
 ```
 
-### E3a 从需求文档提取草稿
-
-**操作**：在「新建需求」表单顶部粘贴一段需求文档（或选择 `.txt/.md` 文件），点「提取草稿」。
-
-**预期**：标题、背景、描述与若干条验收条件被填入表单，并提示提取条数；此时需求列表**没有**新增条目。逐条修改后点「创建需求」，保存的是表单里的内容。非 LEADER 看不到新建表单，直接调用接口返回 403。
-
-**关键**：草稿是 AI 整理的结果，不保证完整或正确，必须逐条核对。
-
-### E4 需求质量检查
+### E5 需求质量检查
 
 **操作**：对需求运行质量检查。
 
@@ -547,13 +558,13 @@ from requirement_revision order by id;"
 
 **对应端点**：`POST /api/projects/{projectId}/requirements/{requirementId}/quality`
 
-### E5 DRAFT → READY 冻结
+### E6 DRAFT → READY 冻结
 
 **操作**：LEADER 把需求置为 READY，然后尝试修改正文或 AC。
 
 **预期**：READY 之后正文与 AC **锁定**，无法原地修改。
 
-### E6 创建新 Revision
+### E7 创建新 Revision
 
 **操作**：对已 READY 的需求发起修改，填写**变更原因**。
 
@@ -567,7 +578,7 @@ select id, requirement_id, seq, left(title,30) as title, change_reason, created_
 from requirement_revision where requirement_id=<id> order by seq;"
 ```
 
-### E7 指派与状态推进
+### E8 指派与状态推进
 
 **操作**：把 READY 需求指派给某个 DEVELOPER。
 
@@ -577,7 +588,7 @@ from requirement_revision where requirement_id=<id> order by seq;"
 
 **审查人**：LEADER 再从本项目 REVIEWER/LEADER 中选择审查人，调用 `POST .../requirements/{id}/reviewer`，请求 `{userId}`，传 null 可清空。列表/详情返回 `reviewerId/reviewerName`。终态拒绝修改；审查人失去资格时名称为空并由 LEADER 接手，成员移除时 ID 也置空。无有效开发负责人时不能提交最终决定。
 
-### E8 需求文档附件
+### E9 需求文档附件
 
 **操作**：上传 `.txt` / `.md` 需求文档作为附件，然后**阅读**与**下载**。
 
@@ -585,7 +596,7 @@ from requirement_revision where requirement_id=<id> order by seq;"
 
 **对应端点**：`POST .../attachments`、`GET .../attachments/{documentId}/content`、`GET .../attachments/{documentId}/download`
 
-### E9 附件隔离与显式提升
+### E10 附件隔离与显式提升
 
 **操作**：在需求 A 上传附件，然后在需求 B 的 AI 场景里检查该附件是否被检索到。
 
@@ -603,7 +614,7 @@ from knowledge_document order by id;"
 
 **对应端点**：`POST .../attachments/{documentId}/promote`
 
-### E10 一次性 AI 实现建议
+### E11 一次性 AI 实现建议
 
 **操作**：在需求详情页生成实现建议。由 LEADER 或**被指派的** DEVELOPER 触发。
 
@@ -619,13 +630,13 @@ select id, use_case, model, status, latency_ms, total_token, created_at
 from ai_call_log where use_case='IMPLEMENTATION_GUIDANCE' order by id desc limit 5;"
 ```
 
-### E11 结构化 Markdown 导出
+### E12 结构化 Markdown 导出
 
 **操作**：导出需求。
 
 **预期**：得到结构化 Markdown，包含标题、背景、描述与全部 AC。
 
-### E12 作废与删除需求
+### E13 作废与删除需求
 
 **操作**：LEADER 先把一条需求置为「已作废」；再对这条已作废的需求点「删除」。
 
@@ -1077,7 +1088,7 @@ from project_notification_channel order by id;"
 | 成员 | **硬删** | 活权限必须真正消失 |
 | 作废需求 | **软删** | 审计与既成事实必须保留 |
 
-逐项验证见 D4、B7、E12。
+逐项验证见 D4、B7、E13。
 
 ### J5 删除台账
 

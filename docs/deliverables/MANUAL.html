@@ -434,7 +434,7 @@ img, svg { max-width: 100%; height: auto; }
 <main>
 
 <header class="masthead">
-  <p class="eyebrow">使用与代码手册 · 2026-11-14</p>
+  <p class="eyebrow">使用与代码手册 · 2026-11-20</p>
   <h1>ForgePilot 使用与代码手册</h1>
   <p class="standfirst">
     一个<strong>基于需求上下文增强的 AI 代码审查系统</strong>。它把研发需求、验收条件与项目知识
@@ -634,7 +634,7 @@ docker compose -p fp-demo up --detach --wait backend frontend</code></pre>
   <ol class="flow">
     <li>
       <strong>LEADER 建项目与需求</strong>
-      建项目 → 加成员并分配角色 →「研发需求」写一条带验收条件的需求。
+      建项目 → 加成员并分配角色 →「研发需求」写一条带验收条件的需求。手头只有一份需求文档时，可在新建表单里粘贴或选择它，让 AI 整理出标题、背景、描述与逐条验收条件的草稿，逐条核对修改后再创建；草稿不会自动保存。
       <code>DRAFT</code> 阶段正文可原地编辑；<code>DRAFT → READY</code> 在<strong>同一个事务</strong>里冻结。
       冻结后任何变更都是发布 <code>seq + 1</code> 的新修订并填写变更原因，旧验收条件<strong>永久保留</strong>。
       LEADER 指派 DEVELOPER/LEADER 作开发负责人，并选择 REVIEWER/LEADER 作审查人；服务端也校验目标资格，失败不改变指派或状态。首次开发指派进入开发中，审查人未指定或失效时由 LEADER 处理。
@@ -755,7 +755,7 @@ docker compose -p fp-demo up --detach --wait backend frontend</code></pre>
     每包先给职责，再逐文件说明。
   </p>
   <p class="lb-key"><span class="lb"></span> 标记<strong>承重文件</strong>：改动它们会影响不变量、哈希稳定性或授权边界，动前先读它自己的 javadoc。</p>
-  <p>每个包还有一个 <code>package-info.java</code>，只承载包级 javadoc，共 9 个，下表不再重复列出。各包标题旁的文件数与行数（含 <code>package-info.java</code>）是 2026-11-14 的快照，不是结构约束。</p>
+  <p>每个包还有一个 <code>package-info.java</code>，只承载包级 javadoc，共 9 个，下表不再重复列出。各包标题旁的文件数与行数（含 <code>package-info.java</code>）是 2026-11-20 的快照，不是结构约束。</p>
 
   <!-- common -->
   <div class="pkg" id="p-common">
@@ -831,8 +831,8 @@ docker compose -p fp-demo up --detach --wait backend frontend</code></pre>
 
   <!-- requirement -->
   <div class="pkg" id="p-requirement">
-    <div class="pkg-head"><span class="pkg-name">requirement</span><span class="pkg-count">25 文件 · 2054 行</span></div>
-    <p class="pkg-role">需求、它们<strong>不可变的修订</strong>，支配二者的状态机，以及两个一次性 AI 能力（质量检查、实现建议）。</p>
+    <div class="pkg-head"><span class="pkg-name">requirement</span><span class="pkg-count">26 文件 · 2197 行</span></div>
+    <p class="pkg-role">需求、它们<strong>不可变的修订</strong>，支配二者的状态机，以及三个一次性 AI 能力（从文档提取草稿、质量检查、实现建议）。</p>
     <div class="tw"><table>
       <thead><tr><th>文件</th><th>作用</th></tr></thead>
       <tbody>
@@ -1089,7 +1089,7 @@ docker compose -p fp-demo up --detach --wait backend frontend</code></pre>
 <!-- ═══════════════════ 06 ═══════════════════ -->
 <section id="s6">
   <h2><span class="h-num">06</span>前端代码地图</h2>
-  <p>Vue 3 + TypeScript + Vite，<code>frontend/src/</code> 下按 feature 组织。无状态管理库、无 UI 组件库、无 HTTP 客户端库——这些都被 lint 明确禁止。下表的行数是 2026-11-14 的快照。</p>
+  <p>Vue 3 + TypeScript + Vite，<code>frontend/src/</code> 下按 feature 组织。无状态管理库、无 UI 组件库、无 HTTP 客户端库——这些都被 lint 明确禁止。下表的行数是 2026-11-20 的快照。</p>
 
   <div class="tw"><table>
     <caption>基础设施与外壳</caption>
@@ -1122,22 +1122,22 @@ docker compose -p fp-demo up --detach --wait backend frontend</code></pre>
       <tr><td class="f">features/project/api.ts</td><td class="n">128</td><td>项目、成员、归档／取消归档的请求层。</td></tr>
       <tr><td class="f">features/project/ProjectsPage.vue</td><td class="n">411</td><td>项目列表与创建；每卡六入口；归档确认面板（复制项目名 + 一字不差重输才解锁）；已归档折叠组与恢复。</td></tr>
       <tr><td class="f">features/project/ProjectMembersPage.vue</td><td class="n">638</td><td>成员目录四列表格 + 文本/角色筛选 + 批量添加（50 上限；少于两个字符且非纯数字时不发请求；行角色非空）+ 角色编辑 + 绑定审批（失败有提示，请求期间按钮禁用）。</td></tr>
-      <tr><td class="f">features/requirement/api.ts</td><td class="n">297</td><td>需求全部请求 + <code>toDraft</code> 转换。</td></tr>
+      <tr><td class="f">features/requirement/api.ts</td><td class="n">313</td><td>需求全部请求（含从文档提取草稿）+ <code>toDraft</code> 转换。</td></tr>
       <tr><td class="f">features/requirement/status.ts</td><td class="n">82</td><td>状态词汇、流转表和终态判定；共享 <code>requirementPhase/requirementHandler</code> 只对开发中需求派生阶段和处理人，生命周期仍独立展示。</td></tr>
-      <tr><td class="f">features/requirement/RequirementsPage.vue</td><td class="n">467</td><td>需求列表、三个可组合筛选、行内操作（按状态门控，不放宽后端前置条件）、创建 disclosure。</td></tr>
-      <tr><td class="f">features/requirement/RequirementDetailPage.vue</td><td class="n">1472</td><td>详情：页首元信息条（当前阶段、处理人、评审活动、开发/审查人）与退回理由，下分五个标签——需求内容（状态与指派、编辑或发布新版本）、AI 辅助（质量检查、实现建议）、关联审查（PR 活动分布、验收条件覆盖度及其来源审查是否过期）、附件、版本记录。保存或发布后重读派生面板，并用请求序号作废在途的质量检查与建议回答。长 AI 输出定高滚动。</td></tr>
+      <tr><td class="f">features/requirement/RequirementsPage.vue</td><td class="n">547</td><td>需求列表、三个可组合筛选、行内操作（按状态门控，不放宽后端前置条件）、创建 disclosure。创建表单可先粘贴或选择一份需求文档，由 AI 整理成草稿填入表单；草稿不保存，超过 60000 字符的文档在发请求前被拦下。</td></tr>
+      <tr><td class="f">features/requirement/RequirementDetailPage.vue</td><td class="n">1471</td><td>详情：页首元信息条（当前阶段、处理人、评审活动、开发/审查人）与退回理由，下分五个标签——需求内容（状态与指派、编辑或发布新版本）、AI 辅助（质量检查、实现建议）、关联审查（PR 活动分布、验收条件覆盖度及其来源审查是否过期）、附件、版本记录。保存或发布后重读派生面板，并用请求序号作废在途的质量检查与建议回答。长 AI 输出定高滚动。</td></tr>
       <tr><td class="f">features/requirement/AcceptanceCriteriaEditor.vue</td><td class="n">121</td><td>验收条件编辑器。<code>sortOrder</code> 由数组顺序推导。</td></tr>
       <tr><td class="f">features/knowledge/api.ts</td><td class="n">54</td><td>知识列表保留元数据；独立 content/download 接口按需读原文，始终不返回原始向量。</td></tr>
       <tr><td class="f">features/knowledge/KnowledgePage.vue</td><td class="n">394</td><td>原文阅读/下载、多文件上传、失败重试、公共文档删除、折叠索引详情；存在处理中的文档时自动刷新状态；项目/文档切换以请求序号拒绝旧响应。</td></tr>
       <tr><td class="f">features/scm/api.ts</td><td class="n">264</td><td>仓库、身份、绑定请求层 + Token 创建页路径推导（自建实例地址变了入口跟着变）。</td></tr>
-      <tr><td class="f">features/scm/RepositoryPage.vue</td><td class="n">512</td><td>仓库注册与修改，以及项目的钉钉通知配置与测试消息。token、webhook 密钥与通知地址都是<strong>只写字段</strong>，任何位置不回显。</td></tr>
+      <tr><td class="f">features/scm/RepositoryPage.vue</td><td class="n">523</td><td>仓库注册与修改，以及项目的钉钉通知配置与测试消息。token、webhook 密钥与通知地址都是<strong>只写字段</strong>，任何位置不回显。通知配置只有负责人读得到，页面确知当前成员是负责人后才去请求。</td></tr>
       <tr><td class="f">features/notification/api.ts</td><td class="n">56</td><td>钉钉通知渠道的请求层。</td></tr>
       <tr><td class="f">features/review/api.ts</td><td class="n">399</td><td>Review、Finding、活动状态、覆盖度、校准与 AI 调用台账的请求层与类型。</td></tr>
-      <tr><td class="f">features/review/labels.ts <span class="lb"></span></td><td class="n">295</td><td><b>它做什么：</b>四种状态标记的文案与配色，规定它们不许合并。<br><b>为什么这么写：</b>四个标记的词汇与修饰符。<strong>禁止合并其中任何两个</strong>：Review 执行状态、Finding 人工状态、跨轮血缘、一次性 Decision。类别与置信度<strong>刻意没有</strong>色调映射——它们不是严重度。</td></tr>
+      <tr><td class="f">features/review/labels.ts <span class="lb"></span></td><td class="n">286</td><td><b>它做什么：</b>四种状态标记的文案与配色，规定它们不许合并。<br><b>为什么这么写：</b>四个标记的词汇与修饰符。<strong>禁止合并其中任何两个</strong>：Review 执行状态、Finding 人工状态、跨轮血缘、一次性 Decision。类别与置信度<strong>刻意没有</strong>色调映射——它们不是严重度。</td></tr>
       <tr><td class="f">features/review/context.ts</td><td class="n">236</td><td>在归属处对外部 JSON 做一次收窄。视图<strong>绝不</strong>对不可变上下文做类型断言或私自重解读。</td></tr>
       <tr><td class="f">features/review/diff.ts</td><td class="n">69</td><td>把 unified patch 转成稳定展示行与<strong>真实</strong> hunk 行号。</td></tr>
-      <tr><td class="f">features/review/ReviewsPage.vue</td><td class="n">502</td><td>项目级 Review 列表（含提示词版本与模型），三个筛选加搜索；需求评审活动概览；单个 PR 的审查历史、远端状态与手动请求审查；内部 PR 记录 id 输入只在底部「故障恢复」disclosure。</td></tr>
-      <tr><td class="f">features/review/ReviewDetailPage.vue</td><td class="n">1298</td><td>证据工作台、轮次与上次退回理由、PR/MR 身份、作者映射、需求关联纠正、AC 判定（带条文）、覆盖清单、服务端决定资格与 head 闸门；三种终局决定，拒绝关闭前二次确认。延续的 Finding 提示上一轮的处理状态；另列「上一轮报告、本轮未再报告」。公共原文可读，原文删除或查询失败时保留历史摘录。原始 JSON 位于底部折叠区。</td></tr>
+      <tr><td class="f">features/review/ReviewsPage.vue</td><td class="n">501</td><td>项目级 Review 列表（含提示词版本与模型），三个筛选加搜索；需求评审活动概览；单个 PR 的审查历史、远端状态与手动请求审查；内部 PR 记录 id 输入只在底部「故障恢复」disclosure。</td></tr>
+      <tr><td class="f">features/review/ReviewDetailPage.vue</td><td class="n">1295</td><td>证据工作台、轮次与上次退回理由、PR/MR 身份、作者映射、需求关联纠正、AC 判定（带条文）、覆盖清单、服务端决定资格与 head 闸门；三种终局决定，拒绝关闭前二次确认。延续的 Finding 提示上一轮的处理状态；另列「上一轮报告、本轮未再报告」。公共原文可读，原文删除或查询失败时保留历史摘录。原始 JSON 位于底部折叠区。</td></tr>
       <tr><td class="f">features/review/FindingCard.vue</td><td class="n">441</td><td>Finding 卡片，层次为<strong>问题说明 → 代码证据 → 修复建议</strong>；三个哈希收进可核验性折叠区。</td></tr>
       <tr><td class="f">features/review/DiffEvidenceViewer.vue</td><td class="n">195</td><td>diff 渲染。增/删/上下文/分段样式可辨，长行局部滚动，无 patch 有明确空态。</td></tr>
     </tbody>
@@ -1265,6 +1265,7 @@ docker compose -p fp-demo up --detach --wait backend frontend</code></pre>
     <tbody>
       <tr><td><span class="verb get">GET</span></td><td class="f">/</td><td>需求列表。</td></tr>
       <tr><td><span class="verb post">POST</span></td><td class="f">/</td><td>建需求（一事务三步写）。</td></tr>
+      <tr><td><span class="verb post">POST</span></td><td class="f">/draft</td><td>从需求文档提取未保存的草稿。仅 LEADER；只返回标题、背景、描述与验收条件文本，不写任何表。</td></tr>
       <tr><td><span class="verb get">GET</span></td><td class="f">/{requirementId}</td><td>需求详情。</td></tr>
       <tr><td><span class="verb patch">PATCH</span></td><td class="f">/{requirementId}</td><td>改草稿。<strong>仅 DRAFT</strong>。</td></tr>
       <tr><td><span class="verb del">DELETE</span></td><td class="f">/{requirementId}</td><td>软删。<strong>仅已作废</strong>，非作废返 409，重复删除返 404。</td></tr>
@@ -1482,13 +1483,13 @@ python3 evaluation/tools/formal_evaluation.py report \
 <!-- ═══════════════════ 12 ═══════════════════ -->
 <section id="s12">
   <h2><span class="h-num">12</span>测试与质量门</h2>
-  <p>下表是 2026-11-14 一次完整执行的结果。用例数逐提交变动，逐类分布、未覆盖范围与已发现的缺陷见 <code>TEST-REPORT.html</code>。</p>
+  <p>下表是 2026-11-20 一次完整执行的结果。用例数逐提交变动，逐类分布、未覆盖范围与已发现的缺陷见 <code>TEST-REPORT.html</code>。</p>
 
   <div class="tw"><table>
     <thead><tr><th>范围</th><th class="n">规模</th><th>说明</th></tr></thead>
     <tbody>
-      <tr><td>后端</td><td class="n">447 / 55 类</td><td>固定 JDK 21 容器入口的完整 <code>./mvnw -B -ntp verify</code>，0 失败、0 错误、0 跳过。</td></tr>
-      <tr><td>前端</td><td class="n">72 / 18 文件</td><td>lint、严格类型、测试与构建四道门。</td></tr>
+      <tr><td>后端</td><td class="n">450 / 56 类</td><td>固定 JDK 21 容器入口的完整 <code>./mvnw -B -ntp verify</code>，0 失败、0 错误、0 跳过。</td></tr>
+      <tr><td>前端</td><td class="n">75 / 19 文件</td><td>lint、严格类型、测试与构建四道门。</td></tr>
       <tr><td>评测</td><td class="n">18 + 30</td><td>四个 unittest 模块与评分器自测；只验证工具与口径，不调用模型，不触碰冻结资产。</td></tr>
     </tbody>
   </table></div>
@@ -1590,7 +1591,7 @@ python3 evaluation/tools/score.py --selftest</code></pre>
 <footer class="end">
   <p>
     本手册描述当前代码：9 个后端包、21 张表、15 条迁移、6 个一级导航、11 条产品路由，这组结构性数字由测试钉住。
-    文件数、行数与用例数是 2026-11-14 的快照，引用时以实际代码与执行结果为准。
+    文件数、行数与用例数是 2026-11-20 的快照，引用时以实际代码与执行结果为准。
     变更历史在 Git 提交与 <code>.trellis/tasks/</code> 的任务记录里；容量实测与正式评测保留原测量日期。
   </p>
   <p>

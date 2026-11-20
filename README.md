@@ -31,7 +31,7 @@ ForgePilot 是一个面向软件研发流程的轻量级 AI 研发协作与代�
 
 验证使用 Testcontainers 真实 PostgreSQL 15 + pgvector；最近一次全套执行结果见[测试报告](docs/deliverables/TEST-REPORT.html)。当前提示词与规则版本为 `review-6`、`guidance-3`、`quality-2`。
 
-除正式三臂评测外，另有几组各自独立的线上证据：部署后调用链复验、演示仓与第三方真实 PR 重放、相邻两轮稳定性复测、实现建议验收。它们的口径、逐例数据和复算脚本集中在[论文材料](docs/thesis/README.md)，不与下文的正式评测合并分母。
+除正式三臂评测外，另有几组各自独立的线上证据：部署后调用链复验、演示仓与第三方真实 PR 重放、相邻两轮稳定性复测、实现建议验收，以及当前提示词版本 `review-6` 的一轮线上重审与逐条判定。它们的口径、逐例数据和复算脚本集中在[论文材料](docs/thesis/README.md)，不与下文的正式评测合并分母。
 
 ## 从这里开始
 
@@ -79,7 +79,7 @@ docker compose up --build --detach --wait
 
 - 采用模块化单体，不以"企业级"为理由增加微服务和中间件。
 - 只有一条 Review Engine；PR 自动触发和人工重试共用同一入口。
-- AI 只提供需求检查、一次性实现建议和 PR 审查，不自动修改代码或改变业务状态。
+- AI 只提供需求草稿、需求检查、一次性实现建议和 PR 审查，不自动修改代码或改变业务状态；草稿与建议都不落库。
 - 项目知识使用 PostgreSQL + pgvector，严格按 `project_id` 隔离。
 - Agent、Patch、RabbitMQ、Outbox、Risk Model、Sandbox 不进入主线。
 

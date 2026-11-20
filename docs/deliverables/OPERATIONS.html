@@ -140,7 +140,7 @@
 <main>
 
 <header class="mast">
-  <p class="eyebrow">Operations · 2026-11-14</p>
+  <p class="eyebrow">Operations · 2026-11-20</p>
   <h1>ForgePilot 运维手册</h1>
   <p class="standfirst">
     这份文档面向<strong>要把这套东西跑起来、或者半夜发现它挂了</strong>的人。
@@ -154,7 +154,7 @@
     <div><dt>外部入口</dt><dd>1<small>／cloudflared</small></dd></div>
     <div><dt>发布端口</dt><dd>全部 127.0.0.1</dd></div>
     <div><dt>持久化</dt><dd>1 个卷</dd></div>
-    <div><dt>拓扑核对</dt><dd>2026-11-14<small>实测</small></dd></div>
+    <div><dt>拓扑核对</dt><dd>2026-11-20<small>实测</small></dd></div>
   </dl>
 </header>
 
@@ -162,7 +162,7 @@
 <section id="s1">
   <h2><span class="hn">1</span>运行拓扑</h2>
 
-  <p>下面这条链是在部署机上实际核对过的（最近一次 2026-11-14），不是设计意图：</p>
+  <p>下面这条链是在部署机上实际核对过的（最近一次 2026-11-20），不是设计意图：</p>
 
 <pre><code>公网
   │  <span class="c">Cloudflare 边缘</span>
@@ -236,8 +236,13 @@ fp-demo_postgres-data  <span class="c">唯一的持久化卷</span></code></pre>
       </tr>
       <tr>
         <td class="f">FORGEPILOT_AI_*</td>
-        <td>留空则 AI 审查不可用，但<strong>应用照常启动</strong>，其余功能不受影响</td>
-        <td>否，但影响面仅限审查</td>
+        <td>聊天模型的地址、密钥与模型名。留空则全部 AI 能力不可用，但<strong>应用照常启动</strong>，其余功能不受影响。换聊天模型只需改 <code>FORGEPILOT_AI_CHAT_MODEL</code>；此后产生的审查会记下新的模型名，历史审查不变</td>
+        <td>否，但只需重建后端</td>
+      </tr>
+      <tr>
+        <td class="f">FORGEPILOT_EMBEDDING_*<br>FORGEPILOT_KNOWLEDGE_EMBEDDING_*</td>
+        <td>向量服务的地址与密钥，以及向量模型的名称与版本标签。向量服务可以与聊天服务不是同一家，<strong>密钥各自独立失效</strong>。每次审查的第一步就是一次向量召回，这组配置失效时审查全部失败，而聊天服务本身可能完全正常——见 6.4。换服务但<strong>不换模型</strong>时已入库的向量仍可用，换完抽几个切片重新向量化、与库内向量比一下余弦相似度再放行；<strong>换模型</strong>则必须停写并重建全部向量</td>
+        <td>否，但只需重建后端</td>
       </tr>
       <tr>
         <td class="f">FORGEPILOT_*_PER_MINUTE 等三项</td>
@@ -505,7 +510,7 @@ free -m</code></pre>
     <li>收到 <strong>401</strong> → 投递无法验证，可能是未知仓库、载荷不完整、签名或密钥不匹配；不能仅凭状态码区分这些原因。</li>
     <li>收到 <strong>429</strong> → 撞了默认 60 次／分的配额。先检查真实客户端地址解析与异常流量，确认误限再调配额；不要假设 provider 一定自动重投。</li>
     <li>收到 <strong>422</strong> → 已通过验证，但 PR 编号、快照或 diff 存储上限等业务输入不合法。用错误体的 traceId 查对应后端日志。</li>
-    <li>收到 <strong>503</strong> <code>provider_unavailable</code> 或 <strong>502</strong> <code>provider_error</code> → 投递通过了验证，但回头向平台读取 PR 时失败：前者是限流、5xx 或网络问题，后者是平台拒绝了这次读取（多半是仓库 Token 失效或权限不足）。</li>
+    <li>收到 <strong>503</strong> <code>provider_unavailable</code> 或 <strong>502</strong> <code>provider_error</code> → 投递通过了验证，但回头向平台读取 PR 时失败：前者是限流、5xx 或网络问题，后者是平台拒绝了这次读取（多半是仓库 Token 失效或权限不足）。由负责人在「仓库接入」页换上有效的 Token 后，到平台的 webhook 投递记录里<strong>重投</strong>失败的那几次即可，不需要重新推送代码。</li>
     <li>收到 <strong>2xx</strong> 但没有新增 Review → 可能是无关事件、重复投递复用已有 Review，或旧快照被忽略。PR 在平台上已关闭或合并时也是如此：照常入库，但不再产生新的审查。对照 provider 的事件类型、PR head 与既有审查；不能把 2xx 当作模型已完成，也不能把超限拒绝归入 2xx。</li>
   </ol>
 
@@ -532,11 +537,18 @@ free -m</code></pre>
   </p>
 <pre><code>docker compose -p fp-demo exec -T postgres \
   psql -U forgepilot forgepilot -c \
-  "select created_at, status, model from ai_call_log order by id desc limit 20;"</code></pre>
+  "select created_at, use_case, status, error, model from ai_call_log order by id desc limit 20;"</code></pre>
   <p>
-    全是失败且集中在同一时间点，通常是 <code>FORGEPILOT_AI_*</code> 配置或 provider 侧的问题。
-    注意日志里<strong>不会</strong>有 provider 的原始报错原文（它可能引用模型回答），
-    只有改写后的失败原因。
+    先看 <code>use_case</code> 是哪一类在失败。一次审查先做一次 <code>EMBEDDING</code>（知识召回），再做若干次 <code>REVIEW</code>（聊天）：
+  </p>
+  <ul>
+    <li>失败的全是 <code>EMBEDDING</code>、<code>error</code> 是 <code>HTTP 401</code> 之类 → 向量服务的密钥或地址有问题。此时聊天服务可以完全正常，审查却一条也跑不完，因为它们都停在第一步；知识上传与实现建议同样受影响。查 <code>FORGEPILOT_EMBEDDING_*</code>。</li>
+    <li>失败的是 <code>REVIEW</code> → 聊天服务的问题。<code>TIMEOUT</code> 是单次调用超过了 120 秒，<code>HTTP 4xx</code> 多半是密钥或模型名不对。查 <code>FORGEPILOT_AI_*</code>。</li>
+  </ul>
+  <p>
+    后端日志里对应的那一行会写明审查停在哪个阶段（<code>recall</code>、<code>batch N</code> 或 <code>synthesis</code>），
+    但<strong>不会</strong>有 provider 的原始报错原文（它可能引用模型回答），只有改写后的失败原因。
+    配置改好后，失败的审查不会自动重跑：由负责人、审查人或该 PR 的作者在代码审查页对这个 PR 重新请求审查。
   </p>
 
   <h3>6.5 知识文档一直「正在处理」或「处理失败」</h3>
@@ -653,18 +665,18 @@ curl -s http://127.0.0.1:18081/healthz <span class="c"># 本机能不能到 ngin
 <section id="s7">
   <h2><span class="hn">7</span>容量与余量</h2>
 
-  <p>2026-11-14 在部署机上空闲状态下的实测基线。它的用处是：下次觉得「是不是内存不够」时有个对照。</p>
+  <p>2026-11-20 在部署机上空闲状态下的实测基线。它的用处是：下次觉得「是不是内存不够」时有个对照。</p>
 
   <div class="tw"><table>
     <thead><tr><th>容器</th><th>实测占用</th><th>上限</th><th>占上限</th></tr></thead>
     <tbody>
-      <tr><td class="f">fp-demo-backend-1</td><td class="n">422.6 MiB</td><td class="n">768 MiB</td><td class="n">55%</td></tr>
-      <tr><td class="f">fp-demo-postgres-1</td><td class="n">45.0 MiB</td><td class="n">512 MiB</td><td class="n">9%</td></tr>
-      <tr><td class="f">fp-demo-frontend-1</td><td class="n">7.5 MiB</td><td class="n">64 MiB</td><td class="n">12%</td></tr>
+      <tr><td class="f">fp-demo-backend-1</td><td class="n">458.8 MiB</td><td class="n">768 MiB</td><td class="n">60%</td></tr>
+      <tr><td class="f">fp-demo-postgres-1</td><td class="n">54.0 MiB</td><td class="n">512 MiB</td><td class="n">11%</td></tr>
+      <tr><td class="f">fp-demo-frontend-1</td><td class="n">6.5 MiB</td><td class="n">64 MiB</td><td class="n">10%</td></tr>
     </tbody>
   </table></div>
 
-  <p>宿主机：总内存约 3.9 GB，其中可用约 2.4 GB，另有 4 GB swap；磁盘 39 GB，<strong>已用 83%</strong>。磁盘是这台机器上最紧的资源——占用主要来自镜像与构建缓存，升级前先看一眼 <code>df -h /</code>，不够时清理不再使用的镜像，而不是动数据卷。</p>
+  <p>宿主机：总内存约 3.9 GB，其中可用约 2.3 GB，另有 4 GB swap；磁盘 39 GB，<strong>已用 54%</strong>。磁盘是这台机器上涨得最快的资源——每次构建都留下镜像与构建缓存，曾经涨到九成以上，升级前先看一眼 <code>df -h /</code>，不够时清理不再使用的镜像，而不是动数据卷。</p>
 
   <div class="note amber">
     <span class="label">这几个数字不是随便设的</span>
@@ -727,7 +739,7 @@ curl -s http://127.0.0.1:18081/healthz <span class="c"># 本机能不能到 ngin
 
 <footer class="end">
   <p>
-    本文描述当前的部署形态。第 1 章的拓扑与第 7 章的占用数字为 2026-11-14 在部署机上实测；
+    本文描述当前的部署形态。第 1 章的拓扑与第 7 章的占用数字为 2026-11-20 在部署机上实测；
     JVM 参数与内存上限来自更早的一次完整容量测量，未重测。健康检查命令取自 <code>compose.yaml</code>。
   </p>
   <p>

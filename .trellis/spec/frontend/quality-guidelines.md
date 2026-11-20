@@ -78,6 +78,14 @@ substantial:
 - [ ] No new reusable color, spacing, radius, shadow, breakpoint, or motion
       value was added without a named token.
 - [ ] Browser console/network checks show no new errors or accidental retries.
+- [ ] A resource only some roles may read is requested only once the role is
+      known. Catching the 403 hides it from the user but not from the console
+      or the server log; `RepositoryPage.vue` waits for `isLeader` before
+      loading the notification channel.
+- [ ] A length limit on a text field is also enforced in code when the same
+      text can arrive from a file picker: `maxlength` does not apply to values
+      set from a file, and the server's generic validation error does not say
+      which limit was exceeded.
 - [ ] No seventh top-level menu, fabricated business data, or unauthorized
       Assistant/Agent capability slipped into the shell.
 

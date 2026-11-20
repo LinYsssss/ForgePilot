@@ -45,7 +45,7 @@ This host has no JDK 21 (only JDK 17 is installed). Backend builds and tests run
 - There is exactly one Review Engine.
 - Backend top-level packages are limited to `common`, `auth`, `project`, `requirement`, `scm`, `knowledge`, `ai`, `review`, and `notification`.
 - Agent, Patch, RabbitMQ/Outbox, Risk Model, Sandbox, a second AI runtime, and a second Review pipeline are out of scope.
-- AI may produce requirement checks, one-shot implementation guidance, and review findings; it must not change business state or code automatically.
+- AI may produce unsaved requirement drafts, requirement checks, one-shot implementation guidance, and review findings; it must not change business state or code automatically.
 - `finding_key`, `evidence_hash` and `basis_hash` must never cover model prose. `explanation`, `suggestion` and `confidence` are the only outputs allowed to move with the model's wording, which is exactly why no hash may see them — a suppression that drifts with wording stops working silently, and the failure only surfaces a round later.
 - `ReviewPrompts.VERSION` and `FindingKeys.RULE_VERSION` are different constants that move for different reasons. The first must be bumped whenever an instruction or output schema changes. The second must stay put unless a deterministic rule changes, because incrementing it rewrites every `basis_hash` and discards every inherited suppression.
 

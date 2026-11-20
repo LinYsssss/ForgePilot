@@ -70,7 +70,7 @@ The last guard is for a source checkout. A machine holding the ignored post-free
 
 Use three disposable accounts and one disposable project. The signed-in shell has six top-level entries — Workspace, Projects, Requirements, Project Knowledge, Repository Integration, Reviews — in one centered top application bar.
 
-1. A LEADER creates the project and requirement, adds DEVELOPER and REVIEWER members, assigns the developer and reviewer, uploads project knowledge on **Project Knowledge**, and configures either GitHub or GitLab on **Repository Integration** (`/repositories`; the legacy `/projects/:id/settings` path redirects there). Tokens and webhook secrets are write-only. GitLab's repository token needs `api` and actual merge permission.
+1. A LEADER creates the project and requirement — typing the acceptance criteria, or pasting a requirement document into the new-requirement form and letting the model draft them for line-by-line correction; nothing is saved until the LEADER submits. The LEADER then adds DEVELOPER and REVIEWER members, assigns the developer and reviewer, uploads project knowledge on **Project Knowledge**, and configures either GitHub or GitLab on **Repository Integration** (`/repositories`; the legacy `/projects/:id/settings` path redirects there). Tokens and webhook secrets are write-only. GitLab's repository token needs `api` and actual merge permission.
 2. A merge/pull request webhook authenticates the untouched body, triggers an authoritative provider read, links `REQ-<id>` when present, and creates the shared PENDING Review.
 3. The assigned REVIEWER or LEADER returns the completed Review with a reason. Show it on the requirement and Review pages; the PR/MR and original branch remain open for developer updates. Other REVIEWER members can handle findings but cannot make this final decision.
    A REJECT instead closes the PR/MR after a second confirmation and keeps the branch and the requirement.
@@ -79,8 +79,8 @@ Use three disposable accounts and one disposable project. The signed-in shell ha
 
 These are manual acceptance steps; the automated suites drive both providers through
 scripted HTTP, not a live merge or notification. On `merge_outcome_unknown` or
-`close_outcome_unknown`, verify the remote merge state
-state before deciding how to retry; no background compensation is provided.
+`close_outcome_unknown`, verify the remote merge or close state
+before deciding how to retry; no background compensation is provided.
 
 One thing to state honestly if asked during the walkthrough: semantic knowledge retrieval runs without a vector index. That is a deliberate choice, not an oversight — the frozen 4096-dimension embedding profile exceeds every exact index form pgvector 0.8.6 offers, and the two buildable forms are lossy pre-filters that would need a rerank stage. At MVP corpus scale the sequential scan returns the exact cosine ordering, which `KnowledgeVectorIndexTest` demonstrates at the frozen dimension. None of this affects the recorded evaluation, whose runner builds its own context and never calls the running application's retrieval path.
 
@@ -148,6 +148,27 @@ prompts, yet only 6 reports came out identical: the provider is not deterministi
 temperature 0, so say so rather than promising reproducible findings. Deriving the finding
 type from the cited criterion removed the 9 findings per Halo round that had been dropped
 for contradicting labels. Recompute with `python3 docs/thesis/verify-stability.py`.
+
+The current prompt version has one live round of its own. On 2026-11-15/16 all 38 open
+pull requests were re-reviewed under `review-6` with the chat model switched to
+`gpt-6-luna`: 40 Reviews completed on the first attempt with no failed model call, and all
+54 reported Findings were adjudicated against the reviewed source — 44 confirmed overall,
+41 of 42 on the constructed demo repositories but only 3 of 12 on the Halo replay. The same
+round produced the first real close, a full fix → re-review → verify → merge loop ending in
+a completed requirement, and an own-pull-request authorization check with a bound SCM
+identity. Narrative, datasets and verifier are under
+[`docs/thesis/REVIEW6-ROUND.md`](../thesis/REVIEW6-ROUND.md):
+
+```bash
+python3 docs/thesis/verify-review6-round.py
+```
+
+Say three things plainly when citing it. The adjudication, the decisions and the fix were
+carried out by an AI coding assistant using test accounts and have not been re-checked by
+the author; three Halo verdicts disagree with earlier verdicts on the same issue. Only
+reported Findings were judged, so it says nothing about misses. And the prompt, the chat
+model and the embedding endpoint all changed since the previous round, so no difference
+can be attributed to any one of them.
 
 ## 6. Secret and cleanup rules
 

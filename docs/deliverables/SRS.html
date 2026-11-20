@@ -149,10 +149,10 @@
   <dl class="docmeta">
     <div><dt>系统名称</dt><dd>ForgePilot</dd></div>
     <div><dt>定位</dt><dd>需求驱动的 AI 代码审查平台</dd></div>
-    <div><dt>功能需求</dt><dd>82 条（FR）</dd></div>
+    <div><dt>功能需求</dt><dd>83 条（FR）</dd></div>
     <div><dt>非功能需求</dt><dd>40 条（NFR）</dd></div>
     <div><dt>验证记录</dt><dd>见 TEST-REPORT.html</dd></div>
-    <div><dt>文档日期</dt><dd>2026-11-14</dd></div>
+    <div><dt>文档日期</dt><dd>2026-11-20</dd></div>
   </dl>
 </header>
 
@@ -302,7 +302,7 @@
 <!-- ══════ 4 ══════ -->
 <section id="s4">
   <h2><span class="hn">4</span>功能需求</h2>
-  <p>共 82 条。每条给出验收判据；「验证」列的测试类见第 7 章完整追溯。</p>
+  <p>共 83 条。每条给出验收判据；「验证」列的测试类见第 7 章完整追溯。</p>
 
   <h3>4.1 账户与会话（FR-A）</h3>
   <div class="tw"><table>
@@ -778,16 +778,16 @@
   <div class="note red">
     <span class="label">限制 6 · 真实环境验证的范围</span>
     <p>
-      GitHub 链路有真实 PR 与一次真实合并的线上演练；<strong>GitLab 与钉钉只对回环桩服务验证过</strong>，
-      没有真实实例上的端到端记录。当前提示词版本也还没有独立的真实样本与人工真值，
-      已有的线上数据对应更早的版本。这些范围在 <code>TEST-REPORT.html</code> 第 8、10 章逐项列出。
+      GitHub 链路有真实 PR、真实合并与真实关闭的线上记录；<strong>GitLab 与钉钉只对回环桩服务验证过</strong>，
+      没有真实实例上的端到端记录。当前提示词版本有一轮线上样本，已报告的 Finding 逐条判定过，
+      但判定只有一个执行人、没有独立真值，不能据此给出漏报率。这些范围在 <code>TEST-REPORT.html</code> 第 8、10 章逐项列出。
     </p>
   </div>
 </section>
 
 <footer class="end">
   <p>
-    本文档描述当前代码：82 条功能需求、40 条非功能需求。需求编号只增不改，交付后新增的能力追加在各模块末尾。
+    本文档描述当前代码：83 条功能需求、40 条非功能需求。需求编号只增不改，交付后新增的能力追加在各模块末尾。
     自动化验证的执行结果、未覆盖范围与人工验收的进度见 TEST-REPORT.html；正式评测沿用不可变的历史证据。
   </p>
   <p>

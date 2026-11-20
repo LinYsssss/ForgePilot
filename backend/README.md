@@ -34,7 +34,7 @@ H2、跳过测试或 Docker 条件分支替代。
 common       统一错误模型、异常处理与按客户端地址限流
 auth         账号、会话、CSRF、鉴权入口
 project      项目、成员目录、多角色与项目隔离
-requirement  需求、验收条件、不可变修订、质量检查与实现建议
+requirement  需求、验收条件、不可变修订、从文档提取草稿、质量检查与实现建议
 scm          GitHub/GitLab Provider、用户身份与项目绑定、Webhook、PR 快照与需求关联
 knowledge    项目知识文档、分块与 pgvector 检索
 ai           统一 AI 网关、Prompt 净化与调用审计
